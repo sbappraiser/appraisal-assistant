@@ -111,6 +111,12 @@ table.docs select { max-width: 260px; } .lnk { border: 0; background: none; padd
 .pg { display: inline; font-size: 13px; } .pg input { width: 3em; display: inline; }
 .facts-box h4 { margin: 14px 0 4px; font: 600 13px var(--ui); } table.facts { width: 100%; font-size: 13px; border-collapse: collapse; } table.facts th, table.facts td { text-align: left; padding: 3px 6px; border-bottom: 1px solid var(--line); vertical-align: top; } table.facts th { color: var(--muted); font-weight: 600; width: 40%; }
 .seg2 { display: inline-flex; border: 1px solid var(--line); border-radius: 9px; overflow: hidden; } .seg2 button { border: 0; background: var(--panel); padding: 7px 14px; font: 600 13px var(--ui); color: var(--muted); cursor: pointer; } .seg2 button + button { border-left: 1px solid var(--line); } .seg2 button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+.mkgrid { display: grid; gap: 16px; } .mkcard { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; display: grid; gap: 12px; min-width: 0; }
+.mkcard h3 { margin: 0; font: 600 17px var(--ui); } .mkcard h4 { margin: 8px 0 0; font: 600 14px var(--ui); } .mkcard canvas { width: 100%; max-width: 900px; height: auto; border: 1px solid var(--line); border-radius: 8px; background: #fff; display: block; }
+.mkcard figure { margin: 0; display: grid; gap: 6px; } table.uad th { width: 34%; } table.uad textarea { width: 100%; } table.uad td small { font-size: 12.5px; }
+table.mkrows td small { display: block; color: var(--muted); font-size: 12px; } table.mkrows tr.off td { color: var(--muted); text-decoration: line-through; } table.mkrows tr.off td:first-child, table.mkrows tr.off td:last-child { text-decoration: none; }
+.cnt { display: block; font-size: 12px; color: var(--muted); text-align: right; } .cnt.near { color: var(--warn); } .cnt.over { color: var(--danger); font-weight: 700; } .muted { color: var(--muted); } .warnTxt { color: var(--warn); font-weight: 600; }
+.types { display: flex; flex-wrap: wrap; gap: 4px 12px; padding-top: 6px; } .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; } .zil input { width: 100%; }
 a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fatal { background: #fde8e8; color: #8a1c1c; padding: 14px; margin: 0; font-weight: 600; }
 </style>
 </head>
@@ -120,6 +126,7 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
   <nav class="tabs" aria-label="Sections">
     <button type="button" data-tab="saved" aria-selected="false">Orders</button>
     <button type="button" data-tab="letter" aria-selected="true">Order &amp; letter</button>
+    <button type="button" data-tab="market" aria-selected="false">Market</button>
     <button type="button" data-tab="contacts" aria-selected="false">Clients</button>
     <button type="button" data-tab="wording" aria-selected="false">Standard wording</button>
   </nav>
@@ -287,6 +294,10 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
     <div class="toolrow"><button type="button" class="btn primary" id="btnNew2">New order</button><button type="button" class="btn ghost" id="btnIpad" title="Saves Active Orders.json – put it in OneDrive or iCloud Drive, then open it in the inspection app on the iPad">Send active orders to the iPad</button></div></div>
   <div class="listHead"><div class="seg2"><button type="button" data-filter="active">Active</button><button type="button" data-filter="done">Delivered and closed</button><button type="button" data-filter="all">All</button></div><input id="letterSearch" type="search" placeholder="Search file #, street, client, APN, owner, notes"></div>
   <div class="tableWrap"><table><thead><tr><th>File #</th><th>Property</th><th>Client</th><th>Type</th><th>Order status</th><th>Due</th><th>Inspection</th><th>AI</th><th>My letter</th><th>Files</th><th></th></tr></thead><tbody id="letterList"></tbody></table></div>
+</section>
+<section class="panel" id="panel-market" hidden>
+  <div class="listHead"><div><h2 id="mkTitle">Market conditions</h2><p class="help">For the order that is open on the Order &amp; letter tab. Nothing here is sent anywhere.</p></div></div>
+  <div id="mkBody"></div>
 </section>
 <section class="panel" id="panel-contacts" hidden>
   <div class="listHead"><div><h2>Clients</h2><p class="help" id="contactCount"></p></div><input id="contactSearch" type="search" placeholder="Search name, firm, email"></div>

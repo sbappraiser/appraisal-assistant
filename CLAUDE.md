@@ -5,5 +5,5 @@
 - Never commit her data (archive, CORT, client documents, client list). See `.gitignore`.
 - UAD 3.6 field names and enumerations must match Fannie Mae Appendix A-1; ask her for the spreadsheet if it is needed (not stored here).
 - Each app: edit `src/`, run `python3 build.py`, test in Chromium (Playwright), then deliver the built files.
-- Order hub built (o1, Oct 14 2026; see notes "Order hub"). Build with `python3 orders/build.py` → `docs/`. Next: market conditions module, then document reader.
+- Order hub built (o1, Oct 14 2026; see notes "Order hub"). Build with `python3 orders/build.py` → `docs/`. Market conditions are on the hub's Market tab (see notes). Next: document reader.
 - Pushes work only to this repo; the comp-genie and Inspection repos are updated by her uploading the zips (unless she gives the Claude GitHub App access to them).

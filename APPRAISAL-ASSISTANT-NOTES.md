@@ -125,5 +125,15 @@ Home page of the assistant: https://sbappraiser.github.io/appraisal-assistant/ (
 - iPad (inspection 6e): home "Active orders" from the Active Orders.json file (OneDrive/iCloud → Files); Start inspection prefills address, ZIP+4, county, year built, flood, permits, inspection date, and a "From the order" box (client, type, access contact with tap-to-call, to-dos with checkboxes, MLS history, document list). Floor plans appear in Sketch → More → Floor plan underlay. CRS beds/baths/sq ft removed from the inspection's CRS box and never stored.
 - Next: inspection export coming back and attaching to the order; client-letter requirements → to-dos automatically; USPS address check; invoice at delivery.
 
+## Market conditions (built in the order hub, Market tab, Oct 14 2026)
+Source orders/src/market.js. Per order (order.market): lookback, rows from her SBMLS CSV, excluded listings, property-type filter, her choices, texts. Shared (kv): mk:stats (parsed monthly SBMLS PDFs by month), mk:zillow (by city, typed by her), mk:boundaries (saved named market areas).
+- Status on the effective date is worked out from the dates (Begin, Under Contract, Sold/COE, Withdrawal/Cancel/End or Status Change for off-market, Fallthrough), so retrospective dates work; actives' DOM = MLS DOM for current dates, else effective date − list date. Two-unit addresses (2535/2537, 18-20) are left out by default; she can tick them back.
+- Suggestions (she confirms): months of supply < 4 Shortage, 4–6 In Balance, > 6 Oversupply; marketing time from median cumulative DOM of the sales (<90, 90–180, >180 days); distressed = REO / bank owned / foreclosure / short sale / notice of default (estate and trust are not distressed).
+- Trend: log-linear $/sq ft vs date, reported only with ≥ 6 sales; < 3%/yr or R² < 0.15 → "no consistent trend".
+- SBMLS PDF parser: Summary of Stats, Previous Year Comparison, YTD pages, and month-by-month charts (values matched to month labels by position; a chart that does not end at the report month or has months out of order is skipped with a note – the Sept 2026 condo charts are like that). Checked against her commentary's 24-month list: all match.
+- Draft 17.019 ≤ 2,500 chars, parts dropped in priority order when long; 17.004 drafted from the search; 17.003 hers (saved areas). Graphs: price trend (dots + monthly or quarterly median; per sq ft option), absorption (sales per month), South Coast median by month; saved as PNG.
+- Samarkand test (eff 10/14/2026, 12 mo, duplexes out): 2 active ($1.30M/$1.64M/$1.99M, median DOM 86), 1 pending, 12 sales ($1.125M/$2.14M/$6.3M), 2.0 months supply → Shortage, Under 3 months, no distressed.
+- Later: MISMO export of section 17 with the report; Zillow Research CSV import; condo/HE segment choice override.
+
 ## Master checklist
 Her live checklist page (she ticks items and adds her own): https://claude.ai/artifact/FZzBaFYusgsZtyQeajE2jy — read it (Artifact action "read") at the start of a session to see what she has checked or added. CHECKLIST.html here is the Oct 14 2026 starting copy only.

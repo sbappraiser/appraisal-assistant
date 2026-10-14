@@ -142,7 +142,7 @@ const safe = s => String(s).replace(/[\\/:*?"<>|]+/g, '-').replace(/\s+/g, ' ').
 const fileName = f => safe(`${f.fileNo ? f.fileNo + ' ' : ''}${street(f) || 'No address yet'} - Engagement Letter`) + '.docx';
 
 /* ---------- actions ---------- */
-function toast(msg) { const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(t._h); t._h = setTimeout(() => { t.hidden = true; }, 2600); }
+function toast(msg, ms) { const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(t._h); t._h = setTimeout(() => { t.hidden = true; }, ms || 2600); }
 function download(bytes, name, type) {
   const url = URL.createObjectURL(new Blob([bytes], { type }));
   const a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click();
@@ -307,6 +307,7 @@ function renderScan(d) {
 function showTab(t) {
   document.querySelectorAll('[data-tab]').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === t));
   document.querySelectorAll('.panel').forEach(p => { p.hidden = p.id !== 'panel-' + t; });
+  if (t === 'market') { $('#mkTitle').textContent = 'Market conditions' + (cur && (cur.fileNo || street(cur)) ? ' – ' + [cur.fileNo, street(cur)].filter(Boolean).join(' ') : ''); mkRender(); }
 }
 
 /* ---------- backup: one zip with every order, client, and document ---------- */
@@ -345,7 +346,7 @@ async function restore(file) {
 async function start() {
   try { await ODB.init(); } catch (e) { document.body.insertAdjacentHTML('afterbegin', `<p class="fatal">${hesc(e.message || String(e))}</p>`); return; }
   try { if (navigator.storage && navigator.storage.persist) await navigator.storage.persist(); } catch (e) {} // ask Chrome never to clear this data
-  letters = (await ODB.all('orders')) || [];
+  letters = (await ODB.all('orders')) || []; await mkLoad();
   const old = store.get('letters', null); // orders saved by the old letter writer on this same site
   if (Array.isArray(old) && old.length) { const ids = new Set(letters.map(x => x.id)); const add = old.filter(x => !ids.has(x.id)).map(x => ({ ...NEW_FIELDS, docs: [], ...x })); if (add.length) { await ODB.putMany('orders', add); letters.push(...add); } try { localStorage.removeItem('el.letters'); } catch (e) {} }
   const GROUPS = [['Estate, trust and gift', ['dod', 'altValuation', 'parentChild', 'trust', 'gift']], ['Divorce and co-owners', ['divorce', 'divorceRetro', 'buyout']],
