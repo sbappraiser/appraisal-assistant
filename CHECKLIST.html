@@ -1,0 +1,196 @@
+<title>Appraisal Assistant Checklist</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Fraunces:opsz,wght@9..144,600&display=swap">
+<style id="css">
+/* Layout: one reading column; each part of the system is a section with its progress and its own add box. */
+:root {
+  --bg: #f3f7f7; --surface: #ffffff; --ink: #142f2e; --muted: #57706f; --line: #d6e5e5;
+  --accent: #0b7f86; --accent-soft: #e0f2f3; --done: #2f7d4a; --next: #a05a00; --next-soft: #fff1dc; --danger: #b3261e;
+  --f-display: "Fraunces", Georgia, serif; --f-body: "Atkinson Hyperlegible", -apple-system, "Segoe UI", Arial, sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0f1a1a; --surface: #172525; --ink: #e3efee; --muted: #9db5b3; --line: #2b3f3f;
+  --accent: #5cc3c9; --accent-soft: #1d3638; --done: #74c48f; --next: #f0ad55; --next-soft: #3a2a14; --danger: #f08b84; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #0f1a1a; --surface: #172525; --ink: #e3efee; --muted: #9db5b3; --line: #2b3f3f;
+  --accent: #5cc3c9; --accent-soft: #1d3638; --done: #74c48f; --next: #f0ad55; --next-soft: #3a2a14; --danger: #f08b84; color-scheme: dark }
+body { background: var(--bg); color: var(--ink); font: 16px/1.5 var(--f-body); }
+.wrap { max-width: 860px; margin: 0 auto; padding-block: 28px 56px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 20px; }
+h1 { font: 600 clamp(28px, 5vw, 38px)/1.1 var(--f-display); margin: 0; text-wrap: balance; }
+h2 { font: 600 21px/1.2 var(--f-display); margin: 0; text-wrap: balance; }
+.lede { color: var(--muted); margin: 6px 0 0; max-width: 62ch; }
+.overall { display: grid; gap: 8px; }
+.bar { height: 10px; border-radius: 99px; background: var(--line); overflow: hidden; }
+.bar > i { display: block; height: 100%; background: var(--accent); }
+.meta { display: flex; flex-wrap: wrap; gap: 8px 18px; color: var(--muted); font-size: 14px; font-variant-numeric: tabular-nums; }
+.nextbox { background: var(--next-soft); border: 1px solid var(--next); border-radius: 10px; padding: 14px 16px; display: grid; gap: 4px; }
+.nextbox b { color: var(--next); font-size: 13px; letter-spacing: .06em; text-transform: uppercase; }
+.nextbox ol { margin: 4px 0 0; padding-left: 22px; }
+section.part { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; display: grid; gap: 10px; min-width: 0; }
+.parthead { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 12px; }
+.parthead .count { color: var(--muted); font-size: 14px; font-variant-numeric: tabular-nums; margin-left: auto; }
+.partbar { height: 5px; }
+ul.items { list-style: none; margin: 0; padding: 0; display: grid; }
+li.item { display: grid; grid-template-columns: 28px 1fr auto; gap: 10px; align-items: start; padding: 8px 0; border-top: 1px solid var(--line); }
+li.item:first-child { border-top: 0; }
+li.item input[type=checkbox] { width: 22px; height: 22px; margin: 1px 0 0; accent-color: var(--done); cursor: pointer; }
+li.item .txt { min-width: 0; overflow-wrap: anywhere; }
+li.item.done .txt { color: var(--muted); text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--muted) 60%, transparent); }
+.tag { display: inline-block; font-size: 12px; font-weight: 700; letter-spacing: .04em; border-radius: 99px; padding: 1px 8px; margin-left: 6px; vertical-align: 1px; }
+.tag.next { background: var(--next-soft); color: var(--next); border: 1px solid var(--next); }
+.tag.mine { background: var(--accent-soft); color: var(--accent); }
+.acts { display: flex; gap: 6px; }
+button { font: inherit; font-size: 14px; color: var(--accent); background: transparent; border: 1px solid var(--line); border-radius: 8px; padding: 3px 9px; cursor: pointer; }
+button:hover { background: var(--accent-soft); }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+button.danger { color: var(--danger); }
+button.solid { background: var(--accent); color: var(--surface); border-color: var(--accent); }
+form.add { display: flex; gap: 8px; }
+form.add input { flex: 1; min-width: 0; font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; }
+.status { position: fixed; right: max(16px, env(safe-area-inset-right, 0px)); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); background: var(--ink); color: var(--bg); padding: 8px 14px; border-radius: 8px; font-size: 14px; }
+.legend { color: var(--muted); font-size: 14px; }
+@media (prefers-reduced-motion: no-preference) { .bar > i { transition: width .3s ease; } }
+</style>
+<script type="application/json" id="state">{"updated":"2026-10-14","next":["Order intake: one assignment record that the letter writer, comp genie, document reader and iPad all share","Move the letter writer onto the same site as the other tools","Hand active orders to the iPad (Active Orders file)"],"parts":[
+{"id":"insp","title":"Inspection app (iPad)","items":[
+{"id":"i1","t":"UAD 3.6 inspection form with photos and SFREP export","d":true},
+{"id":"i2","t":"Sketch with area calculations, levels and pages","d":true},
+{"id":"i3","t":"Save-to-Files export fix (6b)","d":true},
+{"id":"i4","t":"CRS report import fix (seller and deed type)","d":true},
+{"id":"i5","t":"Condo / HOA changes: amenities, 55+, club membership, land lease, HOA contact question, 10-key pad (6c)","d":true},
+{"id":"i6","t":"Sketch: reliable keypad, Bedroom 1/2/3 and Bath numbering, Save to inspection button, label suggestions (6c)","d":true},
+{"id":"i7","t":"Interior walls, doors and stairs in the sketch (Fannie Mae floor plan requirement)","d":false},
+{"id":"i8","t":"Floorplan picture as a tracing layer under the sketch","d":false},
+{"id":"i9","t":"Active orders list on the iPad; open an order already filled in (never subject beds, baths or square footage)","d":false},
+{"id":"i10","t":"Retire the inspect-test repository","d":false}]},
+{"id":"data","title":"Comp archive and sales data","items":[
+{"id":"d1","t":"ACI comp archive converted: 23,918 records, every version kept, exact duplicates removed","d":true},
+{"id":"d2","t":"Land split (residential, equestrian, orchard, watershed acres) and usable acres","d":true},
+{"id":"d3","t":"Adjustment reliability test, and the Montecito re-test with your method","d":true},
+{"id":"d4","t":"CORT scans read into a CORT table (379 sales)","d":true},
+{"id":"d5","t":"Double-counted other structures fixed (655 records)","d":true},
+{"id":"d6","t":"Read new weekly CORT PDFs inside the app","d":false},
+{"id":"d7","t":"Older CORT binders: decide how far back to scan","d":false},
+{"id":"d8","t":"Connect the construction cost database","d":false}]},
+{"id":"intake","title":"Orders and engagement letters","items":[
+{"id":"o1","t":"Engagement letter writer: 16 letter types, AI clause, delivery and payment terms","d":true},
+{"id":"o2","t":"Client list that grows on its own","d":true},
+{"id":"o3","t":"Scan a client's engagement letter for AI restrictions","d":true},
+{"id":"o4","t":"Order intake: one assignment record shared by every tool","d":false,"n":true},
+{"id":"o5","t":"Move the letter writer onto the same site as everything else","d":false},
+{"id":"o6","t":"Requirements checklist from a client's engagement letter, with inspection to-dos sent to the iPad","d":false},
+{"id":"o7","t":"Contact book: lenders, AMCs, attorneys, trustees, agents","d":false},
+{"id":"o8","t":"Hand active orders to the iPad (Active Orders file in iCloud Drive)","d":false},
+{"id":"o9","t":"Attorney review of the AI clause and the gift and donation letters","d":false}]},
+{"id":"genie","title":"Comp genie","items":[
+{"id":"g1","t":"Address box fills a comp from your archive","d":true},
+{"id":"g2","t":"Reads MLS export, MLS photos, MLS printout (listing history), CRS and CORT, and matches them","d":true},
+{"id":"g3","t":"Side-by-side comparison; your value always wins","d":true},
+{"id":"g4","t":"Flags: quick resale, land or teardown sale, recorded price differs, relisted, non-arm's-length","d":true},
+{"id":"g5","t":"Exports: SFREP comps file, comps table, front photos","d":true},
+{"id":"g6","t":"Remove a dropped file, Undo, Remove all comps, photo viewer, closed/pending/active order, CRS as subject","d":true},
+{"id":"g7","t":"Test the SFREP comps import on a copy of a real report","d":false},
+{"id":"g8","t":"Subject's own MLS listing goes to the subject's listing history, not the comps","d":false},
+{"id":"g9","t":"Larger MLS photos (check the Flexmls photo size setting)","d":false},
+{"id":"g10","t":"Keep only front photos after comps are chosen","d":false},
+{"id":"g11","t":"ADUs and outbuildings, and interior/exterior quality and condition, in the SFREP file","d":false}]},
+{"id":"docs","title":"Documents","items":[
+{"id":"r1","t":"Document reader: contracts, counters, addenda, disclosures, leasebacks, preliminary title, permits, plans, budgets, HOA documents","d":false},
+{"id":"r2","t":"Text recognition for scanned documents","d":false},
+{"id":"r3","t":"Redaction and an approval queue (accept, edit or reject, with the source page)","d":false},
+{"id":"r4","t":"Permit history by parcel (county properties)","d":false}]},
+{"id":"market","title":"Market conditions","items":[
+{"id":"m1","t":"Market area search (MLS export) fills the UAD 3.6 market fields","d":false},
+{"id":"m2","t":"Monthly MLS statistics PDF and Zillow trends draft the price trend comment (2,500 characters)","d":false},
+{"id":"m3","t":"Absorption rate chart","d":false},
+{"id":"m4","t":"Support for market-condition (time) adjustments","d":false}]},
+{"id":"adj","title":"Adjustments and approaches","items":[
+{"id":"a1","t":"Adjustment assistant: sensitivity, regression where it is reliable, ranking","d":false},
+{"id":"a2","t":"Depreciated cost from your cost database (pools, guest houses, barns, site work)","d":false},
+{"id":"a3","t":"Income method for ADUs and guest houses","d":false},
+{"id":"a4","t":"Land value tools (land sales, allocation, extraction)","d":false},
+{"id":"a5","t":"Cost approach sent to SFREP","d":false},
+{"id":"a6","t":"Reconciliation helper (adjusted range, net and gross, weighting)","d":false}]},
+{"id":"write","title":"Writing and review","items":[
+{"id":"w1","t":"Comment library in your voice, organized by UAD 3.6 section (from OneNote)","d":false},
+{"id":"w2","t":"Comment sets by assignment type: estate, divorce, trust, pre-listing","d":false},
+{"id":"w3","t":"Reviewer: math, consistency and UAD 3.6 rules checked before SFREP","d":false},
+{"id":"w4","t":"Photo review, captions and filing","d":false},
+{"id":"w5","t":"Reference library search: USPAP, UAD, community plans, zoning","d":false}]},
+{"id":"office","title":"Office","items":[
+{"id":"f1","t":"Job list with search; job folders in your folder structure","d":false},
+{"id":"f2","t":"Workfile completeness check and year-end archive","d":false},
+{"id":"f3","t":"Invoices, payments and the unpaid list","d":false},
+{"id":"f4","t":"Pull a prior report when you have appraised the subject before","d":false}]},
+{"id":"setup","title":"Setup","items":[
+{"id":"s1","t":"GitHub repositories: Inspection, comp-genie, appraisal-assistant","d":true},
+{"id":"s2","t":"All source code and project notes saved in GitHub","d":true},
+{"id":"s3","t":"Move the building work to Claude Code","d":false},
+{"id":"s4","t":"New desktop PC: BitLocker and backups","d":false}]}
+]}</script>
+<div id="root"></div>
+<script id="app-js">
+(function () {
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  let S = JSON.parse(document.getElementById('state').textContent);
+  let api = null, readOnly = false, timer = null, confirmId = null;
+  const root = document.getElementById('root');
+  const all = () => S.parts.flatMap(p => p.items);
+  function render() {
+    const items = all(), done = items.filter(i => i.d).length, pct = items.length ? Math.round(done / items.length * 100) : 0;
+    root.innerHTML = `<div class="wrap">
+      <header><h1>Appraisal Assistant</h1><p class="lede">Everything the assistant will do, grouped by part. Tick an item when it's finished, or add your own at the bottom of any group.</p></header>
+      <div class="overall"><div class="bar" aria-hidden="true"><i style="width:${pct}%"></i></div>
+        <div class="meta"><span><b>${done}</b> of ${items.length} finished (${pct}%)</span><span>Last change ${esc(S.updated)}</span>${readOnly ? '<span>Read-only view</span>' : ''}</div></div>
+      <div class="nextbox"><b>Up next</b><ol>${S.next.map(n => `<li>${esc(n)}</li>`).join('')}</ol></div>
+      ${S.parts.map(p => { const d = p.items.filter(i => i.d).length; return `<section class="part" aria-labelledby="h-${p.id}">
+        <div class="parthead"><h2 id="h-${p.id}">${esc(p.title)}</h2><span class="count">${d} of ${p.items.length}</span></div>
+        <div class="bar partbar" aria-hidden="true"><i style="width:${p.items.length ? d / p.items.length * 100 : 0}%"></i></div>
+        <ul class="items">${p.items.map(i => `<li class="item ${i.d ? 'done' : ''}">
+          <input type="checkbox" id="cb-${i.id}" data-tick="${i.id}" ${i.d ? 'checked' : ''} ${readOnly ? 'disabled' : ''} aria-label="Finished">
+          <label class="txt" for="cb-${i.id}">${esc(i.t)}${i.n ? '<span class="tag next">Next</span>' : ''}${i.m ? '<span class="tag mine">Added by you</span>' : ''}</label>
+          <span class="acts">${readOnly ? '' : confirmId === i.id ? `<button class="danger solid" data-delyes="${i.id}">Remove</button><button data-delno="1">Keep</button>` : `<button class="danger" data-del="${i.id}" aria-label="Remove this item">✕</button>`}</span></li>`).join('')}</ul>
+        ${readOnly ? '' : `<form class="add" data-add="${p.id}"><input id="add-${p.id}" placeholder="Add something to ${esc(p.title.toLowerCase())}" autocomplete="off" aria-label="New item for ${esc(p.title)}"><button type="submit">Add</button></form>`}
+      </section>`; }).join('')}
+      <p class="legend">Changes save to this page for everyone who opens it, including Claude.</p>
+    </div>`;
+  }
+  function status(t) { let el = document.querySelector('.status'); if (!t) { if (el) el.remove(); return; } if (!el) { el = document.createElement('div'); el.className = 'status'; el.setAttribute('role', 'status'); document.body.appendChild(el); } el.textContent = t; }
+  function docFor(state) {
+    const json = JSON.stringify(state).replace(/</g, '\\u003c');
+    const css = document.getElementById('css').textContent, js = document.getElementById('app-js').textContent;
+    const head = document.head.querySelector('link[href*="fonts.googleapis.com/css2"]');
+    return '<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style></head><body>'
+      + '<title>Appraisal Assistant Checklist</title>\n<meta name="claude:viewport-fit-sides" content="cover">\n<link rel="preconnect" href="https://fonts.googleapis.com">\n'
+      + '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Fraunces:opsz,wght@9..144,600&display=swap">\n'
+      + '<style id="css">' + css + '</style>\n<script type="application/json" id="state">' + json + '<\/script>\n<div id="root"></div>\n<script id="app-js">' + js + '<\/script>\n</body></html>';
+  }
+  function today() { const d = new Date(); return new Date(d - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10); }
+  function changed() {
+    S.updated = today(); render(); if (!api) { status('Saving is not available in this view'); return; }
+    status('Saving…'); clearTimeout(timer);
+    timer = setTimeout(async () => {
+      try { await api.publish(docFor(S)); }
+      catch (e) { const c = e && e.code;
+        if (c === 'conflict') status('Someone else saved first – loading their version');
+        else if (['not_writer', 'not_granted', 'not_declared', 'consent_required', 'capability_disabled', 'capability_removed'].includes(c)) { readOnly = true; status('This view is read-only'); render(); }
+        else status('Could not save – try again in a moment'); }
+    }, 1200);
+  }
+  root.addEventListener('change', e => { const id = e.target.dataset.tick; if (!id || readOnly) return; const it = all().find(i => i.id === id); it.d = e.target.checked; changed(); });
+  root.addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b || readOnly) return;
+    if (b.dataset.del) { confirmId = b.dataset.del; render(); return; }
+    if (b.dataset.delno) { confirmId = null; render(); return; }
+    if (b.dataset.delyes) { S.parts.forEach(p => { p.items = p.items.filter(i => i.id !== b.dataset.delyes); }); confirmId = null; changed(); }
+  });
+  root.addEventListener('submit', e => {
+    e.preventDefault(); const f = e.target.closest('form[data-add]'); if (!f || readOnly) return;
+    const inp = f.querySelector('input'); const t = inp.value.trim(); if (!t) return;
+    const p = S.parts.find(x => x.id === f.dataset.add); p.items.push({ id: 'u' + Date.now().toString(36), t, d: false, m: true }); changed();
+  });
+  render();
+  if (window.claude && window.claude.use) window.claude.use('artifact').then(a => { api = a; if (!a) { readOnly = true; render(); } }).catch(() => {});
+})();
+</script>
