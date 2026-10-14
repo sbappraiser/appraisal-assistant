@@ -68,3 +68,9 @@ To do: rename GLA areas to UAD 3.6 / ANSI terms (finished above grade, nonstanda
 - HOA: "Does the owner have an HOA contact?" (replaces hoaNoContact; migrated). Dues and all $ fields have an on-screen 10-key. Utilities "Other" gets picks (Trash, Cable/Internet, …) each sent as Other + description. Dues-cover list no longer has pool/spa, elevator, security gate, doorman/concierge. Mandatory club membership (name, initiation, monthly dues → ClubMembership amenity + comment). Land lease (monthly → annual ProjectAnalysisGroundRentAmount, expiry, notes).
 - Sketch: keypad digits on pointerdown, only the length box updates (no lost/double taps); header "Save to inspection" button grey → green after saving, grey again after a change; Bedroom 1/2/3, Bath 1/2, Half Bath 1 numbering; label names title-cased (small words lower) with word suggestions.
 - Includes the CRS sales-row fix.
+
+## 6d (Oct 14 2026)
+- Interior walls (SK.sk.iwalls [{id,a,b,level,pg}]): thin lines, never change area. Tool "┼ Interior wall": tap start/end (snaps to corners, wall points – square to the start when close – then 0.5 ft grid at 45° steps), keep tapping to chain, or type a length + arrow. Select → set length / delete. Included in undo, versions, rotate-all, print; move with their area when the area is dragged (with symbols/labels inside).
+- Doors (symbols with door:true): Door, Double door, Sliding door, Open doorway, Exterior entry (door + arrow). "◜ Door" button. Dropped within 3 ft of a wall they seat on it and swing into the room; Hinge side / Swing in-out buttons; width only. Opening painted in the room's fill colour.
+- L-shaped stairs symbol.
+- Floor plan underlay (More → Floor plan underlay): picture or PDF page (choose page), stored as 'under:<id>' record in the sketches store, faint on screen only (never printed); set scale by tapping two points + real length; move; lighter/darker; turn 90°; hide; remove.

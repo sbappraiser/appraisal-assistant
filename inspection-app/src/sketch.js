@@ -47,7 +47,10 @@ const TS = () => (SK.lib && SK.lib.textScale) || 1, DS = () => (SK.lib && SK.lib
 const FILL = a => (SK.lib && SK.lib.fills === false) ? null : BUCKETS[defOf(a.def).bucket].fill;
 /* ---------- symbols: fireplaces, wood stove, stairs, elevator (sizes in feet, resizable) ---------- */
 const SYMBOLS = { fireplace: { n: 'Fireplace', w: 5, h: 2 }, cornerfp: { n: 'Corner fireplace', w: 4, h: 4 }, dblfp: { n: 'Double-sided fireplace', w: 5, h: 2.5 },
-  woodstove: { n: 'Wood stove', w: 2.5, h: 2.5 }, stairs: { n: 'Stairs', w: 3.5, h: 10 }, spiral: { n: 'Spiral stairs', w: 5, h: 5 }, elevator: { n: 'Elevator', w: 5, h: 5 } };
+  woodstove: { n: 'Wood stove', w: 2.5, h: 2.5 }, stairs: { n: 'Stairs', w: 3.5, h: 10 }, stairsL: { n: 'L-shaped stairs', w: 7, h: 7 }, spiral: { n: 'Spiral stairs', w: 5, h: 5 }, elevator: { n: 'Elevator', w: 5, h: 5 },
+  door: { n: 'Door', w: 3, h: 3, door: true }, dbldoor: { n: 'Double door', w: 5, h: 2.5, door: true }, slider: { n: 'Sliding door', w: 6, h: 1, door: true }, opening: { n: 'Open doorway', w: 4, h: 1, door: true }, entry: { n: 'Exterior entry', w: 3, h: 3, door: true } };
+const DOORISH = t => !!(SYMBOLS[t] && SYMBOLS[t].door);
+const WALL_Y = y => (y.type === 'door' || y.type === 'entry' || y.type === 'dbldoor') ? y.h / 2 : 0; // where the wall line sits inside the symbol box
 function drawSymbol(g, sym, T, s, hi) { // T: feet -> screen; s: px per foot
   const [cx, cy] = T([sym.x, sym.y]); const w = sym.w * s, h = sym.h * s; g.save(); g.translate(cx, cy); g.rotate(-(sym.rot || 0) * Math.PI / 180);
   g.strokeStyle = hi ? '#ff7a00' : '#000'; g.lineWidth = hi ? 3 : 1.6; g.fillStyle = '#fff'; const R = (x, y, a, b) => { g.fillRect(x, y, a, b); g.strokeRect(x, y, a, b); };
@@ -61,10 +64,103 @@ function drawSymbol(g, sym, T, s, hi) { // T: feet -> screen; s: px per foot
     g.lineWidth = hi ? 3 : 1.8; g.beginPath(); g.moveTo(0, h / 2 - h * 0.08); g.lineTo(0, -h / 2 + h * 0.1); g.moveTo(-w * 0.18, -h / 2 + h * 0.1 + w * 0.22); g.lineTo(0, -h / 2 + h * 0.1); g.lineTo(w * 0.18, -h / 2 + h * 0.1 + w * 0.22); g.stroke(); }
   else if (sym.type === 'spiral') { const r = Math.min(w, h) / 2; g.beginPath(); g.arc(0, 0, r, 0, 7); g.fill(); g.stroke(); g.beginPath(); g.arc(0, 0, r * 0.15, 0, 7); g.stroke(); g.beginPath(); for (let i = 0; i < 10; i++) { const t = i * Math.PI / 5; g.moveTo(Math.cos(t) * r * 0.15, Math.sin(t) * r * 0.15); g.lineTo(Math.cos(t) * r, Math.sin(t) * r); } g.stroke(); }
   else if (sym.type === 'elevator') { R(-w / 2, -h / 2, w, h); g.beginPath(); g.moveTo(-w / 2, -h / 2); g.lineTo(w / 2, h / 2); g.moveTo(w / 2, -h / 2); g.lineTo(-w / 2, h / 2); g.stroke(); }
+  else if (sym.type === 'stairsL') { const r = Math.min(w, h) * 0.42; g.beginPath(); g.moveTo(-w / 2, -h / 2); g.lineTo(w / 2, -h / 2); g.lineTo(w / 2, -h / 2 + r); g.lineTo(-w / 2 + r, -h / 2 + r); g.lineTo(-w / 2 + r, h / 2); g.lineTo(-w / 2, h / 2); g.closePath(); g.fill(); g.stroke();
+    g.beginPath(); const n1 = Math.max(2, Math.round((w - r) / s / 0.9)); for (let i = 1; i < n1; i++) { const x = -w / 2 + r + (w - r) * i / n1; g.moveTo(x, -h / 2); g.lineTo(x, -h / 2 + r); }
+    const n2 = Math.max(2, Math.round((h - r) / s / 0.9)); for (let i = 1; i < n2; i++) { const y = -h / 2 + r + (h - r) * i / n2; g.moveTo(-w / 2, y); g.lineTo(-w / 2 + r, y); } g.moveTo(-w / 2, -h / 2 + r); g.lineTo(-w / 2 + r, -h / 2 + r); g.stroke();
+    g.lineWidth = hi ? 3 : 1.8; g.beginPath(); g.moveTo(-w / 2 + r / 2, h / 2 - r * 0.3); g.lineTo(-w / 2 + r / 2, -h / 2 + r / 2); g.lineTo(w / 2 - r * 0.3, -h / 2 + r / 2); g.moveTo(w / 2 - r * 0.3 - r * 0.25, -h / 2 + r / 2 - r * 0.22); g.lineTo(w / 2 - r * 0.3, -h / 2 + r / 2); g.lineTo(w / 2 - r * 0.3 - r * 0.25, -h / 2 + r / 2 + r * 0.22); g.stroke(); }
+  else if (DOORISH(sym.type)) { // the opening is cut out of the wall (white), then the door is drawn
+    const wy = WALL_Y({ type: sym.type, h }); const wt = Math.max(3, s * 0.45); if (sym.flip) g.scale(-1, 1);
+    g.fillStyle = '#fff'; g.fillRect(-w / 2, wy - wt, w, wt * 2); { const f = gapFill(sym); if (f) { g.fillStyle = f; g.fillRect(-w / 2, wy - wt, w, wt * 2); } } g.lineWidth = hi ? 3 : 1.6;
+    g.beginPath(); g.moveTo(-w / 2, wy - wt); g.lineTo(-w / 2, wy + wt); g.moveTo(w / 2, wy - wt); g.lineTo(w / 2, wy + wt); g.stroke(); // jambs
+    if (sym.type === 'door' || sym.type === 'entry') { g.beginPath(); g.moveTo(-w / 2, wy); g.lineTo(-w / 2, wy - w); g.stroke(); g.save(); g.setLineDash([4, 3]); g.lineWidth = 1; g.beginPath(); g.arc(-w / 2, wy, w, -Math.PI / 2, 0); g.stroke(); g.restore();
+      if (sym.type === 'entry') { const L = Math.max(14, w * 0.8); g.lineWidth = hi ? 3 : 2; g.beginPath(); g.moveTo(0, wy + wt + L); g.lineTo(0, wy + wt + 3); g.moveTo(-6, wy + wt + 10); g.lineTo(0, wy + wt + 3); g.lineTo(6, wy + wt + 10); g.stroke(); } }
+    else if (sym.type === 'dbldoor') { const lf = w / 2; g.beginPath(); g.moveTo(-w / 2, wy); g.lineTo(-w / 2, wy - lf); g.moveTo(w / 2, wy); g.lineTo(w / 2, wy - lf); g.stroke(); g.save(); g.setLineDash([4, 3]); g.lineWidth = 1; g.beginPath(); g.arc(-w / 2, wy, lf, -Math.PI / 2, 0); g.moveTo(w / 2, wy - lf); g.arc(w / 2, wy, lf, -Math.PI / 2, -Math.PI, true); g.stroke(); g.restore(); }
+    else if (sym.type === 'slider') { const o = Math.max(2, wt * 0.45); g.beginPath(); g.moveTo(-w / 2, wy - o); g.lineTo(w * 0.08, wy - o); g.moveTo(-w * 0.08, wy + o); g.lineTo(w / 2, wy + o); g.stroke(); }
+  }
   g.restore();
 }
 function hitSymbol(ft) { const tol = 10 / SK.view.s; return (SK.sk.symbols || []).filter(x => here(x)).find(x => { const t = (x.rot || 0) * Math.PI / 180, dx = ft[0] - x.x, dy = ft[1] - x.y;
   const lx = dx * Math.cos(t) - dy * Math.sin(t), ly = dx * Math.sin(t) + dy * Math.cos(t); return Math.abs(lx) <= x.w / 2 + tol && Math.abs(ly) <= x.h / 2 + tol; }) || null; }
+
+/* ---------- interior walls: thin lines drawn inside the outline; they never change the square footage ---------- */
+const IW = () => (SK.sk.iwalls = SK.sk.iwalls || []);
+const projOn = (pt, a, b) => { const dx = b[0] - a[0], dy = b[1] - a[1], L = dx * dx + dy * dy; let t = L ? ((pt[0] - a[0]) * dx + (pt[1] - a[1]) * dy) / L : 0; t = Math.max(0, Math.min(1, t)); return [a[0] + t * dx, a[1] + t * dy]; };
+const segsHere = () => [...SK.sk.areas.filter(a => here(a)).flatMap(a => walls(a).map(([i, p, q]) => ({ p, q, a }))), ...IW().filter(w => here(w)).map(w => ({ p: w.a, q: w.b, iw: w }))];
+function iwSnap(ft, from) { // a corner, then a point on a wall, then the 0.5 ft grid (square to the start when close)
+  const tol = 16 / SK.view.s; let best = null;
+  [...cornersHere(), ...IW().filter(w => here(w)).flatMap(w => [w.a, w.b])].forEach(p => { const d = Math.hypot(p[0] - ft[0], p[1] - ft[1]); if (d < tol && (!best || d < best.d)) best = { d, p: [...p], how: 'corner' }; });
+  if (best) return best;
+  segsHere().forEach(({ p, q }) => { let P = projOn(ft, p, q); if (from) { // prefer the point on this wall that keeps the new wall square
+      const ux = q[0] - p[0], uy = q[1] - p[1], L = Math.hypot(ux, uy) || 1; [[1, 0], [0, 1]].forEach(([ax, ay]) => { const den = ax * uy - ay * ux; if (Math.abs(den) < 1e-9) return; const tt = ((p[0] - from[0]) * uy - (p[1] - from[1]) * ux) / den; const X = [from[0] + ax * tt, from[1] + ay * tt]; if (Math.hypot(X[0] - ft[0], X[1] - ft[1]) < tol * 1.5 && segDist(X, p, q) < 0.05) P = X; }); }
+    const d = Math.hypot(P[0] - ft[0], P[1] - ft[1]); if (d < tol && (!best || d < best.d)) best = { d, p: P, how: 'wall' }; });
+  if (best) return { p: [r3(best.p[0]), r3(best.p[1])], how: 'wall' };
+  let p = [Math.round(ft[0] * 2) / 2, Math.round(ft[1] * 2) / 2];
+  if (from) { const dx = ft[0] - from[0], dy = ft[1] - from[1]; const ang = Math.atan2(dy, dx), a45 = Math.round(ang / (Math.PI / 4)) * (Math.PI / 4); if (Math.abs(ang - a45) < 0.14) { const L2 = Math.round(Math.hypot(dx, dy) * 2) / 2; p = [r3(from[0] + Math.cos(a45) * L2), r3(from[1] + Math.sin(a45) * L2)]; } }
+  return { p, how: 'grid' };
+}
+function hitIWall(ft) { const tol = 12 / SK.view.s; let best = null; IW().filter(w => here(w)).forEach(w => { const d = segDist(ft, w.a, w.b); if (d < tol && (!best || d < best.d)) best = { d, w }; }); return best ? best.w : null; }
+function addIWall(a, b) { if (Math.hypot(b[0] - a[0], b[1] - a[1]) < 0.3) return false; pushUndo(); IW().push({ id: uid(), a: [r3(a[0]), r3(a[1])], b: [r3(b[0]), r3(b[1])], level: SK.level, pg: SK.pg }); markDirty(); return true; }
+function drawIWalls(g, T, s, list, selId) { list.forEach(w => { const [X1, Y1] = T(w.a), [X2, Y2] = T(w.b); g.strokeStyle = w.id === selId ? '#ff7a00' : '#222'; g.lineWidth = w.id === selId ? 4 : Math.max(1.3, Math.min(3, s * 0.12)); g.lineCap = 'round'; g.beginPath(); g.moveTo(X1, Y1); g.lineTo(X2, Y2); g.stroke(); g.lineCap = 'butt'; }); }
+/* a door dropped near a wall lines up on it, opening into the room */
+function seatDoor(y, pt) {
+  let best = null; segsHere().forEach(sg => { const P = projOn(pt, sg.p, sg.q); const d = Math.hypot(P[0] - pt[0], P[1] - pt[1]); if (d < 3 && (!best || d < best.d)) best = { d, P, ...sg }; });
+  if (!best) return false;
+  const th = Math.atan2(best.q[1] - best.p[1], best.q[0] - best.p[0]); const place = rot => { const ph = -rot * Math.PI / 180, off = WALL_Y(y); y.rot = norm360(rot); y.x = r3(best.P[0] + off * Math.sin(ph)); y.y = r3(best.P[1] - off * Math.cos(ph)); return [Math.sin(ph), -Math.cos(ph)]; };
+  const into = place(-th * 180 / Math.PI); // swing side = local −y
+  if (best.a && best.a.closed) { const tp = [best.P[0] + into[0] * 1.2, best.P[1] + into[1] * 1.2]; if (!inPoly(tp, shape(best.a))) place(-th * 180 / Math.PI + 180); }
+  return true;
+}
+function gapFill(y) { // the opening takes the colour of the room it opens into
+  if (!y || y.x === undefined || typeof FILL !== 'function' || !SK.sk) return null; const ph = -(y.rot || 0) * Math.PI / 180, off = WALL_Y(y); const P = [y.x - off * Math.sin(ph) + Math.sin(ph) * 0.6, y.y + off * Math.cos(ph) - Math.cos(ph) * 0.6];
+  const c = SK.sk.areas.filter(a => a.closed && a.level === y.level && PG(a) === PG(y) && a.pts.length > 2 && inPoly(P, shape(a))).sort((a, b) => polyArea(shape(a)) - polyArea(shape(b)))[0]; return c ? FILL(c) : null; }
+function flipSwing(y) { const ph = -(y.rot || 0) * Math.PI / 180, off = WALL_Y(y); const P = [y.x - off * Math.sin(ph), y.y + off * Math.cos(ph)]; y.rot = norm360((y.rot || 0) + 180); const ph2 = -y.rot * Math.PI / 180; y.x = r3(P[0] + off * Math.sin(ph2)); y.y = r3(P[1] - off * Math.cos(ph2)); y.flip = !y.flip; }
+
+/* ---------- floor plan underlay: a picture or PDF page to trace over (shown faintly, never printed) ---------- */
+const UL = () => (SK.sk.under = SK.sk.under || []);
+const ulImgs = new Map();
+function ulImage(u) { if (ulImgs.has(u.id)) return ulImgs.get(u.id); const im = new Image(); ulImgs.set(u.id, im); DB.get('sketches', 'under:' + u.id).then(r => { if (r && r.src) { im.onload = () => draw(); im.src = r.src; } }).catch(() => {}); return im; }
+function drawUnder() { UL().filter(u => here(u) && !u.hide).forEach(u => { const im = ulImage(u); if (!im.complete || !im.naturalWidth) return; const [X, Y] = toScr([u.x, u.y]); const s = SK.view.s;
+  ctx.save(); ctx.globalAlpha = u.op ?? 0.35; ctx.translate(X, Y); ctx.rotate((u.rot || 0) * Math.PI / 180); ctx.drawImage(im, 0, 0, u.iw * u.k * s, u.ih * u.k * s); ctx.restore(); });
+  if (SK.mode === 'uscale' && SK.us && SK.us.a) { const [X, Y] = toScr(SK.us.a); ctx.strokeStyle = '#d00'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(X, Y, 9, 0, 7); ctx.moveTo(X - 14, Y); ctx.lineTo(X + 14, Y); ctx.moveTo(X, Y - 14); ctx.lineTo(X, Y + 14); ctx.stroke(); } }
+const ulHere = () => UL().find(u => here(u)) || null;
+async function ulLoad(file) {
+  let canvas; toast('Opening the floor plan…');
+  if (/\.pdf$/i.test(file.name) || file.type === 'application/pdf') {
+    const pdfjs = await import('./pdf.min.mjs'); pdfjs.GlobalWorkerOptions.workerSrc = './pdf.worker.min.mjs';
+    const doc = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()), isEvalSupported: false }).promise;
+    let pn = 1; if (doc.numPages > 1) { pn = await new Promise(res => askNumber(`Which page? (1–${doc.numPages})`, 'The page of the PDF with the floor plan for this level.', '1', v => res(Math.max(1, Math.min(doc.numPages, Math.round(v)))))); }
+    const pg = await doc.getPage(pn); const vp = pg.getViewport({ scale: 1 }); const v2 = pg.getViewport({ scale: Math.min(3, 2400 / Math.max(vp.width, vp.height)) });
+    canvas = document.createElement('canvas'); canvas.width = Math.round(v2.width); canvas.height = Math.round(v2.height); const g = canvas.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, canvas.width, canvas.height); await pg.render({ canvasContext: g, viewport: v2 }).promise;
+  } else {
+    const url = URL.createObjectURL(file); const im = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => rej(new Error('That picture could not be opened')); i.src = url; });
+    const sc = Math.min(1, 2400 / Math.max(im.naturalWidth, im.naturalHeight)); canvas = document.createElement('canvas'); canvas.width = Math.round(im.naturalWidth * sc); canvas.height = Math.round(im.naturalHeight * sc); canvas.getContext('2d').drawImage(im, 0, 0, canvas.width, canvas.height); URL.revokeObjectURL(url);
+  }
+  const src = canvas.toDataURL('image/jpeg', 0.85); const id = uid(); await DB.put('sketches', { id: 'under:' + id, src });
+  UL().filter(u => here(u)).forEach(u => { u.hide = true; });
+  const W = cv.clientWidth, H = cv.clientHeight, k = 60 / canvas.width, c = toFt(W / 2, H / 2);
+  UL().push({ id, level: SK.level, pg: SK.pg, iw: canvas.width, ih: canvas.height, k, x: r3(c[0] - canvas.width * k / 2), y: r3(c[1] - canvas.height * k / 2), op: 0.35, rot: 0, name: file.name });
+  markDirty(); draw(); SK.mode = 'uscale'; SK.us = { a: null }; SK.sel = null; renderPanel(); toast('Now set the scale: tap the two ends of the scale bar or of a wall with a known length');
+}
+function ulScale(u, a, b, feet) { const m = Math.hypot(b[0] - a[0], b[1] - a[1]); if (!(m > 0.01) || !(feet > 0)) return; const r = feet / m; u.k *= r; u.x = r3(a[0] + (u.x - a[0]) * r); u.y = r3(a[1] + (u.y - a[1]) * r); markDirty(); draw(); }
+function openUnderlay() {
+  const u = ulHere();
+  openSheet(`<h3>Floor plan underlay</h3><p class="help">Put a floor plan picture or a PDF page under this level (${esc(LEVEL_NAME(SK.level))}) and trace over it. It shows faintly on screen only and is never printed or sent to SFREP. Your measured wall lengths always set the square footage.</p>
+    <div class="grid-btns col"><label class="btn">${u ? 'Replace with another plan…' : 'Choose a floor plan (picture or PDF)…'}<input type="file" id="ulFile" accept="image/*,application/pdf" hidden></label>
+    ${u ? `<button class="btn" id="ulScale">Set the scale (tap two points)</button><button class="btn" id="ulMove">Move it to line it up</button>
+    <div class="lrow"><span><b>Strength</b> ${Math.round((u.op ?? 0.35) * 100)}%</span><span><button class="btn sm" data-op="-0.1">Lighter</button> <button class="btn sm" data-op="0.1">Darker</button></span></div>
+    <div class="lrow"><span><b>Turn</b></span><span><button class="btn sm" data-ur="-90">↺ 90°</button> <button class="btn sm" data-ur="90">↻ 90°</button></span></div>
+    <button class="btn" id="ulHide">${u.hide ? 'Show it' : 'Hide it'}</button><button class="btn danger" id="ulDel">Remove it</button>` : ''}</div>
+    <div class="row"><button class="btn" data-close>Close</button></div>`, sh => {
+      sh.querySelector('#ulFile').onchange = async e => { const f = e.target.files[0]; if (!f) return; closeSheet(); try { await ulLoad(f); } catch (err) { toast('Could not open that plan: ' + (err.message || err)); } };
+      if (!u) return;
+      sh.querySelector('#ulScale').onclick = () => { closeSheet(); u.hide = false; SK.mode = 'uscale'; SK.us = { a: null }; SK.sel = null; draw(); renderPanel(); };
+      sh.querySelector('#ulMove').onclick = () => { closeSheet(); u.hide = false; SK.mode = 'umove'; SK.sel = null; draw(); renderPanel(); };
+      sh.querySelectorAll('[data-op]').forEach(b => b.onclick = () => { u.op = Math.max(0.1, Math.min(0.9, Math.round(((u.op ?? 0.35) + +b.dataset.op) * 10) / 10)); markDirty(); draw(); openUnderlay(); });
+      sh.querySelectorAll('[data-ur]').forEach(b => b.onclick = () => { const c = [u.x + u.iw * u.k / 2, u.y + u.ih * u.k / 2]; u.rot = norm360((u.rot || 0) + +b.dataset.ur); const t = u.rot * Math.PI / 180, cx = u.iw * u.k / 2, cy = u.ih * u.k / 2; u.x = r3(c[0] - (cx * Math.cos(t) - cy * Math.sin(t))); u.y = r3(c[1] - (cx * Math.sin(t) + cy * Math.cos(t))); markDirty(); draw(); });
+      sh.querySelector('#ulHide').onclick = () => { u.hide = !u.hide; markDirty(); draw(); openUnderlay(); };
+      sh.querySelector('#ulDel').onclick = () => { SK.sk.under = UL().filter(x => x !== u); DB.del('sketches', 'under:' + u.id).catch(() => {}); ulImgs.delete(u.id); closeSheet(); markDirty(); draw(); toast('Underlay removed'); };
+    });
+}
 
 /* ---------- sketch pages: the main house on one page, guest house / garage / pool house on others (each prints on its own sheet) ---------- */
 const PG = o => (o && o.pg) || 1; const here = o => o.level === SK.level && PG(o) === SK.pg; const sameSpot = (o, a) => o.level === a.level && PG(o) === PG(a);
@@ -241,7 +337,7 @@ function snapshotVersion(why) {
   const v = SK.sk.versions = SK.sk.versions || [];
   const last = v[v.length - 1]; const now = Date.now();
   if (last && now - last.ts < 60000 && why === 'auto') return;
-  v.push({ ts: now, why, areas: JSON.parse(JSON.stringify(SK.sk.areas)), labels: JSON.parse(JSON.stringify(SK.sk.labels)), symbols: JSON.parse(JSON.stringify(SK.sk.symbols || [])) });
+  v.push({ ts: now, why, areas: JSON.parse(JSON.stringify(SK.sk.areas)), labels: JSON.parse(JSON.stringify(SK.sk.labels)), symbols: JSON.parse(JSON.stringify(SK.sk.symbols || [])), iwalls: JSON.parse(JSON.stringify(SK.sk.iwalls || [])) });
   if (v.length > 25) v.splice(0, v.length - 25);
 }
 async function saveLib() { try { await DB.put('sketches', SK.lib); } catch (e) {} }
@@ -267,9 +363,9 @@ async function pushToInspection(withImage) {
 function setSaved(ok) { const s = document.getElementById('skSaved'); if (s) { s.textContent = !DB.persistent ? 'NOT SAVED – storage closed' : ok ? 'Saved ✓ ' + new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : 'Not saved!'; s.classList.toggle('bad', !ok || !DB.persistent); } }
 
 /* ---------- undo ---------- */
-function pushUndo() { SK.undo.push(JSON.stringify({ a: SK.sk.areas, l: SK.sk.labels, y: SK.sk.symbols || [], p: SK.sk.pages || null })); if (SK.undo.length > 60) SK.undo.shift(); SK.redo = []; }
-function doUndo() { if (!SK.undo.length) return toast('Nothing to undo'); SK.redo.push(JSON.stringify({ a: SK.sk.areas, l: SK.sk.labels, y: SK.sk.symbols || [], p: SK.sk.pages || null })); const s = JSON.parse(SK.undo.pop()); SK.sk.areas = s.a; SK.sk.labels = s.l; SK.sk.symbols = s.y || []; SK.sk.pages = s.p || undefined; if (!pageList().some(x => x.n === SK.pg)) SK.pg = 1; renderLevels(); if (SK.drawId && !SK.sk.areas.find(a => a.id === SK.drawId)) { SK.drawId = null; SK.mode = 'select'; } SK.sel = null; markDirty(); draw(); renderPanel(); }
-function doRedo() { if (!SK.redo.length) return toast('Nothing to redo'); SK.undo.push(JSON.stringify({ a: SK.sk.areas, l: SK.sk.labels, y: SK.sk.symbols || [], p: SK.sk.pages || null })); const s = JSON.parse(SK.redo.pop()); SK.sk.areas = s.a; SK.sk.labels = s.l; SK.sk.symbols = s.y || []; SK.sk.pages = s.p || undefined; if (!pageList().some(x => x.n === SK.pg)) SK.pg = 1; renderLevels(); SK.sel = null; markDirty(); draw(); renderPanel(); }
+function pushUndo() { SK.undo.push(JSON.stringify({ a: SK.sk.areas, l: SK.sk.labels, y: SK.sk.symbols || [], p: SK.sk.pages || null, w: SK.sk.iwalls || [] })); if (SK.undo.length > 60) SK.undo.shift(); SK.redo = []; }
+function doUndo() { if (!SK.undo.length) return toast('Nothing to undo'); SK.redo.push(JSON.stringify({ a: SK.sk.areas, l: SK.sk.labels, y: SK.sk.symbols || [], p: SK.sk.pages || null, w: SK.sk.iwalls || [] })); const s = JSON.parse(SK.undo.pop()); SK.sk.areas = s.a; SK.sk.labels = s.l; SK.sk.symbols = s.y || []; SK.sk.pages = s.p || undefined; SK.sk.iwalls = s.w || []; if (!pageList().some(x => x.n === SK.pg)) SK.pg = 1; renderLevels(); if (SK.drawId && !SK.sk.areas.find(a => a.id === SK.drawId)) { SK.drawId = null; SK.mode = 'select'; } SK.sel = null; markDirty(); draw(); renderPanel(); }
+function doRedo() { if (!SK.redo.length) return toast('Nothing to redo'); SK.undo.push(JSON.stringify({ a: SK.sk.areas, l: SK.sk.labels, y: SK.sk.symbols || [], p: SK.sk.pages || null, w: SK.sk.iwalls || [] })); const s = JSON.parse(SK.redo.pop()); SK.sk.areas = s.a; SK.sk.labels = s.l; SK.sk.symbols = s.y || []; SK.sk.pages = s.p || undefined; SK.sk.iwalls = s.w || []; if (!pageList().some(x => x.n === SK.pg)) SK.pg = 1; renderLevels(); SK.sel = null; markDirty(); draw(); renderPanel(); }
 
 /* ---------- view transforms ---------- */
 let cv, ctx, dpr = 1;
@@ -293,6 +389,7 @@ function draw() {
   const [fx0, fy0] = toFt(0, 0), [fx1, fy1] = toFt(W, H);
   for (let x = Math.floor(fx0 / step) * step; x <= fx1; x += step) { const X = toScr([x, 0])[0]; ctx.strokeStyle = x % 10 === 0 ? '#cfd6de' : x % 5 === 0 ? '#e1e6eb' : '#f0f2f4'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(X, 0); ctx.lineTo(X, H); ctx.stroke(); }
   for (let y = Math.floor(fy0 / step) * step; y <= fy1; y += step) { const Y = toScr([0, y])[1]; ctx.strokeStyle = y % 10 === 0 ? '#cfd6de' : y % 5 === 0 ? '#e1e6eb' : '#f0f2f4'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(0, Y); ctx.lineTo(W, Y); ctx.stroke(); }
+  drawUnder();
   const C = computeAreas();
   // other levels as faint outlines for lining up floors
   SK.sk.areas.filter(a => PG(a) === SK.pg && a.level !== SK.level && a.pts.length > 1).forEach(a => { ctx.strokeStyle = 'rgba(70,80,120,.55)'; ctx.lineWidth = 1.6; pathOf(a); ctx.stroke();
@@ -328,6 +425,9 @@ function draw() {
     const L = wallLen(d.from, d.pt); ctx.font = '700 20px system-ui'; ctx.textAlign = 'left'; const t = `${r1(L).toFixed(1)}'${d.snap === 'corner' ? ' → corner' : d.snap === 'dot' ? ' · on dot' : d.snap === 'align' ? ' · lined up' : d.snap === '45' ? ' · ' + Math.round(d.ang) + '°' : ''}`; const w = ctx.measureText(t).width;
     ctx.fillStyle = 'rgba(255,255,255,.9)'; ctx.fillRect(X2 + 12, Y2 - 34, w + 12, 28); ctx.fillStyle = '#c75b00'; ctx.fillText(t, X2 + 18, Y2 - 13); }
   if (SK.cursor) { const [X, Y] = toScr(SK.cursor); ctx.strokeStyle = '#d00'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(X - 16, Y); ctx.lineTo(X + 16, Y); ctx.moveTo(X, Y - 16); ctx.lineTo(X, Y + 16); ctx.stroke(); ctx.beginPath(); ctx.arc(X, Y, 8, 0, 7); ctx.stroke(); }
+  drawIWalls(ctx, toScr, s, IW().filter(w => here(w)), SK.sel && SK.sel.type === 'iwall' ? SK.sel.id : null);
+  if (SK.sel && SK.sel.type === 'iwall') { const w = IW().find(x => x.id === SK.sel.id); if (w) { const [X1, Y1] = toScr(w.a), [X2, Y2] = toScr(w.b); ctx.font = '700 14px system-ui'; ctx.fillStyle = '#c75b00'; ctx.textAlign = 'center'; ctx.fillText(r1(wallLen(w.a, w.b)).toFixed(1) + "'", (X1 + X2) / 2, (Y1 + Y2) / 2 - 8); } }
+  if (SK.mode === 'iwall' && SK.iw && SK.iw.start) { const [X, Y] = toScr(SK.iw.start); ctx.fillStyle = '#ff7a00'; ctx.beginPath(); ctx.arc(X, Y, 7, 0, 7); ctx.fill(); }
   (SK.sk.symbols || []).filter(x => here(x)).forEach(x => drawSymbol(ctx, x, toScr, SK.view.s, SK.sel && SK.sel.type === 'symbol' && SK.sel.id === x.id));
   // labels
   SK.sk.labels.filter(l => here(l)).forEach(l => { const [X, Y] = toScr([l.x, l.y]); const sel = SK.sel && SK.sel.type === 'label' && SK.sel.id === l.id;
@@ -474,6 +574,7 @@ function rotateAll(deg, quiet) {
   const c = quiet && SK.rotC ? SK.rotC : [(Math.min(...pts.map(p => p[0])) + Math.max(...pts.map(p => p[0]))) / 2, (Math.min(...pts.map(p => p[1])) + Math.max(...pts.map(p => p[1]))) / 2]; if (quiet) SK.rotC = c;
   SK.sk.areas.forEach(a => a.pts = rotatePts(a.pts, deg, c)); SK.sk.labels.forEach(l => { const [p] = rotatePts([[l.x, l.y]], deg, c); l.x = p[0]; l.y = p[1]; });
   (SK.sk.symbols || []).forEach(y => { const [p] = rotatePts([[y.x, y.y]], deg, c); y.x = r3(p[0]); y.y = r3(p[1]); y.rot = norm360((y.rot || 0) + deg); });
+  IW().forEach(w => { const [a, b] = rotatePts([w.a, w.b], deg, c); w.a = [r3(a[0]), r3(a[1])]; w.b = [r3(b[0]), r3(b[1])]; });
   SK.sk.areas.forEach(a => { if (a.nameAt && typeof a.nameAt === 'object') { const [p] = rotatePts([[a.nameAt.x, a.nameAt.y]], deg, c); a.nameAt = { x: r3(p[0]), y: r3(p[1]) }; } });
   if (!quiet) { snapshotVersion('rotate'); fitView(); } markDirty(); draw();
 }
@@ -482,6 +583,7 @@ function deleteSel() {
   if (SK.sel.type === 'area' || SK.sel.type === 'wall') SK.sk.areas = SK.sk.areas.filter(a => a.id !== SK.sel.id);
   if (SK.sel.type === 'label') SK.sk.labels = SK.sk.labels.filter(l => l.id !== SK.sel.id);
   if (SK.sel.type === 'symbol') SK.sk.symbols = (SK.sk.symbols || []).filter(l => l.id !== SK.sel.id);
+  if (SK.sel.type === 'iwall') SK.sk.iwalls = IW().filter(w => w.id !== SK.sel.id);
   SK.sel = null; snapshotVersion('delete'); markDirty(); draw(); renderPanel();
 }
 
@@ -512,9 +614,13 @@ function onDown(e) {
   if (SK.mode === 'select') { const c = nearCorner(ft, 18); if (c) { const g = { type: 'tap', x: e.offsetX, y: e.offsetY, t: Date.now(), moved: false, v: { ...SK.view }, drag: null, corner: [...c] };
       g.hold = setTimeout(() => { if (gest === g && !g.moved) { gest = { type: 'startdrag', at: g.corner, x: g.x, y: g.y, moved: false, held: true }; longPressStart(g.corner); } }, 450); gest = g; return; } }
   let drag = null;
+  if (SK.mode === 'umove') { const u = ulHere(); if (u) drag = { kind: 'under', u, start: ft, orig: [u.x, u.y] }; }
   if (SK.mode === 'select' && SK.sel) {
     if (SK.sel.type === 'area') { const a = SK.sk.areas.find(x => x.id === SK.sel.id); if (a && a.closed && hitName(ft) === a) SK.grabbed = a.id, drag = { kind: 'name', a, start: ft, orig: namePt(a, computeAreas(), SK.view.s, NAME_PX()) };
-      else if (a && a.closed && inPoly(ft, shape(a))) drag = { kind: 'area', a, start: ft, orig: a.pts.map(p => [...p]), nameOrig: a.nameAt && typeof a.nameAt === 'object' ? [a.nameAt.x, a.nameAt.y] : null }; }
+      else if (a && a.closed && inPoly(ft, shape(a))) { const sh0 = shape(a), inA = p => insideOrOn(p, sh0);
+        drag = { kind: 'area', a, start: ft, orig: a.pts.map(p => [...p]), nameOrig: a.nameAt && typeof a.nameAt === 'object' ? [a.nameAt.x, a.nameAt.y] : null,
+          inner: IW().filter(w => sameSpot(w, a) && inA(w.a) && inA(w.b)).map(w => ({ w, a0: [...w.a], b0: [...w.b] })),
+          things: [...(SK.sk.symbols || []), ...SK.sk.labels].filter(o => sameSpot(o, a) && inA([o.x, o.y]) && !SK.sk.areas.some(b => b !== a && sameSpot(b, a) && b.closed && polyArea(shape(b)) < polyArea(sh0) && inPoly([o.x, o.y], shape(b)) && !inA(centroid(shape(b))) )).map(o => ({ o, x0: o.x, y0: o.y })) }; } }
     if (SK.sel.type === 'symbol') { const y = (SK.sk.symbols || []).find(x => x.id === SK.sel.id); if (y && hitSymbol(ft) === y) drag = { kind: 'label', l: y, start: ft, orig: [y.x, y.y] }; }
     if (SK.sel.type === 'label') { const l = SK.sk.labels.find(x => x.id === SK.sel.id); if (l && hitLabel(ft) === l) drag = { kind: 'label', l, start: ft, orig: [l.x, l.y] }; }
   }
@@ -533,8 +639,10 @@ function onMove(e) {
   if (!gest || gest.type !== 'tap') return;
   const dx = e.offsetX - gest.x, dy = e.offsetY - gest.y; if (!gest.moved && Math.hypot(dx, dy) < 8) return; gest.moved = true; if (gest.hold) clearTimeout(gest.hold);
   if (gest.drag) { const ft = toFt(e.offsetX, e.offsetY); const ddx = Math.round((ft[0] - gest.drag.start[0]) * 10) / 10, ddy = Math.round((ft[1] - gest.drag.start[1]) * 10) / 10;
-    if (!gest.undoPushed) { pushUndo(); gest.undoPushed = true; }
-    if (gest.drag.kind === 'area') { gest.drag.a.pts = gest.drag.orig.map(([x, y]) => [r3(x + ddx), r3(y + ddy)]); if (gest.drag.nameOrig) gest.drag.a.nameAt = { x: r3(gest.drag.nameOrig[0] + ddx), y: r3(gest.drag.nameOrig[1] + ddy) }; }
+    if (!gest.undoPushed && gest.drag.kind !== 'under') { pushUndo(); gest.undoPushed = true; }
+    if (gest.drag.kind === 'under') { gest.drag.u.x = r3(gest.drag.orig[0] + (ft[0] - gest.drag.start[0])); gest.drag.u.y = r3(gest.drag.orig[1] + (ft[1] - gest.drag.start[1])); draw(); return; }
+    if (gest.drag.kind === 'area') { gest.drag.a.pts = gest.drag.orig.map(([x, y]) => [r3(x + ddx), r3(y + ddy)]); if (gest.drag.nameOrig) gest.drag.a.nameAt = { x: r3(gest.drag.nameOrig[0] + ddx), y: r3(gest.drag.nameOrig[1] + ddy) };
+      (gest.drag.inner || []).forEach(r => { r.w.a = [r3(r.a0[0] + ddx), r3(r.a0[1] + ddy)]; r.w.b = [r3(r.b0[0] + ddx), r3(r.b0[1] + ddy)]; }); (gest.drag.things || []).forEach(r => { r.o.x = r3(r.x0 + ddx); r.o.y = r3(r.y0 + ddy); }); }
     else if (gest.drag.kind === 'name') gest.drag.a.nameAt = { x: r3(gest.drag.orig[0] + ddx), y: r3(gest.drag.orig[1] + ddy) }; else { gest.drag.l.x = r3(gest.drag.orig[0] + ddx); gest.drag.l.y = r3(gest.drag.orig[1] + ddy); }
     draw(); return; }
   SK.view = { ...gest.v, ox: gest.v.ox + dx, oy: gest.v.oy + dy }; draw();
@@ -565,11 +673,16 @@ function tapAt(ft) {
   if (SK.mode === 'start') { setCursor(snapPoint(ft)); draw(); renderPanel(); return; }
   if (SK.mode === 'label') { placeLabel(SK.pendingLabel.text, SK.pendingLabel.room, ft); return; }
   if (SK.mode === 'symbol') { placeSymbol(SK.pendingSym, ft); return; }
+  if (SK.mode === 'iwall') { const r = iwSnap(ft, SK.iw && SK.iw.start); if (!SK.iw.start) SK.iw.start = r.p; else if (addIWall(SK.iw.start, r.p)) SK.iw.start = r.p; draw(); renderPanel(); return; }
+  if (SK.mode === 'uscale') { if (!SK.us.a) { SK.us.a = ft; draw(); renderPanel(); return; } const a = SK.us.a, b = ft, u = ulHere(); SK.us = { a: null };
+    askNumber('How long is that, in feet?', 'The real length between the two points you tapped: the scale bar, or a dimension printed on the plan.', '', v => { if (u) ulScale(u, a, b, v); SK.mode = 'select'; renderPanel(); toast('Scale set – trace over the plan'); }); return; }
+  if (SK.mode === 'umove') return;
   if (SK.mode === 'draw') return; // while drawing, taps do nothing (walls come from the keypad)
   SK.curve = null;
   const l = hitLabel(ft); if (l) { SK.sel = { type: 'label', id: l.id }; draw(); renderPanel(); return; }
   const sy = hitSymbol(ft); if (sy) { SK.sel = { type: 'symbol', id: sy.id }; SK.cursor = null; draw(); renderPanel(); return; }
   const an = hitName(ft); if (an) { SK.sel = { type: 'area', id: an.id }; SK.cursor = null; draw(); renderPanel(); return; }
+  const iw = hitIWall(ft); if (iw) { SK.sel = { type: 'iwall', id: iw.id }; SK.cursor = null; draw(); renderPanel(); return; }
   const w = hitWall(ft); if (w) { SK.sel = { type: 'wall', id: w.id, i: w.i }; draw(); renderPanel(); return; }
   const a = hitArea(ft); SK.sel = a ? { type: 'area', id: a.id } : null; if (a) SK.cursor = null; else setCursor(ft); draw(); renderPanel();
 }
@@ -702,6 +815,9 @@ function renderPanel() {
   if (ctxHtml) {} else if (SK.mode === 'start') ctxHtml = `<div class="ctx"><b>Starting corner for the ${esc(defOf(SK.pendingDef).name)}:</b> ${SK.cursor ? 'cursor dropped –' : 'tap to drop the cursor, or press on a corner and drag to draw the first wall.'}
       ${SK.cursor ? `<button class="btn sm" id="skJump">⤓ Jump to nearest corner</button><button class="btn primary sm" id="skStartHere">Start here</button>` : ''}<button class="btn sm" id="skCancelStart">Cancel</button></div>`;
   else if (SK.mode === 'symbol') ctxHtml = `<div class="ctx"><b>Tap where the ${esc(SYMBOLS[SK.pendingSym].n.toLowerCase())} goes.</b> <button class="btn sm" id="skCancelLabel">Cancel</button></div>`;
+  else if (SK.mode === 'iwall') ctxHtml = `<div class="ctx"><b>Interior walls:</b> ${SK.iw && SK.iw.start ? 'tap where this wall ends (it snaps to walls and corners), or type a length and press an arrow. Keep tapping to continue the wall.' : 'tap where the wall starts – on an outside wall, a corner, or anywhere.'} <button class="btn sm" id="iwBreak" ${SK.iw && SK.iw.start ? '' : 'disabled'}>Start a separate wall</button><button class="btn primary sm" id="iwDone">Done</button></div>`;
+  else if (SK.mode === 'uscale') ctxHtml = `<div class="ctx"><b>Set the scale:</b> ${SK.us && SK.us.a ? 'now tap the other end.' : 'tap one end of the scale bar, or of a wall whose length is printed on the plan.'} <button class="btn sm" id="skCancelLabel">Cancel</button></div>`;
+  else if (SK.mode === 'umove') ctxHtml = `<div class="ctx"><b>Move the floor plan:</b> drag it until it lines up with your walls. <button class="btn primary sm" id="skCancelLabel">Done</button></div>`;
   else if (SK.mode === 'label') ctxHtml = `<div class="ctx"><b>Tap where “${esc(SK.pendingLabel.text)}” goes.</b> <button class="btn sm" id="skCancelLabel">Cancel</button></div>`;
   else if (a) ctxHtml = `<div class="ctx"><b>Drawing: ${esc(a.name || defOf(a.def).name)}</b> · ${a.pts.length - 1} wall${a.pts.length === 2 ? '' : 's'} · type a length + arrow, drag from the orange point, or tap a blue dot to line up with another corner. Tap the green start to close.${a.pts.length >= 2 ? ' <button class="btn sm" id="skCurveLast">⌒ Curve last wall</button>' : ''}</div>`;
   else if (sel && sel.type === 'wall') { const ar = SK.sk.areas.find(x => x.id === sel.id); const ws = walls(ar).find(w => w[0] === sel.i); const L = ws ? r1(wallLen(ws[1], ws[2])) : 0; const closing = ar.closed && sel.i === ar.pts.length - 1;
@@ -717,8 +833,11 @@ function renderPanel() {
       <span class="help">Drag the area to move it · drag its name to put the name anywhere.</span></div>`; }
   else if (sel && sel.type === 'symbol') { const y = (SK.sk.symbols || []).find(x => x.id === sel.id);
     ctxHtml = `<div class="ctx"><b>${esc(SYMBOLS[y.type].n)}</b> · width <button class="btn sm" data-sz="w:-0.5">−</button><input class="txt num sz" id="syW" inputmode="decimal" value="${y.w.toFixed(1)}"><button class="btn sm" data-sz="w:0.5">+</button>
-      ${y.type === 'spiral' ? '' : `length <button class="btn sm" data-sz="h:-0.5">−</button><input class="txt num sz" id="syH" inputmode="decimal" value="${y.h.toFixed(1)}"><button class="btn sm" data-sz="h:0.5">+</button>`} ft
+      ${y.type === 'spiral' || DOORISH(y.type) ? '' : `length <button class="btn sm" data-sz="h:-0.5">−</button><input class="txt num sz" id="syH" inputmode="decimal" value="${y.h.toFixed(1)}"><button class="btn sm" data-sz="h:0.5">+</button>`} ft
+      ${y.type === 'door' || y.type === 'entry' ? '<button class="btn sm" id="syHinge">⇄ Hinge side</button><button class="btn sm" id="sySwing">⇅ Swing in / out</button>' : y.type === 'dbldoor' ? '<button class="btn sm" id="sySwing">⇅ Swing in / out</button>' : ''}
       <button class="btn sm danger" id="skDel">Delete</button><div class="nmpos"><b>Turn</b> ${rotBar('s' + y.id)}</div><span class="help">Drag it to move it.</span></div>`; }
+  else if (sel && sel.type === 'iwall') { const w = IW().find(x => x.id === sel.id); const L = w ? r1(wallLen(w.a, w.b)) : 0;
+    ctxHtml = `<div class="ctx"><b>Interior wall: ${L.toFixed(1)} ft</b> <label class="inl">New length <input id="iwLen" class="txt num" inputmode="decimal" value="${L.toFixed(1)}"></label><button class="btn primary sm" id="iwSet">Apply</button><button class="btn sm danger" id="skDel">Delete</button><span class="help">Interior walls never change the square footage.</span></div>`; }
   else if (sel && sel.type === 'label') { const l = SK.sk.labels.find(x => x.id === sel.id);
     const lk = l.room && l.room.id && ((SK.ins.lists || {})[l.room.list] || []).find(x => x.id === l.room.id);
     ctxHtml = `<div class="ctx"><b>${esc(l.text)}</b> · ${l.room ? (l.room.gone ? 'room was removed on the Interior tab' : lk ? 'linked to ' + esc(itemName(l.room.list, lk)) + ' on the Interior tab' : esc(roomWord(l.room)) + ' – added to the Interior tab when saved') : 'label only'} <button class="btn sm" id="skLblEdit">Change</button><button class="btn sm danger" id="skDel">Delete</button><span class="help">Drag it to move it.</span></div>`; }
@@ -744,6 +863,7 @@ function renderPanel() {
       <button class="btn big" id="skClose" ${a ? '' : 'disabled'}>Close area</button>
       <button class="btn big" id="skDone" ${a ? '' : 'disabled'}>Stop (leave open)</button>
       <div class="two"><button class="btn big" id="skLabel">Aa Label</button><button class="btn big" id="skSym">◫ Symbol</button></div>
+      <div class="two"><button class="btn big ${SK.mode === 'iwall' ? 'primary' : ''}" id="skIWall">┼ Interior wall</button><button class="btn big" id="skDoor">◜ Door</button></div>
       <div class="two"><button class="btn big" id="skCenter">◎ Center</button><button class="btn big" id="skFit">Fit all</button></div>
     </div>
   </div>`;
@@ -753,7 +873,7 @@ function renderPanel() {
   el.querySelectorAll('[data-k]').forEach(b => b.addEventListener('pointerdown', e => { e.preventDefault(); const k = b.dataset.k;
     b.classList.add('hit'); setTimeout(() => b.classList.remove('hit'), 120);
     if (k === '.' && SK.entry.includes('.')) return; if (SK.entry.includes('.') && SK.entry.split('.')[1].length >= 1) return toast('Lengths are to 0.1 ft'); SK.entry += k; showEntry(); }));
-  el.querySelectorAll('[data-dx]').forEach(b => b.onclick = () => addWall(+b.dataset.dx, +b.dataset.dy));
+  el.querySelectorAll('[data-dx]').forEach(b => b.onclick = () => { if (SK.mode === 'iwall') { const L = parseFloat(SK.entry); if (!SK.iw.start) return toast('Tap where the wall starts first'); if (!(L > 0)) return toast('Type the length first'); const dx = +b.dataset.dx, dy = +b.dataset.dy, n = Math.hypot(dx, dy); const e = [SK.iw.start[0] + dx / n * L, SK.iw.start[1] + dy / n * L]; if (addIWall(SK.iw.start, e)) SK.iw.start = [r3(e[0]), r3(e[1])]; SK.entry = ''; draw(); renderPanel(); return; } addWall(+b.dataset.dx, +b.dataset.dy); });
   on('skBs', backspace);
   on('skAngle', () => { if (!curArea()) return toast('Start an area first'); const ld = lastDir(); SK.dial = { ang: SK.lastAngle ?? (ld ?? 0) }; renderPanel(); });
   on('skNew', openDefs); on('skClose', closeArea); on('skDone', () => finishArea(false)); on('skLabel', () => openLabels()); on('skFit', () => { fitView(); draw(); }); on('skCenter', centreNow);
@@ -779,7 +899,12 @@ function renderPanel() {
   on('skDel', () => { if (sel.type === 'label' || sel.type === 'symbol') { deleteSel(); toast((sel.type === 'label' ? 'Label' : 'Symbol') + ' deleted – Undo brings it back'); } else if (confirm('Delete this area?')) deleteSel(); });
   on('skLblEdit', () => openLabels(SK.sk.labels.find(x => x.id === sel.id)));
   on('skSym', () => openSymbols(SK.cursor ? [...SK.cursor] : null));
-  if (sel && sel.type === 'symbol') { const y = SK.sk.symbols.find(x => x.id === sel.id); const setSz = (k, v) => { if (!(v > 0.4)) return; pushUndo(); y[k] = Math.round(v * 10) / 10; if (y.type === 'spiral') y.h = y.w; markDirty(); draw(); renderPanel(); };
+  on('skDoor', () => openSymbols(null, true));
+  on('skIWall', () => { if (curArea()) return toast('Close or stop the current area first'); SK.mode = SK.mode === 'iwall' ? 'select' : 'iwall'; SK.iw = { start: SK.cursor ? [...SK.cursor] : null }; SK.sel = null; SK.cursor = null; draw(); renderPanel(); });
+  on('iwDone', () => { SK.mode = 'select'; SK.iw = null; draw(); renderPanel(); }); on('iwBreak', () => { SK.iw.start = null; draw(); renderPanel(); });
+  on('iwSet', () => { const w = IW().find(x => x.id === sel.id); const v = parseFloat(document.getElementById('iwLen').value); const L = wallLen(w.a, w.b); if (!(v > 0.2) || !L) return; pushUndo(); w.b = [r3(w.a[0] + (w.b[0] - w.a[0]) * v / L), r3(w.a[1] + (w.b[1] - w.a[1]) * v / L)]; markDirty(); draw(); renderPanel(); });
+  if (sel && sel.type === 'symbol') { const y = SK.sk.symbols.find(x => x.id === sel.id); const setSz = (k, v) => { if (!(v > 0.4)) return; pushUndo(); y[k] = Math.round(v * 10) / 10; if (y.type === 'spiral') y.h = y.w; if (y.type === 'door' || y.type === 'entry') y.h = y.w; if (y.type === 'dbldoor') y.h = y.w / 2; markDirty(); draw(); renderPanel(); };
+    on('syHinge', () => { pushUndo(); y.flip = !y.flip; markDirty(); draw(); }); on('sySwing', () => { pushUndo(); flipSwing(y); markDirty(); draw(); });
     el.querySelectorAll('[data-sz]').forEach(b => b.onclick = () => { const [k, d] = b.dataset.sz.split(':'); setSz(k, y[k] + +d); });
     const iw = el.querySelector('#syW'); if (iw) iw.onchange = () => setSz('w', parseFloat(iw.value)); const ih = el.querySelector('#syH'); if (ih) ih.onchange = () => setSz('h', parseFloat(ih.value));
     }
@@ -933,9 +1058,9 @@ function openLabels(editing, at) {
       sh.querySelector('#lbNew').onclick = () => newOne(q.value); sh.querySelector('#lbUse').onclick = () => newOne(q.value);
     });
 }
-function placeSymbol(type, pt) { const d = SYMBOLS[type]; pushUndo(); const y = { id: uid(), type, x: r3(pt[0]), y: r3(pt[1]), w: d.w, h: d.h, rot: 0, level: SK.level, pg: SK.pg }; SK.sk.symbols = SK.sk.symbols || []; SK.sk.symbols.push(y); SK.mode = 'select'; SK.cursor = null; SK.sel = { type: 'symbol', id: y.id }; markDirty(); draw(); renderPanel(); }
-function openSymbols(at) {
-  openSheet(`<h3>Add a symbol</h3><p class="help">Tap one, then tap where it goes. You can resize and rotate it afterwards.</p><div class="grid-btns">${Object.entries(SYMBOLS).map(([k, d]) => `<button class="btn symb" data-sym="${k}"><canvas width="64" height="48" data-prev="${k}"></canvas>${esc(d.n)}</button>`).join('')}</div><div class="row"><button class="btn" data-close>Cancel</button></div>`, sh => {
+function placeSymbol(type, pt) { const d = SYMBOLS[type]; pushUndo(); const y = { id: uid(), type, x: r3(pt[0]), y: r3(pt[1]), w: d.w, h: d.h, rot: 0, level: SK.level, pg: SK.pg }; if (DOORISH(type) && !seatDoor(y, pt)) toast('Tip: drop a door right on a wall and it lines up by itself'); SK.sk.symbols = SK.sk.symbols || []; SK.sk.symbols.push(y); SK.mode = 'select'; SK.cursor = null; SK.sel = { type: 'symbol', id: y.id }; markDirty(); draw(); renderPanel(); }
+function openSymbols(at, doors) {
+  openSheet(`<h3>${doors ? 'Add a door or opening' : 'Add a symbol'}</h3><p class="help">${doors ? 'Tap one, then tap on the wall where it goes; it lines up with the wall and opens into the room. Change the width, hinge side and swing afterwards.' : 'Tap one, then tap where it goes. You can resize and rotate it afterwards.'}</p><div class="grid-btns">${Object.entries(SYMBOLS).filter(([k]) => doors ? DOORISH(k) : !DOORISH(k)).map(([k, d]) => `<button class="btn symb" data-sym="${k}"><canvas width="64" height="48" data-prev="${k}"></canvas>${esc(d.n)}</button>`).join('')}</div><div class="row"><button class="btn" data-close>Cancel</button></div>`, sh => {
     sh.querySelectorAll('[data-prev]').forEach(c => { const d = SYMBOLS[c.dataset.prev]; const k = Math.min(56 / d.w, 40 / d.h); drawSymbol(c.getContext('2d'), { type: c.dataset.prev, x: 0, y: 0, w: d.w, h: d.h, rot: 0 }, () => [32, 24], k, false); });
     sh.querySelectorAll('[data-sym]').forEach(b => b.onclick = () => { closeSheet(); if (at) return placeSymbol(b.dataset.sym, at); SK.pendingSym = b.dataset.sym; SK.mode = 'symbol'; SK.sel = null; renderPanel(); }); });
 }
@@ -982,6 +1107,7 @@ function openMenu() {
     <div class="lrow"><span><b>Text size</b> (area names, labels) ${Math.round(TS() * 100)}%</span><span><button class="btn sm" data-ts="-0.1">A−</button> <button class="btn sm" data-ts="0.1">A+</button></span></div>
     <div class="lrow"><span><b>Dimension size</b> (wall lengths) ${Math.round(DS() * 100)}%</span><span><button class="btn sm" data-ds="-0.1">A−</button> <button class="btn sm" data-ds="0.1">A+</button></span></div>
     <div class="lrow"><span><b>Area colors</b> (on screen and printed) – ${SK.lib.fills === false ? 'off' : 'on'}</span><button class="btn sm" id="mFills">${SK.lib.fills === false ? 'Turn on' : 'Turn off'}</button></div>
+    <button class="btn" id="mUnder">Floor plan underlay (trace over a plan)…</button>
     <button class="btn" id="mRotAll">Turn the whole sketch</button>
     <button class="btn" id="mVers">Saved versions (restore)</button>
     <button class="btn" id="mTypes">My area types and labels</button>
@@ -992,6 +1118,7 @@ function openMenu() {
       const sc = (k, d) => { SK.lib[k] = Math.max(0.6, Math.min(2.5, Math.round(((SK.lib[k] || 1) + d) * 10) / 10)); saveLib(); draw(); openMenu(); };
       sh.querySelectorAll('[data-ts]').forEach(b => b.onclick = () => sc('textScale', +b.dataset.ts)); sh.querySelectorAll('[data-ds]').forEach(b => b.onclick = () => sc('dimScale', +b.dataset.ds));
       sh.querySelector('#mFills').onclick = () => { SK.lib.fills = SK.lib.fills === false; saveLib(); draw(); openMenu(); };
+      sh.querySelector('#mUnder').onclick = () => { closeSheet(); openUnderlay(); };
       sh.querySelector('#mRotAll').onclick = () => { closeSheet(); if (!SK.sk.areas.length) return toast('Nothing drawn yet'); SK.rotC = null; SK.sel = { type: 'all' }; SK.cursor = null; renderPanel(); };
       sh.querySelector('#mVers').onclick = openVersions;
       sh.querySelector('#mTypes').onclick = openMyTypes;
@@ -1003,7 +1130,7 @@ function openVersions() {
   const v = (SK.sk.versions || []).slice().reverse();
   openSheet(`<h3>Saved versions</h3><p class="help">A version is kept each time you close an area, delete, or rotate (and about once a minute while you work). Restoring keeps your current drawing as a version too.</p>
     <div class="grid-btns col">${v.map((x, i) => `<button class="btn" data-ver="${v.length - 1 - i}">${new Date(x.ts).toLocaleString()} · ${x.areas.length} area${x.areas.length === 1 ? '' : 's'} · ${esc(x.why)}</button>`).join('') || '<p class="help">No versions yet.</p>'}</div>
-    <div class="row"><button class="btn" data-close>Close</button></div>`, sh => sh.querySelectorAll('[data-ver]').forEach(b => b.onclick = () => { const x = SK.sk.versions[+b.dataset.ver]; snapshotVersion('before restore'); pushUndo(); SK.sk.areas = JSON.parse(JSON.stringify(x.areas)); SK.sk.labels = JSON.parse(JSON.stringify(x.labels)); SK.sk.symbols = JSON.parse(JSON.stringify(x.symbols || [])); SK.sel = null; closeSheet(); markDirty(); renderLevels(); fitView(); draw(); renderPanel(); toast('Version restored'); }));
+    <div class="row"><button class="btn" data-close>Close</button></div>`, sh => sh.querySelectorAll('[data-ver]').forEach(b => b.onclick = () => { const x = SK.sk.versions[+b.dataset.ver]; snapshotVersion('before restore'); pushUndo(); SK.sk.areas = JSON.parse(JSON.stringify(x.areas)); SK.sk.labels = JSON.parse(JSON.stringify(x.labels)); SK.sk.symbols = JSON.parse(JSON.stringify(x.symbols || [])); SK.sk.iwalls = JSON.parse(JSON.stringify(x.iwalls || [])); SK.sel = null; closeSheet(); markDirty(); renderLevels(); fitView(); draw(); renderPanel(); toast('Version restored'); }));
 }
 function openMyTypes() {
   openSheet(`<h3>My area types and labels</h3><h4>Area types I added</h4>
@@ -1052,6 +1179,7 @@ function drawLevelBlock(g, k, X0, Y0, s, bb, C) { // one level's drawing at scal
       if (a.closed) { const ft = k => [bb.x0 + (mx + nx * k - X0) / s, bb.y0 + (my + ny * k - Y0) / s]; if (inPoly(ft(6), shape(a))) { nx = -nx; ny = -ny; } if ([10, 18, 26].some(k => inNeighbour(a, ft(k)))) { nx = -nx; ny = -ny; } }
       let ang = Math.atan2(Y2 - Y1, X2 - X1); if (ang > Math.PI / 2 || ang < -Math.PI / 2) ang += Math.PI; g.translate(mx + nx * 13, my + ny * 13); g.rotate(ang); g.fillText(f1(L) + "'", 0, 0); g.restore(); });
     if (a.closed && defOf(a.def).bucket !== 'LIV') { const [cx, cy] = T(namePt(a, C, s, 16 * TS())); g.textAlign = 'center'; g.fillStyle = '#000'; g.font = '600 ' + fs(16); g.fillText(a.name || defOf(a.def).name, cx, cy - 2); g.font = fs(15); g.fillText(f1(C.net.get(a.id)) + ' sf', cx, cy + 18); } });
+  drawIWalls(g, T, s, IW().filter(w => inBlk(w, k)), null);
   (SK.sk.symbols || []).filter(x => inBlk(x, k)).forEach(x => drawSymbol(g, x, T, s, false));
   SK.sk.labels.filter(l => inBlk(l, k)).forEach(l => { const [X, Y] = T([l.x, l.y]); g.textAlign = 'center'; g.font = (l.room ? '600 ' : 'italic ') + fs(15); g.fillStyle = '#000'; g.fillText(l.text, X, Y + 5); });
 }
