@@ -6,12 +6,14 @@ const app = { job: null, jobs: [], sel: null, cort: [], cortByApn: new Map(), co
 /* ---------------- start ---------------- */
 async function start() {
   await DB.init();
+  try { if (navigator.storage && navigator.storage.persist) await navigator.storage.persist(); } catch (e) {} // ask Chrome to keep this data, never clear it to free space
   const arch = await DB.get('kv', 'archive'); if (arch && arch.data) archiveIndex(arch.data);
   const cort = await DB.get('kv', 'cort'); setCort(cort ? cort.rows : []);
   app.jobs = (await DB.all('jobs')).sort((a, b) => b.updated - a.updated);
   const last = await DB.get('kv', 'lastJob');
   app.job = app.jobs.find(j => last && j.id === last.v) || app.jobs[0] || null;
   if (!app.job) await newJob();
+  app.jobs.forEach(j => (j.files || []).forEach(f => { if (!f.id) { f.id = uid(); f.legacy = true; } }));  // files dropped before "remove file" existed
   await loadPhotos();
   render();
 }
@@ -30,7 +32,7 @@ async function saveNow() { if (!app.job) return; app.job.updated = Date.now(); a
 
 /* ---------------- photos ---------------- */
 app.photos = []; // [{id, mls, n, name}] for this job (blobs stay in storage)
-async function loadPhotos() { app.photos = app.job ? (await DB.byJob(app.job.id)).map(p => ({ id: p.id, mls: p.mls, n: p.n, name: p.name })) : []; }
+async function loadPhotos() { app.photos = app.job ? (await DB.byJob(app.job.id)).map(p => ({ id: p.id, mls: p.mls, n: p.n, name: p.name, file: p.file })) : []; }
 const photosOf = c => { const m = V(c, 'mls'); return m ? app.photos.filter(p => p.mls === m).sort((a, b) => a.n - b.n) : []; };
 const frontOf = c => { const ps = photosOf(c); return ps.find(p => p.id === c.front) || ps[0] || null; };
 async function photoURL(id) {
@@ -54,9 +56,10 @@ function attachCort(c) {
   if (c.key && app.cortByKey.has(c.key)) app.cortByKey.get(c.key).forEach(i => idx.add(i));
   c.src.cort = [...idx].map(i => app.cort[i]).sort((x, y) => String(y.saleDate).localeCompare(String(x.saleDate)));
 }
-function upsertComp(seed, srcName, rec) {
+function upsertComp(seed, srcName, rec, fid) {
   let c = findComp(seed); const isNew = !c;
-  if (!c) { c = newComp(seed); app.job.comps.push(c); }
+  if (!c) { c = newComp(seed); c.madeBy = fid || 'typed'; app.job.comps.push(c); }
+  if (rec && fid) rec._file = fid;
   if (seed.apn && !c.apn) c.apn = seed.apn; if (seed.mls && !c.mls) c.mls = seed.mls; if (seed.key && !c.key) c.key = seed.key; if (seed.label && !c.label) c.label = seed.label;
   if (srcName) c.src[srcName] = rec;
   attachArchive(c); attachCort(c);
@@ -72,7 +75,7 @@ function addByAddress(text) {
 
 /* ---------------- files in ---------------- */
 async function ingest(files) {
-  const notes = [];
+  const notes = []; app.batch = [];
   for (const f of files) {
     try {
       app.busy = 'Reading ' + f.name + '…'; renderBusy();
@@ -93,43 +96,62 @@ async function ingest(files) {
       } else notes.push(f.name + ': file type not used here');
     } catch (e) { console.error(e); notes.push(f.name + ': could not read – ' + (e.message || e)); }
   }
-  app.busy = ''; save(); render(); if (notes.length) showNotes(notes);
+  app.busy = ''; save(); render(); if (notes.length) showNotes(notes, app.batch.slice());
 }
-function logFile(name, kind, n) { app.job.files = (app.job.files || []).filter(x => x.name !== name); app.job.files.push({ name, kind, n, at: Date.now() }); }
+function logFile(name, kind, n, id) {
+  app.job.files = (app.job.files || []).filter(x => !(x.name === name && x.kind === kind));
+  const e = { id: id || uid(), name, kind, n, at: Date.now() }; app.job.files.push(e); if (app.batch) app.batch.push(e.id); return e;
+}
+/* Take a dropped file back out: its data comes off every comp, and comps that came only from it are removed. */
+const KIND_SRC = { 'MLS export': 'mls', 'MLS printout': 'pdf', 'CRS report': 'crs' };
+async function removeFile(fileId) {
+  const J = app.job; const e = (J.files || []).find(x => x.id === fileId); if (!e) return;
+  const mine = rec => rec && (rec._file === e.id || (!rec._file && e.legacy));
+  const src = KIND_SRC[e.kind];
+  if (src) J.comps.forEach(c => { if (mine(c.src[src])) { c.src[src] = null; c._lost = true; } });
+  if (e.kind === 'CRS (subject)' && J.subject.crs) { const r = J.subject.crs; if (String(J.subject.lat) === String(r.lat)) { J.subject.lat = ''; J.subject.lon = ''; } J.subject.crs = null; }
+  if (e.kind === 'MLS photos') { for (const p of await DB.byJob(J.id)) if (p.file === e.id || (!p.file && e.legacy)) await DB.del('photos', p.id); app.photoCache.clear(); await loadPhotos(); }
+  if (e.kind === 'CORT table') { const before = app.cort.length; app.cort = app.cort.filter(r => r._file !== e.id); if (app.cort.length !== before) { setCort(app.cort); await DB.put('kv', { id: 'cort', rows: app.cort }); J.comps.forEach(attachCort); } }
+  const left = c => c.src.mls || c.src.pdf || c.src.crs || c.use || Object.keys(c.edit || {}).length;
+  J.comps = J.comps.filter(c => { const gone = (c.madeBy === e.id || (c._lost && !c.madeBy)) && !left(c); delete c._lost; return !gone; });
+  if (app.sel && !J.comps.some(c => c.id === app.sel)) app.sel = null;
+  J.files = J.files.filter(x => x.id !== e.id); await saveNow();
+}
 function ingestMls(rows, name) {
-  let made = 0, merged = 0;
-  rows.forEach(r => { const { isNew } = upsertComp({ mls: r.mls, apn: r.apn, key: r.addr ? addrKey(r.addr) : '', label: r.addr }, 'mls', r); isNew ? made++ : merged++; });
-  logFile(name, 'MLS export', rows.length);
+  let made = 0, merged = 0; const fid = uid();
+  rows.forEach(r => { const { isNew } = upsertComp({ mls: r.mls, apn: r.apn, key: r.addr ? addrKey(r.addr) : '', label: r.addr }, 'mls', r, fid); isNew ? made++ : merged++; });
+  logFile(name, 'MLS export', rows.length, fid);
   return `${name}: ${rows.length} listings (${made} new, ${merged} matched to comps already here)`;
 }
 function ingestPdf(list, name) {
-  let made = 0, merged = 0;
-  list.forEach(r => { const { isNew } = upsertComp({ mls: r.mls, apn: r.apn, key: r.addr ? addrKey(r.addr) : '', label: r.addr }, 'pdf', r); isNew ? made++ : merged++; });
-  logFile(name, 'MLS printout', list.length);
+  let made = 0, merged = 0; const fid = uid();
+  list.forEach(r => { const { isNew } = upsertComp({ mls: r.mls, apn: r.apn, key: r.addr ? addrKey(r.addr) : '', label: r.addr }, 'pdf', r, fid); isNew ? made++ : merged++; });
+  logFile(name, 'MLS printout', list.length, fid);
   return `${name}: ${list.length} listings with history (${merged} matched, ${made} new)`;
 }
 function ingestCrs(r, name) {
   const s = app.job.subject; const key = addrKey(r.addr);
   if (s.addr && addrKey(s.addr) === key) { s.crs = r; fillSubjectFrom(r); logFile(name, 'CRS (subject)', 1); return `${name}: subject's CRS report – location and APN filled in`; }
-  const { isNew } = upsertComp({ apn: r.apn, key, label: r.addr }, 'crs', r); logFile(name, 'CRS report', 1);
+  const fid = uid(); const { isNew } = upsertComp({ apn: r.apn, key, label: r.addr }, 'crs', r, fid); logFile(name, 'CRS report', 1, fid);
   return `${name}: ${r.addr} (${isNew ? 'new comp' : 'matched'})`;
 }
 async function ingestCort(rows, name) {
-  const seen = new Set(app.cort.map(r => r.apn + '|' + r.saleDate + '|' + r.doc)); let added = 0;
-  rows.forEach(r => { const k = r.apn + '|' + r.saleDate + '|' + r.doc; if (!seen.has(k)) { seen.add(k); app.cort.push(r); added++; } });
+  const seen = new Set(app.cort.map(r => r.apn + '|' + r.saleDate + '|' + r.doc)); let added = 0; const fid = uid();
+  rows.forEach(r => { const k = r.apn + '|' + r.saleDate + '|' + r.doc; if (!seen.has(k)) { seen.add(k); r._file = fid; app.cort.push(r); added++; } });
+  logFile(name, 'CORT table', added, fid);
   setCort(app.cort); await DB.put('kv', { id: 'cort', rows: app.cort });
   app.job.comps.forEach(attachCort);
   return `${name}: ${added} new CORT sales saved (${app.cort.length} in your CORT table). They fill in automatically when a comp matches by APN or address.`;
 }
 async function ingestPhotos(f) {
-  const files = await readZip(f); let n = 0; const mlsSet = new Set();
+  const files = await readZip(f); let n = 0; const mlsSet = new Set(); const fid = uid();
   for (const [path, data] of files) {
     const base = path.split('/').pop(); const m = base.match(/^(\d{2}-\d+)_(\d+)\.(jpe?g|png)$/i); if (!m) continue;
     const id = app.job.id + ':' + m[1] + '_' + m[2];
-    await DB.put('photos', { id, jobId: app.job.id, mls: m[1], n: +m[2], name: base, blob: new Blob([data], { type: /png$/i.test(m[3]) ? 'image/png' : 'image/jpeg' }) });
+    await DB.put('photos', { id, jobId: app.job.id, mls: m[1], n: +m[2], name: base, file: fid, blob: new Blob([data], { type: /png$/i.test(m[3]) ? 'image/png' : 'image/jpeg' }) });
     n++; mlsSet.add(m[1]);
   }
-  await loadPhotos(); logFile(f.name, 'MLS photos', n);
+  await loadPhotos(); logFile(f.name, 'MLS photos', n, fid);
   const missing = [...mlsSet].filter(m => !app.job.comps.some(c => V(c, 'mls') === m));
   return `${f.name}: ${n} photos for ${mlsSet.size} listings${missing.length ? ` (${missing.length} listings are not in your list yet – their photos appear when you add the MLS export)` : ''}`;
 }
@@ -166,7 +188,7 @@ function render() {
     <button class="btn" data-act="backup" title="Save this assignment to a file">Back up</button>
     ${app.confirm === 'deljob' ? `<span class="confirm">Delete “${esc(J.name)}”? <button class="btn danger solid" data-act="deljob-yes">Delete</button><button class="btn" data-act="cancel">Keep</button></span>` : `<button class="btn danger" data-act="deljob">Delete</button>`}
   </header>
-  ${ARCH.loaded ? '' : `<section class="card notice"><b>Load your comp archive once.</b> Drop <i>Comp Archive.json.gz</i> anywhere on this page (or <label class="link">choose it<input type="file" multiple data-act="files" hidden></label>). It is saved on this computer only; nothing is uploaded.</section>`}
+  ${ARCH.loaded ? '' : `<section class="card notice"><b>Load your comp archive${app.jobs.some(j => j.comps.length) ? ' in this browser' : ' once'}.</b> ${app.jobs.some(j => j.comps.length) ? 'Each browser (Chrome, Firefox, Edge) keeps its own copy, and this one has none yet. ' : ''}Drop <i>Comp Archive.json.gz</i> and <i>CORT Sales.csv</i> anywhere on this page (or <label class="link">choose it<input type="file" multiple data-act="files" hidden></label>). It is saved on this computer only; nothing is uploaded.</section>`}
   <div class="busy" id="busy" ${app.busy ? '' : 'hidden'}>${esc(app.busy)}</div>
   <section class="card"><h2>Subject</h2>${subjectHTML(J)}</section>
   <section class="card"><h2>Add comps</h2>
@@ -175,7 +197,7 @@ function render() {
     <p class="help">If the address is in your archive, it fills in at once with every version you have. Then drop files to add to it.</p>
     <label class="drop" id="drop"><input type="file" multiple data-act="files" hidden>
       <b>Drop files here</b> or click to choose: MLS export (.csv) · MLS photos (.zip) · MLS printout (.pdf) · CRS reports (.pdf) · CORT table (.csv) · comp archive (.gz)</label>
-    ${(J.files || []).length ? `<p class="help">In this assignment: ${J.files.map(f => `${esc(f.name)} <small>(${esc(f.kind)}${f.n ? ', ' + f.n : ''})</small>`).join(' · ')}</p>` : ''}
+    ${(J.files || []).length ? `<div class="files"><b>Files in this assignment</b> <small>(✕ takes a file back out)</small><ul>${J.files.map(f => `<li>${esc(f.name)} <small>${esc(f.kind)}${f.n ? ', ' + f.n : ''}</small> ${app.confirm === 'rf:' + f.id ? `<span class="confirm">Take it out? <button class="btn danger solid sm" data-rfyes="${esc(f.id)}">Remove file</button><button class="btn sm" data-act="cancel">Keep</button></span>` : `<button class="btn sm" data-rf="${esc(f.id)}" title="Remove this file and what it added">✕</button>`}</li>`).join('')}</ul></div>` : ''}
   </section>
   <section class="card" id="compsCard">${compsCardHTML(J)}</section>
   <div id="detail">${app.sel ? detailHTML(J.comps.find(c => c.id === app.sel)) : ''}</div>
@@ -195,7 +217,7 @@ function renderKeepFocus() {
     if (key) { const el = document.querySelector(`[${key[0]}="${CSS.escape(key[1])}"]`); if (el) { el.focus({ preventScroll: true }); try { if (pos) el.setSelectionRange(pos[0], pos[1]); } catch (e) {} } }
   }, 0);
 }
-const compsCardHTML = J => `<h2>Comps considered <small>${J.comps.length}</small></h2>${compsTable(J)}`;
+const compsCardHTML = J => `<div class="row"><h2 style="margin:0">Comps considered <small>${J.comps.length}</small></h2><span class="grow"></span>${J.comps.length ? (app.confirm === 'rmall' ? `<span class="confirm">Remove all ${J.comps.length} comps from this assignment? <button class="btn danger solid sm" data-act="rmall-yes">Remove all</button><button class="btn sm" data-act="cancel">Keep</button></span>` : `<button class="btn sm danger" data-act="rmall">Remove all comps</button>`) : ''}</div>${compsTable(J)}`;
 /* Redraw only what depends on a typed value, so the field you are in (and the next one you Tab to) is never replaced. */
 function renderParts(opts = {}) {
   const J = app.job;
@@ -287,10 +309,11 @@ function exportHTML(J) {
   <button class="btn" data-act="x-photos">Front photos (.zip)</button></div>
   <p class="help">The SFREP file has the chosen comps in grid order with their front photos, sale and listing data, site, view and house facts. Adjustments are not included – you make those in SFREP. Import it into a copy of your report first (Home › Import Forms) to see how SFREP takes it.</p>`;
 }
-function showNotes(notes) {
+function showNotes(notes, fileIds) {
   const bg = document.createElement('div'); bg.className = 'sheet-bg';
-  bg.innerHTML = `<div class="sheet"><h2>Files read</h2><ul>${notes.map(n => `<li>${esc(n)}</li>`).join('')}</ul><div class="row"><button class="btn primary" data-close="1">OK</button></div></div>`;
+  bg.innerHTML = `<div class="sheet"><h2>Files read</h2><ul>${notes.map(n => `<li>${esc(n)}</li>`).join('')}</ul><div class="row"><button class="btn primary" data-close="1">OK</button>${(fileIds || []).length ? `<button class="btn danger" data-undo="1">Undo – take ${fileIds.length > 1 ? 'these files' : 'this file'} back out</button>` : ''}</div></div>`;
   document.body.appendChild(bg); bg.querySelector('[data-close]').onclick = () => bg.remove(); bg.querySelector('[data-close]').focus();
+  const u = bg.querySelector('[data-undo]'); if (u) u.onclick = async () => { u.disabled = true; u.textContent = 'Taking out…'; for (const id of fileIds) await removeFile(id); bg.remove(); render(); toast('Undone – nothing from ' + (fileIds.length > 1 ? 'those files' : 'that file') + ' is left'); };
 }
 
 /* ---------------- exports ---------------- */
@@ -320,7 +343,7 @@ async function backupJob() {
 /* ---------------- events ---------------- */
 function openComp(id) { app.sel = id; render(); const d = $('#detail'); if (d) d.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
 document.addEventListener('click', async e => {
-  const t = e.target.closest('[data-act],[data-open],[data-pick],[data-reset],[data-front],[data-rm],[data-rmyes],.sug');
+  const t = e.target.closest('[data-act],[data-open],[data-pick],[data-reset],[data-front],[data-rm],[data-rmyes],[data-rf],[data-rfyes],.sug');
   if (!t) return;
   if (t.matches('select,input,option')) return;
   const c = app.sel ? app.job.comps.find(x => x.id === app.sel) : null;
@@ -329,6 +352,8 @@ document.addEventListener('click', async e => {
   if (t.dataset.pick && c) { c.pick[t.dataset.field] = t.dataset.pick; delete c.edit[t.dataset.field]; save(); render(); return; }
   if (t.dataset.reset && c) { delete c.pick[t.dataset.reset]; delete c.edit[t.dataset.reset]; save(); render(); return; }
   if (t.dataset.front && c) { c.front = t.dataset.front; save(); render(); return; }
+  if (t.dataset.rf) { app.confirm = 'rf:' + t.dataset.rf; render(); return; }
+  if (t.dataset.rfyes) { app.confirm = null; await removeFile(t.dataset.rfyes); render(); toast('File taken out'); return; }
   if (t.dataset.rm) { app.confirm = 'rm:' + t.dataset.rm; render(); return; }
   if (t.dataset.rmyes) { app.job.comps = app.job.comps.filter(x => x.id !== t.dataset.rmyes); if (app.sel === t.dataset.rmyes) app.sel = null; app.confirm = null; save(); render(); return; }
   switch (t.dataset.act) {
@@ -337,6 +362,8 @@ document.addEventListener('click', async e => {
     case 'deljob': app.confirm = 'deljob'; render(); break;
     case 'deljob-yes': { const id = app.job.id; await DB.del('jobs', id); for (const p of await DB.byJob(id)) await DB.del('photos', p.id); app.jobs = app.jobs.filter(j => j.id !== id); app.job = app.jobs[0] || null; app.confirm = null; if (!app.job) await newJob(); await loadPhotos(); render(); break; }
     case 'cancel': app.confirm = null; render(); break;
+    case 'rmall': app.confirm = 'rmall'; render(); break;
+    case 'rmall-yes': app.job.comps = []; app.sel = null; app.confirm = null; await saveNow(); render(); toast('All comps removed – your files list is unchanged'); break;
     case 'close': app.sel = null; render(); break;
     case 'backup': backupJob(); break;
     case 'x-sfrep': exportSfrep(); break;

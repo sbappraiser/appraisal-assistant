@@ -50,3 +50,4 @@ details{margin:12px 0}summary{cursor:pointer;color:var(--teal-d);font-weight:700
 .jobsel{display:flex;gap:6px;align-items:center;font-size:14px;color:var(--muted)}.jobsel select{max-width:260px}
 table.cmp{table-layout:fixed;min-width:900px}table.cmp th select{width:100%;font-size:12.5px}table.cmp td,table.cmp th{overflow-wrap:anywhere}
 table.comps td.r,table.comps td:nth-child(6){white-space:nowrap}
+.files{margin-top:10px;font-size:14px}.files ul{margin:4px 0;padding-left:18px}.files li{margin:3px 0}.files small{color:var(--muted)}
