@@ -240,9 +240,16 @@ function subjectHTML(J) {
     ${f('lat', 'Latitude')}${f('lon', 'Longitude')}<label class="fld"><span>Assignment name</span><input class="txt" data-jobname="1" value="${esc(J.name)}"></label></div>
     <p class="help">Latitude and longitude give each comp its distance and direction. Fill them from the subject's CRS report: <label class="link">choose the subject's CRS PDF<input type="file" accept=".pdf" data-act="subjcrs" hidden></label>${inA ? ` · Your archive has ${inA.length} record${inA.length > 1 ? 's' : ''} for this address.` : ''}</p>`;
 }
+/* Closed sales first (newest closing on top), then pending (newest contract), then active listings (newest list date), then everything else */
+function compGroup(c) { const st = String(V(c, 'status') || (currentSale(c) || {}).status || ''); if (/closed|sold/i.test(st) || (!st && V(c, 'saleDate'))) return 0; if (/pending|contract|contingent/i.test(st)) return 1; if (/active|coming/i.test(st)) return 2; return 3; }
+function compOrder(a, b) {
+  const ga = compGroup(a), gb = compGroup(b); if (ga !== gb) return ga - gb;
+  const d = c => String((ga === 0 ? V(c, 'saleDate') : ga === 1 ? V(c, 'contractDate') || V(c, 'listDate') : V(c, 'listDate')) || V(c, 'saleDate') || '');
+  return d(b).localeCompare(d(a));
+}
 function compsTable(J) {
   if (!J.comps.length) return '<p class="help">No comps yet. Type an address above, or drop your MLS export.</p>';
-  const rows = [...J.comps].sort((a, b) => (a.use || 99) - (b.use || 99) || String(V(b, 'saleDate') || V(b, 'contractDate') || '').localeCompare(String(V(a, 'saleDate') || V(a, 'contractDate') || '')));
+  const rows = [...J.comps].sort(compOrder);
   const maxUse = Math.max(9, J.comps.length);
   return `<div class="tablewrap"><table class="comps"><thead><tr><th>Use as</th><th></th><th>Address</th><th>Status</th><th class="r">Price</th><th>Date</th><th class="r">GLA</th><th class="r">Site</th><th>Q / C</th><th>View</th><th class="r">Miles</th><th>Sources</th><th>Flags</th><th></th></tr></thead><tbody>
   ${rows.map(c => { const fr = frontOf(c); const px = proximity(c, J); const fl = compFlags(c, J); const warn = fl.filter(x => x.sev === 'warn').length;
