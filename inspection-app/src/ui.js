@@ -541,7 +541,7 @@ const titleCase = s => String(s || '').toLowerCase().replace(/\b([a-z])/g, m => 
 let pdfjsLib = null;
 async function pdfLines(file) {
   if (!pdfjsLib) { pdfjsLib = await import('./pdf.min.mjs'); pdfjsLib.GlobalWorkerOptions.workerSrc = './pdf.worker.min.mjs'; }
-  const doc = await pdfjsLib.getDocument({ data: new Uint8Array(await file.arrayBuffer()), isEvalSupported: false }).promise;
+  const doc = await pdfjsLib.getDocument({ data: new Uint8Array(await file.arrayBuffer()), isEvalSupported: false, wasmUrl: './wasm/', standardFontDataUrl: './standard_fonts/' }).promise;
   const out = []; out.rows = [];
   for (let n = 1; n <= doc.numPages; n++) {
     const tc = await (await doc.getPage(n)).getTextContent(); const rows = new Map();

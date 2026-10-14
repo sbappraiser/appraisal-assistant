@@ -89,7 +89,7 @@ function mkTrend(S) { // log-linear fit of price per sq ft against sale date; sh
 
 /* ---------- 2. the monthly SBMLS statistics PDF ---------- */
 async function pdfItems(file) {
-  const pdfjs = await loadPdfJs(); const doc = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()), isEvalSupported: false }).promise; const pages = [];
+  const pdfjs = await loadPdfJs(); const doc = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()), isEvalSupported: false, wasmUrl: './wasm/', standardFontDataUrl: './standard_fonts/' }).promise; const pages = [];
   for (let n = 1; n <= doc.numPages; n++) {
     const tc = await (await doc.getPage(n)).getTextContent(); const its = [];
     tc.items.forEach(it => { const s = it.str; if (!s.trim()) return; const x0 = it.transform[4], y = it.transform[5], w = it.width || 0;

@@ -266,7 +266,7 @@ function loadPdfJs() {
   return pdfjsReady;
 }
 async function pdfParagraphs(file) {
-  const lib = await loadPdfJs(); const pdf = await lib.getDocument({ data: new Uint8Array(await file.arrayBuffer()), isEvalSupported: false }).promise; const paras = [];
+  const lib = await loadPdfJs(); const pdf = await lib.getDocument({ data: new Uint8Array(await file.arrayBuffer()), isEvalSupported: false, wasmUrl: './wasm/', standardFontDataUrl: './standard_fonts/' }).promise; const paras = [];
   for (let i = 1; i <= pdf.numPages; i++) {
     const tc = await (await pdf.getPage(i)).getTextContent(); let cur = '', lastY = null;
     tc.items.forEach(it => { const y = it.transform[5]; if (lastY !== null && Math.abs(lastY - y) > 18 && cur) { paras.push(cur.trim()); cur = ''; } cur += it.str + (it.hasEOL ? ' ' : ''); lastY = y; });
@@ -389,9 +389,10 @@ async function start() {
   writeForm(cur); render(); renderLetters(); renderContacts();
   showTab(q && pick ? 'letter' : letters.length ? 'saved' : 'letter');
   $('#build').textContent = 'Version ' + BUILD;
+  $('#helpSearch').addEventListener('input', e => { const q = e.target.value.trim().toLowerCase(); document.querySelectorAll('.help-page details').forEach(d => { const hit = !q || d.textContent.toLowerCase().includes(q); d.hidden = !hit; d.open = !!q && hit; }); });
   $('#rdClose').onclick = closeReader; $('#rdPrev').onclick = () => { RD.page--; rdPage(); }; $('#rdNext').onclick = () => { RD.page++; rdPage(); }; $('#rdOpen').onclick = () => openDoc(RD.id);
   document.addEventListener('keydown', e => { if ($('#reader').hidden || /INPUT|TEXTAREA/.test(document.activeElement.tagName)) return; if (e.key === 'ArrowRight') { RD.page++; rdPage(); } if (e.key === 'ArrowLeft') { RD.page--; rdPage(); } if (e.key === 'Escape') closeReader(); });
-  let st = null; $('#docSearch').addEventListener('input', e => { clearTimeout(st); st = setTimeout(() => searchDocs(e.target.value), 350); });
+  let st = null; $('#docSearch').addEventListener('input', e => { clearTimeout(st); st = setTimeout(() => searchDocs(e.target.value), 350); }); $('#docSearchBtn').onclick = () => searchDocs($('#docSearch').value); $('#docSearch').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); searchDocs(e.target.value); } });
   $('#aiKeyBox').value = aiKey(); $('#aiModelBox').value = aiModel();
   $('#aiKeySave').onclick = () => { try { localStorage.setItem('aa.claudeKey', $('#aiKeyBox').value.trim()); localStorage.setItem('aa.claudeModel', $('#aiModelBox').value.trim() || 'claude-sonnet-5-5'); toast('AI settings saved in this browser'); } catch (e) { toast('Could not save'); } };
   $('#aiKeyClear').onclick = () => { try { localStorage.removeItem('aa.claudeKey'); } catch (e) {} $('#aiKeyBox').value = ''; toast('Key removed'); };

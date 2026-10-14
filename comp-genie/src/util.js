@@ -177,7 +177,7 @@ const DB = (() => {
 let pdfjsLib = null;
 async function pdfLines(file, onPage) {
   if (!pdfjsLib) { pdfjsLib = await import('./pdf.min.mjs'); pdfjsLib.GlobalWorkerOptions.workerSrc = './pdf.worker.min.mjs'; }
-  const doc = await pdfjsLib.getDocument({ data: new Uint8Array(await file.arrayBuffer()), isEvalSupported: false }).promise;
+  const doc = await pdfjsLib.getDocument({ data: new Uint8Array(await file.arrayBuffer()), isEvalSupported: false, wasmUrl: './wasm/', standardFontDataUrl: './standard_fonts/' }).promise;
   const out = []; out.rows = []; out.pages = doc.numPages; out.pageOf = [];
   for (let n = 1; n <= doc.numPages; n++) {
     const tc = await (await doc.getPage(n)).getTextContent(); const rows = new Map();
@@ -189,6 +189,6 @@ async function pdfLines(file, onPage) {
 }
 async function pdfFirstText(file) { // quick look at page 1 to tell what kind of PDF this is
   if (!pdfjsLib) { pdfjsLib = await import('./pdf.min.mjs'); pdfjsLib.GlobalWorkerOptions.workerSrc = './pdf.worker.min.mjs'; }
-  const doc = await pdfjsLib.getDocument({ data: new Uint8Array(await file.arrayBuffer()), isEvalSupported: false }).promise;
+  const doc = await pdfjsLib.getDocument({ data: new Uint8Array(await file.arrayBuffer()), isEvalSupported: false, wasmUrl: './wasm/', standardFontDataUrl: './standard_fonts/' }).promise;
   const tc = await (await doc.getPage(1)).getTextContent(); return { text: tc.items.map(i => i.str).join(' '), pages: doc.numPages };
 }

@@ -150,7 +150,7 @@ async function planPreview(file, page) {
   let canvas, pages = 1;
   if (isPdf(file)) {
     const pdfjs = await import('./pdf.min.mjs'); pdfjs.GlobalWorkerOptions.workerSrc = './pdf.worker.min.mjs';
-    const doc = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()), isEvalSupported: false }).promise; pages = doc.numPages;
+    const doc = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()), isEvalSupported: false, wasmUrl: './wasm/', standardFontDataUrl: './standard_fonts/' }).promise; pages = doc.numPages;
     const pg = await doc.getPage(Math.min(page, pages)); const vp = pg.getViewport({ scale: 1 }); const v2 = pg.getViewport({ scale: Math.min(3, 2400 / Math.max(vp.width, vp.height)) });
     canvas = document.createElement('canvas'); canvas.width = Math.round(v2.width); canvas.height = Math.round(v2.height);
     const g = canvas.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, canvas.width, canvas.height); await pg.render({ canvasContext: g, viewport: v2 }).promise;

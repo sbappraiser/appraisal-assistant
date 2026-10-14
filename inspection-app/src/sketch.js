@@ -127,7 +127,7 @@ async function ulLoad(file) {
   let canvas; toast('Opening the floor plan…');
   if (/\.pdf$/i.test(file.name) || file.type === 'application/pdf') {
     const pdfjs = await import('./pdf.min.mjs'); pdfjs.GlobalWorkerOptions.workerSrc = './pdf.worker.min.mjs';
-    const doc = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()), isEvalSupported: false }).promise;
+    const doc = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()), isEvalSupported: false, wasmUrl: './wasm/', standardFontDataUrl: './standard_fonts/' }).promise;
     let pn = 1; if (doc.numPages > 1) { pn = await new Promise(res => askNumber(`Which page? (1–${doc.numPages})`, 'The page of the PDF with the floor plan for this level.', '1', v => res(Math.max(1, Math.min(doc.numPages, Math.round(v)))))); }
     const pg = await doc.getPage(pn); const vp = pg.getViewport({ scale: 1 }); const v2 = pg.getViewport({ scale: Math.min(3, 2400 / Math.max(vp.width, vp.height)) });
     canvas = document.createElement('canvas'); canvas.width = Math.round(v2.width); canvas.height = Math.round(v2.height); const g = canvas.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, canvas.width, canvas.height); await pg.render({ canvasContext: g, viewport: v2 }).promise;

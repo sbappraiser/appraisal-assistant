@@ -11,11 +11,11 @@
    typed-in entries come out as text, so their checklist is filled by her or by Claude.
    ===================================================================== */
 const CHECK = {
-  contract: { title: 'Purchase contract', items: [['price', 'Purchase price'], ['acceptDate', 'Date of acceptance (contract date)'], ['coe', 'Close of escrow'], ['financing', 'Financing (all cash, loan amount, down payment)'], ['sellerCredit', 'Seller credit / concessions to the buyer'], ['buyerBroker', 'Buyer’s broker compensation and who pays it'], ['personal', 'Personal property included'], ['leaseback', 'Seller rent-back / leaseback'], ['exchange', '1031 exchange'], ['apprCont', 'Appraisal contingency'], ['loanCont', 'Loan contingency'], ['buyers', 'Buyer (individuals, LLC, trust)'], ['sellers', 'Seller (individuals, trust, estate, trustee)'], ['changes', 'Changes from the printed form / unusual terms']] },
+  contract: { title: 'Purchase contract', items: [['price', 'Final negotiated sales price (after counters)'], ['acceptDate', 'Acceptance date'], ['personal', 'Personal property included'], ['leaseback', 'Leaseback / rent-back'], ['credits', 'Credits / concessions to the buyer'], ['buyerBroker', 'Buyer’s broker: who pays, % or amount'], ['addenda', 'Counters and addenda – summary'], ['loanCont', 'Loan contingency (Yes / No)'], ['apprCont', 'Appraisal contingency (Yes / No)'], ['entity', 'Signing for an entity: who, and which entity'], ['special', 'Court-ordered, estate, trust, trustee or atypical terms'], ['written', 'Terms written in (not pre-printed on the form)']] },
   counter: { title: 'Counter offer', items: [['price', 'Price in the counter'], ['date', 'Date'], ['terms', 'Terms changed']] },
   addendum: { title: 'Addendum', items: [['date', 'Date'], ['terms', 'Terms changed']] },
   leaseback: { title: 'Leaseback / rent-back', items: [['rent', 'Rent (amount and period)'], ['term', 'Term (start and end)'], ['deposit', 'Security deposit'], ['furnished', 'Furnished / what the seller keeps'], ['terms', 'Other terms']] },
-  prelim: { title: 'Preliminary title report', items: [['dated', 'Dated as of'], ['vesting', 'Vested in'], ['estate', 'Estate or interest'], ['apn', 'APN'], ['taxes', 'Property taxes'], ['transfers', 'Transfers in the last 24 months'], ['easements', 'Easements'], ['ccrs', 'CC&Rs and agreements'], ['liens', 'Deeds of trust, judgments and liens'], ['other', 'Other exceptions']] },
+  prelim: { title: 'Preliminary title report', items: [['dated', 'Dated as of'], ['easements', 'Easements'], ['restrictions', 'Restrictions, CC&Rs, covenants, reservations'], ['minerals', 'Oil, gas, minerals, wells'], ['encroach', 'Encroachments, boundary or survey matters'], ['clear', 'May need to be cleared before a transfer (judgments, liens, delinquent taxes)'], ['other', 'Other exceptions worth mentioning']] },
   legal: { title: 'Legal description', items: [['legal', 'Legal description']] },
   condoQ: { title: 'Condo questionnaire', items: [['dues', 'HOA dues'], ['special', 'Special assessments'], ['litigation', 'Litigation'], ['reserves', 'Reserves'], ['rentals', 'Rental restrictions / owner occupancy'], ['insurance', 'Master insurance'], ['other', 'Other']] },
   hoaBudget: { title: 'HOA budget', items: [['dues', 'HOA dues'], ['reserves', 'Reserves'], ['special', 'Special assessments'], ['other', 'Other']] },
@@ -37,7 +37,7 @@ async function docPages(id) {
   if (rec.pagesText) return rec;
   const file = new File([rec.blob], rec.name, { type: rec.mime || rec.blob.type });
   let pagesText = [];
-  if (isPdf(file)) { const pdfjs = await loadPdfJs(); const doc = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()), isEvalSupported: false }).promise;
+  if (isPdf(file)) { const pdfjs = await loadPdfJs(); const doc = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()), isEvalSupported: false, wasmUrl: './wasm/', standardFontDataUrl: './standard_fonts/' }).promise;
     for (let n = 1; n <= doc.numPages; n++) { const tc = await (await doc.getPage(n)).getTextContent(); pagesText.push(tc.items.map(i => i.str + (i.hasEOL ? '\n' : ' ')).join('').replace(/[ \t]+/g, ' ')); } }
   else if (/\.docx$/i.test(file.name)) pagesText = [(await docxParagraphs(file)).join('\n')];
   else if (/\.(txt|csv)$/i.test(file.name)) pagesText = [await G.readText(file)];
@@ -53,11 +53,8 @@ function readPrelim(pages) {
   const all = pages.map((t, i) => ({ t, p: i + 1 }));
   const find = re => { for (const x of all) { const m = x.t.match(re); if (m) return { m, p: x.p }; } return null; };
   let r = find(/Dated as of\s+([A-Z][a-z]+ \d{1,2}, \d{4})/); if (r) add('dated', r.m[1], r.p, r.m[0]);
-  r = find(/vested in:?\s*([\s\S]{3,300}?)\n\s*(?:The estate|SUBJECT TO|$)/i); if (r) add('vesting', r.m[1], r.p, r.m[0]);
-  r = find(/covered by this (?:Report|Commitment) is:?\s*([A-Z][A-Za-z ]{2,40})/i); if (r) add('estate', r.m[1], r.p, r.m[0]);
-  r = find(/A\.?\s?P\.?\s?N?o?\.?:?\s*(\d{3}-\d{3}-\d{3})/); if (r) add('apn', r.m[1], r.p, r.m[0]);
-  r = find(/(First Installment:?\s*\$[\d,.]+[^\n]*)[\s\S]{0,120}?(Second Installment:?\s*\$[\d,.]+[^\n]*)/i); if (r) add('taxes', r.m[1] + '; ' + r.m[2], r.p, r.m[0]);
-  r = find(/no conveyance of the land within a period of\s+(\w+(?:-\s?\w+)?) months[\s\S]{0,80}?except as follows:\s*([^\n]+)/i); if (r) add('transfers', r.m[2], r.p, r.m[0]);
+  // taxes only when delinquent; trust deeds, trust requirements and general printed items are left out (her rule)
+  all.forEach(x => { const m = x.t.match(/[^\n]*Installment[^\n]*DELINQUENT[^\n]*/i); if (m) add('clear', 'Delinquent property taxes: ' + m[0], x.p, m[0]); });
   // numbered exceptions: from "exceptions to coverage" to the informational notes
   const joined = all.map(x => x.t.split('\n').map(l => ({ l, p: x.p }))).flat();
   let on = false, curEx = null; const ex = [];
@@ -69,8 +66,10 @@ function readPrelim(pages) {
     if (m && +m[1] === ex.length + 1) { curEx = { n: +m[1], text: m[2], p }; ex.push(curEx); }
     else if (curEx && !/Page \d+ of \d+|Order Number|Page Number|First American Title|^\s*$/i.test(l)) curEx.text += ' ' + l.trim();
   }
-  const kind = e => /^(General and special taxes|The lien of supplemental taxes|Assessments)/i.test(e.text) ? 'taxes' : /easement/i.test(e.text) ? 'easements' : /covenants|conditions and restrictions|CC&R|agreement|declaration/i.test(e.text) ? 'ccrs' : /deed of trust to secure|judgment|mechanic|lis pendens|abstract of|tax lien|notice of (default|lien)/i.test(e.text) ? 'liens' : 'other';
-  ex.forEach(e => { const k = kind(e); const amt = (e.text.match(/\$[\d,]+(?:\.\d\d)?/) || [''])[0]; add(k, `#${e.n}: ${e.text.slice(0, 220)}${e.text.length > 220 ? '…' : ''}`, e.p, e.text.slice(0, 300)); });
+  const SKIP = /^(General and special taxes|The lien of supplemental taxes|A deed of trust|An assignment of|Rights of the public|Water rights|The new lender|An Owner.s Certification|With respect to the trust|With respect to|Any rights of parties in possession|The requirement that|Matters which may be disclosed by an inspection|Any facts, rights, interests)/i;
+  const kind = e => /oil|gas|mineral|hydrocarbon|\bwells?\b|subsurface/i.test(e.text) && !/^Water rights/i.test(e.text) ? 'minerals' : /easement/i.test(e.text) ? 'easements' : /covenants|conditions and restrictions|CC&R|restriction|reservation|declaration|agreement/i.test(e.text) ? 'restrictions'
+    : /encroach|survey|boundary|lot line/i.test(e.text) ? 'encroach' : /judgment|mechanic|lis pendens|abstract of|tax lien|notice of (default|lien)|delinquent|bankruptcy|federal tax|state tax lien/i.test(e.text) ? 'clear' : SKIP.test(e.text) ? '' : 'other';
+  ex.forEach(e => { const k = kind(e); if (!k) return; const amt = (e.text.match(/\$[\d,]+(?:\.\d\d)?/) || [''])[0]; add(k, `#${e.n}: ${e.text.slice(0, 220)}${e.text.length > 220 ? '…' : ''}`, e.p, e.text.slice(0, 300)); });
   return S;
 }
 
@@ -81,7 +80,7 @@ async function openReader(id, page, q) {
   RD.id = id; RD.page = page || 1; RD.q = q || ''; RD.boxes = {}; RD.pdf = null; RD.extra = null;
   toast('Opening ' + meta.name + '…');
   const rec = await docPages(id); if (!rec) { toast('That file is no longer stored'); return; } RD.rec = rec;
-  if (isPdf({ name: rec.name, type: rec.mime })) { const pdfjs = await loadPdfJs(); RD.pdf = await pdfjs.getDocument({ data: new Uint8Array(await rec.blob.arrayBuffer()), isEvalSupported: false }).promise; }
+  if (isPdf({ name: rec.name, type: rec.mime })) { const pdfjs = await loadPdfJs(); RD.pdf = await pdfjs.getDocument({ data: new Uint8Array(await rec.blob.arrayBuffer()), isEvalSupported: false, wasmUrl: './wasm/', standardFontDataUrl: './standard_fonts/' }).promise; }
   cur = readForm(); cur.review = cur.review || {}; const rv = cur.review[id] = cur.review[id] || { sugg: [] };
   if (meta.type === 'prelim' && !rv.sugg.some(s => s.by === 'reader')) { rv.sugg.push(...readPrelim(rec.pagesText).map(s => ({ ...s, id: uid(), state: 'new' }))); saveLetter(true, true); }
   $('#reader').hidden = false; document.body.classList.add('reading'); rdRender(); rdPage();
@@ -111,7 +110,9 @@ function rdRender() {
   };
   const nNew = rv.sugg.filter(x => x.state === 'new').length;
   $('#rdSide').innerHTML = `<p class="help">Nothing goes into the order until you accept it. Each entry keeps its page so you can check it later.</p>${nNew > 1 ? `<div class="row"><button type="button" class="btn ghost small" id="rdAccAll">Accept all ${nNew} as shown</button></div>` : ''}
+    ${stickiesHtml()}
     ${C.items.map(rowFor).join('')}
+    ${rdExtras(meta)}
     <div class="rdai"><h4>Read with Claude</h4>${!aiOk ? `<p class="help">${ai === 'No' ? 'This order is set to <b>No AI</b>, so nothing from it can be sent.' : 'Choose <b>AI use on this job</b> on the Order &amp; letter tab first. Until then nothing is sent.'}</p>`
       : !key ? `<p class="help">Add your Claude API key on the Standard wording tab (AI settings) to use this. It stays in this browser.</p>`
       : `<p class="help">Sends page pictures (not the file) of pages <input id="rdFrom" value="1" size="2" inputmode="numeric"> to <input id="rdTo" value="${Math.min(20, RD.pdf ? RD.pdf.numPages : 1)}" size="2" inputmode="numeric"> to Claude. ${ai === 'Redacted' ? 'Names, phones, emails and numbers are painted out first, and you see every page before it is sent.' : 'This order allows AI without redaction; you still see the pages first.'}</p>
@@ -125,6 +126,7 @@ function rdRender() {
   side.querySelectorAll('[data-ownadd]').forEach(b => b.onclick = () => { const k = b.dataset.ownadd, i = side.querySelector(`[data-own="${k}"]`); const v = i.value.trim(); if (!v) return;
     (cur.facts = cur.facts || []).push({ id: uid(), docId: RD.id, doc: meta.name, type: meta.type, key: k, label: (C.items.find(x => x[0] === k) || [, k])[1], value: v, page: RD.page, by: 'you', at: new Date().toISOString() }); saveLetter(true, true); rdRender(); });
   const prep = $('#rdPrep'); if (prep) prep.onclick = () => rdPrepare();
+  wireStickies(side); rdWireExtras(side);
   const aa = $('#rdAccAll'); if (aa) aa.onclick = () => { side.querySelectorAll('[data-acc]').forEach(b => b.click()); };
 }
 
@@ -134,10 +136,14 @@ async function searchDocs(q) {
   out.innerHTML = '<p class="help">Searching…</p>'; const hits = [];
   for (const d of cur.docs || []) { let rec; try { rec = await docPages(d.id); } catch (e) { continue; } if (!rec || !rec.pagesText) continue;
     rec.pagesText.forEach((t, i) => { const at = t.toLowerCase().indexOf(q.toLowerCase()); if (at >= 0) hits.push({ d, p: i + 1, s: t.slice(Math.max(0, at - 70), at + q.length + 90).replace(/\s+/g, ' ') }); }); }
+  const ql = q.toLowerCase();
+  (cur.stickies || []).forEach(n => { if (n.text.toLowerCase().includes(ql) || tagName(n.tag).toLowerCase().includes(ql)) hits.unshift({ d: { id: n.docId, name: '📌 ' + n.doc }, p: n.page, s: tagName(n.tag) + ': ' + n.text }); });
+  (cur.facts || []).forEach(f => { if ((f.value + ' ' + f.label).toLowerCase().includes(ql)) hits.unshift({ d: { id: f.docId, name: '✓ ' + f.doc }, p: f.page || 1, s: f.label + ': ' + f.value }); });
   out.innerHTML = hits.length ? `<ul class="hits2">${hits.slice(0, 60).map(x => `<li><button type="button" class="lnk" data-hit="${x.d.id}" data-p="${x.p}">${h(x.d.name)} · page ${x.p}</button><small>${h(x.s)}</small></li>`).join('')}</ul>${hits.length > 60 ? `<p class="help">${hits.length - 60} more.</p>` : ''}` : '<p class="help">Not found in the readable text. Scanned pages cannot be searched until they are run through Acrobat’s Recognize Text.</p>';
   out.querySelectorAll('[data-hit]').forEach(b => b.onclick = () => openReader(b.dataset.hit, +b.dataset.p, q));
 }
 function renderFacts() {
+  renderStickies();
   const box = $('#factList'); if (!box) return; const F = (cur && cur.facts) || [];
   box.innerHTML = F.length ? `<h4>Facts accepted from the documents</h4><table class="facts">${F.map(f => `<tr><th>${h(f.label)}</th><td>${h(f.value)} <small class="muted">${h(f.doc)}${f.page ? ', p. ' + f.page : ''}</small></td></tr>`).join('')}</table>` : '';
 }
@@ -165,7 +171,8 @@ async function redactPage(n, redact) { // → canvas with the page painted, sens
       const spans = []; s.replace(PATTERN, (m, off) => { spans.push([off, m.length]); return m; });
       s.replace(/[A-Za-z0-9@.'’-]{3,}/g, (w, off) => { if (terms.has(w.replace(/[.'’]+$/, '').toLowerCase())) spans.push([off, w.length]); return w; });
       spans.forEach(([o, l]) => { g.fillRect(x + (o - 1) * per * sc - 2, y - hgt - 1, (l + 2) * per * sc + 4, hgt * 1.3 + 2); hits++; }); }); }
-  (RD.boxes[n] || []).forEach(b => { g.fillStyle = '#000'; g.fillRect(b.x * cv.width, b.y * cv.height, b.w * cv.width, b.h * cv.height); hits++; });
+  (RD.boxes[n] || []).forEach(b => { const X = b.x * cv.width, Y = b.y * cv.height, W = Math.max(2, b.w * cv.width), H = Math.max(2, b.h * cv.height);
+    if (b.mode === 'blur') { pixelate(g, X, Y, W, H); } else { g.fillStyle = '#000'; g.fillRect(X, Y, W, H); } hits++; });
   return { cv, hits };
 }
 async function rdPrepare() {
@@ -173,14 +180,18 @@ async function rdPrepare() {
   const from = Math.max(1, parseInt($('#rdFrom').value, 10) || 1), to = Math.min(RD.pdf.numPages, parseInt($('#rdTo').value, 10) || from, from + 29);
   const red = cur.aiUse === 'Redacted'; const pane = $('#rdSend'); pane.hidden = false; if (RD.extra == null) RD.extra = cur.redactNames || '';
   pane.innerHTML = `<div class="rdsendbar"><b>${red ? 'Redacted pages' : 'Pages'} ${from}–${to}: check every page.</b> ${red ? 'Black boxes are painted into the picture itself, so the hidden words are gone. Drag on a page to black out anything else (signatures, account numbers).' : ''}
-    ${red ? `<label>Also remove these names <span class="opt">separate with commas – buyers, sellers, agents, anyone else on the pages</span><input id="rdExtra" value="${h(RD.extra || '')}" placeholder="Broadway Warehouse, Colleen Casey"></label><p class="help">Signatures and initials are pictures, not text: drag a box over each one.</p>` : ''}
+    ${red ? `<label>Also remove these names <span class="opt">separate with commas – buyers, sellers, agents, anyone else on the pages</span><input id="rdExtra" value="${h(RD.extra || '')}" placeholder="Broadway Warehouse, Colleen Casey"></label><p class="help">Signatures and initials are pictures, not text: drag a box over each one.</p>
+      <div class="row"><span>Drag to:</span><div class="seg2"><button type="button" data-dm="black" aria-pressed="${(RD.drawMode || 'black') === 'black'}">Black box</button><button type="button" data-dm="blur" aria-pressed="${RD.drawMode === 'blur'}">Blur</button></div><button type="button" class="btn ghost small" id="rdUndoBox">Undo last box</button></div>
+      <p class="help">Blur scrambles the pixels so nothing underneath can be read back; it looks softer than a black box (good for photos and logos). Names and numbers found in the text are always blacked out.</p>` : ''}
     <span class="row"><button type="button" class="btn primary" id="rdGo">Send these ${to - from + 1} pages to Claude</button><button type="button" class="btn ghost" id="rdCancel">Cancel</button></span></div><div id="rdThumbs" class="rdthumbs"></div>`;
   const th = $('#rdThumbs'); RD.prepared = [];
   for (let n = from; n <= to; n++) { const { cv, hits } = await redactPage(n, red); cv.dataset.n = n; const wrap = document.createElement('figure'); wrap.innerHTML = `<figcaption>Page ${n}${red ? ` · ${hits} item${hits === 1 ? '' : 's'} blacked out` : ''}</figcaption>`; wrap.prepend(cv); th.appendChild(wrap); RD.prepared.push(n);
     if (red) { let st = null; cv.onpointerdown = e => { const r = cv.getBoundingClientRect(); st = [(e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height]; cv.setPointerCapture(e.pointerId); };
       cv.onpointerup = async e => { if (!st) return; const r = cv.getBoundingClientRect(); const en = [(e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height]; const b = { x: Math.min(st[0], en[0]), y: Math.min(st[1], en[1]), w: Math.abs(en[0] - st[0]), h: Math.abs(en[1] - st[1]) }; st = null; if (b.w < 0.01 || b.h < 0.005) return;
-        (RD.boxes[n] = RD.boxes[n] || []).push(b); const { cv: nv, hits: nh } = await redactPage(n, true); cv.getContext('2d').drawImage(nv, 0, 0); wrap.querySelector('figcaption').textContent = `Page ${n} · ${nh} items blacked out`; }; } }
+        b.mode = RD.drawMode || 'black'; b.t = Date.now(); (RD.boxes[n] = RD.boxes[n] || []).push(b); const { cv: nv, hits: nh } = await redactPage(n, true); cv.getContext('2d').drawImage(nv, 0, 0); wrap.querySelector('figcaption').textContent = `Page ${n} · ${nh} items blacked out`; }; } }
   $('#rdCancel').onclick = () => { pane.hidden = true; pane.innerHTML = ''; };
+  document.querySelectorAll('[data-dm]').forEach(b => b.onclick = () => { RD.drawMode = b.dataset.dm; document.querySelectorAll('[data-dm]').forEach(x => x.setAttribute('aria-pressed', x === b)); });
+  const ub = $('#rdUndoBox'); if (ub) ub.onclick = () => { const ns = Object.keys(RD.boxes).filter(k => RD.boxes[k].length).map(Number); if (!ns.length) return; const last = ns.reduce((a, k) => (RD.boxes[k].at(-1).t || 0) > (RD.boxes[a].at(-1).t || 0) ? k : a, ns[0]); RD.boxes[last].pop(); rdPrepare(); };
   const ex = $('#rdExtra'); if (ex) ex.onchange = () => { RD.extra = ex.value; cur.redactNames = ex.value; saveLetter(true, true); rdPrepare(); };
   $('#rdGo').onclick = () => rdSend(red);
 }
@@ -190,14 +201,139 @@ async function rdSend(red) {
     const imgs = []; for (const cv of document.querySelectorAll('#rdThumbs canvas')) { const data = cv.toDataURL('image/jpeg', 0.82).split(',')[1]; imgs.push({ n: +cv.dataset.n, data }); }
     const content = [];
     imgs.forEach(im => { content.push({ type: 'text', text: `Page ${im.n}:` }); content.push({ type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: im.data } }); });
-    content.push({ type: 'text', text: `This is a ${C.title.toLowerCase()} for a residential appraisal of ${street(readForm()) || 'a property'} in California. Read the pages above and fill this checklist:\n${C.items.map(([k, l]) => `- ${k}: ${l}`).join('\n')}\n\nAnswer with JSON only, in this form: {"items":[{"key":"<checklist key>","value":"<what the document says, short>","page":<page number>,"quote":"<the words you read it from>"}]}. Use only what the pages show; leave a key out when the pages do not cover it. Black boxes are redactions: do not guess what is under them. Do not give an opinion of value.` });
+    content.push({ type: 'text', text: `This is a ${C.title.toLowerCase()} for a residential appraisal of ${street(readForm()) || 'a property'} in California. Read the pages above and fill this checklist:\n${C.items.map(([k, l]) => `- ${k}: ${l}`).join('\n')}\n\nAnswer with JSON only, in this form: {"items":[{"key":"<checklist key>","value":"<what the document says, short>","page":<page number>,"quote":"<the words you read it from>"}]}. ${meta.type === 'contract' ? 'Also list the parts of the document as "parts":[{"kind":"Purchase agreement|Seller counter offer|Buyer counter offer|Addendum|Lease agreement|1031 exchange agreement|Agent/broker disclosures|Other disclosures|Other","pages":"first-last"}]. Report only terms written or typed in, not the pre-printed wording. ' : ''}${meta.type === 'prelim' ? 'Leave out deeds of trust, trust requirements, general printed exceptions and tax installments that are paid. ' : ''}Use only what the pages show; leave a key out when the pages do not cover it. Black boxes are redactions: do not guess what is under them. Do not give an opinion of value.` });
     const res = await fetch('https://api.anthropic.com/v1/messages', { method: 'POST', headers: { 'content-type': 'application/json', 'x-api-key': aiKey(), 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
       body: JSON.stringify({ model: aiModel(), max_tokens: 4000, system: 'You read real estate documents for a residential appraiser and report exactly what they say, with page numbers. Reply with JSON only.', messages: [{ role: 'user', content }] }) });
     const j = await res.json(); if (!res.ok) throw new Error((j.error && j.error.message) || 'Claude answered with an error (' + res.status + ')');
     const txt = (j.content || []).filter(c => c.type === 'text').map(c => c.text).join(''); const js = txt.slice(txt.indexOf('{'), txt.lastIndexOf('}') + 1);
-    const items = (JSON.parse(js).items || []).filter(x => x && x.key && x.value);
+    const parsed = JSON.parse(js); const items = (parsed.items || []).filter(x => x && x.key && x.value);
+    if (Array.isArray(parsed.parts) && parsed.parts.length) { const rv0 = cur.review[RD.id]; if (!(rv0.parts || []).length) rv0.parts = parsed.parts.map(x => ({ kind: PART_KINDS.includes(x.kind) ? x.kind : 'Other', pages: String(x.pages || '') })); }
     const rv = cur.review[RD.id]; items.forEach(x => rv.sugg.push({ id: uid(), key: C.items.some(i => i[0] === x.key) ? x.key : C.items[C.items.length - 1][0], value: String(x.value), page: +x.page || null, quote: String(x.quote || ''), by: 'claude', state: 'new' }));
     (cur.aiLog = cur.aiLog || []).push({ at: new Date().toISOString(), doc: meta.name, pages: imgs.map(i => i.n), mode: red ? 'redacted' : 'full', model: aiModel(), items: items.length });
     saveLetter(true, true); $('#rdSend').hidden = true; rdRender(); toast(`Claude read ${imgs.length} pages and suggested ${items.length} entries – accept or reject each one`, 5000);
   } catch (e) { console.error(e); toast('Not sent or not read: ' + (e.message || e), 6000); go.disabled = false; go.textContent = 'Try again'; }
+}
+
+function pixelate(g, X, Y, W, H) { // strong mosaic: 1 colour per 18-px block, then a soft pass – the original pixels are gone
+  const bs = 18; const img = g.getImageData(X, Y, W, H), d = img.data;
+  for (let by = 0; by < H; by += bs) for (let bx = 0; bx < W; bx += bs) { let r = 0, gg = 0, b = 0, n = 0;
+    for (let y = by; y < Math.min(H, by + bs); y++) for (let x = bx; x < Math.min(W, bx + bs); x++) { const i = (y * W + x) * 4; r += d[i]; gg += d[i + 1]; b += d[i + 2]; n++; }
+    r /= n; gg /= n; b /= n; for (let y = by; y < Math.min(H, by + bs); y++) for (let x = bx; x < Math.min(W, bx + bs); x++) { const i = (y * W + x) * 4; d[i] = r; d[i + 1] = gg; d[i + 2] = b; } }
+  g.putImageData(img, X, Y); g.save(); g.filter = 'blur(6px)'; g.drawImage(g.canvas, X, Y, W, H, X, Y, W, H); g.restore();
+}
+
+/* ---------- parts of a contract packet, UAD 3.6 entries, drafted summaries ---------- */
+const PART_KINDS = ['Purchase agreement', 'Seller counter offer', 'Buyer counter offer', 'Addendum', 'Lease agreement', '1031 exchange agreement', 'Agent/broker disclosures', 'Other disclosures', 'Other'];
+const SALE_TYPES = [['TypicallyMotivated', 'Typically motivated'], ['EstateSale', 'Estate sale'], ['CourtOrderedNonForeclosureSale', 'Court-ordered (non-foreclosure)'], ['SaleBetweenRelatedParties', 'Sale between related parties'], ['RelocationSale', 'Relocation sale'], ['REOSale', 'REO sale'], ['ShortSale', 'Short sale'], ['ForeclosureSale', 'Foreclosure sale'], ['LandSale', 'Land sale'], ['PreSubdivisionSale', 'Pre-subdivision sale']];
+const EASE_TYPES = [['IngressOrEgress', 'Ingress / egress'], ['Utility', 'Utility'], ['Drainage', 'Drainage'], ['Conservation', 'Conservation'], ['Other', 'Other']];
+const REST_TYPES = [['Age', 'Age'], ['HistoricPreservation', 'Historic preservation'], ['Income', 'Income'], ['LandUse', 'Land use'], ['Rental', 'Rental'], ['SalePrice', 'Sale price'], ['Other', 'Other']];
+const fval = (docId, key) => (cur.facts || []).filter(f => f.docId === docId && f.key === key).map(f => f.value);
+const nWord = n => ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'][n] || String(n);
+function partsSentence(parts, total) {
+  const cnt = {}; parts.forEach(x => { cnt[x.kind] = cnt[x.kind] || []; cnt[x.kind].push(x); });
+  const pageCount = x => { const m = String(x.pages || '').match(/(\d+)\s*[-–]\s*(\d+)/); return m ? +m[2] - +m[1] + 1 : /^\d+$/.test(String(x.pages || '').trim()) ? 1 : null; };
+  const phrase = (k, list) => { const n = list.length; const pc = n === 1 && k === 'Purchase agreement' ? pageCount(list[0]) : null; const many = n > 1 || (pageCount(list[0]) || 1) > 1;
+    const name = { 'Purchase agreement': 'purchase contract', 'Seller counter offer': 'seller counter offer', 'Buyer counter offer': 'buyer counter offer', 'Addendum': 'addendum', 'Lease agreement': 'lease agreement', '1031 exchange agreement': '1031 exchange agreement', 'Agent/broker disclosures': 'agent/broker disclosures', 'Other disclosures': 'other disclosures', 'Other': 'other documents' }[k];
+    if (/disclosures|other documents/.test(name)) return (many ? 'multiple ' : '') + name;
+    return n === 1 ? (pc ? `a ${pc}-page ${name}` : (/^[aeiou]/.test(name) ? 'an ' : 'a ') + name) : `${n} ${name === 'addendum' ? 'addendums' : name + 's'}`; };
+  const bits = PART_KINDS.filter(k => cnt[k]).map(k => phrase(k, cnt[k]));
+  if (!bits.length) return '';
+  const list = bits.length > 1 ? bits.slice(0, -1).join(', ') + ', and ' + bits.at(-1) : bits[0];
+  return `I received a ${total ? total + '-page ' : ''}document which contains ${list}.`;
+}
+function contractDraft(docId) {
+  const rv = cur.review[docId], total = RD.pdf ? RD.pdf.numPages : null; const v = k => fval(docId, k).join('; ');
+  const out = []; const ps = partsSentence(rv.parts || [], total); if (ps) out.push(ps);
+  if (v('price')) out.push(`The final negotiated sales price is ${v('price')}${v('acceptDate') ? ', with an acceptance date of ' + v('acceptDate') : ''}.`); else if (v('acceptDate')) out.push(`The acceptance date is ${v('acceptDate')}.`);
+  if (v('personal')) out.push(`Personal property included: ${v('personal')}.`);
+  if (v('leaseback')) out.push(`Leaseback: ${v('leaseback')}.`);
+  if (v('credits')) out.push(`Credits/concessions: ${v('credits')}.`);
+  if (v('buyerBroker')) out.push(`Buyer's broker compensation: ${v('buyerBroker')}.`);
+  if (v('addenda')) out.push(`Counter offers and addenda: ${v('addenda')}.`);
+  if (v('loanCont') || v('apprCont')) out.push([v('loanCont') && `Loan contingency: ${v('loanCont')}.`, v('apprCont') && `Appraisal contingency: ${v('apprCont')}.`].filter(Boolean).join(' '));
+  if (v('entity')) out.push(`${v('entity')}.`);
+  if (v('special')) out.push(`${v('special')}.`);
+  if (v('written')) out.push(`Other terms written into the agreement: ${v('written')}.`);
+  return out.join(' ').replace(/\.\./g, '.').slice(0, 5000);
+}
+function prelimDraft(docId) {
+  const v = k => fval(docId, k); const dated = v('dated')[0];
+  const items = ['easements', 'restrictions', 'minerals', 'encroach', 'clear', 'other'].flatMap(k => v(k));
+  return `A preliminary title report${dated ? ' dated ' + dated : ''} was provided and reviewed.` + (items.length ? ` Exceptions of note: ${items.map(shortEx).join('; ')}.` : ' No exceptions of note were observed.')
+    + (v('clear').length ? ' Some items may need to be cleared prior to a transfer.' : '')
+    + ` The appraiser is not a title expert. This is a brief summary only; the appraisal assumes the title is marketable and free of adverse encumbrances other than those noted. The client should consult a title officer regarding any title concerns.`;
+}
+function rdExtras(meta) {
+  const rv = cur.review[RD.id]; cur.uad = cur.uad || {}; const U = cur.uad; const opt = (list, v) => '<option value="">—</option>' + list.map(([k, l]) => `<option value="${k}"${v === k ? ' selected' : ''}>${l}</option>`).join('');
+  const yn = (k) => `<select data-uad="${k}">${[['', '—'], ['true', 'Yes'], ['false', 'No']].map(([x, l]) => `<option value="${x}"${String(U[k] ?? '') === x ? ' selected' : ''}>${l}</option>`).join('')}</select>`;
+  if (meta.type === 'contract') { rv.parts = rv.parts || [];
+    return `<div class="rdx"><h4>Parts of this ${RD.pdf ? RD.pdf.numPages + '-page ' : ''}document</h4>
+      ${rv.parts.map((x, i) => `<div class="row"><select data-pk="${i}">${PART_KINDS.map(k => `<option${x.kind === k ? ' selected' : ''}>${k}</option>`).join('')}</select><input data-pp="${i}" value="${h(x.pages)}" placeholder="pages, e.g. 1-17" size="8"><button type="button" class="lnk" data-pdel="${i}">remove</button></div>`).join('')}
+      <div class="row"><button type="button" class="btn ghost small" id="rdPartAdd">+ Add a part (starting on page ${RD.page})</button></div>
+      <p class="help">${h(partsSentence(rv.parts, RD.pdf ? RD.pdf.numPages : null)) || 'Add each part (purchase agreement, counters, addenda, lease, 1031 agreement, disclosures) to build the sentence for the report.'}</p></div>
+    <div class="rdx"><h4>UAD 3.6 sales contract</h4><table class="facts uadm">
+      <tr><th>20.004 Contract price</th><td><input data-uad="price" value="${h(U.price ?? (fval(RD.id, 'price')[0] || ''))}"></td></tr>
+      <tr><th>20.005 Contract date</th><td><input data-uad="cdate" value="${h(U.cdate ?? (fval(RD.id, 'acceptDate')[0] || ''))}" placeholder="MM/DD/YYYY"></td></tr>
+      <tr><th>20.006 Transfer terms</th><td><select data-uad="saleType">${opt(SALE_TYPES, U.saleType)}</select></td></tr>
+      <tr><th>20.002 Arm's length?</th><td>${yn('arms')}</td></tr>
+      <tr><th>20.007 Personal property conveyed?</th><td>${yn('pp')}</td></tr>
+      <tr><th>20.008 Sales concessions?</th><td>${yn('conc')}</td></tr>
+      <tr><th>20.009 Total concessions ($)</th><td><input data-uad="concAmt" value="${h(U.concAmt || '')}" inputmode="decimal"></td></tr>
+      <tr><th>20.010 Typical for the market?</th><td>${yn('concTyp')}</td></tr></table>
+      <h4>20.011 Sales contract analysis <small class="muted">5,000 characters</small></h4><textarea data-uad="cmt" rows="8">${h(U.cmt ?? contractDraft(RD.id))}</textarea>
+      <div class="row"><button type="button" class="btn ghost small" data-redo="contract">Draft again from the accepted entries</button><button type="button" class="btn ghost small" data-copyuad="cmt">Copy</button></div></div>`; }
+  if (meta.type === 'prelim') {
+    return `<div class="rdx"><h4>UAD 3.6 site – encumbrances</h4><table class="facts uadm">
+      <tr><th>4.050 Easement noted</th><td>${yn('encEase')}</td></tr><tr><th>4.055 Easement type</th><td><select data-uad="easeType">${opt(EASE_TYPES, U.easeType)}</select></td></tr>
+      <tr><th>4.068 Improvement within an easement?</th><td>${yn('impInEase')}</td></tr>
+      <tr><th>4.050 Property restrictions (CC&Rs)</th><td>${yn('encCcr')}</td></tr><tr><th>4.051 Restriction type</th><td><select data-uad="restType">${opt(REST_TYPES, U.restType)}</select></td></tr>
+      <tr><th>4.050 Encroachment</th><td>${yn('encEncr')}</td></tr><tr><th>3.029 Mineral rights leased?</th><td>${yn('mineral')}</td></tr></table>
+      <p class="help">You decide how each easement or restriction affects market appeal and marketability; say so in the comments.</p>
+      <h4>Title summary for the report</h4><textarea data-uad="title" rows="7">${h(U.title ?? prelimDraft(RD.id))}</textarea>
+      <div class="row"><button type="button" class="btn ghost small" data-redo="prelim">Draft again from the accepted entries</button><button type="button" class="btn ghost small" data-copyuad="title">Copy</button></div></div>`; }
+  return '';
+}
+function rdWireExtras(side) {
+  const rv = cur.review[RD.id];
+  side.querySelectorAll('[data-uad]').forEach(el => el.onchange = el.oninput = () => { cur.uad[el.dataset.uad] = el.value; saveLetter(true, true); });
+  side.querySelectorAll('[data-redo]').forEach(b => b.onclick = () => { const k = b.dataset.redo === 'contract' ? 'cmt' : 'title'; cur.uad[k] = b.dataset.redo === 'contract' ? contractDraft(RD.id) : prelimDraft(RD.id); saveLetter(true, true); rdRender(); });
+  side.querySelectorAll('[data-copyuad]').forEach(b => b.onclick = async () => { try { await navigator.clipboard.writeText(cur.uad[b.dataset.copyuad] ?? side.querySelector(`[data-uad="${b.dataset.copyuad}"]`).value); toast('Copied – paste it into SFREP'); } catch (e) { toast('Select the text and press Ctrl+C'); } });
+  side.querySelectorAll('[data-pk]').forEach(s => s.onchange = () => { rv.parts[+s.dataset.pk].kind = s.value; saveLetter(true, true); rdRender(); });
+  side.querySelectorAll('[data-pp]').forEach(i => i.onchange = () => { rv.parts[+i.dataset.pp].pages = i.value; saveLetter(true, true); rdRender(); });
+  side.querySelectorAll('[data-pdel]').forEach(b => b.onclick = () => { rv.parts.splice(+b.dataset.pdel, 1); saveLetter(true, true); rdRender(); });
+  const pa = side.querySelector('#rdPartAdd'); if (pa) pa.onclick = () => { rv.parts.push({ kind: rv.parts.length ? 'Addendum' : 'Purchase agreement', pages: String(RD.page) }); saveLetter(true, true); rdRender(); };
+}
+
+/* ---------- sticky notes ---------- */
+const TAGS = [['important', 'Important'], ['market', 'Affects market appeal / marketability'], ['clear', 'Clear before transfer'], ['ask', 'Ask the client / agent'], ['report', 'Put in the report'], ['follow', 'Follow up']];
+const tagName = k => (TAGS.find(t => t[0] === k) || [, 'Note'])[1];
+function stickiesHtml() {
+  const S = (cur.stickies || []).filter(x => x.docId === RD.id).sort((a, b) => a.page - b.page);
+  return `<div class="rdx sticky-box"><div class="row"><h4>Sticky notes</h4><span class="grow"></span><button type="button" class="btn small" id="rdStick">+ Sticky note on page ${RD.page}</button></div>
+    <div id="rdStickForm" hidden><select id="rdStickTag">${TAGS.map(([k, l]) => `<option value="${k}">${l}</option>`).join('')}</select><textarea id="rdStickTxt" rows="2" placeholder="What to remember about this page"></textarea><div class="row"><button type="button" class="btn small primary" id="rdStickSave">Save note</button><button type="button" class="btn ghost small" id="rdStickCancel">Cancel</button></div></div>
+    ${S.map(n => `<div class="sticky tag-${n.tag}${n.done ? ' done' : ''}"><div class="row"><b>${h(tagName(n.tag))}</b><button type="button" class="pgchip" data-goto="${n.page}">p. ${n.page}</button><span class="grow"></span><label class="check"><input type="checkbox" data-sdone="${n.id}" ${n.done ? 'checked' : ''}>done</label><button type="button" class="lnk" data-sdel="${n.id}">delete</button></div><div>${h(n.text)}</div></div>`).join('') || '<p class="help">None yet. Tag anything important so you can find it again.</p>'}</div>`;
+}
+function wireStickies(side) {
+  const f = side.querySelector('#rdStickForm');
+  side.querySelector('#rdStick').onclick = () => { f.hidden = false; side.querySelector('#rdStickTxt').focus(); };
+  side.querySelector('#rdStickCancel').onclick = () => { f.hidden = true; };
+  side.querySelector('#rdStickSave').onclick = () => { const t = side.querySelector('#rdStickTxt').value.trim(); if (!t) return; const meta = cur.docs.find(d => d.id === RD.id);
+    (cur.stickies = cur.stickies || []).push({ id: uid(), docId: RD.id, doc: meta.name, page: RD.page, tag: side.querySelector('#rdStickTag').value, text: t, at: new Date().toISOString() }); saveLetter(true, true); rdRender(); toast('Sticky note saved on page ' + RD.page); };
+  side.querySelectorAll('[data-sdone]').forEach(c => c.onchange = () => { cur.stickies.find(x => x.id === c.dataset.sdone).done = c.checked; saveLetter(true, true); rdRender(); });
+  side.querySelectorAll('[data-sdel]').forEach(b => b.onclick = () => { cur.stickies = cur.stickies.filter(x => x.id !== b.dataset.sdel); saveLetter(true, true); rdRender(); });
+}
+function renderStickies() {
+  const box = $('#stickyList'); if (!box) return; const all = (cur && cur.stickies) || []; const flt = box.dataset.tag || '';
+  const S = all.filter(x => !flt || x.tag === flt);
+  box.innerHTML = all.length ? `<div class="row"><h4>Sticky notes</h4><select id="stickyTag"><option value="">All (${all.length})</option>${TAGS.filter(([k]) => all.some(x => x.tag === k)).map(([k, l]) => `<option value="${k}"${flt === k ? ' selected' : ''}>${l} (${all.filter(x => x.tag === k).length})</option>`).join('')}</select></div>
+    ${S.map(n => `<div class="sticky tag-${n.tag}${n.done ? ' done' : ''}"><div class="row"><b>${h(tagName(n.tag))}</b><button type="button" class="lnk" data-sopen="${n.docId}" data-p="${n.page}">${h(n.doc)}, page ${n.page}</button></div><div>${h(n.text)}</div></div>`).join('')}` : '';
+  const sel = box.querySelector('#stickyTag'); if (sel) sel.onchange = () => { box.dataset.tag = sel.value; renderStickies(); };
+  box.querySelectorAll('[data-sopen]').forEach(b => b.onclick = () => openReader(b.dataset.sopen, +b.dataset.p));
+}
+
+function shortEx(x) { // one short phrase per exception for the report: no instrument numbers, case numbers or names
+  let t = x.replace(/^#\d+:\s*/, '').replace(/…$/, '');
+  t = t.split(/\.\s+(?=[A-Z])/)[0].replace(/,?\s*a certified copy of which/i, '').replace(/\s+as\s+INSTRUMENT NO\.?.*$/i, '').replace(/\s+in Book\s+\d+.*$/i, '').replace(/\s+/g, ' ').trim();
+  t = t.replace(/\b(recorded)\s+([A-Z]+)\s+(\d{1,2}),\s+(\d{4})/g, (m, r, mo, d, y) => `${r} ${mo[0] + mo.slice(1).toLowerCase()} ${d}, ${y}`);
+  return t.charAt(0).toLowerCase() + t.slice(1);
 }

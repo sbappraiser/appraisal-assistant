@@ -11,4 +11,5 @@ js = 'const BUILD=' + repr(BUILD) + ';\n' + G + '\n'.join((root / 'engagement-le
 html = (src / 'template.html').read_text().replace('/*JS*/', js)
 (out / 'index.html').write_text(html)
 for f in ['pdf.min.mjs', 'pdf.worker.min.mjs', 'pdfjs-LICENSE.txt']: shutil.copy(root / 'inspection-app' / f, out / f)
+for d in ['wasm', 'standard_fonts']: shutil.copytree(root / 'vendor' / 'pdfjs' / d, out / d, dirs_exist_ok=True)  # scanned PDFs (JBIG2/JPEG 2000) and non-embedded fonts
 print('docs/index.html', len(html), BUILD)
