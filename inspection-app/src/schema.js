@@ -454,6 +454,7 @@ const VIEW_OPTS = (() => { const all = U('ViewType').filter(([c]) => !['Bay','Ca
 const SECTIONS = [
   { id: 'property', title: 'Property', groups: [
     { id: 'crs', title: 'Public record (CRS Data)', fields: [
+      { k: 'orderBox', l: 'From the order', t: 'order', show: (d, ins) => !!(ins && ins.data.property.order) },
       { k: 'crsLoad', l: 'Load a CRS Property Report (PDF) before you leave the office', t: 'crs' },
       { k: 'permitLoad', l: 'County permit history (optional)', t: 'permits' },
     ]},

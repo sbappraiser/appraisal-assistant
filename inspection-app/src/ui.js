@@ -43,6 +43,7 @@ async function renderHome() {
     ${hcBtn()}<button class="icon-btn" id="storeBtn">Storage check</button><label class="icon-btn" style="position:relative;overflow:hidden">Restore backup<input id="restoreFile" type="file" accept=".zip,application/zip" style="position:absolute;inset:0;opacity:0"></label></div></header>
   <main>
     ${(navigator.standalone || matchMedia('(display-mode: standalone)').matches) ? '' : '<p class="warn-box">You are in Safari. Inspections made here are kept separately from the Home Screen app – use the Home Screen icon for real work.</p>'}
+    ${await ordersBlock(all)}
     <form class="new-form" id="newForm" autocomplete="off">
       <h2 style="grid-column:1/-1">Start a new inspection</h2>
       <div><label class="flabel" for="nAddr"><span class="tag">Required</span><span class="lab">Property address</span></label><input class="txt" id="nAddr" required placeholder="123 Oak Street"></div>
@@ -64,6 +65,9 @@ async function renderHome() {
     await DB.del('inspections', id); app.confirm = null; toast('Inspection deleted'); renderHome();
   });
   $('#restoreFile').onchange = e => restoreBackup(e.target.files[0]);
+  $('#ordersFile').onchange = e => loadOrdersFile(e.target.files[0]);
+  root.querySelectorAll('[data-ostart]').forEach(b => b.onclick = () => startFromOrder(b.dataset.ostart));
+  root.querySelectorAll('[data-oclear]').forEach(b => b.onclick = async () => { if (!b.dataset.armed) { b.dataset.armed = 1; b.textContent = 'Tap again to clear the list'; return; } await clearOrders(); toast('Orders list cleared (your inspections are kept)'); renderHome(); });
   $('#storeBtn').onclick = storageCheck;
   root.querySelectorAll('[data-backup]').forEach(b => b.onclick = async () => {
     const ins = all.find(x => x.id === b.dataset.backup); if (!ins) return;
@@ -323,6 +327,7 @@ function renderField(f, d, ctx) {
   const id = ctx.list ? `f-${ctx.list}-${ctx.item}-${f.k}` : `f-${ctx.sec}-${f.k}`;
   const data = ctx.list ? `data-list="${ctx.list}" data-item="${ctx.item}"` : `data-sec="${ctx.sec}"`;
   if (f.t === 'info') return `<div class="field wide note-field"><div class="info remind">📏 ${esc(f.l)}</div></div>`;
+  if (f.t === 'order') return `<div class="field wide" id="${id}">${orderWidget()}</div>`;
   if (f.t === 'crs') return `<div class="field wide" id="${id}">${crsWidget()}</div>`;
   if (f.t === 'permits') { const w = permitsWidget(f.compact); return w ? `<div class="field wide" id="${id}">${f.compact ? '<div class="flabel"><span class="lab">' + esc(f.l) + '</span></div>' : ''}${w}</div>` : ''; }
   const req = isReq(f, d, ins);
@@ -403,11 +408,78 @@ function extraPhotos(sec) {
   return `<section class="group extra"><div class="extra-photos"><h3>Extra workfile photos – ${esc(sec.title)} ${photoCount(ph.length)}</h3>${photoSlot(slot)}</div></section>`;
 }
 
+/* ---------------- Active orders from the Appraisal Assistant (desktop) ----------------
+   The desktop saves "Active Orders.json"; she opens it here from Files (OneDrive / iCloud Drive).
+   Kept in the sketches store: 'orders:active' = the list, 'plan:<order>:<n>' = floor plan pictures. */
+const fmtD = iso => { if (!iso) return ''; const [y, m, d] = String(iso).split('-').map(Number); if (!d) return iso; return new Date(y, m - 1, d).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' }); };
+const fmtT = t => { if (!t) return ''; const [hh, mm] = t.split(':').map(Number); return new Date(2000, 0, 1, hh, mm).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }); };
+async function ordersBlock(all) {
+  let rec = null; try { rec = await DB.get('sketches', 'orders:active'); } catch (e) {}
+  const list = (rec && rec.orders) || [];
+  const card = o => { const ins = all.find(i => i.orderId === o.id); const street = String(o.address || '').split(',')[0];
+    return `<div class="card order-card"><b>${esc(street || '(no address)')}</b>
+      <div class="meta">${esc([o.fileNo && 'File ' + o.fileNo, o.type].filter(Boolean).join(' · '))}</div>
+      ${o.inspDate ? `<div class="meta"><b>Inspection ${esc(fmtD(o.inspDate))}${o.inspTime ? ' at ' + esc(fmtT(o.inspTime)) : ''}</b></div>` : ''}
+      ${o.access && (o.access.name || o.access.phone) ? `<div class="meta">Access: ${esc([o.access.name, o.access.rel].filter(Boolean).join(', '))} ${o.access.phone ? `<a href="tel:${esc(o.access.phone.replace(/[^\d+]/g, ''))}">${esc(o.access.phone)}</a>` : ''}</div>` : ''}
+      ${o.todos && o.todos.length ? `<div class="meta">${o.todos.length} to-do${o.todos.length > 1 ? 's' : ''} from the order</div>` : ''}
+      <div class="row">${ins ? `<button class="btn primary" data-open="${ins.id}">Open inspection</button>` : `<button class="btn primary" data-ostart="${esc(o.id)}">Start inspection</button>`}</div></div>`; };
+  return `<section class="orders-home"><div class="row" style="align-items:center;justify-content:space-between"><h2>Active orders${rec ? ` <small>from ${esc(new Date(rec.made).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }))}</small>` : ''}</h2>
+    <span class="row"><label class="btn" style="position:relative;overflow:hidden">${rec ? 'Get the newer orders file' : 'Get orders (Active Orders file)'}<input id="ordersFile" type="file" accept=".json,application/json" style="position:absolute;inset:0;opacity:0"></label>${rec ? '<button class="btn" data-oclear>Clear</button>' : ''}</span></div>
+    ${list.length ? `<div class="cards">${list.map(card).join('')}</div>` : `<p class="help">On the computer, press <b>Send active orders to the iPad</b> in the Appraisal Assistant and save the file to OneDrive or iCloud Drive. Then tap <b>Get orders</b> here and pick “Active Orders.json” in Files.</p>`}</section>`;
+}
+async function clearOrders() {
+  const all = (await DB.all('sketches')) || [];
+  for (const r of all) if (r.id === 'orders:active') await DB.del('sketches', r.id);
+}
+async function loadOrdersFile(file) {
+  if (!file) return; toast('Reading the orders file…');
+  try {
+    const d = JSON.parse(await file.text()); if (d.app !== 'appraisal-assistant' || d.kind !== 'active-orders') throw new Error('That is not an Active Orders file from the Appraisal Assistant.');
+    const old = await DB.get('sketches', 'orders:active');
+    const keep = new Set(); const orders = [];
+    for (const o of d.orders || []) {
+      const plans = [];
+      for (let n = 0; n < (o.plans || []).length; n++) { const key = 'plan:' + o.id + ':' + n; await DB.put('sketches', { id: key, src: o.plans[n].src, name: o.plans[n].name }); plans.push({ key, name: o.plans[n].name }); keep.add(key); }
+      orders.push({ ...o, plans });
+    }
+    await DB.put('sketches', { id: 'orders:active', made: d.made, orders });
+    // floor plans of orders no longer on the list stay only if an inspection uses them
+    const inUse = new Set(); ((await DB.all('inspections')) || []).forEach(i => (((i.data || {}).property || {}).order || { plans: [] }).plans.forEach(pl => inUse.add(pl.key)));
+    if (old) for (const o of old.orders || []) for (const pl of o.plans || []) if (!keep.has(pl.key) && !inUse.has(pl.key)) await DB.del('sketches', pl.key);
+    toast(orders.length + ' active order' + (orders.length === 1 ? '' : 's') + ' on this iPad'); renderHome();
+  } catch (e) { console.error(e); toast(e.message || 'Could not read that file'); }
+}
+async function startFromOrder(id) {
+  const rec = await DB.get('sketches', 'orders:active'); const o = rec && (rec.orders || []).find(x => x.id === id); if (!o) return;
+  const parts = String(o.address || '').split(',').map(x => x.trim()); const street = titleCase(parts[0] || '');
+  const ins = newInspection(o.fileNo || street, street); ins.orderId = o.id; const p = ins.data.property;
+  // address from the order; CRS facts (never beds, baths or square feet) when the order has the CRS report
+  const zm = (parts[2] || '').match(/([A-Z]{2})?\s*(\d{5})(?:-(\d{4}))?/);
+  applyCRS(ins, { addr: parts[0] || '', city: parts[1] || '', state: (zm && zm[1]) || 'CA', zip: zm ? zm[2] : '', zip4: zm && zm[3] ? zm[3] : '', county: o.county || '' }); delete p.crs;
+  if (o.crs) applyCRS(ins, { ...o.crs, file: o.crs.file || 'CRS report (from the order)', loadedAt: 'with the order' });
+  p.addr = street || p.addr; if (o.unit) p.unit = o.unit;
+  if (o.inspDate) p.inspDate = o.inspDate;
+  if (o.permits) { p.permits = o.permits; if (o.permits.zoning && !ins.data.site.zoneCode) ins.data.site.zoneCode = o.permits.zoning; }
+  p.order = { id: o.id, fileNo: o.fileNo, client: o.client, type: o.type, effDate: o.effDate, inspDate: o.inspDate, inspTime: o.inspTime, access: o.access || {}, todos: o.todos || [], done: {}, notes: o.notes || '',
+    listings: o.listings || [], docs: o.docs || [], plans: o.plans || [], apn: o.apn || '', lat: o.lat || '', lon: o.lon || '' };
+  await DB.put('inspections', ins); toast('Inspection started from order ' + (o.fileNo || street)); openInspection(ins.id);
+}
+function orderWidget() {
+  const O = app.ins.data.property.order; if (!O) return ''; const done = O.done || {};
+  const rows = [['File', O.fileNo], ['Client', O.client], ['Assignment', O.type], ['Effective date', fmtD(O.effDate)], ['Inspection', [fmtD(O.inspDate), fmtT(O.inspTime)].filter(Boolean).join(' at ')], ['APN', O.apn]].filter(r => r[1]);
+  return `<div class="crs"><table class="crs-table">${rows.map(r => `<tr><th>${esc(r[0])}</th><td>${esc(r[1])}</td></tr>`).join('')}
+    ${O.access && (O.access.name || O.access.phone) ? `<tr><th>Access contact</th><td>${esc([O.access.name, O.access.rel].filter(Boolean).join(', '))} ${O.access.phone ? `<a href="tel:${esc(O.access.phone.replace(/[^\d+]/g, ''))}">${esc(O.access.phone)}</a>` : ''}</td></tr>` : ''}
+    ${O.notes ? `<tr><th>Notes</th><td>${esc(O.notes)}</td></tr>` : ''}</table>
+    ${O.todos.length ? `<h3>To-dos from the order</h3>${O.todos.map((t, i) => `<label class="todo"><input type="checkbox" data-todo="${i}" ${done[i] ? 'checked' : ''}> ${esc(t)}</label>`).join('')}` : ''}
+    ${O.listings.length ? `<h3>MLS history of the subject</h3><table class="crs-table">${O.listings.map(x => `<tr><th>MLS ${esc(x.mls)}</th><td>${esc([x.status, x.listDate && 'listed ' + x.listDate, x.listPrice && '$' + Number(x.listPrice).toLocaleString(), x.saleDate && 'sold ' + x.saleDate, x.salePrice && '$' + Number(x.salePrice).toLocaleString()].filter(Boolean).join(' · '))}</td></tr>`).join('')}</table>` : ''}
+    ${O.plans.length ? `<p class="help">Floor plan${O.plans.length > 1 ? 's' : ''} from the order: open the sketch, then More → Floor plan underlay.</p>` : ''}
+    ${O.docs.length ? `<p class="help">Documents in the order (on the computer): ${esc(O.docs.map(d => d.type).join(', '))}</p>` : ''}</div>`;
+}
+
 /* ---------------- CRS Data import ---------------- */
 function crsWidget() {
   const c = app.ins.data.property.crs;
-  const rows = c ? [['Address', [c.addr, c.cityLine].filter(Boolean).join(', ')], ['APN', c.apn], ['Owner of record', c.owner], ['Year built (assessor / MLS)', [c.yearBuilt, c.yearBuiltMls].filter(Boolean).join(' / ')], ['Beds / baths (assessor)', [c.beds, c.baths].filter(Boolean).join(' / ')],
-    ['Public record sq. ft.', c.sqft], ['Lot size', [c.lotSf && Number(c.lotSf).toLocaleString() + ' sq. ft.', c.acres && c.acres + ' ac.'].filter(Boolean).join(' / ')], ['Land use', c.landUse], ['Zoning', c.zoning], ['FEMA flood zone', [c.fema, c.femaPanel, c.femaDate].filter(Boolean).join(' · ')],
+  const rows = c ? [['Address', [c.addr, c.cityLine].filter(Boolean).join(', ')], ['APN', c.apn], ['Owner of record', c.owner], ['Year built (assessor / MLS)', [c.yearBuilt, c.yearBuiltMls].filter(Boolean).join(' / ')], ['Lot size', [c.lotSf && Number(c.lotSf).toLocaleString() + ' sq. ft.', c.acres && c.acres + ' ac.'].filter(Boolean).join(' / ')], ['Land use', c.landUse], ['Zoning', c.zoning], ['FEMA flood zone', [c.fema, c.femaPanel, c.femaDate].filter(Boolean).join(' · ')],
     ['Last sale', c.sales && c.sales[0] ? `${c.sales[0].date} ${c.sales[0].amount || ''} ${c.sales[0].instrument || ''}` : ''], ['Transfers in last 3 years', c.sales ? String(c.sales.filter(s => withinYears(s.date, 3)).length) : '']].filter(r => r[1]) : [];
   return `<div class="crs">
     <p class="help">Before you leave the office, load the CRS Property Report PDF. It fills the address, ZIP+4, county and year built, and keeps APN, owner, lot size, flood zone and sales history for your workfile and SFREP.</p>
@@ -445,7 +517,15 @@ async function loadCRS(file) {
     const lines = await pdfLines(file); const c = parseCRS(lines);
     if (!c.addr && !c.apn) throw new Error('This does not look like a CRS Property Report.');
     c.file = file.name; c.loadedAt = new Date().toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
-    const p = app.ins.data.property, fr = app.ins.data.front, si = app.ins.data.site;
+    applyCRS(app.ins, c);
+    await saveNow(); toast('CRS data loaded'); renderTab();
+  } catch (e) { console.error(e); toast(e.message || 'Could not read that PDF'); }
+}
+// SUBJECT RULE: beds, baths and square footage from the CRS are never put into the inspection – she counts and measures on site.
+const NO_SUBJECT_COUNTS = ['beds', 'bedsMls', 'baths', 'bathsMls', 'sqft', 'sqftAssessor', 'sqftMls', 'rooms', 'roomsMls'];
+function applyCRS(ins, c) {
+  { NO_SUBJECT_COUNTS.forEach(k => delete c[k]);
+    const p = ins.data.property, fr = ins.data.front, si = ins.data.site;
     p.crs = c; if (p.pubCmt === undefined) p.pubCmt = true;
     if (c.addr) p.addr = titleCase(c.addr);
     if (c.city) { const m = CITIES.find(x => x[0].toLowerCase() === c.city.toLowerCase()); if (m) { p.city = m[0]; delete p.cityOther; } else { p.city = 'Other'; p.cityOther = titleCase(c.city); } }
@@ -455,8 +535,7 @@ async function loadCRS(file) {
     if (c.county) { if (/santa barbara/i.test(c.county)) p.county = 'Santa Barbara'; else if (/ventura/i.test(c.county)) p.county = 'Ventura'; else { p.county = 'Other'; p.countyOther = c.county.replace(/ County.*/i, ''); } }
     if (c.yearBuilt && !fr.yearBuilt) fr.yearBuilt = Number(c.yearBuilt);
     if (c.fema && isEmpty(si.hazard)) si.hazard = /^(A|V)/i.test(c.fema) ? ['FEMASpecialFloodHazardArea'] : ['None'];
-    await saveNow(); toast('CRS data loaded'); renderTab();
-  } catch (e) { console.error(e); toast(e.message || 'Could not read that PDF'); }
+  }
 }
 const titleCase = s => String(s || '').toLowerCase().replace(/\b([a-z])/g, m => m.toUpperCase());
 let pdfjsLib = null;
@@ -602,6 +681,7 @@ function bind(root) {
     renderTab();
   });
   const crs = root.querySelector('#crsFile'); if (crs) crs.onchange = () => loadCRS(crs.files[0]);
+  root.querySelectorAll('[data-todo]').forEach(cb => cb.onchange = async () => { const O = app.ins.data.property.order; O.done = O.done || {}; O.done[cb.dataset.todo] = cb.checked; await saveNow(); });
   root.querySelectorAll('.permitFile').forEach(pmf => pmf.onchange = () => loadPermits(pmf.files[0]));
   root.querySelectorAll('[data-appl]').forEach(b => b.onclick = () => {
     const it = itemOf(b); it.appl = it.appl || {}; const ak = b.dataset.appl; const a = APPLIANCES.find(x => x.k === ak);

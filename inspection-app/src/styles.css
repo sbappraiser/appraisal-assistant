@@ -306,3 +306,6 @@ html.testcopy .bar { border-bottom-color: #7b2cbf; }
 .tenkey[hidden]{display:none}
 .tk{font:700 24px system-ui,sans-serif;min-height:52px;border:2px solid #0b8f96;border-radius:8px;background:#fff;color:#066a70;touch-action:manipulation}
 .tk.hit,.tk:active{background:#bfe9eb}.tk.done{grid-column:span 3;font-size:18px;background:#0b8f96;color:#fff}
+
+.orders-home { margin-bottom: 22px; } .orders-home h2 small { font-size: 14px; font-weight: 400; color: #555; }
+.order-card .meta a { font-weight: 700; } label.todo { display: flex; gap: 10px; align-items: center; font-size: 18px; padding: 8px 0; border-bottom: 1px solid #ddd; } label.todo input { width: 26px; height: 26px; }

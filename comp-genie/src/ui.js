@@ -12,6 +12,9 @@ async function start() {
   app.jobs = (await DB.all('jobs')).sort((a, b) => b.updated - a.updated);
   const last = await DB.get('kv', 'lastJob');
   app.job = app.jobs.find(j => last && j.id === last.v) || app.jobs[0] || null;
+  app.orders = await readOrders();
+  const oq = new URLSearchParams(location.search).get('order');
+  if (oq) { history.replaceState(null, '', location.pathname); const o = app.orders.find(x => x.id === oq); if (o) await jobFromOrder(o); else toast('That order was not found in this browser. Open the Appraisal Assistant in this same browser (Chrome).', 6000); }
   if (!app.job) await newJob();
   app.jobs.forEach(j => (j.files || []).forEach(f => { if (!f.id) { f.id = uid(); f.legacy = true; } }));  // files dropped before "remove file" existed
   await loadPhotos();
@@ -21,6 +24,31 @@ function setCort(rows) {
   app.cort = rows || []; app.cortByApn = new Map(); app.cortByKey = new Map();
   app.cort.forEach((r, i) => { const a = apnKey(r.apn); if (a) { if (!app.cortByApn.has(a)) app.cortByApn.set(a, []); app.cortByApn.get(a).push(i); }
     if (r.addr) { const k = addrKey(r.addr); if (!app.cortByKey.has(k)) app.cortByKey.set(k, []); app.cortByKey.get(k).push(i); } });
+}
+/* ---------------- orders from the Appraisal Assistant (same site, same browser) ---------------- */
+async function readOrders() { // read-only; never creates the orders storage if the assistant was not used in this browser
+  try { if (indexedDB.databases) { const l = await indexedDB.databases(); if (!l.some(d => d.name === 'aa-orders')) return []; } } catch (e) {}
+  return new Promise(res => {
+    let r; try { r = indexedDB.open('aa-orders'); } catch (e) { res([]); return; }
+    r.onupgradeneeded = () => { try { r.transaction.abort(); } catch (e) {} };
+    r.onerror = () => res([]); r.onblocked = () => res([]);
+    r.onsuccess = () => { const d = r.result; if (!d.objectStoreNames.contains('orders')) { d.close(); res([]); return; }
+      const q = d.transaction('orders').objectStore('orders').getAll(); q.onsuccess = () => { d.close(); res(q.result || []); }; q.onerror = () => { d.close(); res([]); }; };
+  });
+}
+const ORDER_DONE = ['Delivered', 'Paid', 'Cancelled'];
+window.addEventListener('focus', async () => { const o = await readOrders(); if (o.length !== (app.orders || []).length) { app.orders = o; render(); } else app.orders = o; });
+const orderName = o => [o.fileNo, String(o.address || '').split(',')[0].trim()].filter(Boolean).join(' ') || 'Order';
+async function jobFromOrder(o) {
+  const parts = String(o.address || '').split(',').map(x => x.trim());
+  const sub = { addr: parts[0] || '', city: parts[1] || '', zip: ((parts[2] || '').match(/\d{5}/) || [''])[0], apn: o.apn || '', lat: o.lat || '', lon: o.lon || '', eff: o.effective || todayISO() };
+  if (o.unit) sub.unit = o.unit;
+  let j = app.jobs.find(x => x.orderId === o.id);
+  if (j) { Object.entries(sub).forEach(([k, v]) => { if (v && !j.subject[k]) j.subject[k] = v; }); if (o.effective) j.subject.eff = o.effective; app.job = j; }
+  else { j = await newJob(orderName(o)); j.orderId = o.id; Object.assign(j.subject, sub); }
+  if (o.crs && !j.subject.crs) j.subject.crs = crsCanon(o.crs);
+  j.subject.listings = o.listings || []; j.fileNo = o.fileNo || '';
+  app.sel = null; await saveNow(); await loadPhotos(); toast('Opened the assignment for order ' + orderName(o));
 }
 async function newJob(name) {
   const j = { id: uid(), name: name || 'New assignment', created: Date.now(), updated: Date.now(), subject: { addr: '', city: '', zip: '', apn: '', lat: '', lon: '', eff: todayISO() }, comps: [], files: [] };
@@ -186,6 +214,7 @@ function render() {
     <span class="grow"></span>
     <label class="jobsel">Assignment <select data-act="pickjob" id="jobpick">${app.jobs.map(j => `<option value="${j.id}" ${j.id === J.id ? 'selected' : ''}>${esc(j.name)}</option>`).join('')}</select></label>
     <button class="btn" data-act="newjob">New assignment</button>
+    ${(app.orders || []).some(o => !ORDER_DONE.includes(o.stage || 'New')) ? `<select data-act="fromorder" aria-label="Start from an order"><option value="">From an order…</option>${app.orders.filter(o => !ORDER_DONE.includes(o.stage || 'New')).sort((a, b) => String(b.orderDate || '').localeCompare(String(a.orderDate || ''))).map(o => `<option value="${o.id}">${esc(orderName(o))}</option>`).join('')}</select>` : ''}
     <button class="btn" data-act="backup" title="Save this assignment to a file">Back up</button>
     ${app.confirm === 'deljob' ? `<span class="confirm">Delete “${esc(J.name)}”? <button class="btn danger solid" data-act="deljob-yes">Delete</button><button class="btn" data-act="cancel">Keep</button></span>` : `<button class="btn danger" data-act="deljob">Delete</button>`}
   </header>
@@ -405,6 +434,7 @@ document.addEventListener('change', async e => {
   const t = e.target;
   if (t.dataset.act === 'files' && t.files.length) { await ingest([...t.files]); t.value = ''; return; }
   if (t.dataset.act === 'subjcrs' && t.files.length) { try { const r = crsCanon(parseCRS(await pdfLines(t.files[0]))); app.job.subject.crs = r; ['addr', 'city', 'zip', 'apn'].forEach(k => { if (r[k]) app.job.subject[k] = r[k]; }); if (r.lat) { app.job.subject.lat = r.lat; app.job.subject.lon = r.lon; } if (app.job.name === 'New assignment' && r.addr) app.job.name = r.addr; logFile(t.files[0].name, 'CRS (subject)', 1); save(); render(); toast('Subject filled from the CRS report'); } catch (err) { toast('Could not read that CRS report'); } return; }
+  if (t.dataset.act === 'fromorder' && t.value) { const o = app.orders.find(x => x.id === t.value); if (o) { await jobFromOrder(o); render(); } return; }
   if (t.dataset.act === 'pickjob') { app.job = app.jobs.find(j => j.id === t.value); app.sel = null; await DB.put('kv', { id: 'lastJob', v: app.job.id }); await loadPhotos(); render(); return; }
   if (t.dataset.act === 'showall') { app.showAll = t.checked; render(); return; }
   if (t.dataset.use) { const c = app.job.comps.find(x => x.id === t.dataset.use); const n = t.value ? +t.value : null; if (n) app.job.comps.forEach(x => { if (x !== c && x.use === n) x.use = null; }); c.use = n; save(); render(); return; }

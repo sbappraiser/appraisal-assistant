@@ -145,12 +145,13 @@ function ulScale(u, a, b, feet) { const m = Math.hypot(b[0] - a[0], b[1] - a[1])
 function openUnderlay() {
   const u = ulHere();
   openSheet(`<h3>Floor plan underlay</h3><p class="help">Put a floor plan picture or a PDF page under this level (${esc(LEVEL_NAME(SK.level))}) and trace over it. It shows faintly on screen only and is never printed or sent to SFREP. Your measured wall lengths always set the square footage.</p>
-    <div class="grid-btns col"><label class="btn">${u ? 'Replace with another plan…' : 'Choose a floor plan (picture or PDF)…'}<input type="file" id="ulFile" accept="image/*,application/pdf" hidden></label>
+    <div class="grid-btns col">${(((SK.ins.data.property || {}).order || {}).plans || []).map(pl => `<button class="btn" data-oplan="${esc(pl.key)}">From the order: ${esc(pl.name)}</button>`).join('')}<label class="btn">${u ? 'Replace with another plan…' : 'Choose a floor plan (picture or PDF)…'}<input type="file" id="ulFile" accept="image/*,application/pdf" hidden></label>
     ${u ? `<button class="btn" id="ulScale">Set the scale (tap two points)</button><button class="btn" id="ulMove">Move it to line it up</button>
     <div class="lrow"><span><b>Strength</b> ${Math.round((u.op ?? 0.35) * 100)}%</span><span><button class="btn sm" data-op="-0.1">Lighter</button> <button class="btn sm" data-op="0.1">Darker</button></span></div>
     <div class="lrow"><span><b>Turn</b></span><span><button class="btn sm" data-ur="-90">↺ 90°</button> <button class="btn sm" data-ur="90">↻ 90°</button></span></div>
     <button class="btn" id="ulHide">${u.hide ? 'Show it' : 'Hide it'}</button><button class="btn danger" id="ulDel">Remove it</button>` : ''}</div>
     <div class="row"><button class="btn" data-close>Close</button></div>`, sh => {
+      sh.querySelectorAll('[data-oplan]').forEach(b => b.onclick = async () => { closeSheet(); try { const r = await DB.get('sketches', b.dataset.oplan); if (!r || !r.src) throw new Error('it is not on this iPad any more – get the orders file again'); const bl = await (await fetch(r.src)).blob(); await ulLoad(new File([bl], (r.name || 'floor plan') + '.jpg', { type: 'image/jpeg' })); } catch (err) { toast('Could not open that plan: ' + (err.message || err)); } });
       sh.querySelector('#ulFile').onchange = async e => { const f = e.target.files[0]; if (!f) return; closeSheet(); try { await ulLoad(f); } catch (err) { toast('Could not open that plan: ' + (err.message || err)); } };
       if (!u) return;
       sh.querySelector('#ulScale').onclick = () => { closeSheet(); u.hide = false; SK.mode = 'uscale'; SK.us = { a: null }; SK.sel = null; draw(); renderPanel(); };
