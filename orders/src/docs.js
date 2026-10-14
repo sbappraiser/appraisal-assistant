@@ -132,10 +132,12 @@ function renderDocs() {
   box.innerHTML = list.length ? `<table class="docs"><tbody>${list.map(d => `<tr>
       <td><button type="button" class="lnk" data-dopen="${d.id}" title="Open">${h(d.name)}</button><small>${Math.max(1, Math.round(d.size / 1024)).toLocaleString()} KB${d.note ? ' · ' + h(d.note) : READS[d.type] ? '' : ''}</small></td>
       <td><select data-dtype="${d.id}" aria-label="Kind of document">${opts(d.type)}</select>${d.type === 'floorplan' && d.pages > 1 ? ` <label class="pg">page <input data-dpage="${d.id}" inputmode="numeric" value="${d.page || 1}" size="2"> of ${d.pages}</label>` : ''}</td>
-      <td class="acts"><button type="button" class="btn ghost small danger" data-ddel="${d.id}">Remove</button></td></tr>`).join('')}</tbody></table>`
+      <td class="acts"><button type="button" class="btn small" data-dread="${d.id}">Read</button><button type="button" class="btn ghost small danger" data-ddel="${d.id}">Remove</button></td></tr>`).join('')}</tbody></table>`
     : '<p class="help">No documents yet.</p>';
   $('#docCount').textContent = list.length ? list.length + ' file' + (list.length > 1 ? 's' : '') : '';
   box.querySelectorAll('[data-dopen]').forEach(b => b.onclick = () => openDoc(b.dataset.dopen));
+  box.querySelectorAll('[data-dread]').forEach(b => b.onclick = () => { saveLetter(true, true); openReader(b.dataset.dread); });
+  if (typeof renderFacts === 'function') renderFacts();
   box.querySelectorAll('[data-dtype]').forEach(s => s.onchange = () => retypeDoc(s.dataset.dtype, s.value));
   box.querySelectorAll('[data-dpage]').forEach(i => i.onchange = async () => { cur = readForm(); const m = cur.docs.find(d => d.id === i.dataset.dpage); m.page = Math.max(1, Math.min(m.pages || 1, parseInt(i.value, 10) || 1)); const f = await docFile(m.id); await readDoc(m, f); renderDocs(); saveLetter(true); toast('Floor plan page ' + m.page + ' will go to the iPad'); });
   box.querySelectorAll('[data-ddel]').forEach(b => b.onclick = () => {

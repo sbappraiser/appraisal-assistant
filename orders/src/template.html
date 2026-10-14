@@ -117,6 +117,18 @@ table.docs select { max-width: 260px; } .lnk { border: 0; background: none; padd
 table.mkrows td small { display: block; color: var(--muted); font-size: 12px; } table.mkrows tr.off td { color: var(--muted); text-decoration: line-through; } table.mkrows tr.off td:first-child, table.mkrows tr.off td:last-child { text-decoration: none; }
 .cnt { display: block; font-size: 12px; color: var(--muted); text-align: right; } .cnt.near { color: var(--warn); } .cnt.over { color: var(--danger); font-weight: 700; } .muted { color: var(--muted); } .warnTxt { color: var(--warn); font-weight: 600; }
 .types { display: flex; flex-wrap: wrap; gap: 4px 12px; padding-top: 6px; } .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; } .zil input { width: 100%; }
+#reader { position: fixed; inset: 0; z-index: 20; background: var(--bg); display: grid; grid-template-rows: auto 1fr; } body.reading { overflow: hidden; }
+.rdbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 10px 16px; background: var(--panel); border-bottom: 1px solid var(--line); } .grow { flex: 1; }
+.rdmain { display: grid; grid-template-columns: minmax(0, 1fr) minmax(320px, 440px); min-height: 0; } .rdview { overflow: auto; padding: 12px; } .rdview canvas { max-width: 100%; height: auto; box-shadow: 0 2px 10px rgba(0,0,0,.15); background: #fff; } .rdview pre { white-space: pre-wrap; background: var(--panel); padding: 12px; border-radius: 8px; }
+@media (max-width: 900px) { .rdmain { grid-template-columns: 1fr; } }
+#rdSide { overflow: auto; padding: 12px 16px; border-left: 1px solid var(--line); background: var(--panel); display: grid; gap: 10px; align-content: start; }
+.rditem { border-bottom: 1px solid var(--line); padding-bottom: 8px; display: grid; gap: 6px; } .rdlab { font: 600 13px var(--ui); } .rdfact { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; color: var(--ok); } .rdfact small { color: var(--muted); font-size: 12px; width: 100%; } .rdsug small { color: var(--muted); font-size: 12px; }
+.rdsug { background: var(--accent-soft); border-radius: 8px; padding: 6px 8px; display: grid; gap: 4px; } .rdsug textarea { min-height: 0; padding: 4px 6px; } .rdsug .row { gap: 6px; } .rdsug textarea { width: 100%; } .rdadd { display: flex; gap: 6px; } .rdadd input { flex: 1; min-width: 0; }
+.pgchip { border: 1px solid var(--line); background: var(--panel); border-radius: 99px; font-size: 12px; padding: 1px 8px; cursor: pointer; color: var(--accent); }
+.rdai { background: var(--field); border: 1px solid var(--line); border-radius: 10px; padding: 10px; } .rdai input { width: 3em; display: inline; }
+#rdSend { position: fixed; inset: 0; z-index: 25; background: var(--bg); overflow: auto; padding: 16px; } .rdsendbar { position: sticky; top: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; display: grid; gap: 8px; z-index: 2; }
+.rdthumbs { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; padding-top: 14px; } .rdthumbs canvas { width: 100%; height: auto; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,.15); cursor: crosshair; touch-action: none; } .rdthumbs figure { margin: 0; } .rdthumbs figcaption { font-size: 13px; color: var(--muted); }
+ul.hits2 { margin: 0; padding-left: 18px; } ul.hits2 li { margin: 4px 0; } ul.hits2 small { display: block; color: var(--muted); }
 a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fatal { background: #fde8e8; color: #8a1c1c; padding: 14px; margin: 0; font-weight: 600; }
 </style>
 </head>
@@ -177,6 +189,9 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
       </div>
       <p class="help pre" id="docStatus"></p>
       <div id="docList"></div>
+      <label>Search every document in this order<input id="docSearch" type="search" placeholder="for example: easement, rent, credit, Mello-Roos"></label>
+      <div id="docHits"></div>
+      <div id="factList" class="facts-box"></div>
     </fieldset>
     <fieldset><legend>Client</legend>
       <div id="clients"></div>
@@ -310,10 +325,19 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
     <label>AI-use paragraph<textarea id="aiTextBox"></textarea></label>
     <div class="toolrow"><button type="button" class="btn primary" id="aiSave">Save wording</button><button type="button" class="btn ghost" id="aiReset">Go back to the draft</button></div>
     <p class="note">Your orders, documents, clients and wording are kept in this browser on this computer only – nothing is sent anywhere. Press Back up now and then and keep the zip with your OneDrive records. To bring in the clients and orders from the old Engagement Letter Writer file: open it, press Back up there, then press Restore here and choose that file.</p>
+    <h2 style="margin-top:24px">AI settings</h2>
+    <p class="help">Used only by <b>Read with Claude</b> in the document reader, and only on orders where AI use is Yes or Redacted. The key is kept in this browser on this computer. Get one at console.anthropic.com → Settings → API Keys, after setting a monthly spending limit under Billing.</p>
+    <div class="grid2"><label>Claude API key<input id="aiKeyBox" type="password" autocomplete="off" placeholder="sk-ant-…"></label><label>Model<input id="aiModelBox" placeholder="claude-sonnet-5-5"></label></div>
+    <div class="toolrow"><button type="button" class="btn primary" id="aiKeySave">Save AI settings</button><button type="button" class="btn ghost" id="aiKeyClear">Remove the key</button></div>
     <p class="note" id="build"></p>
   </div>
 </section>
 </main>
+<div id="reader" hidden>
+  <div class="rdbar"><b id="rdTitle"></b><span class="grow"></span><button type="button" class="btn ghost small" id="rdPrev">‹ Previous</button><span id="rdPg"></span><button type="button" class="btn ghost small" id="rdNext">Next ›</button><button type="button" class="btn small" id="rdOpen">Open the file</button><button type="button" class="btn primary small" id="rdClose">Done</button></div>
+  <div class="rdmain"><div class="rdview"><p class="help warnTxt" id="rdNote"></p><canvas id="rdCanvas"></canvas><pre id="rdText" hidden></pre></div><aside id="rdSide"></aside></div>
+  <div id="rdSend" hidden></div>
+</div>
 <div id="toast" role="status" hidden></div>
 <script>
 /*JS*/

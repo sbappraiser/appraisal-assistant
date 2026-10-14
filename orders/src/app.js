@@ -389,5 +389,11 @@ async function start() {
   writeForm(cur); render(); renderLetters(); renderContacts();
   showTab(q && pick ? 'letter' : letters.length ? 'saved' : 'letter');
   $('#build').textContent = 'Version ' + BUILD;
+  $('#rdClose').onclick = closeReader; $('#rdPrev').onclick = () => { RD.page--; rdPage(); }; $('#rdNext').onclick = () => { RD.page++; rdPage(); }; $('#rdOpen').onclick = () => openDoc(RD.id);
+  document.addEventListener('keydown', e => { if ($('#reader').hidden || /INPUT|TEXTAREA/.test(document.activeElement.tagName)) return; if (e.key === 'ArrowRight') { RD.page++; rdPage(); } if (e.key === 'ArrowLeft') { RD.page--; rdPage(); } if (e.key === 'Escape') closeReader(); });
+  let st = null; $('#docSearch').addEventListener('input', e => { clearTimeout(st); st = setTimeout(() => searchDocs(e.target.value), 350); });
+  $('#aiKeyBox').value = aiKey(); $('#aiModelBox').value = aiModel();
+  $('#aiKeySave').onclick = () => { try { localStorage.setItem('aa.claudeKey', $('#aiKeyBox').value.trim()); localStorage.setItem('aa.claudeModel', $('#aiModelBox').value.trim() || 'claude-sonnet-5-5'); toast('AI settings saved in this browser'); } catch (e) { toast('Could not save'); } };
+  $('#aiKeyClear').onclick = () => { try { localStorage.removeItem('aa.claudeKey'); } catch (e) {} $('#aiKeyBox').value = ''; toast('Key removed'); };
 }
 document.addEventListener('DOMContentLoaded', start);
