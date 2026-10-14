@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Engagement Letter Writer</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,500;6..72,600&display=swap">
+<style>
+/* Layout: a working desk – intake form on the left, the signed-paper preview pinned on the right. */
+:root {
+  --bg: #eef1f4; --panel: #ffffff; --ink: #1c2631; --muted: #5b6876; --line: #d6dce3; --field: #f8fafb;
+  --accent: #2c5a78; --accent-ink: #ffffff; --accent-soft: #e3edf4; --warn: #8a5a00; --warn-bg: #fdf3dc; --ok: #2f6b3f; --ok-bg: #e5f2e8; --danger: #a33a2c;
+  --sheet: #ffffff; --sheet-ink: #111111; --sheet-line: #c8c8c8; --shadow: 0 1px 2px rgba(20,32,45,.08), 0 8px 24px rgba(20,32,45,.10);
+  --ui: "Public Sans", system-ui, -apple-system, "Segoe UI", sans-serif; --display: "Newsreader", Georgia, "Times New Roman", serif; --letter: Arial, Helvetica, sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #11171d; --panel: #1a222b; --ink: #e5ebf0; --muted: #9eabb8; --line: #2d3946; --field: #141b22;
+  --accent: #7fb3d6; --accent-ink: #0d1a24; --accent-soft: #1e3242; --warn: #f0c46a; --warn-bg: #3a2e14; --ok: #8fd19e; --ok-bg: #173022; --danger: #f08b7c;
+  --sheet: #fbfbfa; --sheet-ink: #111111; --sheet-line: #c8c8c8; --shadow: 0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.45); color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #11171d; --panel: #1a222b; --ink: #e5ebf0; --muted: #9eabb8; --line: #2d3946; --field: #141b22;
+  --accent: #7fb3d6; --accent-ink: #0d1a24; --accent-soft: #1e3242; --warn: #f0c46a; --warn-bg: #3a2e14; --ok: #8fd19e; --ok-bg: #173022; --danger: #f08b7c;
+  --sheet: #fbfbfa; --sheet-ink: #111111; --sheet-line: #c8c8c8; --shadow: 0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.45); color-scheme: dark }
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--ink); font: 15px/1.5 var(--ui); padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 0 48px; }
+header.top { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px; padding-block: 18px 14px; max-width: 1480px; margin: 0 auto; }
+.brand { display: grid; gap: 0; margin-right: auto; }
+.brand h1 { font: 600 26px/1.1 var(--display); margin: 0; letter-spacing: -.01em; text-wrap: balance; }
+.brand small { color: var(--muted); font-size: 13px; }
+nav.tabs { display: flex; gap: 4px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 4px; }
+nav.tabs button { border: 0; background: transparent; color: var(--muted); font: 600 14px var(--ui); padding: 8px 14px; border-radius: 7px; cursor: pointer; }
+nav.tabs button[aria-selected="true"] { background: var(--accent-soft); color: var(--ink); }
+.toolrow { display: flex; gap: 8px; flex-wrap: wrap; }
+main { max-width: 1480px; margin: 0 auto; }
+.desk { display: grid; grid-template-columns: minmax(0, 560px) minmax(0, 1fr); gap: 24px; align-items: start; }
+@media (max-width: 1020px) { .desk { grid-template-columns: minmax(0, 1fr); } .previewCol { position: static !important; } }
+form#letterForm { display: grid; gap: 14px; }
+fieldset { margin: 0; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); padding: 14px 16px 16px; display: grid; gap: 12px; min-width: 0; }
+legend { font: 600 12px/1 var(--ui); text-transform: uppercase; letter-spacing: .08em; color: var(--accent); padding: 0 6px; }
+.grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 12px; }
+.grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px 12px; }
+@media (max-width: 560px) { .grid2, .grid3 { grid-template-columns: minmax(0, 1fr); } }
+label { display: block; font-size: 13px; font-weight: 600; color: var(--muted); min-width: 0; }
+label > input, label > select, label > textarea { display: block; margin-top: 4px; }
+.opt { margin-left: 4px; }
+label.check { display: flex; align-items: center; gap: 8px; font-weight: 500; color: var(--ink); font-size: 14px; }
+.opt { font-weight: 400; color: var(--muted); font-size: 12px; }
+input, select, textarea { font: 15px/1.35 var(--ui); color: var(--ink); background: var(--field); border: 1px solid var(--line); border-radius: 8px; padding: 9px 10px; width: 100%; min-width: 0; }
+textarea { min-height: 64px; resize: vertical; }
+input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--accent); }
+input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.help { font-size: 13px; color: var(--muted); margin: 0; }
+.checks { display: flex; flex-wrap: wrap; gap: 8px 18px; }
+.client { display: grid; gap: 10px; padding-top: 4px; }
+.client + .client { border-top: 1px dashed var(--line); padding-top: 14px; }
+.client-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; }
+.client-actions { display: flex; gap: 6px; flex-wrap: wrap; } .client-actions select { width: auto; max-width: 220px; padding: 6px 8px; font-size: 13px; }
+.eyebrow { font: 600 12px var(--ui); text-transform: uppercase; letter-spacing: .07em; color: var(--muted); }
+.btn { font: 600 14px var(--ui); border: 1px solid var(--line); background: var(--panel); color: var(--ink); border-radius: 8px; padding: 9px 14px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.btn:hover { border-color: var(--accent); }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.btn.ghost { background: transparent; } .btn.small { padding: 5px 10px; font-size: 13px; } .btn.danger { color: var(--danger); }
+label.btn input { display: none; }
+.previewCol { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 12px); display: grid; gap: 12px; min-width: 0; }
+.bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; }
+.bar .fname { font: 500 13px var(--ui); color: var(--muted); margin-right: auto; min-width: 0; overflow-wrap: anywhere; }
+.missing { font-size: 13px; border-radius: 8px; padding: 7px 10px; margin: 0; }
+.missing.warn { background: var(--warn-bg); color: var(--warn); } .missing.ok { background: var(--ok-bg); color: var(--ok); }
+.paperWrap { max-height: calc(100vh - 170px); overflow: auto; border-radius: 4px; }
+@media (max-width: 1020px) { .paperWrap { max-height: none; } }
+#sheet { background: var(--sheet); color: var(--sheet-ink); box-shadow: var(--shadow); font: 13px/1.42 var(--letter); padding: 56px 64px 64px; max-width: 816px; margin: 0 auto; }
+@media (max-width: 600px) { #sheet { padding: 24px 18px; font-size: 12px; } }
+#sheet p { margin: 0 0 10px; } #sheet p.tight { margin-bottom: 0; } #sheet p.ind { padding-left: 40px; }
+#sheet p.lh { font-weight: 700; margin: 14px 0 0; }
+#sheet hr.lrule { border: 0; border-top: 1.5px solid var(--sheet-ink); margin: 6px 0 16px; }
+#sheet ol.ll { margin: 0 0 10px; padding-left: 40px; } #sheet ol.ll li { margin-bottom: 3px; }
+#sheet .blank { background: #fff1c2; color: var(--sheet-ink); }
+#sheet .lsig { margin-top: 24px; display: grid; gap: 6px; } #sheet .lsig div { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; } #sheet .lsig .b { font-weight: 700; }
+.panel h2 { font: 600 22px/1.2 var(--display); margin: 6px 0 4px; }
+.listHead { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.listHead input { max-width: 320px; }
+.tableWrap { overflow-x: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+th { font: 600 12px var(--ui); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+td.num { font-variant-numeric: tabular-nums; white-space: nowrap; } td.acts { white-space: nowrap; } td.acts .btn { margin-right: 4px; }
+td select { width: auto; padding: 5px 8px; font-size: 13px; }
+td.empty { color: var(--muted); padding: 28px 12px; text-align: center; }
+.wording { display: grid; gap: 12px; max-width: 820px; } .wording textarea { min-height: 240px; font-size: 14px; line-height: 1.5; }
+.note { background: var(--accent-soft); border-radius: 10px; padding: 12px 14px; font-size: 14px; }
+.drop { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; justify-content: space-between; border: 1.5px dashed var(--line); border-radius: 10px; padding: 12px 14px; background: var(--field); }
+.drop > div { flex: 1 1 240px; min-width: 0; } .drop.over { border-color: var(--accent); background: var(--accent-soft); }
+.scan { display: grid; gap: 8px; } .verdict { border-radius: 8px; padding: 9px 12px; font-size: 14px; font-weight: 600; }
+.verdict.stop { background: var(--warn-bg); color: var(--warn); } .verdict.look { background: var(--accent-soft); color: var(--ink); } .verdict.clear { background: var(--ok-bg); color: var(--ok); }
+.hits { display: grid; gap: 6px; max-height: 300px; overflow: auto; } .hit { font-size: 13px; line-height: 1.45; border-left: 3px solid var(--line); padding: 4px 10px; }
+.hit.ai { border-left-color: var(--warn); } .hit mark { background: var(--warn-bg); color: var(--ink); padding: 0 2px; border-radius: 3px; } .hit .tag { font: 600 11px var(--ui); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); display: block; }
+.aiPick { display: grid; gap: 6px; } .aiChoices { display: grid; gap: 6px; } .aiChoices input { accent-color: var(--accent); width: 18px; height: 18px; } .seg { position: relative; display: inline-flex; border: 1px solid var(--line); border-radius: 9px; overflow: hidden; width: max-content; }
+.seg input { position: absolute; opacity: 0; width: 1px; height: 1px; } .seg label { display: block; padding: 8px 22px; font: 600 14px var(--ui); color: var(--muted); cursor: pointer; background: var(--panel); }
+.seg label + input + label { border-left: 1px solid var(--line); } .seg input:checked + label { background: var(--accent); color: var(--accent-ink); } .seg input:focus-visible + label { outline: 2px solid var(--accent); outline-offset: -2px; }
+.pill { display: inline-block; font: 600 12px var(--ui); padding: 2px 8px; border-radius: 99px; background: var(--accent-soft); color: var(--ink); } .pill.no { background: var(--warn-bg); color: var(--warn); } .pill.yes { background: var(--ok-bg); color: var(--ok); }
+#toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(env(safe-area-inset-bottom, 0px) + 20px); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 10px; font-weight: 600; font-size: 14px; z-index: 10; max-width: calc(100vw - 32px); }
+@media (prefers-reduced-motion: no-preference) { .btn, nav.tabs button { transition: background .15s, border-color .15s; } }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand"><h1>Engagement Letter Writer</h1><small>Jennifer Heath, LLC · order intake and engagement letters in your 2026 wording</small></div>
+  <nav class="tabs" aria-label="Sections">
+    <button type="button" data-tab="letter" aria-selected="true">Letter</button>
+    <button type="button" data-tab="saved" aria-selected="false">Orders</button>
+    <button type="button" data-tab="contacts" aria-selected="false">Clients</button>
+    <button type="button" data-tab="wording" aria-selected="false">Standard wording</button>
+  </nav>
+  <div class="toolrow"><button type="button" class="btn ghost" id="btnBackup">Back up</button><label class="btn ghost" for="restoreFile">Restore<input type="file" id="restoreFile" accept=".json,application/json"></label></div>
+</header>
+<main>
+<section class="panel" id="panel-letter">
+ <div class="desk">
+  <form id="letterForm" autocomplete="off">
+    <fieldset><legend>Order</legend>
+      <div class="grid3">
+        <label>File number<input id="f_fileNo" placeholder="26-101"></label>
+        <label>Order received<input id="f_orderDate" type="date"></label>
+        <label>Report due<input id="f_dueDate" type="date"></label>
+      </div>
+      <div class="grid2">
+        <label>Assignment type<select id="f_type"></select></label>
+        <label>Status<select id="f_status"><option>Drafted</option><option>Sent</option><option>Signed</option></select></label>
+      </div>
+      <p class="help" id="typeNote"></p>
+      <div class="drop" id="dropZone">
+        <div><span class="eyebrow">Client’s letter or order</span>
+          <p class="help" id="docName">Upload it here (Word or PDF). It is read on this computer only, with no AI, for any wording about AI, confidentiality or third parties.</p></div>
+        <label class="btn" for="orderFile">Upload letter<input type="file" id="orderFile" accept=".pdf,.docx,.txt,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain"></label>
+      </div>
+      <div id="scanBox" hidden></div>
+      <div class="aiPick" role="radiogroup" aria-labelledby="aiLbl">
+        <span class="eyebrow" id="aiLbl">AI use on this job</span>
+        <div class="aiChoices">
+          <label class="check"><input type="radio" name="aiUse" id="ai_yes" value="Yes">Yes – no restriction</label>
+          <label class="check"><input type="radio" name="aiUse" id="ai_red" value="Redacted">Yes – only with confidential information removed</label>
+          <label class="check"><input type="radio" name="aiUse" id="ai_no" value="No">No AI on this job</label></div>
+        <p class="help" id="aiNote">Not decided yet.</p>
+      </div>
+      <label>Date of agreement<input id="f_agreeDate" type="date"></label>
+    </fieldset>
+    <fieldset><legend>Client</legend>
+      <div id="clients"></div>
+      <div><button type="button" class="btn ghost small" id="addClient">+ Add another client (co-trustee, sibling)</button></div>
+      <label class="check" id="jointBox"><input type="checkbox" id="f_joint">Both spouses are the clients, jointly (adds the authorization clause when only one spouse signs)</label>
+      <label>Other intended users <span class="opt">names only · leave blank when the Client is the only one</span><input id="f_otherUsers" placeholder="the Client’s attorney, Smith &amp; Lee LLP"></label>
+      <p class="help" id="usersNote" hidden></p>
+      <label>Intended user, in your own words <span class="opt">optional · replaces the standard sentence</span><textarea id="f_userText" placeholder="The Client is the sole intended user. This report is not intended for use by any other party…"></textarea></label>
+    </fieldset>
+    <fieldset><legend>Property</legend>
+      <div class="grid2">
+        <label style="grid-column:1/-1">Property address<input id="f_address" placeholder="1450 East Valley Road, Santa Barbara, CA 93108"></label>
+        <label style="grid-column:1/-1">Interest valued <span class="opt">blank = the usual one for this property type</span><input id="f_interest"></label>
+        <label style="grid-column:1/-1">Property type<select id="f_propType"></select></label>
+        <label style="grid-column:1/-1">Describe the property<input id="f_propTypeOther"></label>
+      </div>
+      <div class="grid2" id="dodBox">
+        <label><span id="lblWho">Name of decedent</span><input id="f_decedent"></label>
+        <label><span id="lblDate">Date of death</span><input id="f_dod" type="date"></label>
+      </div>
+    </fieldset>
+    <fieldset><legend>Scope and report</legend>
+      <div id="purposeBox"><label>Purpose, in your words <span class="opt">finishes “to assist the Client in …”</span><input id="f_purpose" placeholder="establishing the cost basis of the property as of the date it was acquired"></label></div>
+      <div id="premiseBox" class="grid2">
+        <label>Value premise<select id="f_premise"><option value="asis">As is</option><option value="complHC">As completed, as of today (hypothetical condition)</option><option value="prospective">Prospective as completed (future date)</option><option value="both">Both as is and prospective as completed</option></select></label>
+        <label id="completionBox">Estimated completion date<input id="f_completion" type="date"></label>
+        <label id="plansBox" style="grid-column:1/-1">Documents the client will provide<input id="f_plans" placeholder="plans, specifications, and detailed cost budget"></label>
+      </div>
+      <label>Inspection<select id="f_inspection"><option value="interior">Interior and exterior</option><option value="exterior">Exterior only, from the street</option><option value="none">No inspection</option></select></label>
+      <div><span class="eyebrow">Valuation approaches</span>
+        <div class="checks"><label class="check"><input type="checkbox" id="f_apSales">Sales Comparison</label><label class="check"><input type="checkbox" id="f_apCost">Cost (as applicable)</label><label class="check"><input type="checkbox" id="f_apIncome">Income (as applicable)</label></div></div>
+      <label>Report format <span class="opt">blank = the form for this property type</span><input id="f_format"></label>
+      <div class="grid2">
+        <label>Listing / contract status<select id="f_listing"><option value="omit">Leave this section out</option><option value="notListed">Not listed for sale</option><option value="listed">Currently listed</option><option value="contract">Under contract</option></select></label>
+        <label id="listingDetailBox">Details <span class="opt">MLS #, list price, contract date</span><input id="f_listingDetail"></label>
+      </div>
+      <label>Extraordinary assumptions <span class="opt">blank = standard wording</span><textarea id="f_ea"></textarea></label>
+      <label>Hypothetical conditions <span class="opt">blank = standard wording</span><textarea id="f_hc"></textarea></label>
+      <div class="grid3">
+        <label>Access contact <span class="opt">blank = Client</span><input id="f_accessName"></label>
+        <label>Relationship<input id="f_accessRel" placeholder="tenant, agent"></label>
+        <label>Phone<input id="f_accessPhone"></label>
+      </div>
+    </fieldset>
+    <fieldset><legend>Fee and delivery</legend>
+      <div class="grid2">
+        <label>Total fee ($)<input id="f_fee" inputmode="decimal" placeholder="2,500"></label>
+        <label>Retainer ($) <span class="opt">optional</span><input id="f_retainer" inputmode="decimal"></label>
+      </div>
+      <label>Payment due<select id="f_payWhen"><option value="inspection">At or before the inspection</option><option value="report">Upon delivery of the report (invoice due on receipt)</option><option value="signing">Upon signing this Agreement</option><option value="other">Other (type it)</option></select></label>
+      <label id="payOtherBox">Payment terms, in your words<input id="f_payDue" placeholder="Half on signing, the balance on delivery of the report"></label>
+      <div class="grid3">
+        <label>Report delivered within<input id="f_deliveryN" inputmode="numeric" placeholder="10"></label>
+        <label>&nbsp;<select id="f_deliveryUnit"><option>days</option><option>business days</option><option>weeks</option></select></label>
+        <label>Counted from<select id="f_deliveryFrom"><option value="either">Inspection or payment, whichever is later</option><option value="inspection">The inspection</option><option value="payment">Receipt of payment</option></select></label>
+      </div>
+      <p class="help" id="deliveryNote"></p>
+    </fieldset>
+    <fieldset><legend>Rent survey and court testimony</legend>
+      <div class="grid2">
+        <label class="check"><input type="checkbox" id="f_rent">Add a current market rent survey</label>
+        <label id="rentFeeBox">Rent survey fee ($)<input id="f_rentFee" inputmode="decimal" placeholder="500"></label>
+      </div>
+      <label class="check"><input type="checkbox" id="f_testimony">Include court testimony and expert witness terms</label>
+      <div class="grid2" id="testimonyBox">
+        <label>Hourly rate ($)<input id="f_tRate" inputmode="decimal"></label>
+        <label>Declaration minimum ($)<input id="f_tDecl" inputmode="decimal"></label>
+        <label>Testimony retainer ($)<input id="f_tRetainer" inputmode="decimal"></label>
+        <label>Late-cancellation fee ($)<input id="f_tCancel" inputmode="decimal"></label>
+      </div>
+    </fieldset>
+    <fieldset><legend>Confidentiality and extra terms</legend>
+      <p class="help">The AI-use paragraph prints at the end of Confidentiality unless AI use is set to No AI. Edit its wording on the Standard wording tab.</p>
+      <label>Additional terms <span class="opt">optional · a blank line starts a new paragraph</span><textarea id="f_extra"></textarea></label>
+    </fieldset>
+  </form>
+  <div class="previewCol">
+    <div class="bar"><span class="fname" id="fileName"></span>
+      <button type="button" class="btn ghost" id="btnNew">New letter</button><button type="button" class="btn" id="btnSave">Save letter</button><button type="button" class="btn primary" id="btnDocx">Download Word letter</button></div>
+    <p class="missing" id="missing"></p>
+    <div class="paperWrap"><article id="sheet" aria-label="Letter preview"></article></div>
+  </div>
+ </div>
+</section>
+<section class="panel" id="panel-saved" hidden>
+  <div class="listHead"><div><h2>Orders</h2><p class="help" id="letterCount"></p></div><input id="letterSearch" type="search" placeholder="Search file #, client, street"></div>
+  <div class="tableWrap"><table><thead><tr><th>File #</th><th>Property</th><th>Client</th><th>Type</th><th>AI</th><th>Agreement</th><th>Status</th><th></th></tr></thead><tbody id="letterList"></tbody></table></div>
+</section>
+<section class="panel" id="panel-contacts" hidden>
+  <div class="listHead"><div><h2>Clients</h2><p class="help" id="contactCount"></p></div><input id="contactSearch" type="search" placeholder="Search name, firm, email"></div>
+  <div class="tableWrap"><table><thead><tr><th>Name</th><th>Firm</th><th>Address</th><th>Phone</th><th>Email</th><th>Letters</th><th>Last letter</th><th></th></tr></thead><tbody id="contactList"></tbody></table></div>
+</section>
+<section class="panel" id="panel-wording" hidden>
+  <div class="wording">
+    <h2>Standard wording</h2>
+    <p class="help">Every other clause comes word for word from your 2026 letters. The AI-use paragraph below is a draft for you to adjust; it prints at the end of the Confidentiality section.</p>
+    <label>AI-use paragraph<textarea id="aiTextBox"></textarea></label>
+    <div class="toolrow"><button type="button" class="btn primary" id="aiSave">Save wording</button><button type="button" class="btn ghost" id="aiReset">Go back to the draft</button></div>
+    <p class="note">Your orders, clients and wording are kept in this browser on this computer only. Press Back up now and then, and keep the file with your OneDrive records.</p>
+  </div>
+</section>
+</main>
+<div id="toast" role="status" hidden></div>
+<script>
+/*JS*/
+</script>
+</body>
+</html>

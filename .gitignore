@@ -1,0 +1,9 @@
+# Her data never goes in this repository
+*.db
+*.json.gz
+*.csv
+*.xlsx
+*.zip
+data/
+dist/
+out/

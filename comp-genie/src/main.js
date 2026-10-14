@@ -1,0 +1,3 @@
+if (location.protocol === 'file:') {
+  document.getElementById('app').innerHTML = '<section class="card notice"><h2>Open Comp Genie from its web address</h2><p>This page reads PDFs with a helper that browsers only allow on a web address (https), not from a file on your computer. Open the Comp Genie link (your GitHub Pages address) in Chrome instead. Your data still stays on this computer.</p></section>';
+} else start().catch(e => { console.error(e); const b = document.getElementById('app'); b.innerHTML = '<p style="color:#c00;padding:24px">Comp Genie could not start: ' + esc(e.message || e) + '</p>'; });
