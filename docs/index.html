@@ -354,7 +354,7 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
       <li><b>Parts of this document:</b> go to the first page of each part and click <b>+ Add a part</b>; set its kind and pages. The sentence "I received a 75-page document which contains…" is built for you.</li>
       <li>Fill the <b>UAD 3.6 sales contract</b> boxes. <b>20.011 Sales contract analysis</b> is drafted from your entries; edit, <b>Copy</b>, paste into SFREP.</li></ol></details>
     <details><summary>Read with Claude, and redaction</summary><ol>
-      <li>One time: get a Claude API key at console.anthropic.com (Billing → add a card and a monthly limit; Settings → API Keys → Create Key). Paste it on <b>Standard wording → AI settings</b> and click <b>Save AI settings</b>.</li>
+      <li>One time: get a Claude API key at platform.claude.com, the Claude Console (Billing → add a card or credits and a monthly spending limit; then platform.claude.com/settings/keys → Create key, copy the key that starts with sk-ant-; it is shown only once). Paste it on <b>Standard wording → AI settings</b> and click <b>Save AI settings</b>.</li>
       <li>Only orders set to <b>Yes</b> or <b>Yes – only with confidential information removed</b> can use it. On <b>No AI</b> orders the button is locked and nothing is sent.</li>
       <li>In the reader, choose the pages and click <b>Prepare pages</b>. On redacted orders, names from the order, emails, phones and numbers are blacked out in the picture itself. Type any other names (buyers, sellers, agents) in "Also remove these names".</li>
       <li>Drag over signatures, initials or anything else to remove it. Choose <b>Black box</b> or <b>Blur</b> first. Use <b>Undo last box</b> if you miss.</li>
@@ -398,7 +398,7 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
     <div class="toolrow"><button type="button" class="btn primary" id="aiSave">Save wording</button><button type="button" class="btn ghost" id="aiReset">Go back to the draft</button></div>
     <p class="note">Your orders, documents, clients and wording are kept in this browser on this computer only – nothing is sent anywhere. Press Back up now and then and keep the zip with your OneDrive records. To bring in the clients and orders from the old Engagement Letter Writer file: open it, press Back up there, then press Restore here and choose that file.</p>
     <h2 style="margin-top:24px">AI settings</h2>
-    <p class="help">Used only by <b>Read with Claude</b> in the document reader, and only on orders where AI use is Yes or Redacted. The key is kept in this browser on this computer. Get one at console.anthropic.com → Settings → API Keys, after setting a monthly spending limit under Billing.</p>
+    <p class="help">Used only by <b>Read with Claude</b> in the document reader, and only on orders where AI use is Yes or Redacted. The key is kept in this browser on this computer. Get one at platform.claude.com (the Claude Console): add credits and a spending limit under Billing, then Settings → API keys → Create key.</p>
     <div class="grid2"><label>Claude API key<input id="aiKeyBox" type="password" autocomplete="off" placeholder="sk-ant-…"></label><label>Model<input id="aiModelBox" placeholder="claude-sonnet-5-5"></label></div>
     <div class="toolrow"><button type="button" class="btn primary" id="aiKeySave">Save AI settings</button><button type="button" class="btn ghost" id="aiKeyClear">Remove the key</button></div>
     <p class="note" id="build"></p>
@@ -412,7 +412,7 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
 </div>
 <div id="toast" role="status" hidden></div>
 <script>
-const BUILD='o1-1014-2306';
+const BUILD='o1-1014-2313';
 const G = (() => {
 /* ---------------- small helpers ---------------- */
 const $ = (s, r = document) => r.querySelector(s);

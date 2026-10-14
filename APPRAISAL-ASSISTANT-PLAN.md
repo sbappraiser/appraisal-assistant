@@ -51,7 +51,7 @@ This document carries everything agreed in the October 2026 conversations about 
   paragraphs; a ban → job set to None, letter never sent to AI; (2) otherwise AI reads the
   redacted letter once; (3) requirements stored **per client** so later letters are compared
   locally and only changes are flagged (AI reads only changed paragraphs).
-- **AI key**: console.anthropic.com → Billing (card + monthly spending limit) → API Keys → Create
+- **AI key**: platform.claude.com (Claude Console) → Billing (card + monthly spending limit) → Settings → API keys → Create
   Key → save in password manager → paste into assistant settings (stays on her computer). Not
   needed until the document reader stage. Alternative: assistant prepares documents and she drops
   them into the Claude app herself under her Pro plan (training off).
