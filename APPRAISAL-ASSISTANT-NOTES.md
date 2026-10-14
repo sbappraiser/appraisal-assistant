@@ -101,3 +101,4 @@ Plan: one "assignment" record created at intake (address, APN, lat/lon, client, 
 
 ## To do – comp genie (from her testing, Oct 14 2026)
 - The "Files read" box only has OK. Add "Undo this file" there (removes the comps, photos and data that file added), plus "Remove all comps" / select-and-remove in the comps list. She dropped an 84-listing MLS export when she wanted 11 and had no way back except starting a new assignment.
+- When an MLS export/printout row matches the subject (address or APN), file it as the SUBJECT's listing history (UAD subject listing section), not as a comp — same as the subject CRS report. Never use it to fill subject beds/baths/sq ft. Also show a "Remove file" (×) next to each file in "In this assignment".
