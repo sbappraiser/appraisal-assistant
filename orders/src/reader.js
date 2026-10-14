@@ -150,7 +150,7 @@ function renderFacts() {
 
 /* ---------- AI settings (stay in this browser) ---------- */
 const aiKey = () => { try { return localStorage.getItem('aa.claudeKey') || ''; } catch (e) { return ''; } };
-const aiModel = () => { try { return localStorage.getItem('aa.claudeModel') || 'claude-sonnet-5-5'; } catch (e) { return 'claude-sonnet-5-5'; } };
+const aiModel = () => { let m = ''; try { m = localStorage.getItem('aa.claudeModel') || ''; } catch (e) {} m = m.trim().toLowerCase().replace(/[\s.]+/g, '-').replace(/-+/g, '-'); return m || 'claude-sonnet-5-5'; }; // "Claude Sonnet 5.5" → claude-sonnet-5-5
 
 /* ---------- redaction and sending ---------- */
 function sensitiveTerms() {
