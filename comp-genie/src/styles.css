@@ -51,3 +51,8 @@ details{margin:12px 0}summary{cursor:pointer;color:var(--teal-d);font-weight:700
 table.cmp{table-layout:fixed;min-width:900px}table.cmp th select{width:100%;font-size:12.5px}table.cmp td,table.cmp th{overflow-wrap:anywhere}
 table.comps td.r,table.comps td:nth-child(6){white-space:nowrap}
 .files{margin-top:10px;font-size:14px}.files ul{margin:4px 0;padding-left:18px}.files li{margin:3px 0}.files small{color:var(--muted)}
+.viewer{position:fixed;inset:0;background:rgba(8,20,20,.92);z-index:50;display:flex;align-items:center;justify-content:center}
+.vbar{position:absolute;top:0;left:0;right:0;display:flex;gap:10px;align-items:center;padding:10px 16px;background:rgba(255,255,255,.96)}
+.vimg{width:calc(100vw - 140px);height:calc(100vh - 90px);object-fit:contain;margin-top:50px;border-radius:6px;box-shadow:0 8px 30px rgba(0,0,0,.4)}
+.varr{position:absolute;top:50%;transform:translateY(-50%);font-size:44px;width:56px;height:84px;border:0;border-radius:8px;background:rgba(255,255,255,.85);cursor:pointer}.varr.l{left:12px}.varr.r{right:12px}
+.hero{cursor:zoom-in}

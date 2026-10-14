@@ -283,13 +283,13 @@ function detailHTML(c) {
   const cortSel = c.src.cort.length > 1 ? `<select data-cortpick="${c.id}">${c.src.cort.map((t, i) => `<option value="${i}" ${(c.cortPick || 0) === i ? 'selected' : ''}>${esc(showDate(t.saleDate) + ' ' + money(t.salePrice))}</option>`).join('')}</select>` : '';
   const p = c.src.pdf, m = c.src.mls;
   return `<section class="card detail" id="det-${c.id}">
-    <div class="dhead"><div>${fr ? `<img class="hero" data-photo="${fr.id}" alt="Front photo">` : ''}</div>
+    <div class="dhead"><div>${fr ? `<img class="hero" data-photo="${fr.id}" data-view="${fr.id}" alt="Front photo" title="Click to look at the photos full size">` : ''}</div>
       <div><h2>${esc(compTitle(c))} <small>${esc([V(c, 'city'), V(c, 'zip')].filter(Boolean).join(' '))}</small></h2>
       <p class="big">${esc(V(c, 'status') || '')} · ${money(V(c, 'salePrice') || V(c, 'listPrice'))} · ${esc(showDate(V(c, 'saleDate') || V(c, 'contractDate')))}${px ? ` · ${px.mi.toFixed(2)} mi ${esc(px.dir)}` : ''}</p>
       <p><label>Use as comp # <select data-use="${c.id}"><option value="">–</option>${Array.from({ length: Math.max(9, J.comps.length) }, (_, i) => `<option ${c.use === i + 1 ? 'selected' : ''}>${i + 1}</option>`).join('')}</select></label>
          <button class="btn sm" data-act="close">Close</button></p>
       ${fl.length ? `<ul class="flags">${fl.map(x => `<li class="${x.sev}">${esc(x.t)}</li>`).join('')}</ul>` : '<p class="help">No flags.</p>'}</div></div>
-    ${ps.length ? `<div class="strip">${ps.map(ph => `<button class="ph ${fr && ph.id === fr.id ? 'on' : ''}" data-front="${ph.id}" title="Use as the front photo"><img data-photo="${ph.id}" alt="Photo ${ph.n}"></button>`).join('')}</div><p class="help">Click a photo to make it the front photo for this comp.</p>` : (V(c, 'mls') ? '<p class="help">No photos yet – drop the MLS photos zip.</p>' : '')}
+    ${ps.length ? `<div class="strip">${ps.map(ph => `<button class="ph ${fr && ph.id === fr.id ? 'on' : ''}" data-view="${ph.id}" title="Click to look at it full size"><img data-photo="${ph.id}" alt="Photo ${ph.n}"></button>`).join('')}</div><p class="help">Click a photo to see it full size and page through them. The outlined one is the front photo; change it in the viewer.</p>` : (V(c, 'mls') ? '<p class="help">No photos yet – drop the MLS photos zip.</p>' : '')}
     <h3>Field by field <small>click any source value to use it, or type your own</small></h3>
     <div class="tablewrap"><table class="cmp"><colgroup><col style="width:200px"><col style="width:190px"><col style="width:120px">${cols.map(() => '<col>').join('')}</colgroup><thead><tr><th>Field</th><th>Using</th><th>Your value</th>${cols.map(s => `<th>${esc(SRC[s].name)}${s === 'arch' ? '<br>' + archSel : s === 'cort' ? '<br>' + cortSel : ''}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table></div>
     <p><label><input type="checkbox" data-act="showall" ${app.showAll ? 'checked' : ''}> Show empty fields too</label></p>
@@ -313,6 +313,21 @@ function exportHTML(J) {
 function useCrsAsSubject(ch) {
   return removeFile(ch.fid).then(() => { const s = app.job.subject; s.crs = ch.r; ['addr', 'city', 'zip', 'apn'].forEach(k => { if (ch.r[k]) s[k] = ch.r[k]; }); if (ch.r.lat) { s.lat = ch.r.lat; s.lon = ch.r.lon; }
     if (app.job.name === 'New assignment' && ch.r.addr) app.job.name = ch.r.addr; logFile(ch.name, 'CRS (subject)', 1); return saveNow(); });
+}
+/* Full-size photo viewer: arrows (or the keyboard) to page through, one click to make a photo the front photo */
+function openViewer(c, startId) {
+  const ps = photosOf(c); let i = Math.max(0, ps.findIndex(p => p.id === startId));
+  const bg = document.createElement('div'); bg.className = 'viewer';
+  const draw = async () => { const ph = ps[i]; const fr = frontOf(c);
+    bg.innerHTML = `<div class="vbar"><b>${esc(compTitle(c))}</b> · photo ${i + 1} of ${ps.length}<span class="grow"></span>
+      ${fr && fr.id === ph.id ? '<span class="pill ok">Front photo</span>' : '<button class="btn primary" data-vfront="1">Use as the front photo</button>'}<button class="btn" data-vclose="1">Close ✕</button></div>
+      <button class="varr l" data-vstep="-1" aria-label="Previous">‹</button><img class="vimg" alt="Photo ${i + 1}" src="${await photoURL(ph.id)}"><button class="varr r" data-vstep="1" aria-label="Next">›</button>`;
+    bg.querySelector('[data-vclose]').onclick = close; bg.querySelectorAll('[data-vstep]').forEach(b => b.onclick = () => step(+b.dataset.vstep));
+    const f = bg.querySelector('[data-vfront]'); if (f) f.onclick = () => { c.front = ph.id; save(); draw(); render(); }; };
+  const step = d => { i = (i + d + ps.length) % ps.length; draw(); };
+  const key = e => { if (e.key === 'ArrowRight') step(1); else if (e.key === 'ArrowLeft') step(-1); else if (e.key === 'Escape') close(); };
+  const close = () => { document.removeEventListener('keydown', key); bg.remove(); };
+  document.addEventListener('keydown', key); document.body.appendChild(bg); draw();
 }
 function showNotes(notes, fileIds, crsChoices) {
   const bg = document.createElement('div'); bg.className = 'sheet-bg';
@@ -349,7 +364,7 @@ async function backupJob() {
 /* ---------------- events ---------------- */
 function openComp(id) { app.sel = id; render(); const d = $('#detail'); if (d) d.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
 document.addEventListener('click', async e => {
-  const t = e.target.closest('[data-act],[data-open],[data-pick],[data-reset],[data-front],[data-rm],[data-rmyes],[data-rf],[data-rfyes],.sug');
+  const t = e.target.closest('[data-act],[data-open],[data-pick],[data-reset],[data-front],[data-view],[data-rm],[data-rmyes],[data-rf],[data-rfyes],.sug');
   if (!t) return;
   if (t.matches('select,input,option')) return;
   const c = app.sel ? app.job.comps.find(x => x.id === app.sel) : null;
@@ -357,6 +372,7 @@ document.addEventListener('click', async e => {
   if (t.dataset.open && !e.target.closest('select,button,input')) { openComp(t.dataset.open); return; }
   if (t.dataset.pick && c) { c.pick[t.dataset.field] = t.dataset.pick; delete c.edit[t.dataset.field]; save(); render(); return; }
   if (t.dataset.reset && c) { delete c.pick[t.dataset.reset]; delete c.edit[t.dataset.reset]; save(); render(); return; }
+  if (t.dataset.view && c) { openViewer(c, t.dataset.view); return; }
   if (t.dataset.front && c) { c.front = t.dataset.front; save(); render(); return; }
   if (t.dataset.rf) { app.confirm = 'rf:' + t.dataset.rf; render(); return; }
   if (t.dataset.rfyes) { app.confirm = null; await removeFile(t.dataset.rfyes); render(); toast('File taken out'); return; }
