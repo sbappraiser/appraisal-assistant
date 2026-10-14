@@ -75,7 +75,7 @@ function addByAddress(text) {
 
 /* ---------------- files in ---------------- */
 async function ingest(files) {
-  const notes = []; app.batch = [];
+  const notes = []; app.batch = []; app.crsChoices = [];
   for (const f of files) {
     try {
       app.busy = 'Reading ' + f.name + '…'; renderBusy();
@@ -96,7 +96,7 @@ async function ingest(files) {
       } else notes.push(f.name + ': file type not used here');
     } catch (e) { console.error(e); notes.push(f.name + ': could not read – ' + (e.message || e)); }
   }
-  app.busy = ''; save(); render(); if (notes.length) showNotes(notes, app.batch.slice());
+  app.busy = ''; save(); render(); if (notes.length) showNotes(notes, app.batch.slice(), app.crsChoices.slice());
 }
 function logFile(name, kind, n, id) {
   app.job.files = (app.job.files || []).filter(x => !(x.name === name && x.kind === kind));
@@ -131,8 +131,9 @@ function ingestPdf(list, name) {
 }
 function ingestCrs(r, name) {
   const s = app.job.subject; const key = addrKey(r.addr);
-  if (s.addr && addrKey(s.addr) === key) { s.crs = r; fillSubjectFrom(r); logFile(name, 'CRS (subject)', 1); return `${name}: subject's CRS report – location and APN filled in`; }
+  if ((s.addr && addrKey(s.addr) === key) || (s.apn && apnKey(s.apn) && apnKey(s.apn) === apnKey(r.apn))) { s.crs = r; fillSubjectFrom(r); logFile(name, 'CRS (subject)', 1); return `${name}: subject's CRS report – location and APN filled in`; }
   const fid = uid(); const { isNew } = upsertComp({ apn: r.apn, key, label: r.addr }, 'crs', r, fid); logFile(name, 'CRS report', 1, fid);
+  if (!s.addr) (app.crsChoices = app.crsChoices || []).push({ fid, r, name }); // subject not entered yet: offer 'this is the subject'
   return `${name}: ${r.addr} (${isNew ? 'new comp' : 'matched'})`;
 }
 async function ingestCort(rows, name) {
@@ -237,7 +238,7 @@ function subjectHTML(J) {
   const f = (k, l, w = '') => `<label class="fld ${w}"><span>${l}</span><input class="txt" data-subj="${k}" value="${esc(s[k] ?? '')}"></label>`;
   return `<div class="grid6">${f('addr', 'Address', 'w2')}${f('city', 'City')}${f('zip', 'ZIP')}${f('apn', 'APN')}<label class="fld"><span>Effective date</span><input class="txt" data-subj="eff" placeholder="mm/dd/yyyy" value="${esc(showDate(s.eff) || s.eff || '')}"></label>
     ${f('lat', 'Latitude')}${f('lon', 'Longitude')}<label class="fld"><span>Assignment name</span><input class="txt" data-jobname="1" value="${esc(J.name)}"></label></div>
-    <p class="help">Latitude and longitude give each comp its distance and direction. Drop the subject's CRS report here to fill them: <label class="link">choose the subject's CRS PDF<input type="file" accept=".pdf" data-act="subjcrs" hidden></label>${inA ? ` · Your archive has ${inA.length} record${inA.length > 1 ? 's' : ''} for this address.` : ''}</p>`;
+    <p class="help">Latitude and longitude give each comp its distance and direction. Fill them from the subject's CRS report: <label class="link">choose the subject's CRS PDF<input type="file" accept=".pdf" data-act="subjcrs" hidden></label>${inA ? ` · Your archive has ${inA.length} record${inA.length > 1 ? 's' : ''} for this address.` : ''}</p>`;
 }
 function compsTable(J) {
   if (!J.comps.length) return '<p class="help">No comps yet. Type an address above, or drop your MLS export.</p>';
@@ -309,10 +310,15 @@ function exportHTML(J) {
   <button class="btn" data-act="x-photos">Front photos (.zip)</button></div>
   <p class="help">The SFREP file has the chosen comps in grid order with their front photos, sale and listing data, site, view and house facts. Adjustments are not included – you make those in SFREP. Import it into a copy of your report first (Home › Import Forms) to see how SFREP takes it.</p>`;
 }
-function showNotes(notes, fileIds) {
+function useCrsAsSubject(ch) {
+  return removeFile(ch.fid).then(() => { const s = app.job.subject; s.crs = ch.r; ['addr', 'city', 'zip', 'apn'].forEach(k => { if (ch.r[k]) s[k] = ch.r[k]; }); if (ch.r.lat) { s.lat = ch.r.lat; s.lon = ch.r.lon; }
+    if (app.job.name === 'New assignment' && ch.r.addr) app.job.name = ch.r.addr; logFile(ch.name, 'CRS (subject)', 1); return saveNow(); });
+}
+function showNotes(notes, fileIds, crsChoices) {
   const bg = document.createElement('div'); bg.className = 'sheet-bg';
-  bg.innerHTML = `<div class="sheet"><h2>Files read</h2><ul>${notes.map(n => `<li>${esc(n)}</li>`).join('')}</ul><div class="row"><button class="btn primary" data-close="1">OK</button>${(fileIds || []).length ? `<button class="btn danger" data-undo="1">Undo – take ${fileIds.length > 1 ? 'these files' : 'this file'} back out</button>` : ''}</div></div>`;
+  bg.innerHTML = `<div class="sheet"><h2>Files read</h2><ul>${notes.map(n => `<li>${esc(n)}</li>`).join('')}</ul><div class="row"><button class="btn primary" data-close="1">OK</button>${(crsChoices || []).map((ch, i) => `<button class="btn primary" data-subj-crs="${i}">${esc(ch.r.addr || ch.name)} is the subject</button>`).join('')}${(fileIds || []).length ? `<button class="btn danger" data-undo="1">Undo – take ${fileIds.length > 1 ? 'these files' : 'this file'} back out</button>` : ''}</div></div>`;
   document.body.appendChild(bg); bg.querySelector('[data-close]').onclick = () => bg.remove(); bg.querySelector('[data-close]').focus();
+  bg.querySelectorAll('[data-subj-crs]').forEach(b => b.onclick = async () => { await useCrsAsSubject(crsChoices[+b.dataset.subjCrs]); bg.remove(); render(); toast('Subject filled from the CRS report'); });
   const u = bg.querySelector('[data-undo]'); if (u) u.onclick = async () => { u.disabled = true; u.textContent = 'Taking out…'; for (const id of fileIds) await removeFile(id); bg.remove(); render(); toast('Undone – nothing from ' + (fileIds.length > 1 ? 'those files' : 'that file') + ' is left'); };
 }
 
