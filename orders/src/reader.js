@@ -19,7 +19,7 @@ const CHECK = {
   legal: { title: 'Legal description', items: [['legal', 'Legal description']] },
   condoQ: { title: 'Condo questionnaire', items: [['dues', 'HOA dues'], ['special', 'Special assessments'], ['litigation', 'Litigation'], ['reserves', 'Reserves'], ['rentals', 'Rental restrictions / owner occupancy'], ['insurance', 'Master insurance'], ['other', 'Other']] },
   hoaBudget: { title: 'HOA budget', items: [['dues', 'HOA dues'], ['reserves', 'Reserves'], ['special', 'Special assessments'], ['other', 'Other']] },
-  ccrs: { title: 'CC&Rs', items: [['restrictions', 'Use restrictions'], ['age', 'Age restriction (55+)'], ['rentals', 'Rental restrictions'], ['other', 'Other']] },
+  ccrs: { title: "CC&R's", items: [['restrictions', 'Use restrictions'], ['age', 'Age restriction (55+)'], ['rentals', 'Rental restrictions'], ['other', 'Other']] },
   bylaws: { title: 'HOA bylaws', items: [['other', 'Notes']] },
   minutes: { title: 'HOA minutes', items: [['special', 'Special assessments discussed'], ['litigation', 'Litigation'], ['repairs', 'Major repairs'], ['other', 'Other']] },
   disclosures: { title: 'Disclosures', items: [['defects', 'Defects and repairs disclosed'], ['permits', 'Unpermitted work / additions'], ['hazards', 'Natural hazards (flood, fire, fault)'], ['other', 'Other']] },
@@ -81,7 +81,7 @@ async function openReader(id, page, q) {
   const rec = await docPages(id); if (!rec) { toast('That file is no longer stored'); return; } RD.rec = rec;
   if (isPdf({ name: rec.name, type: rec.mime })) { const pdfjs = await loadPdfJs(); RD.pdf = await pdfjs.getDocument({ data: new Uint8Array(await rec.blob.arrayBuffer()), isEvalSupported: false, wasmUrl: './wasm/', standardFontDataUrl: './standard_fonts/' }).promise; }
   cur = readForm(); cur.review = cur.review || {}; const rv = cur.review[id] = cur.review[id] || { sugg: [] };
-  const PRELIM_V = 6; // bump when the prelim rules change: suggestions not yet accepted or rejected are made again
+  const PRELIM_V = 7; // bump when the prelim rules change: suggestions not yet accepted or rejected are made again
   if (meta.type === 'prelim' && (rv.prelimV || 0) < PRELIM_V) { rv.sugg = rv.sugg.filter(s => s.by !== 'reader' || s.state !== 'new'); const seen = new Set(rv.sugg.map(s => s.key + '|' + s.value + '|' + s.page));
     rv.sugg.push(...readPrelim(rec.pagesText).filter(s => !seen.has(s.key + '|' + s.value + '|' + s.page)).map(s => ({ ...s, id: uid(), state: 'new' }))); rv.prelimV = PRELIM_V; saveLetter(true, true); }
   $('#reader').hidden = false; document.body.classList.add('reading'); rdRender(); rdPage();
@@ -385,7 +385,7 @@ function prelimLabel(t) {
   if (/\btax(es)?\b|assessments? (collected|levied)|bonds? and assessments|community facilit|Mello[- ]Roos/i.test(t) && !/delinquent|default|unpaid|tax lien/i.test(t)) return ''; // taxes only when delinquent
   if (/delinquent/i.test(t) && /tax/i.test(t)) return 'delinquent property taxes';
   if (/(oil|gas|mineral|hydrocarbon|subsurface)/i.test(t) && /reserv|lease|rights? to|excepting|claims?/i.test(t) && !/gas (line|main|pipe)|utilit|easement for/i.test(t)) return 'oil, gas and mineral rights';
-  if (/covenants,? conditions|conditions,? (and )?restrictions|CC&R|declaration of (covenants|restrictions)/i.test(t)) return 'CC&Rs';
+  if (/covenants,? conditions|conditions,? (and )?restrictions|CC&R|declaration of (covenants|restrictions)/i.test(t)) return "CC&R's";
   if (/^matters contained/i.test(t) && !/notice (to|of) (the )?property owner/i.test(t)) return 'unknown easement';
   if (/easement/i.test(t)) {
     if (/ingress|egress|road|street|highway|access|driveway|right[- ]of[- ]way/i.test(t)) return 'road easement';
@@ -396,7 +396,7 @@ function prelimLabel(t) {
     if (/affecting (the )?easement parcel|easements? parcel/i.test(t)) return 'easements affecting the easement parcels';
     return 'unknown easement';
   }
-  if (/covenants,? conditions|conditions,? (and )?restrictions|CC&R|declaration of (covenants|restrictions)/i.test(t)) return 'CC&Rs';
+  if (/covenants,? conditions|conditions,? (and )?restrictions|CC&R|declaration of (covenants|restrictions)/i.test(t)) return "CC&R's";
   if (/restrict|prohibit/i.test(t)) return 'deed restriction';
   if (/encroach|lot line adjustment|boundary/i.test(t)) return 'encroachment / boundary matters';
   if (/judgment/i.test(t)) return 'judgment';
@@ -405,7 +405,7 @@ function prelimLabel(t) {
   return ''; // only what she summarizes: easements, CC&Rs and restrictions, minerals, encroachments, and items to clear before a transfer
 }
 function joinLabels(vals) { // "utility easement" ×2 → "utility easements"; keeps her order of importance
-  const ORDER = ['road easement', 'utility easement', 'drainage easement', 'conservation easement', 'slope easement', 'unknown easement', 'easements affecting the easement parcels', 'CC&Rs', 'deed restriction', 'oil, gas and mineral rights', 'encroachment / boundary matters', 'judgment', 'lien', 'lis pendens', 'delinquent property taxes'];
+  const ORDER = ['road easement', 'utility easement', 'drainage easement', 'conservation easement', 'slope easement', 'unknown easement', 'easements affecting the easement parcels', "CC&R's", 'deed restriction', 'oil, gas and mineral rights', 'encroachment / boundary matters', 'judgment', 'lien', 'lis pendens', 'delinquent property taxes'];
   const n = {}; vals.forEach(v => { v = v.replace(/^#\d+[a-z]?:\s*/, '').trim(); n[v] = (n[v] || 0) + 1; });
   const keys = Object.keys(n).sort((a, b) => (ORDER.indexOf(a) + 1 || 99) - (ORDER.indexOf(b) + 1 || 99));
   const out = keys.map(k => n[k] < 2 ? k : /easement$|judgment$|lien$|restriction$/.test(k) ? k + 's' : k === 'notice to property owner' ? 'notices to property owner' : k);
