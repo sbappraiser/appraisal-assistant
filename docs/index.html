@@ -2157,7 +2157,7 @@ async function openReader(id, page, q) {
   const rec = await docPages(id); if (!rec) { toast('That file is no longer stored'); return; } RD.rec = rec;
   if (isPdf({ name: rec.name, type: rec.mime })) { const pdfjs = await loadPdfJs(); RD.pdf = await pdfjs.getDocument({ data: new Uint8Array(await rec.blob.arrayBuffer()), isEvalSupported: false, wasmUrl: './wasm/', standardFontDataUrl: './standard_fonts/' }).promise; }
   cur = readForm(); cur.review = cur.review || {}; const rv = cur.review[id] = cur.review[id] || { sugg: [] };
-  const PRELIM_V = 5; // bump when the prelim rules change: suggestions not yet accepted or rejected are made again
+  const PRELIM_V = 6; // bump when the prelim rules change: suggestions not yet accepted or rejected are made again
   if (meta.type === 'prelim' && (rv.prelimV || 0) < PRELIM_V) { rv.sugg = rv.sugg.filter(s => s.by !== 'reader' || s.state !== 'new'); const seen = new Set(rv.sugg.map(s => s.key + '|' + s.value + '|' + s.page));
     rv.sugg.push(...readPrelim(rec.pagesText).filter(s => !seen.has(s.key + '|' + s.value + '|' + s.page)).map(s => ({ ...s, id: uid(), state: 'new' }))); rv.prelimV = PRELIM_V; saveLetter(true, true); }
   $('#reader').hidden = false; document.body.classList.add('reading'); rdRender(); rdPage();
@@ -2453,7 +2453,7 @@ function shortEx(x) { // one short phrase per exception for the report: no instr
 const PRELIM_SKIP = /^(General and special|General and Special City|The lien of supplemental|Assessments, for community|Assessments for community|The liens? of bonds|A deed of trust|An assignment of|Rights of the public|Water rights|The new lender|An Owner.s Certification|With respect to|Please be advised|Any rights, interests or claims of parties in possession|Rights or claims of parties in possession|The requirement that|Matters which may be disclosed by an inspection|Any facts, rights, interests|Statements? of information)/i;
 const PRELIM_GENERAL = [/not shown by the public records/i, /not shown as existing liens/i, /unpatented mining claims/i, /reservations or exceptions in patents/i, /correct survey|accurate survey|inspection of the land/i,
   /discrepancies,? conflicts in boundary|shortage in area/i, /lien,? or right to a lien,? for services, labor/i, /water rights|claims or title to water/i, /escaped assessments|supplemental/i, /parties in possession|persons in possession/i,
-  /proceedings by a public agency/i, /^any (facts|rights|easements|liens|encroachment|claim)/i, /if any,? (pursuant|assessed|created|shown)/i, /lies within the boundaries of|within the boundaries of the .* district|affidavit|statement of information|owner.s certification|non-institutional lender|deed of trust|reconveyance|open deeds? of trust/i];
+  /proceedings by a public agency/i, /^any (facts|rights|easements|liens|encroachment|claim)/i, /if any,? (pursuant|assessed|created|shown)/i, /furnish (to )?the company|the company will require|prior to (the )?(issuance|insuring|close)|invalidity or defect in the title|trust referred to|vestees|trustee|lies within the boundaries of|within the boundaries of the .* district|affidavit|statement of information|owner.s certification|non-institutional lender|deed of trust|reconveyance|open deeds? of trust/i];
 function prelimLabel(t) {
   t = String(t).replace(/\s+/g, ' ').trim(); if (PRELIM_SKIP.test(t)) return '';
   if (PRELIM_GENERAL.some(re => re.test(t))) return ''; // the standard printed exceptions every policy has
@@ -2477,9 +2477,7 @@ function prelimLabel(t) {
   if (/judgment/i.test(t)) return 'judgment';
   if (/lis pendens/i.test(t)) return 'lis pendens';
   if (/mechanic|lien/i.test(t)) return 'lien';
-  if (/notice (to|of) (the )?property owner/i.test(t)) return 'notice to property owner';
-  if (/matters contained|terms,? (conditions|provisions)|contained in (the|a) document/i.test(t)) { const m = t.match(/entitled:?\s+"?([^,"]{3,60})/i); return m ? 'recorded document: ' + m[1].trim().replace(/\s+recorded.*$/i, '').toLowerCase() : 'unknown easement'; }
-  return 'other: ' + t.split(/[,.;]/)[0].slice(0, 60).toLowerCase();
+  return ''; // only what she summarizes: easements, CC&Rs and restrictions, minerals, encroachments, and items to clear before a transfer
 }
 function joinLabels(vals) { // "utility easement" ×2 → "utility easements"; keeps her order of importance
   const ORDER = ['road easement', 'utility easement', 'drainage easement', 'conservation easement', 'slope easement', 'unknown easement', 'easements affecting the easement parcels', 'CC&Rs', 'deed restriction', 'oil, gas and mineral rights', 'encroachment / boundary matters', 'judgment', 'lien', 'lis pendens', 'delinquent property taxes'];
