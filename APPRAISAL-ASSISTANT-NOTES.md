@@ -149,6 +149,9 @@ Source orders/src/market.js. Per order (order.market): lookback, rows from her S
 - To do (her request): BLUR tool on the iPad photo pages (people, artwork, family photographs, religious symbols, graffiti, personal items); keep the unblurred original in the workfile; same tool in the photo review screen. Usually a lender/AMC requirement (not USPAP); USPAP's concern is that a report not be misleading, so note in the report that photos were edited for privacy.
 - Next: requirements checklist from the client's letter → iPad to-dos; contract facts → UAD 3.6 contract section export; workfile AI note text in her wording.
 
+## Prelim wording, her rules (Oct 15 2026)
+No recording dates, names or instrument numbers. Short labels only: road easement (ingress/egress, road, access, right of way), utility easement(s) (gas, electric, sewer, water, telephone – several become "utility easements"), drainage, conservation, slope easement, unknown easement (purpose not stated / matters contained in a document), CC&Rs, deed restriction, oil, gas and mineral rights, encroachment / boundary matters, judgment, lien, delinquent property taxes, notice to property owner. prelimLabel()/joinLabels() in reader.js; the full exception text stays as the quote behind each suggestion. Tested on the WFG prelim (009-101-011): utility easements, drainage easement, unknown easement, easements affecting the easement parcels, deed restriction, notices to property owner.
+
 ## Redact a copy (Oct 15 2026)
 Reader → "Redact a copy" (every order, no AI needed): same redaction screen as Read with Claude (auto black boxes from order names/patterns, extra names, drawn black/blur boxes) → "Save redacted PDF": a PDF made only of JPEG page pictures (jpegPdf in reader.js; no text layer, no metadata from the original) → Downloads + added to the order's documents as "<name> - REDACTED.pdf". Up to 200 pages a time. Send to Claude from that screen only on AI orders.
 
