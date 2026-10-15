@@ -110,15 +110,15 @@ function rdRender() {
   };
   const nNew = rv.sugg.filter(x => x.state === 'new').length;
   $('#rdSide').innerHTML = `<p class="help">Nothing goes into the order until you accept it. Each entry keeps its page so you can check it later.</p>${nNew > 1 ? `<div class="row"><button type="button" class="btn ghost small" id="rdAccAll">Accept all ${nNew} as shown</button></div>` : ''}
+    ${RD.pdf ? `<div class="rdai rdflow"><h4>Remove confidential information, then send to Claude</h4>
+      <p class="help">Pages <input id="rdRFrom" value="1" size="2" inputmode="numeric"> to <input id="rdRTo" value="${Math.min(RD.pdf.numPages, aiOk && key ? 20 : RD.pdf.numPages)}" size="2" inputmode="numeric"> of ${RD.pdf.numPages}</p>
+      <ol class="steps"><li><b>Redact.</b> Names, phones, emails and numbers are blacked out for you. You add other names, box the signatures and initials, and check every page. You can also save the redacted copy as a PDF.</li>
+        <li>${aiOk && key ? '<b>Send to Claude</b> from the same screen. Only the redacted page pictures are sent, up to 30 pages at a time.' : ai === 'No' ? 'This order is set to <b>No AI</b>: you can redact and save a copy, but nothing is sent.' : !aiOk ? 'To send to Claude, choose <b>AI use on this job</b> on the Order &amp; letter tab first. Until then nothing is sent.' : 'To send to Claude, add your API key on <b>Standard wording → AI settings</b>.'}</li>
+        <li><b>Accept or reject</b> each thing Claude finds, in the checklist below.</li></ol>
+      <div class="row"><button type="button" class="btn primary" id="rdRedact">Redact pages</button>${ai === 'Yes' && key ? '<button type="button" class="btn ghost small" id="rdPrep">Send without redacting</button>' : ''}</div></div>` : ''}
     ${stickiesHtml()}
     ${C.items.map(rowFor).join('')}
-    ${rdExtras(meta)}
-    ${RD.pdf ? `<div class="rdai"><h4>Redact a copy</h4><p class="help">Make a copy with names, phones, emails and numbers removed, plus anything you black out or blur yourself – for your workfile, or to send to someone. Pages <input id="rdRFrom" value="1" size="2" inputmode="numeric"> to <input id="rdRTo" value="${RD.pdf.numPages}" size="2" inputmode="numeric"></p>
-      <button type="button" class="btn" id="rdRedact">Redact pages</button></div>` : ''}
-    <div class="rdai"><h4>Read with Claude</h4>${!aiOk ? `<p class="help">${ai === 'No' ? 'This order is set to <b>No AI</b>, so nothing from it can be sent.' : 'Choose <b>AI use on this job</b> on the Order &amp; letter tab first. Until then nothing is sent.'}</p>`
-      : !key ? `<p class="help">Add your Claude API key on the Standard wording tab (AI settings) to use this. It stays in this browser.</p>`
-      : `<p class="help">Sends page pictures (not the file) of pages <input id="rdFrom" value="1" size="2" inputmode="numeric"> to <input id="rdTo" value="${Math.min(20, RD.pdf ? RD.pdf.numPages : 1)}" size="2" inputmode="numeric"> to Claude. ${ai === 'Redacted' ? 'Names, phones, emails and numbers are painted out first, and you see every page before it is sent.' : 'This order allows AI without redaction; you still see the pages first.'}</p>
-        <button type="button" class="btn" id="rdPrep">${ai === 'Redacted' ? 'Prepare redacted pages' : 'Prepare pages'}</button>`}</div>`;
+    ${rdExtras(meta)}`;
   const side = $('#rdSide');
   side.querySelectorAll('[data-goto]').forEach(b => b.onclick = () => { RD.page = +b.dataset.goto; rdPage(); });
   side.querySelectorAll('[data-acc]').forEach(b => b.onclick = () => { const s = rv.sugg.find(x => x.id === b.dataset.acc); const v = side.querySelector(`[data-sugv="${s.id}"]`).value.trim(); s.state = 'accepted';
@@ -180,7 +180,7 @@ async function redactPage(n, redact) { // → canvas with the page painted, sens
 }
 async function rdPrepare(mode) { // mode 'claude' = to send; 'copy' = a redacted copy for the workfile or to send yourself
   if (!RD.pdf) { toast('This works on PDF files'); return; }
-  if (mode) { RD.prepMode = mode; const fi = mode === 'copy' ? '#rdRFrom' : '#rdFrom', ti = mode === 'copy' ? '#rdRTo' : '#rdTo'; RD.prepFrom = parseInt($(fi).value, 10) || 1; RD.prepTo = parseInt($(ti).value, 10) || RD.prepFrom; }
+  if (mode) { RD.prepMode = mode; const fi = '#rdRFrom', ti = '#rdRTo'; RD.prepFrom = parseInt($(fi).value, 10) || 1; RD.prepTo = parseInt($(ti).value, 10) || RD.prepFrom; }
   mode = RD.prepMode;
   const from = Math.max(1, Math.min(RD.pdf.numPages, RD.prepFrom)), to = Math.min(RD.pdf.numPages, Math.max(from, RD.prepTo), from + (mode === 'copy' ? 199 : 29));
   const red = mode === 'copy' || cur.aiUse === 'Redacted'; const pane = $('#rdSend'); pane.hidden = false; if (RD.extra == null) RD.extra = cur.redactNames || '';
@@ -189,7 +189,7 @@ async function rdPrepare(mode) { // mode 'claude' = to send; 'copy' = a redacted
     ${red ? `<label>Also remove these names <span class="opt">separate with commas – buyers, sellers, agents, anyone else on the pages</span><input id="rdExtra" value="${h(RD.extra || '')}" placeholder="Broadway Warehouse, Colleen Casey"></label><p class="help">Signatures and initials are pictures, not text: drag a box over each one.</p>
       <div class="row"><span>Drag to:</span><div class="seg2"><button type="button" data-dm="black" aria-pressed="${(RD.drawMode || 'black') === 'black'}">Black box</button><button type="button" data-dm="blur" aria-pressed="${RD.drawMode === 'blur'}">Blur</button></div><button type="button" class="btn ghost small" id="rdUndoBox">Undo last box</button></div>
       <p class="help">Blur scrambles the pixels so nothing underneath can be read back; it looks softer than a black box (good for photos and logos). Names and numbers found in the text are always blacked out.</p>` : ''}
-    <span class="row">${mode === 'copy' ? `<button type="button" class="btn primary" id="rdSavePdf">Save redacted PDF</button>` : ''}${canSend && (mode === 'claude' || to - from < 30) ? `<button type="button" class="btn ${mode === 'copy' ? '' : 'primary'}" id="rdGo">Send these ${to - from + 1} pages to Claude</button>` : ''}<button type="button" class="btn ghost" id="rdCancel">${mode === 'copy' ? 'Close' : 'Cancel'}</button></span></div><div id="rdThumbs" class="rdthumbs"></div>`;
+    <span class="row">${mode === 'copy' ? `<button type="button" class="btn${canSend ? ' ghost' : ' primary'}" id="rdSavePdf">Save redacted PDF</button>` : ''}${canSend && (mode === 'claude' || to - from < 30) ? `<button type="button" class="btn primary" id="rdGo">Send these ${to - from + 1} ${red ? 'redacted ' : ''}pages to Claude</button>` : canSend ? '<span class="help">Claude reads up to 30 pages at a time: close this and set fewer pages to send.</span>' : ''}<button type="button" class="btn ghost" id="rdCancel">${mode === 'copy' ? 'Close' : 'Cancel'}</button></span></div><div id="rdThumbs" class="rdthumbs"></div>`;
   const th = $('#rdThumbs'); RD.prepared = [];
   for (let n = from; n <= to; n++) { const { cv, hits } = await redactPage(n, red); cv.dataset.n = n; const wrap = document.createElement('figure'); wrap.innerHTML = `<figcaption>Page ${n}${red ? ` · ${hits} item${hits === 1 ? '' : 's'} blacked out` : ''}</figcaption>`; wrap.prepend(cv); th.appendChild(wrap); RD.prepared.push(n);
     if (red) { let st = null; cv.onpointerdown = e => { const r = cv.getBoundingClientRect(); st = [(e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height]; cv.setPointerCapture(e.pointerId); };

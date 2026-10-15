@@ -125,6 +125,7 @@ table.mkrows td small { display: block; color: var(--muted); font-size: 12px; } 
 .rditem { border-bottom: 1px solid var(--line); padding-bottom: 8px; display: grid; gap: 6px; } .rdlab { font: 600 13px var(--ui); } .rdfact { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; color: var(--ok); } .rdfact small { color: var(--muted); font-size: 12px; width: 100%; } .rdsug small { color: var(--muted); font-size: 12px; }
 .rdsug { background: var(--accent-soft); border-radius: 8px; padding: 6px 8px; display: grid; gap: 4px; } .rdsug textarea { min-height: 0; padding: 4px 6px; } .rdsug .row { gap: 6px; } .rdsug textarea { width: 100%; } .rdadd { display: flex; gap: 6px; } .rdadd input { flex: 1; min-width: 0; }
 .pgchip { border: 1px solid var(--line); background: var(--panel); border-radius: 99px; font-size: 12px; padding: 1px 8px; cursor: pointer; color: var(--accent); }
+.rdflow { border-color: var(--accent); } .rdflow ol.steps { margin: 4px 0; padding-left: 20px; font-size: 13.5px; } .rdflow ol.steps li { margin: 3px 0; }
 .rdai { background: var(--field); border: 1px solid var(--line); border-radius: 10px; padding: 10px; } .rdai input { width: 3em; display: inline; }
 #rdSend { position: fixed; inset: 0; z-index: 25; background: var(--bg); overflow: auto; padding: 16px; } .rdsendbar { position: sticky; top: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; display: grid; gap: 8px; z-index: 2; }
 .rdthumbs { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; padding-top: 14px; } .rdthumbs canvas { width: 100%; height: auto; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,.15); cursor: crosshair; touch-action: none; } .rdthumbs figure { margin: 0; } .rdthumbs figcaption { font-size: 13px; color: var(--muted); }
@@ -366,11 +367,13 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
       <li>Check every page, then click <b>Save redacted PDF</b>. It saves to Downloads (name ends in "REDACTED") and is added to the order's documents. The copy is pictures only, with no hidden text, so nothing removed can be recovered.</li>
       <li>This works on every order, including No AI orders. Nothing is sent anywhere.</li></ol></details>
     <details><summary>Read with Claude, and redaction</summary><ol>
-      <li>One time: get a Claude API key at platform.claude.com, the Claude Console (Billing → add a card or credits and a monthly spending limit; then platform.claude.com/settings/keys → Create key, copy the key that starts with sk-ant-; it is shown only once). Paste it on <b>Standard wording → AI settings</b> and click <b>Save AI settings</b>.</li>
-      <li>Only orders set to <b>Yes</b> or <b>Yes – only with confidential information removed</b> can use it. On <b>No AI</b> orders the button is locked and nothing is sent.</li>
-      <li>In the reader, choose the pages and click <b>Prepare pages</b>. On redacted orders, names from the order, emails, phones and numbers are blacked out in the picture itself. Type any other names (buyers, sellers, agents) in "Also remove these names".</li>
-      <li>Drag over signatures, initials or anything else to remove it. Choose <b>Black box</b> or <b>Blur</b> first. Use <b>Undo last box</b> if you miss.</li>
-      <li>Look at every page, then click <b>Send</b>. Claude's answers come back as suggestions with page numbers: accept or reject each one. Each use is recorded on the order.</li></ol></details>
+      <li>One time: get a Claude API key at platform.claude.com (the Claude Console) and paste it on <b>Standard wording → AI settings</b>, then <b>Save AI settings</b>.</li>
+      <li>Only orders set to <b>Yes</b> or <b>Yes – only with confidential information removed</b> can send anything. On <b>No AI</b> orders nothing is ever sent.</li>
+      <li>In Documents, click <b>Read</b>. At the top right is <b>Remove confidential information, then send to Claude</b>. Set the pages (up to 30 at a time) and click <b>Redact pages</b>.</li>
+      <li>Names from the order, emails, phones, DocuSign IDs and loan/case/escrow numbers are blacked out for you. Type other names in <b>Also remove these names</b>. Pick <b>Black box</b> or <b>Blur</b> and drag over signatures, initials and anything else. Check every page.</li>
+      <li>Click <b>Send these … redacted pages to Claude</b>. Only the redacted page pictures are sent – never the file itself.</li>
+      <li>In about half a minute Claude’s findings appear as blue suggestions in the checklist, each with its page number. Click the page number to check it, edit if needed, then <b>Accept</b> or <b>Reject</b>. Only accepted entries go into the order and into the drafted summaries (title summary, contract analysis), which you copy into SFREP.</li>
+      <li>Each send is recorded on the order (date, document, pages, redacted or not). On a <b>Yes</b> order you may also use <b>Send without redacting</b>.</li></ol></details>
     <details><summary>Engagement letter</summary><ol>
       <li>On <b>Order &amp; letter</b>, the letter preview on the right fills in from the order. Fill the scope, fee and delivery sections.</li>
       <li>Click <b>Download Word letter</b>; it saves to Downloads, named by file number and street. Send it as you do now.</li>

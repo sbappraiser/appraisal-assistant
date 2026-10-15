@@ -125,6 +125,7 @@ table.mkrows td small { display: block; color: var(--muted); font-size: 12px; } 
 .rditem { border-bottom: 1px solid var(--line); padding-bottom: 8px; display: grid; gap: 6px; } .rdlab { font: 600 13px var(--ui); } .rdfact { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; color: var(--ok); } .rdfact small { color: var(--muted); font-size: 12px; width: 100%; } .rdsug small { color: var(--muted); font-size: 12px; }
 .rdsug { background: var(--accent-soft); border-radius: 8px; padding: 6px 8px; display: grid; gap: 4px; } .rdsug textarea { min-height: 0; padding: 4px 6px; } .rdsug .row { gap: 6px; } .rdsug textarea { width: 100%; } .rdadd { display: flex; gap: 6px; } .rdadd input { flex: 1; min-width: 0; }
 .pgchip { border: 1px solid var(--line); background: var(--panel); border-radius: 99px; font-size: 12px; padding: 1px 8px; cursor: pointer; color: var(--accent); }
+.rdflow { border-color: var(--accent); } .rdflow ol.steps { margin: 4px 0; padding-left: 20px; font-size: 13.5px; } .rdflow ol.steps li { margin: 3px 0; }
 .rdai { background: var(--field); border: 1px solid var(--line); border-radius: 10px; padding: 10px; } .rdai input { width: 3em; display: inline; }
 #rdSend { position: fixed; inset: 0; z-index: 25; background: var(--bg); overflow: auto; padding: 16px; } .rdsendbar { position: sticky; top: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; display: grid; gap: 8px; z-index: 2; }
 .rdthumbs { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; padding-top: 14px; } .rdthumbs canvas { width: 100%; height: auto; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,.15); cursor: crosshair; touch-action: none; } .rdthumbs figure { margin: 0; } .rdthumbs figcaption { font-size: 13px; color: var(--muted); }
@@ -366,11 +367,13 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
       <li>Check every page, then click <b>Save redacted PDF</b>. It saves to Downloads (name ends in "REDACTED") and is added to the order's documents. The copy is pictures only, with no hidden text, so nothing removed can be recovered.</li>
       <li>This works on every order, including No AI orders. Nothing is sent anywhere.</li></ol></details>
     <details><summary>Read with Claude, and redaction</summary><ol>
-      <li>One time: get a Claude API key at platform.claude.com, the Claude Console (Billing → add a card or credits and a monthly spending limit; then platform.claude.com/settings/keys → Create key, copy the key that starts with sk-ant-; it is shown only once). Paste it on <b>Standard wording → AI settings</b> and click <b>Save AI settings</b>.</li>
-      <li>Only orders set to <b>Yes</b> or <b>Yes – only with confidential information removed</b> can use it. On <b>No AI</b> orders the button is locked and nothing is sent.</li>
-      <li>In the reader, choose the pages and click <b>Prepare pages</b>. On redacted orders, names from the order, emails, phones and numbers are blacked out in the picture itself. Type any other names (buyers, sellers, agents) in "Also remove these names".</li>
-      <li>Drag over signatures, initials or anything else to remove it. Choose <b>Black box</b> or <b>Blur</b> first. Use <b>Undo last box</b> if you miss.</li>
-      <li>Look at every page, then click <b>Send</b>. Claude's answers come back as suggestions with page numbers: accept or reject each one. Each use is recorded on the order.</li></ol></details>
+      <li>One time: get a Claude API key at platform.claude.com (the Claude Console) and paste it on <b>Standard wording → AI settings</b>, then <b>Save AI settings</b>.</li>
+      <li>Only orders set to <b>Yes</b> or <b>Yes – only with confidential information removed</b> can send anything. On <b>No AI</b> orders nothing is ever sent.</li>
+      <li>In Documents, click <b>Read</b>. At the top right is <b>Remove confidential information, then send to Claude</b>. Set the pages (up to 30 at a time) and click <b>Redact pages</b>.</li>
+      <li>Names from the order, emails, phones, DocuSign IDs and loan/case/escrow numbers are blacked out for you. Type other names in <b>Also remove these names</b>. Pick <b>Black box</b> or <b>Blur</b> and drag over signatures, initials and anything else. Check every page.</li>
+      <li>Click <b>Send these … redacted pages to Claude</b>. Only the redacted page pictures are sent – never the file itself.</li>
+      <li>In about half a minute Claude’s findings appear as blue suggestions in the checklist, each with its page number. Click the page number to check it, edit if needed, then <b>Accept</b> or <b>Reject</b>. Only accepted entries go into the order and into the drafted summaries (title summary, contract analysis), which you copy into SFREP.</li>
+      <li>Each send is recorded on the order (date, document, pages, redacted or not). On a <b>Yes</b> order you may also use <b>Send without redacting</b>.</li></ol></details>
     <details><summary>Engagement letter</summary><ol>
       <li>On <b>Order &amp; letter</b>, the letter preview on the right fills in from the order. Fill the scope, fee and delivery sections.</li>
       <li>Click <b>Download Word letter</b>; it saves to Downloads, named by file number and street. Send it as you do now.</li>
@@ -424,7 +427,7 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
 </div>
 <div id="toast" role="status" hidden></div>
 <script>
-const BUILD='o1-1015-0019';
+const BUILD='o1-1015-0036';
 const G = (() => {
 /* ---------------- small helpers ---------------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -2183,15 +2186,15 @@ function rdRender() {
   };
   const nNew = rv.sugg.filter(x => x.state === 'new').length;
   $('#rdSide').innerHTML = `<p class="help">Nothing goes into the order until you accept it. Each entry keeps its page so you can check it later.</p>${nNew > 1 ? `<div class="row"><button type="button" class="btn ghost small" id="rdAccAll">Accept all ${nNew} as shown</button></div>` : ''}
+    ${RD.pdf ? `<div class="rdai rdflow"><h4>Remove confidential information, then send to Claude</h4>
+      <p class="help">Pages <input id="rdRFrom" value="1" size="2" inputmode="numeric"> to <input id="rdRTo" value="${Math.min(RD.pdf.numPages, aiOk && key ? 20 : RD.pdf.numPages)}" size="2" inputmode="numeric"> of ${RD.pdf.numPages}</p>
+      <ol class="steps"><li><b>Redact.</b> Names, phones, emails and numbers are blacked out for you. You add other names, box the signatures and initials, and check every page. You can also save the redacted copy as a PDF.</li>
+        <li>${aiOk && key ? '<b>Send to Claude</b> from the same screen. Only the redacted page pictures are sent, up to 30 pages at a time.' : ai === 'No' ? 'This order is set to <b>No AI</b>: you can redact and save a copy, but nothing is sent.' : !aiOk ? 'To send to Claude, choose <b>AI use on this job</b> on the Order &amp; letter tab first. Until then nothing is sent.' : 'To send to Claude, add your API key on <b>Standard wording → AI settings</b>.'}</li>
+        <li><b>Accept or reject</b> each thing Claude finds, in the checklist below.</li></ol>
+      <div class="row"><button type="button" class="btn primary" id="rdRedact">Redact pages</button>${ai === 'Yes' && key ? '<button type="button" class="btn ghost small" id="rdPrep">Send without redacting</button>' : ''}</div></div>` : ''}
     ${stickiesHtml()}
     ${C.items.map(rowFor).join('')}
-    ${rdExtras(meta)}
-    ${RD.pdf ? `<div class="rdai"><h4>Redact a copy</h4><p class="help">Make a copy with names, phones, emails and numbers removed, plus anything you black out or blur yourself – for your workfile, or to send to someone. Pages <input id="rdRFrom" value="1" size="2" inputmode="numeric"> to <input id="rdRTo" value="${RD.pdf.numPages}" size="2" inputmode="numeric"></p>
-      <button type="button" class="btn" id="rdRedact">Redact pages</button></div>` : ''}
-    <div class="rdai"><h4>Read with Claude</h4>${!aiOk ? `<p class="help">${ai === 'No' ? 'This order is set to <b>No AI</b>, so nothing from it can be sent.' : 'Choose <b>AI use on this job</b> on the Order &amp; letter tab first. Until then nothing is sent.'}</p>`
-      : !key ? `<p class="help">Add your Claude API key on the Standard wording tab (AI settings) to use this. It stays in this browser.</p>`
-      : `<p class="help">Sends page pictures (not the file) of pages <input id="rdFrom" value="1" size="2" inputmode="numeric"> to <input id="rdTo" value="${Math.min(20, RD.pdf ? RD.pdf.numPages : 1)}" size="2" inputmode="numeric"> to Claude. ${ai === 'Redacted' ? 'Names, phones, emails and numbers are painted out first, and you see every page before it is sent.' : 'This order allows AI without redaction; you still see the pages first.'}</p>
-        <button type="button" class="btn" id="rdPrep">${ai === 'Redacted' ? 'Prepare redacted pages' : 'Prepare pages'}</button>`}</div>`;
+    ${rdExtras(meta)}`;
   const side = $('#rdSide');
   side.querySelectorAll('[data-goto]').forEach(b => b.onclick = () => { RD.page = +b.dataset.goto; rdPage(); });
   side.querySelectorAll('[data-acc]').forEach(b => b.onclick = () => { const s = rv.sugg.find(x => x.id === b.dataset.acc); const v = side.querySelector(`[data-sugv="${s.id}"]`).value.trim(); s.state = 'accepted';
@@ -2253,7 +2256,7 @@ async function redactPage(n, redact) { // → canvas with the page painted, sens
 }
 async function rdPrepare(mode) { // mode 'claude' = to send; 'copy' = a redacted copy for the workfile or to send yourself
   if (!RD.pdf) { toast('This works on PDF files'); return; }
-  if (mode) { RD.prepMode = mode; const fi = mode === 'copy' ? '#rdRFrom' : '#rdFrom', ti = mode === 'copy' ? '#rdRTo' : '#rdTo'; RD.prepFrom = parseInt($(fi).value, 10) || 1; RD.prepTo = parseInt($(ti).value, 10) || RD.prepFrom; }
+  if (mode) { RD.prepMode = mode; const fi = '#rdRFrom', ti = '#rdRTo'; RD.prepFrom = parseInt($(fi).value, 10) || 1; RD.prepTo = parseInt($(ti).value, 10) || RD.prepFrom; }
   mode = RD.prepMode;
   const from = Math.max(1, Math.min(RD.pdf.numPages, RD.prepFrom)), to = Math.min(RD.pdf.numPages, Math.max(from, RD.prepTo), from + (mode === 'copy' ? 199 : 29));
   const red = mode === 'copy' || cur.aiUse === 'Redacted'; const pane = $('#rdSend'); pane.hidden = false; if (RD.extra == null) RD.extra = cur.redactNames || '';
@@ -2262,7 +2265,7 @@ async function rdPrepare(mode) { // mode 'claude' = to send; 'copy' = a redacted
     ${red ? `<label>Also remove these names <span class="opt">separate with commas – buyers, sellers, agents, anyone else on the pages</span><input id="rdExtra" value="${h(RD.extra || '')}" placeholder="Broadway Warehouse, Colleen Casey"></label><p class="help">Signatures and initials are pictures, not text: drag a box over each one.</p>
       <div class="row"><span>Drag to:</span><div class="seg2"><button type="button" data-dm="black" aria-pressed="${(RD.drawMode || 'black') === 'black'}">Black box</button><button type="button" data-dm="blur" aria-pressed="${RD.drawMode === 'blur'}">Blur</button></div><button type="button" class="btn ghost small" id="rdUndoBox">Undo last box</button></div>
       <p class="help">Blur scrambles the pixels so nothing underneath can be read back; it looks softer than a black box (good for photos and logos). Names and numbers found in the text are always blacked out.</p>` : ''}
-    <span class="row">${mode === 'copy' ? `<button type="button" class="btn primary" id="rdSavePdf">Save redacted PDF</button>` : ''}${canSend && (mode === 'claude' || to - from < 30) ? `<button type="button" class="btn ${mode === 'copy' ? '' : 'primary'}" id="rdGo">Send these ${to - from + 1} pages to Claude</button>` : ''}<button type="button" class="btn ghost" id="rdCancel">${mode === 'copy' ? 'Close' : 'Cancel'}</button></span></div><div id="rdThumbs" class="rdthumbs"></div>`;
+    <span class="row">${mode === 'copy' ? `<button type="button" class="btn${canSend ? ' ghost' : ' primary'}" id="rdSavePdf">Save redacted PDF</button>` : ''}${canSend && (mode === 'claude' || to - from < 30) ? `<button type="button" class="btn primary" id="rdGo">Send these ${to - from + 1} ${red ? 'redacted ' : ''}pages to Claude</button>` : canSend ? '<span class="help">Claude reads up to 30 pages at a time: close this and set fewer pages to send.</span>' : ''}<button type="button" class="btn ghost" id="rdCancel">${mode === 'copy' ? 'Close' : 'Cancel'}</button></span></div><div id="rdThumbs" class="rdthumbs"></div>`;
   const th = $('#rdThumbs'); RD.prepared = [];
   for (let n = from; n <= to; n++) { const { cv, hits } = await redactPage(n, red); cv.dataset.n = n; const wrap = document.createElement('figure'); wrap.innerHTML = `<figcaption>Page ${n}${red ? ` · ${hits} item${hits === 1 ? '' : 's'} blacked out` : ''}</figcaption>`; wrap.prepend(cv); th.appendChild(wrap); RD.prepared.push(n);
     if (red) { let st = null; cv.onpointerdown = e => { const r = cv.getBoundingClientRect(); st = [(e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height]; cv.setPointerCapture(e.pointerId); };
