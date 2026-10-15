@@ -15,7 +15,7 @@ const CHECK = {
   counter: { title: 'Counter offer', items: [['price', 'Price in the counter'], ['date', 'Date'], ['terms', 'Terms changed']] },
   addendum: { title: 'Addendum', items: [['date', 'Date'], ['terms', 'Terms changed']] },
   leaseback: { title: 'Leaseback / rent-back', items: [['rent', 'Rent (amount and period)'], ['term', 'Term (start and end)'], ['deposit', 'Security deposit'], ['furnished', 'Furnished / what the seller keeps'], ['terms', 'Other terms']] },
-  prelim: { title: 'Preliminary title report', items: [['dated', 'Dated as of'], ['easements', 'Easements'], ['restrictions', 'Restrictions, CC&Rs, covenants, reservations'], ['minerals', 'Oil, gas, minerals, wells'], ['encroach', 'Encroachments, boundary or survey matters'], ['clear', 'May need to be cleared before a transfer (judgments, liens, delinquent taxes)'], ['other', 'Anything else worth mentioning (type it yourself)']] },
+  prelim: { title: 'Preliminary title report', items: [['dated', 'Dated as of'], ['easements', 'Easements'], ['restrictions', 'Restrictions, CC&Rs, covenants, reservations'], ['minerals', 'Oil, gas, minerals, wells'], ['encroach', 'Encroachments, boundary or survey matters'], ['clear', 'May need to be cleared before a transfer (judgments, liens, delinquent taxes)'], ['parcels', 'Legal description – parcels'], ['other', 'Anything else worth mentioning (type it yourself)']] },
   legal: { title: 'Legal description', items: [['legal', 'Legal description']] },
   condoQ: { title: 'Condo questionnaire', items: [['dues', 'HOA dues'], ['special', 'Special assessments'], ['litigation', 'Litigation'], ['reserves', 'Reserves'], ['rentals', 'Rental restrictions / owner occupancy'], ['insurance', 'Master insurance'], ['other', 'Other']] },
   hoaBudget: { title: 'HOA budget', items: [['dues', 'HOA dues'], ['reserves', 'Reserves'], ['special', 'Special assessments'], ['other', 'Other']] },
@@ -52,7 +52,8 @@ function readPrelim(pages) {
   const S = []; const add = (key, value, page, quote) => { if (value) S.push({ key, value: String(value).replace(/\s+/g, ' ').trim(), page, quote: (quote || '').replace(/\s+/g, ' ').trim().slice(0, 300), by: 'reader' }); };
   const all = pages.map((t, i) => ({ t, p: i + 1 }));
   const find = re => { for (const x of all) { const m = x.t.match(re); if (m) return { m, p: x.p }; } return null; };
-  let r = find(/Dated as of:?\s+([A-Z][a-z]+ \d{1,2}, \d{4})/); if (r) add('dated', r.m[1], r.p, r.m[0]);
+  let r = find(/Dated(?: as of)?:?\s+([A-Z][a-z]+ \d{1,2},? \d{4})/); if (r) add('dated', r.m[1], r.p, r.m[0]);
+  const pc = readParcels(pages); if (pc) add('parcels', pc.text, pc.p, pc.quote);
   // taxes only when delinquent; trust deeds, trust requirements and general printed items are left out (her rule)
   all.forEach(x => { const m = x.t.match(/[^\n]*Installment[^\n]*DELINQUENT[^\n]*/i); if (m) add('clear', 'Delinquent property taxes: ' + m[0], x.p, m[0]); });
   // numbered exceptions: from "exceptions to coverage" to the informational notes
@@ -67,7 +68,7 @@ function readPrelim(pages) {
     if (m && (+m[1] === last + 1 || (+m[1] === last && m[2]) || (!ex.length && +m[1] === 1))) { curEx = { n: +m[1], sub: m[2], text: m[3], p }; ex.push(curEx); }
     else if (curEx && !/Page \d+ of \d+|Order Number|Order No\.|Page Number|First American Title|WFG Form|CLTA Preliminary|^\s*$/i.test(l)) curEx.text += ' ' + l.trim();
   }
-  ex.forEach(e => { const lab = prelimLabel(e.text); if (!lab) return; add(prelimKey(lab), lab, e.p, `#${e.n}${e.sub || ''}: ${e.text}`); });
+  ex.forEach(e => { const lab = prelimLabel(e.text); if (!lab) return; const inner = lab === "CC&R's" && e.text.match(/An easement as contained in the above document\.?\s*For:?\s*([^.]+)/i); if (inner) { const l2 = prelimLabel('An easement for ' + inner[1]); if (l2) add(prelimKey(l2), l2, e.p, `#${e.n}: ${inner[0]}`); } add(prelimKey(lab), lab, e.p, `#${e.n}${e.sub || ''}: ${e.text}`); });
   return S;
 }
 
@@ -80,7 +81,7 @@ async function openReader(id, page, q) {
   const rec = await docPages(id); if (!rec) { toast('That file is no longer stored'); return; } RD.rec = rec;
   if (isPdf({ name: rec.name, type: rec.mime })) { const pdfjs = await loadPdfJs(); RD.pdf = await pdfjs.getDocument({ data: new Uint8Array(await rec.blob.arrayBuffer()), isEvalSupported: false, wasmUrl: './wasm/', standardFontDataUrl: './standard_fonts/' }).promise; }
   cur = readForm(); cur.review = cur.review || {}; const rv = cur.review[id] = cur.review[id] || { sugg: [] };
-  const PRELIM_V = 9; // bump when the prelim rules change: suggestions not yet accepted or rejected are made again
+  const PRELIM_V = 11; // bump when the prelim rules change: suggestions not yet accepted or rejected are made again
   if (meta.type === 'prelim') { let ch = false; rv.sugg.forEach(sg => { if (sg.state === 'new' && sg.by === 'claude' && sg.key !== 'dated') { const c = cleanPrelimValue(sg.value); if (!c) { sg.state = 'rejected'; ch = true; } else if (c !== sg.value) { sg.quote = sg.quote || sg.value; sg.value = c; sg.key = prelimKey(c); ch = true; } } });
     (cur.facts || []).forEach(f => { if (f.docId === id && f.key !== 'dated') { const c = cleanPrelimValue(f.value); if (c && c !== f.value) { f.full = f.full || f.value; f.value = c; ch = true; } } }); if (ch) saveLetter(true, true); }
   if (meta.type === 'prelim' && (rv.prelimV || 0) < PRELIM_V) { rv.sugg = rv.sugg.filter(s => s.by !== 'reader' || s.state !== 'new'); const seen = new Set(rv.sugg.map(s => s.key + '|' + s.value + '|' + s.page));
@@ -124,7 +125,7 @@ function rdRender() {
   const side = $('#rdSide');
   side.querySelectorAll('[data-goto]').forEach(b => b.onclick = () => { RD.page = +b.dataset.goto; rdPage(); });
   side.querySelectorAll('[data-acc]').forEach(b => b.onclick = () => { const s = rv.sugg.find(x => x.id === b.dataset.acc); const v = side.querySelector(`[data-sugv="${s.id}"]`).value.trim(); s.state = 'accepted';
-    (cur.facts = cur.facts || []).push({ id: uid(), docId: RD.id, doc: meta.name, type: meta.type, key: s.key, label: (C.items.find(i => i[0] === s.key) || [, s.key])[1], value: v, page: s.page, by: v === s.value ? s.by : 'you', at: new Date().toISOString() }); saveLetter(true, true); rdRender(); });
+    (cur.facts = cur.facts || []).push({ id: uid(), docId: RD.id, doc: meta.name, type: meta.type, key: s.key, label: (C.items.find(i => i[0] === s.key) || [, s.key])[1], value: v, page: s.page, n: +((String(s.quote || '').match(/^#(\d+)/) || [])[1] || 0) || null, by: v === s.value ? s.by : 'you', at: new Date().toISOString() }); saveLetter(true, true); rdRender(); });
   side.querySelectorAll('[data-rej]').forEach(b => b.onclick = () => { rv.sugg.find(x => x.id === b.dataset.rej).state = 'rejected'; saveLetter(true, true); rdRender(); });
   side.querySelectorAll('[data-unfact]').forEach(b => b.onclick = () => { cur.facts = cur.facts.filter(f => f.id !== b.dataset.unfact); saveLetter(true, true); rdRender(); });
   side.querySelectorAll('[data-ownadd]').forEach(b => b.onclick = () => { const k = b.dataset.ownadd, i = side.querySelector(`[data-own="${k}"]`); const v = i.value.trim(); if (!v) return;
@@ -294,12 +295,36 @@ function contractDraft(docId) {
   if (v('written')) out.push(`Other terms written into the agreement: ${v('written')}.`);
   return out.join(' ').replace(/\.\./g, '.').slice(0, 5000);
 }
-function prelimDraft(docId) {
+function prelimDraft(docId) { // her model comment (Oct 15 2026)
   const v = k => fval(docId, k); const dated = v('dated')[0];
-  const items = ['easements', 'restrictions', 'minerals', 'encroach', 'clear', 'other'].flatMap(k => v(k)).map(cleanPrelimValue).filter(Boolean);
-  return `A preliminary title report${dated ? ' dated ' + dated : ''} was provided and reviewed.` + (items.length ? ' ' + prelimSentence(items) : ' No exceptions of note were observed.')
-    + (v('clear').length ? ' Some items may need to be cleared prior to a transfer.' : '')
-    + ` The appraiser is not a title expert. This is a brief summary only; the appraisal assumes the title is marketable and free of adverse encumbrances other than those noted. The client should consult a title officer regarding any title concerns.`;
+  const facts = (cur.facts || []).filter(f => f.docId === docId && ['easements', 'restrictions', 'minerals', 'encroach', 'clear', 'other'].includes(f.key));
+  const items = facts.slice().sort((a, b) => (a.n || 999) - (b.n || 999) || (a.page || 0) - (b.page || 0) || (/CC&R/.test(b.value) - /CC&R/.test(a.value))).map(f => cleanPrelimValue(f.value)).filter(Boolean);
+  const out = [`The client provided a preliminary title report${dated ? ' dated ' + dated : ''}.`];
+  out.push(items.length ? `The appraiser is not a title expert; however, I did note the following: ${listInOrder(items)}.` : 'The appraiser is not a title expert; no exceptions of note were observed.');
+  if (v('clear').length) out.push('Some items may need to be cleared prior to a transfer.');
+  const parcels = v('parcels')[0]; if (parcels) out.push(parcels);
+  out.push('The appraisal assumes the title is marketable; the client should consult a title officer regarding any title concerns.');
+  return out.join(' ');
+}
+function listInOrder(vals) { // keeps the order they appear in the report; repeats become plural ("utility easements")
+  const seen = []; const n = {}; vals.forEach(v => { if (!(v in n)) { seen.push(v); n[v] = 0; } n[v]++; });
+  const out = seen.map(k => n[k] < 2 ? k : /easement$|judgment$|lien$|restriction$/.test(k) ? k + 's' : k);
+  return out.length > 1 ? out.slice(0, -1).join(', ') + ' and ' + out.at(-1) : out[0] || '';
+}
+const NUMW = ['', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'];
+function readParcels(pages) { // the legal description: how many parcels, and what each one is
+  const all = pages.map((t, i) => ({ t, p: i + 1 })); let hit = null;
+  for (const x of all) { if (/PARCEL (ONE|1|A)\s*:/i.test(x.t) && /PARCEL (TWO|2|B)\s*:/i.test(x.t)) { hit = x; break; } }
+  if (!hit) return null;
+  const parts = hit.t.split(/PARCEL\s+(ONE|TWO|THREE|FOUR|FIVE|SIX|[1-9]|[A-F])\s*:/i); const list = [];
+  for (let k = 1; k < parts.length; k += 2) list.push(parts[k + 1].replace(/\s+/g, ' ').split(/Exhibit A \(Revised|CALIFORNIA LAND TITLE|Page \d+/i)[0].trim());
+  const desc = (d, i) => { const D = d.toUpperCase();
+    if (/RIGHT OF WAY|EASEMENT/.test(D)) { const f = [/INGRESS|EGRESS/.test(D) ? 'ingress and egress' : '', /UTILIT|SEWER|WATER|ELECTRIC|POLE/.test(D) ? 'utilities' : '', /DRAINAGE/.test(D) ? 'drainage' : '', /ROAD/.test(D) && !/INGRESS/.test(D) ? 'road' : ''].filter(Boolean); return 'a right of way' + (f.length ? ' for ' + listInOrder(f) : ''); }
+    const m = d.match(/^THAT PORTION OF ([A-Z][A-Z .'-]*?\s(DRIVE|ROAD|LANE|STREET|AVENUE|WAY|PLACE|COURT|BOULEVARD|TRAIL))\b/i); if (m) return 'a portion of ' + m[1].toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+    if (/^(THAT PORTION OF|A PORTION OF)/.test(D)) return 'a portion of an adjoining lot or tract';
+    return i === 0 ? 'the main parcel' : 'an additional parcel'; };
+  const words = list.map((d, i) => `Parcel ${i + 1} is ${desc(d, i)}.`);
+  return { text: `The legal description is attached and reflects that the subject property has ${NUMW[list.length] || list.length} parcels. ${words.join(' ')}`, p: hit.p, quote: list.map((d, i) => `PARCEL ${i + 1}: ${d.slice(0, 160)}`).join(' | ') };
 }
 function rdExtras(meta) {
   const rv = cur.review[RD.id]; cur.uad = cur.uad || {}; const U = cur.uad; const opt = (list, v) => '<option value="">—</option>' + list.map(([k, l]) => `<option value="${k}"${v === k ? ' selected' : ''}>${l}</option>`).join('');
@@ -388,11 +413,12 @@ function prelimLabel(t) {
   if (/delinquent/i.test(t) && /tax/i.test(t)) return 'delinquent property taxes';
   if (/(oil|gas|mineral|hydrocarbon|subsurface)/i.test(t) && /reserv|lease|rights? to|excepting|claims?/i.test(t) && !/gas (line|main|pipe)|utilit|easement for/i.test(t)) return 'oil, gas and mineral rights';
   if (/covenants,? conditions|conditions,? (and )?restrictions|CC&R|declaration of (covenants|restrictions)/i.test(t)) return "CC&R's";
-  if (/^matters contained/i.test(t) && !/notice (to|of) (the )?property owner/i.test(t)) return 'unknown easement';
+  if (/^(matters|the terms,? (conditions|provisions)( and easements)?) contained/i.test(t) && !/notice (to|of) (the )?property owner/i.test(t)) { const m = t.match(/entitled:?\s*["“]?([^"”,]{3,70})/i); if (m && /easement|agreement|declaration|covenant|restriction|maintenance|road|access/i.test(m[1])) { const d = m[1].trim().toLowerCase(); return (/^[aeiou]/.test(d) ? 'an ' : 'a ') + d; } return 'unknown easement'; }
   if (/easement/i.test(t)) {
-    if (/ingress|egress|road|street|highway|driveway|\baccess\b/i.test(t)) return 'road easement';
+    if (/ingress|egress/i.test(t) && !/utilit|sewer|pole|electric/i.test(t)) return 'ingress/egress';
+    if (/\broad|street|highway|driveway|\baccess\b/i.test(t) && !/utilit|sewer|pole|electric/i.test(t)) return 'road easement';
     if (/utilit|electric|\bgas\b|sewer|water (line|pipe|main|purposes)|pole|telephone|communication|cable|pipeline|power|transmission|sanitary/i.test(t)) return 'utility easement';
-    if (/right[- ]of[- ]way/i.test(t)) return 'road easement';
+    if (/right[- ]of[- ]way/i.test(t)) return /ingress|egress/i.test(t) ? 'ingress/egress' : 'road easement';
     if (/drainage|storm|flood control|culvert/i.test(t)) { const d = ['culvert', 'manhole', 'storm drain', 'channel', 'detention basin'].filter(w => new RegExp(w, 'i').test(t)); return 'drainage easement' + (d.length ? ' (' + d.join(', ') + ')' : ''); }
     if (/conservation|open space|scenic|habitat/i.test(t)) return 'conservation easement';
     if (/slope/i.test(t)) return 'slope easement';
@@ -423,7 +449,7 @@ function prelimNoise(t) { // true = something she does not summarize from a prel
   return true;
 }
 
-const prelimKey = lab => /easement/.test(lab) ? 'easements' : /CC&R|restriction/.test(lab) ? 'restrictions' : /mineral/.test(lab) ? 'minerals' : /encroach/.test(lab) ? 'encroach' : /judgment|lien|lis pendens|delinquent/.test(lab) ? 'clear' : 'other';
+const prelimKey = lab => /easement|ingress|egress/.test(lab) ? 'easements' : /CC&R|restriction/.test(lab) ? 'restrictions' : /mineral/.test(lab) ? 'minerals' : /encroach/.test(lab) ? 'encroach' : /judgment|lien|lis pendens|delinquent/.test(lab) ? 'clear' : 'other';
 function prelimSentence(vals) { // her wording: "Easements for drainage, culvert, manhole and incidental purposes; ingress/egress; and other typical utilities exist."
   const L = vals.map(v => String(v).replace(/^#\d+[a-z]?:\s*/, '').trim()); const groups = []; let road = 0, util = 0; const drain = [];
   L.forEach(v => { let m;
@@ -441,6 +467,7 @@ function prelimSentence(vals) { // her wording: "Easements for drainage, culvert
 
 function cleanPrelimValue(v) { // any prelim entry → her short label; anything with recording details is stripped; noise is dropped
   v = String(v || '').replace(/^#\d+[a-z]?:\s*/, '').trim(); if (!v) return '';
+  if (/^(ingress\/egress|road easement|utility easements?|drainage easement( \(.*\))?|conservation easement|slope easement|unknown easement|easements affecting the easement parcels|CC&R's|deed restriction|oil, gas and mineral rights|encroachment \/ boundary matters|judgment|lien|lis pendens|delinquent property taxes)$/.test(v) || /^(a|an) [a-z][a-z ,&'-]*$/.test(v)) return v; // already one of her labels
   const lab = prelimLabel(v); if (lab) return lab;
   if (prelimNoise(v)) return '';
   return v.replace(/,?\s*(as\s+)?(set forth in a document\s+)?recorded\s+(on\s+)?([A-Z][a-z]+\.? \d{1,2},? \d{4}|\d{1,2}\/\d{1,2}\/\d{2,4})/gi, '')
