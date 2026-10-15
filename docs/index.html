@@ -427,7 +427,7 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
 </div>
 <div id="toast" role="status" hidden></div>
 <script>
-const BUILD='o1-1015-0210';
+const BUILD='o1-1015-0211';
 const G = (() => {
 /* ---------------- small helpers ---------------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -2157,7 +2157,7 @@ async function openReader(id, page, q) {
   const rec = await docPages(id); if (!rec) { toast('That file is no longer stored'); return; } RD.rec = rec;
   if (isPdf({ name: rec.name, type: rec.mime })) { const pdfjs = await loadPdfJs(); RD.pdf = await pdfjs.getDocument({ data: new Uint8Array(await rec.blob.arrayBuffer()), isEvalSupported: false, wasmUrl: './wasm/', standardFontDataUrl: './standard_fonts/' }).promise; }
   cur = readForm(); cur.review = cur.review || {}; const rv = cur.review[id] = cur.review[id] || { sugg: [] };
-  const PRELIM_V = 3; // bump when the prelim rules change: suggestions not yet accepted or rejected are made again
+  const PRELIM_V = 5; // bump when the prelim rules change: suggestions not yet accepted or rejected are made again
   if (meta.type === 'prelim' && (rv.prelimV || 0) < PRELIM_V) { rv.sugg = rv.sugg.filter(s => s.by !== 'reader' || s.state !== 'new'); const seen = new Set(rv.sugg.map(s => s.key + '|' + s.value + '|' + s.page));
     rv.sugg.push(...readPrelim(rec.pagesText).filter(s => !seen.has(s.key + '|' + s.value + '|' + s.page)).map(s => ({ ...s, id: uid(), state: 'new' }))); rv.prelimV = PRELIM_V; saveLetter(true, true); }
   $('#reader').hidden = false; document.body.classList.add('reading'); rdRender(); rdPage();
@@ -2451,11 +2451,17 @@ function shortEx(x) { // one short phrase per exception for the report: no instr
 
 /* her prelim wording: a short label per exception – no dates, names or instrument numbers */
 const PRELIM_SKIP = /^(General and special|General and Special City|The lien of supplemental|Assessments, for community|Assessments for community|The liens? of bonds|A deed of trust|An assignment of|Rights of the public|Water rights|The new lender|An Owner.s Certification|With respect to|Please be advised|Any rights, interests or claims of parties in possession|Rights or claims of parties in possession|The requirement that|Matters which may be disclosed by an inspection|Any facts, rights, interests|Statements? of information)/i;
+const PRELIM_GENERAL = [/not shown by the public records/i, /not shown as existing liens/i, /unpatented mining claims/i, /reservations or exceptions in patents/i, /correct survey|accurate survey|inspection of the land/i,
+  /discrepancies,? conflicts in boundary|shortage in area/i, /lien,? or right to a lien,? for services, labor/i, /water rights|claims or title to water/i, /escaped assessments|supplemental/i, /parties in possession|persons in possession/i,
+  /proceedings by a public agency/i, /^any (facts|rights|easements|liens|encroachment|claim)/i, /if any,? (pursuant|assessed|created|shown)/i, /lies within the boundaries of|within the boundaries of the .* district|affidavit|statement of information|owner.s certification|non-institutional lender|deed of trust|reconveyance|open deeds? of trust/i];
 function prelimLabel(t) {
   t = String(t).replace(/\s+/g, ' ').trim(); if (PRELIM_SKIP.test(t)) return '';
+  if (PRELIM_GENERAL.some(re => re.test(t))) return ''; // the standard printed exceptions every policy has
   if (/\btax(es)?\b|assessments? (collected|levied)|bonds? and assessments|community facilit|Mello[- ]Roos/i.test(t) && !/delinquent|default|unpaid|tax lien/i.test(t)) return ''; // taxes only when delinquent
   if (/delinquent/i.test(t) && /tax/i.test(t)) return 'delinquent property taxes';
   if (/(oil|gas|mineral|hydrocarbon|subsurface)/i.test(t) && /reserv|lease|rights? to|excepting|claims?/i.test(t) && !/gas (line|main|pipe)|utilit|easement for/i.test(t)) return 'oil, gas and mineral rights';
+  if (/covenants,? conditions|conditions,? (and )?restrictions|CC&R|declaration of (covenants|restrictions)/i.test(t)) return 'CC&Rs';
+  if (/^matters contained/i.test(t) && !/notice (to|of) (the )?property owner/i.test(t)) return 'unknown easement';
   if (/easement/i.test(t)) {
     if (/ingress|egress|road|street|highway|access|driveway|right[- ]of[- ]way/i.test(t)) return 'road easement';
     if (/utilit|electric|\bgas\b|sewer|water (line|pipe|main|purposes)|pole|telephone|communication|cable|pipeline|power|transmission/i.test(t)) return 'utility easement';
