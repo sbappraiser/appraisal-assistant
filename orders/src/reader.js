@@ -432,7 +432,7 @@ function prelimSentence(vals) { // her wording: "Easements for drainage, culvert
   if (road) groups.push('ingress/egress'); if (util) groups.push((groups.length ? 'other ' : '') + 'typical utilities');
   const rest = L.filter(v => !/^(drainage|road|utility|conservation|slope) easement/.test(v));
   const out = [];
-  if (groups.length) out.push('Easements for ' + (groups.length > 1 ? groups.slice(0, -1).join('; ') + '; and ' + groups.at(-1) : groups[0]) + ' exist.');
+  if (groups.length) out.push('Easements for ' + (groups.length > 2 ? groups.slice(0, -1).join('; ') + '; and ' + groups.at(-1) : groups.length === 2 ? groups[0] + ', and ' + groups[1] : groups[0]) + ' exist.');
   if (rest.length) { const j = joinLabels(rest); out.push(j.charAt(0).toUpperCase() + j.slice(1) + (groups.length ? ' also' : '') + ' exist.'); }
   return out.join(' ');
 }
