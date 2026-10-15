@@ -67,8 +67,7 @@ function readPrelim(pages) {
     if (m && (+m[1] === last + 1 || (+m[1] === last && m[2]) || (!ex.length && +m[1] === 1))) { curEx = { n: +m[1], sub: m[2], text: m[3], p }; ex.push(curEx); }
     else if (curEx && !/Page \d+ of \d+|Order Number|Order No\.|Page Number|First American Title|WFG Form|CLTA Preliminary|^\s*$/i.test(l)) curEx.text += ' ' + l.trim();
   }
-  const key = lab => /easement/.test(lab) ? 'easements' : /CC&Rs|restriction/.test(lab) ? 'restrictions' : /mineral/.test(lab) ? 'minerals' : /encroach/.test(lab) ? 'encroach' : /judgment|lien|lis pendens|delinquent/.test(lab) ? 'clear' : 'other';
-  ex.forEach(e => { const lab = prelimLabel(e.text); if (!lab) return; add(key(lab), lab, e.p, `#${e.n}${e.sub || ''}: ${e.text}`); });
+  ex.forEach(e => { const lab = prelimLabel(e.text); if (!lab) return; add(prelimKey(lab), lab, e.p, `#${e.n}${e.sub || ''}: ${e.text}`); });
   return S;
 }
 
@@ -81,7 +80,7 @@ async function openReader(id, page, q) {
   const rec = await docPages(id); if (!rec) { toast('That file is no longer stored'); return; } RD.rec = rec;
   if (isPdf({ name: rec.name, type: rec.mime })) { const pdfjs = await loadPdfJs(); RD.pdf = await pdfjs.getDocument({ data: new Uint8Array(await rec.blob.arrayBuffer()), isEvalSupported: false, wasmUrl: './wasm/', standardFontDataUrl: './standard_fonts/' }).promise; }
   cur = readForm(); cur.review = cur.review || {}; const rv = cur.review[id] = cur.review[id] || { sugg: [] };
-  const PRELIM_V = 8; // bump when the prelim rules change: suggestions not yet accepted or rejected are made again
+  const PRELIM_V = 9; // bump when the prelim rules change: suggestions not yet accepted or rejected are made again
   if (meta.type === 'prelim' && (rv.prelimV || 0) < PRELIM_V) { rv.sugg = rv.sugg.filter(s => s.by !== 'reader' || s.state !== 'new'); const seen = new Set(rv.sugg.map(s => s.key + '|' + s.value + '|' + s.page));
     rv.sugg.push(...readPrelim(rec.pagesText).filter(s => !seen.has(s.key + '|' + s.value + '|' + s.page)).map(s => ({ ...s, id: uid(), state: 'new' }))); rv.prelimV = PRELIM_V; saveLetter(true, true); }
   $('#reader').hidden = false; document.body.classList.add('reading'); rdRender(); rdPage();
@@ -243,6 +242,7 @@ async function rdSend(red) {
     const txt = (j.content || []).filter(c => c.type === 'text').map(c => c.text).join(''); const js = txt.slice(txt.indexOf('{'), txt.lastIndexOf('}') + 1);
     const parsed = JSON.parse(js); let items = (parsed.items || []).filter(x => x && x.key && x.value);
     if (meta.type === 'prelim') items = items.filter(x => x.key === 'dated' || !prelimNoise(String(x.value) + ' ' + String(x.quote || ''))); // her rules apply to Claude's answers too
+    if (meta.type === 'prelim') items = items.map(x => { if (x.key === 'dated') return x; const lab = prelimLabel(String(x.value)) || prelimLabel(String(x.value) + ' ' + String(x.quote || '')); return lab ? { ...x, key: prelimKey(lab), value: lab, quote: String(x.quote || x.value) } : x; }); // Claude's wording turned into her short labels
     if (Array.isArray(parsed.parts) && parsed.parts.length) { const rv0 = cur.review[RD.id]; if (!(rv0.parts || []).length) rv0.parts = parsed.parts.map(x => ({ kind: PART_KINDS.includes(x.kind) ? x.kind : 'Other', pages: String(x.pages || '') })); }
     const rv = cur.review[RD.id]; items.forEach(x => rv.sugg.push({ id: uid(), key: C.items.some(i => i[0] === x.key) ? x.key : C.items[C.items.length - 1][0], value: String(x.value), page: +x.page || null, quote: String(x.quote || ''), by: 'claude', state: 'new' }));
     (cur.aiLog = cur.aiLog || []).push({ at: new Date().toISOString(), doc: meta.name, pages: imgs.map(i => i.n), mode: red ? 'redacted' : 'full', model: aiModel(), items: items.length });
@@ -295,7 +295,7 @@ function contractDraft(docId) {
 function prelimDraft(docId) {
   const v = k => fval(docId, k); const dated = v('dated')[0];
   const items = ['easements', 'restrictions', 'minerals', 'encroach', 'clear', 'other'].flatMap(k => v(k));
-  return `A preliminary title report${dated ? ' dated ' + dated : ''} was provided and reviewed.` + (items.length ? ` ${(s => s.charAt(0).toUpperCase() + s.slice(1))(joinLabels(items))} exist.` : ' No exceptions of note were observed.')
+  return `A preliminary title report${dated ? ' dated ' + dated : ''} was provided and reviewed.` + (items.length ? ' ' + prelimSentence(items) : ' No exceptions of note were observed.')
     + (v('clear').length ? ' Some items may need to be cleared prior to a transfer.' : '')
     + ` The appraiser is not a title expert. This is a brief summary only; the appraisal assumes the title is marketable and free of adverse encumbrances other than those noted. The client should consult a title officer regarding any title concerns.`;
 }
@@ -391,7 +391,7 @@ function prelimLabel(t) {
     if (/ingress|egress|road|street|highway|driveway|\baccess\b/i.test(t)) return 'road easement';
     if (/utilit|electric|\bgas\b|sewer|water (line|pipe|main|purposes)|pole|telephone|communication|cable|pipeline|power|transmission|sanitary/i.test(t)) return 'utility easement';
     if (/right[- ]of[- ]way/i.test(t)) return 'road easement';
-    if (/drainage|storm|flood control/i.test(t)) return 'drainage easement';
+    if (/drainage|storm|flood control|culvert/i.test(t)) { const d = ['culvert', 'manhole', 'storm drain', 'channel', 'detention basin'].filter(w => new RegExp(w, 'i').test(t)); return 'drainage easement' + (d.length ? ' (' + d.join(', ') + ')' : ''); }
     if (/conservation|open space|scenic|habitat/i.test(t)) return 'conservation easement';
     if (/slope/i.test(t)) return 'slope easement';
     if (/affecting (the )?easement parcel|easements? parcel/i.test(t)) return 'easements affecting the easement parcels';
@@ -406,7 +406,7 @@ function prelimLabel(t) {
   return ''; // only what she summarizes: easements, CC&Rs and restrictions, minerals, encroachments, and items to clear before a transfer
 }
 function joinLabels(vals) { // "utility easement" ×2 → "utility easements"; keeps her order of importance
-  const ORDER = ['road easement', 'utility easement', 'drainage easement', 'conservation easement', 'slope easement', 'unknown easement', 'easements affecting the easement parcels', "CC&R's", 'deed restriction', 'oil, gas and mineral rights', 'encroachment / boundary matters', 'judgment', 'lien', 'lis pendens', 'delinquent property taxes'];
+  const ORDER = ['road easement', 'utility easement', 'drainage easement', 'unknown easement', "CC&R's", 'conservation easement', 'slope easement', 'unknown easement', 'easements affecting the easement parcels', "CC&R's", 'deed restriction', 'oil, gas and mineral rights', 'encroachment / boundary matters', 'judgment', 'lien', 'lis pendens', 'delinquent property taxes'];
   const n = {}; vals.forEach(v => { v = v.replace(/^#\d+[a-z]?:\s*/, '').trim(); n[v] = (n[v] || 0) + 1; });
   const keys = Object.keys(n).sort((a, b) => (ORDER.indexOf(a) + 1 || 99) - (ORDER.indexOf(b) + 1 || 99));
   const art = k => /^(oil|CC&R|encroachment|delinquent|easements affecting)/.test(k) ? k : (/^[aeiou]/i.test(k) ? 'an ' : 'a ') + k;
@@ -419,4 +419,20 @@ function prelimNoise(t) { // true = something she does not summarize from a prel
   if (/delinquent|judgment|lis pendens|mechanic|abstract of|tax lien/i.test(t)) return false;
   if (/easement|covenants|CC&R|restriction|mineral|oil|encroach/i.test(t) && !PRELIM_GENERAL.some(re => re.test(t))) return false;
   return true;
+}
+
+const prelimKey = lab => /easement/.test(lab) ? 'easements' : /CC&R|restriction/.test(lab) ? 'restrictions' : /mineral/.test(lab) ? 'minerals' : /encroach/.test(lab) ? 'encroach' : /judgment|lien|lis pendens|delinquent/.test(lab) ? 'clear' : 'other';
+function prelimSentence(vals) { // her wording: "Easements for drainage, culvert, manhole and incidental purposes; ingress/egress; and other typical utilities exist."
+  const L = vals.map(v => String(v).replace(/^#\d+[a-z]?:\s*/, '').trim()); const groups = []; let road = 0, util = 0; const drain = [];
+  L.forEach(v => { let m;
+    if ((m = v.match(/^drainage easement(?: \((.*)\))?$/))) { if (!drain.length) drain.push('drainage'); (m[1] || '').split(/,\s*/).filter(Boolean).forEach(d => { if (!drain.includes(d)) drain.push(d); }); }
+    else if (v === 'road easement') road++; else if (v === 'utility easement') util++;
+    else if ((m = v.match(/^(conservation|slope) easement$/)) && !groups.includes(m[1])) groups.push(m[1]); });
+  if (drain.length) groups.unshift(drain.join(', ') + ' and incidental purposes');
+  if (road) groups.push('ingress/egress'); if (util) groups.push((groups.length ? 'other ' : '') + 'typical utilities');
+  const rest = L.filter(v => !/^(drainage|road|utility|conservation|slope) easement/.test(v));
+  const out = [];
+  if (groups.length) out.push('Easements for ' + (groups.length > 1 ? groups.slice(0, -1).join('; ') + '; and ' + groups.at(-1) : groups[0]) + ' exist.');
+  if (rest.length) { const j = joinLabels(rest); out.push(j.charAt(0).toUpperCase() + j.slice(1) + (groups.length ? ' also' : '') + ' exist.'); }
+  return out.join(' ');
 }
