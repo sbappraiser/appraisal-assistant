@@ -149,5 +149,8 @@ Source orders/src/market.js. Per order (order.market): lookback, rows from her S
 - To do (her request): BLUR tool on the iPad photo pages (people, artwork, family photographs, religious symbols, graffiti, personal items); keep the unblurred original in the workfile; same tool in the photo review screen. Usually a lender/AMC requirement (not USPAP); USPAP's concern is that a report not be misleading, so note in the report that photos were edited for privacy.
 - Next: requirements checklist from the client's letter → iPad to-dos; contract facts → UAD 3.6 contract section export; workfile AI note text in her wording.
 
+## Assignment types for lender/AMC orders (Oct 15 2026)
+Group "Lender or AMC order – UAD 3.6": uadPurchase, uadRefi, uadHeloc, uadConstruction (premise default "as completed as of today"), uadOther – defined with UAD36() in engagement-letter-writer/src/clauses.js (Fannie-style intended use, federal market value definition, AIR/Reg Z statement). Choosing one sets My letter to "Not needed – client's letter" (still editable). Order fields govAgency (UAD 2.008 FHA/VA/USDA) and investorId (2.009). Old "Lending" types are now under "Private lending".
+
 ## Master checklist
 Her live checklist page (she ticks items and adds her own): https://claude.ai/artifact/FZzBaFYusgsZtyQeajE2jy — read it (Artifact action "read") at the start of a session to see what she has checked or added. CHECKLIST.html here is the Oct 14 2026 starting copy only.

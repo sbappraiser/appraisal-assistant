@@ -210,6 +210,8 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
     </fieldset>
     <fieldset><legend>Lender and AMC</legend>
       <label>Borrower / owner <span class="opt">optional</span><input id="f_borrower"></label>
+      <div class="grid2" id="gseBox"><label>Government loan (UAD 2.008) <select id="f_govAgency"><option value="">None – conventional</option><option value="FHA">FHA</option><option value="VA">VA</option><option value="USDA">USDA</option></select></label>
+        <label>Investor special ID (UAD 2.009) <span class="opt">only if the lender gives one</span><input id="f_investorId"></label></div>
       <label class="check"><input type="checkbox" id="f_lenderDiff">The lender is different from the client</label>
       <div class="grid2" id="lenderBox">
         <label>Lender<input id="f_lenderCo"></label><label>Loan number<input id="f_loanNo"></label>
@@ -327,7 +329,7 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
     <p class="help">Step-by-step directions for each part of the Appraisal Assistant. Type a word to find the right section.</p>
     <input id="helpSearch" type="search" placeholder="for example: sticky, blur, iPad, backup, market">
     <details><summary>Start a new order</summary><ol>
-      <li>Click <b>Orders</b>, then <b>New order</b>.</li><li>Type the file number. Pick the assignment type.</li>
+      <li>Click <b>Orders</b>, then <b>New order</b>.</li><li>Type the file number. Pick the assignment type. Lender and AMC orders are in the group <b>Lender or AMC order – UAD 3.6</b> (purchase, refinance, HELOC, construction loan, other lending decision); for those, My letter is set to “Not needed – client’s letter”, and you can mark an FHA, VA or USDA loan under Lender and AMC.</li>
       <li>Drop the CRS report into <b>Documents</b>. The address, APN, owner, county, location and public-record facts fill in. Beds, baths and square feet are never filled in for the subject.</li>
       <li>Fill in the client (or <b>Pick a saved client</b>), lender or AMC if any, inspection date and time, access contact, fee.</li>
       <li>Choose <b>AI use on this job</b>: Yes, Yes with confidential information removed, or No AI.</li>
@@ -412,7 +414,7 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
 </div>
 <div id="toast" role="status" hidden></div>
 <script>
-const BUILD='o1-1014-2358';
+const BUILD='o1-1015-0010';
 const G = (() => {
 /* ---------------- small helpers ---------------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -1111,6 +1113,12 @@ const CA_FCV = ['Fair Market Value (full cash value): For purposes of this assig
 const NONE_KNOWN = 'None known at this time. If any hypothetical conditions or extraordinary assumptions are subsequently required based on information discovered during the inspection or research process, they will be disclosed and discussed in the appraisal report.';
 const CURRENT_EFF = ['The effective date of value will be the date of the personal inspection (site visit). The opinion of value reflects market conditions and property characteristics as of the effective date only.'];
 const LENDER_RELIANCE = 'The borrower may receive a copy of the appraisal report from the Client as required by law (including the Equal Credit Opportunity Act and Regulation B); receipt of a copy does not make the borrower an intended user, and the borrower may not rely on the report.';
+// Lender and AMC orders delivered as UAD 3.6 (URAR). Most come with the client's own engagement letter; this letter is only for when she writes one.
+const UAD36 = (kind, what) => ({ retro: false, valueWord: 'Market Value', premise: true, lending: true, uad: true,
+  title: 'APPRAISAL ENGAGEMENT LETTER', subtitle: 'Mortgage Finance Transaction – ' + kind.replace(/^./, c => c.toUpperCase()), formatDefault: 'Uniform Residential Appraisal Report (URAR), UAD 3.6',
+  intendedUse: [`The intended use of the appraisal is for the lender/Client to evaluate the property that is the subject of this appraisal for ${what}, subject to the stated scope of work, purpose of the appraisal, reporting requirements of the appraisal report form, and the definition of market value. No other use is intended.`,
+    'The Client represents that this engagement was made in compliance with the appraiser independence requirements of the Truth in Lending Act and Regulation Z (12 CFR 1026.42), and that no party has communicated a target value or the amount of a loan in a way intended to influence the appraisal.'],
+  effective: CURRENT_EFF, typeOfValue: MV_FED, ea: NONE_KNOWN, hc: 'None at the time of engagement.', relianceExtra: LENDER_RELIANCE, deliveryDefault: '2 weeks' });
 Object.assign(TYPES, {
   lending: { label: 'Lending – private or portfolio mortgage loan', retro: false, valueWord: 'Market Value', premise: true, lending: true,
     title: 'APPRAISAL ENGAGEMENT LETTER', subtitle: 'Mortgage Lending Decision', formatDefault: 'Uniform Residential Appraisal Report (URAR)',
@@ -1122,6 +1130,11 @@ Object.assign(TYPES, {
     intendedUse: ['The intended use of the appraisal is to assist the Client, as lender, in evaluating the subject property as collateral for a construction loan decision for the proposed improvements described below. No other use is intended. This appraisal is not prepared for delivery to Fannie Mae, Freddie Mac, FHA, VA, or USDA unless that is stated in writing in this Agreement.',
       'The Client represents that this engagement was made in compliance with the valuation independence requirements of the Truth in Lending Act and Regulation Z (12 CFR 1026.42).'],
     effective: CURRENT_EFF, typeOfValue: MV_FED, ea: NONE_KNOWN, hc: 'None at the time of engagement.', relianceExtra: LENDER_RELIANCE, deliveryDefault: '2 weeks' },
+  uadPurchase: { ...UAD36('purchase', 'a purchase money mortgage'), label: 'UAD 3.6 – Purchase (lender / AMC order)' },
+  uadRefi: { ...UAD36('refinance', 'a refinance mortgage'), label: 'UAD 3.6 – Refinance (lender / AMC order)' },
+  uadHeloc: { ...UAD36('home equity', 'a home equity loan or home equity line of credit (HELOC)'), label: 'UAD 3.6 – HELOC / home equity (lender / AMC order)' },
+  uadConstruction: { ...UAD36('construction', 'a construction or construction-to-permanent loan for the proposed improvements described below'), label: 'UAD 3.6 – Construction loan (lender / AMC order)', premiseDefault: 'complHC' },
+  uadOther: { ...UAD36('lending', 'a mortgage lending decision'), label: 'UAD 3.6 – Other mortgage lending decision (lender / AMC order)' },
   altValuation: { label: 'Estate – alternate valuation date (IRC §2032)', retro: true, valueWord: 'Fair Market Value',
     title: 'RETROSPECTIVE APPRAISAL ENGAGEMENT LETTER', subtitle: 'Estate Tax / Alternate Valuation Date',
     dateLabels: ['Name of decedent', 'Alternate valuation date', 'Name of decedent'],
@@ -2404,7 +2417,7 @@ let cur = null;           // the letter being edited
 let clientCount = 1;
 
 const NEW_FIELDS = { stage: 'New', inspDate: '', inspTime: '', effDate: '', unit: '', apn: '', county: '', lat: '', lon: '', owner: '', legal: '', borrower: '',
-  lenderDiff: false, lenderCo: '', lenderAddr1: '', lenderAddr2: '', loanNo: '', amcUsed: false, amcCo: '', amcAddr1: '', amcAddr2: '', amcLic: '', amcState: 'CA', amcExp: '', amcFee: '', amcRef: '', notes: '', todos: '' };
+  lenderDiff: false, govAgency: '', investorId: '', lenderCo: '', lenderAddr1: '', lenderAddr2: '', loanNo: '', amcUsed: false, amcCo: '', amcAddr1: '', amcAddr2: '', amcLic: '', amcState: 'CA', amcExp: '', amcFee: '', amcRef: '', notes: '', todos: '' };
 function blankLetter() {
   return { ...NEW_FIELDS, docs: [], crs: null, listings: [], permits: null, created: new Date().toISOString(), id: uid(), status: 'Drafted', fileNo: '', orderDate: todayISO(), dueDate: '', aiUse: '', orderDoc: null, agreeDate: todayISO(), type: 'dod', clients: [{}], address: '', propType: 'sfr', propTypeOther: '',
     interest: '', decedent: '', dod: '', otherUsers: '', inspection: 'interior', apSales: true, apCost: true, apIncome: false, format: '',
@@ -2482,7 +2495,7 @@ function syncVisibility() {
   $('#f_ea').placeholder = t.ea; $('#f_hc').placeholder = t.hc;
   const ai = (document.querySelector('input[name=aiUse]:checked') || {}).value;
   $('#aiNote').textContent = ai === 'Yes' ? 'AI may be used. The AI-use paragraph is in the letter.' : ai === 'Redacted' ? 'AI only on documents with names and personal information removed. The AI-use paragraph is in the letter.' : ai === 'No' ? 'No AI on this job. The AI-use paragraph is left out of the letter.' : 'Not chosen yet. The letter includes the AI-use paragraph until you choose No AI.';
-  $('#lenderBox').hidden = !$('#f_lenderDiff').checked; $('#amcBox').hidden = !$('#f_amcUsed').checked;
+  $('#gseBox').hidden = !t.uad; $('#lenderBox').hidden = !$('#f_lenderDiff').checked; $('#amcBox').hidden = !$('#f_amcUsed').checked;
   const eff = $('#f_effDate').value || (t.retro ? $('#f_dod').value : $('#f_inspDate').value);
   $('#effNote').textContent = eff ? 'Effective date: ' + longDate(eff) + ($('#f_effDate').value ? ' (typed in)' : t.retro ? ' (the ' + (t.dateLabels ? t.dateLabels[1].toLowerCase() : 'date of death') + ')' : ' (the inspection date)') : t.retro ? 'Effective date: fill in the ' + (t.dateLabels ? t.dateLabels[1].toLowerCase() : 'date of death') + ' below.' : 'Effective date: the inspection date, once it is set.';
   $('#typeNote').textContent = (t.retro ? 'Retrospective value as of the ' + (t.dateLabels ? t.dateLabels[1].toLowerCase() : 'effective date') + '.' : 'Current value as of the inspection date.') + (t.draft ? ' This letter type is a draft – review its wording before you send it.' : '');
@@ -2739,7 +2752,7 @@ async function start() {
   const old = store.get('letters', null); // orders saved by the old letter writer on this same site
   if (Array.isArray(old) && old.length) { const ids = new Set(letters.map(x => x.id)); const add = old.filter(x => !ids.has(x.id)).map(x => ({ ...NEW_FIELDS, docs: [], ...x })); if (add.length) { await ODB.putMany('orders', add); letters.push(...add); } try { localStorage.removeItem('el.letters'); } catch (e) {} }
   const GROUPS = [['Estate, trust and gift', ['dod', 'altValuation', 'parentChild', 'trust', 'gift']], ['Divorce and co-owners', ['divorce', 'divorceRetro', 'buyout']],
-    ['Buying and selling', ['purchase', 'preListing']], ['Lending', ['lending', 'construction']], ['Tax', ['taxAppeal', 'donation']], ['Other purposes', ['otherCurrent', 'otherRetro']]];
+    ['Lender or AMC order – UAD 3.6', ['uadPurchase', 'uadRefi', 'uadHeloc', 'uadConstruction', 'uadOther']], ['Buying and selling', ['purchase', 'preListing']], ['Private lending', ['lending', 'construction']], ['Tax', ['taxAppeal', 'donation']], ['Other purposes', ['otherCurrent', 'otherRetro']]];
   const listed = new Set(GROUPS.flatMap(g => g[1]));
   $('#f_type').innerHTML = GROUPS.map(([g, ks]) => `<optgroup label="${hesc(g)}">${ks.filter(k => TYPES[k]).map(k => `<option value="${k}">${hesc(TYPES[k].label)}</option>`).join('')}</optgroup>`).join('')
     + Object.keys(TYPES).filter(k => !listed.has(k)).map(k => `<option value="${k}">${hesc(TYPES[k].label)}</option>`).join('');
@@ -2747,7 +2760,7 @@ async function start() {
   document.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => showTab(b.dataset.tab));
   $('#letterForm').addEventListener('input', update); ['#f_otherUsers', '#f_userText'].forEach(id => $(id).addEventListener('input', syncVisibility)); $('#letterForm').addEventListener('change', update);
   $('#letterForm').addEventListener('submit', e => e.preventDefault());
-  $('#f_type').addEventListener('change', () => { applyTypeDefaults(); syncVisibility(); update(); });
+  $('#f_type').addEventListener('change', () => { applyTypeDefaults(); const T = TYPES[$('#f_type').value] || {}; if (T.uad && $('#f_status').value === 'Drafted') { $('#f_status').value = 'Client letter'; toast('Lender and AMC orders usually come with their own engagement letter – My letter is set to “Not needed”. Change it if you write one.', 6000); } syncVisibility(); update(); });
   $('#f_propType').addEventListener('change', () => { applyPropDefaults(); syncVisibility(); update(); });
   $('#f_listing').addEventListener('change', syncVisibility);
   $('#f_payWhen').addEventListener('change', () => { const w = $('#f_payWhen').value; $('#f_deliveryFrom').value = w === 'report' ? 'inspection' : 'either'; syncVisibility(); update(); }); $('#f_premise').addEventListener('change', syncVisibility); ['#f_rent', '#f_testimony'].forEach(id => $(id).addEventListener('change', syncVisibility));

@@ -129,6 +129,12 @@ const CA_FCV = ['Fair Market Value (full cash value): For purposes of this assig
 const NONE_KNOWN = 'None known at this time. If any hypothetical conditions or extraordinary assumptions are subsequently required based on information discovered during the inspection or research process, they will be disclosed and discussed in the appraisal report.';
 const CURRENT_EFF = ['The effective date of value will be the date of the personal inspection (site visit). The opinion of value reflects market conditions and property characteristics as of the effective date only.'];
 const LENDER_RELIANCE = 'The borrower may receive a copy of the appraisal report from the Client as required by law (including the Equal Credit Opportunity Act and Regulation B); receipt of a copy does not make the borrower an intended user, and the borrower may not rely on the report.';
+// Lender and AMC orders delivered as UAD 3.6 (URAR). Most come with the client's own engagement letter; this letter is only for when she writes one.
+const UAD36 = (kind, what) => ({ retro: false, valueWord: 'Market Value', premise: true, lending: true, uad: true,
+  title: 'APPRAISAL ENGAGEMENT LETTER', subtitle: 'Mortgage Finance Transaction – ' + kind.replace(/^./, c => c.toUpperCase()), formatDefault: 'Uniform Residential Appraisal Report (URAR), UAD 3.6',
+  intendedUse: [`The intended use of the appraisal is for the lender/Client to evaluate the property that is the subject of this appraisal for ${what}, subject to the stated scope of work, purpose of the appraisal, reporting requirements of the appraisal report form, and the definition of market value. No other use is intended.`,
+    'The Client represents that this engagement was made in compliance with the appraiser independence requirements of the Truth in Lending Act and Regulation Z (12 CFR 1026.42), and that no party has communicated a target value or the amount of a loan in a way intended to influence the appraisal.'],
+  effective: CURRENT_EFF, typeOfValue: MV_FED, ea: NONE_KNOWN, hc: 'None at the time of engagement.', relianceExtra: LENDER_RELIANCE, deliveryDefault: '2 weeks' });
 Object.assign(TYPES, {
   lending: { label: 'Lending – private or portfolio mortgage loan', retro: false, valueWord: 'Market Value', premise: true, lending: true,
     title: 'APPRAISAL ENGAGEMENT LETTER', subtitle: 'Mortgage Lending Decision', formatDefault: 'Uniform Residential Appraisal Report (URAR)',
@@ -140,6 +146,11 @@ Object.assign(TYPES, {
     intendedUse: ['The intended use of the appraisal is to assist the Client, as lender, in evaluating the subject property as collateral for a construction loan decision for the proposed improvements described below. No other use is intended. This appraisal is not prepared for delivery to Fannie Mae, Freddie Mac, FHA, VA, or USDA unless that is stated in writing in this Agreement.',
       'The Client represents that this engagement was made in compliance with the valuation independence requirements of the Truth in Lending Act and Regulation Z (12 CFR 1026.42).'],
     effective: CURRENT_EFF, typeOfValue: MV_FED, ea: NONE_KNOWN, hc: 'None at the time of engagement.', relianceExtra: LENDER_RELIANCE, deliveryDefault: '2 weeks' },
+  uadPurchase: { ...UAD36('purchase', 'a purchase money mortgage'), label: 'UAD 3.6 – Purchase (lender / AMC order)' },
+  uadRefi: { ...UAD36('refinance', 'a refinance mortgage'), label: 'UAD 3.6 – Refinance (lender / AMC order)' },
+  uadHeloc: { ...UAD36('home equity', 'a home equity loan or home equity line of credit (HELOC)'), label: 'UAD 3.6 – HELOC / home equity (lender / AMC order)' },
+  uadConstruction: { ...UAD36('construction', 'a construction or construction-to-permanent loan for the proposed improvements described below'), label: 'UAD 3.6 – Construction loan (lender / AMC order)', premiseDefault: 'complHC' },
+  uadOther: { ...UAD36('lending', 'a mortgage lending decision'), label: 'UAD 3.6 – Other mortgage lending decision (lender / AMC order)' },
   altValuation: { label: 'Estate – alternate valuation date (IRC §2032)', retro: true, valueWord: 'Fair Market Value',
     title: 'RETROSPECTIVE APPRAISAL ENGAGEMENT LETTER', subtitle: 'Estate Tax / Alternate Valuation Date',
     dateLabels: ['Name of decedent', 'Alternate valuation date', 'Name of decedent'],

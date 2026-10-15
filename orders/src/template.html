@@ -210,6 +210,8 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
     </fieldset>
     <fieldset><legend>Lender and AMC</legend>
       <label>Borrower / owner <span class="opt">optional</span><input id="f_borrower"></label>
+      <div class="grid2" id="gseBox"><label>Government loan (UAD 2.008) <select id="f_govAgency"><option value="">None – conventional</option><option value="FHA">FHA</option><option value="VA">VA</option><option value="USDA">USDA</option></select></label>
+        <label>Investor special ID (UAD 2.009) <span class="opt">only if the lender gives one</span><input id="f_investorId"></label></div>
       <label class="check"><input type="checkbox" id="f_lenderDiff">The lender is different from the client</label>
       <div class="grid2" id="lenderBox">
         <label>Lender<input id="f_lenderCo"></label><label>Loan number<input id="f_loanNo"></label>
@@ -327,7 +329,7 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
     <p class="help">Step-by-step directions for each part of the Appraisal Assistant. Type a word to find the right section.</p>
     <input id="helpSearch" type="search" placeholder="for example: sticky, blur, iPad, backup, market">
     <details><summary>Start a new order</summary><ol>
-      <li>Click <b>Orders</b>, then <b>New order</b>.</li><li>Type the file number. Pick the assignment type.</li>
+      <li>Click <b>Orders</b>, then <b>New order</b>.</li><li>Type the file number. Pick the assignment type. Lender and AMC orders are in the group <b>Lender or AMC order – UAD 3.6</b> (purchase, refinance, HELOC, construction loan, other lending decision); for those, My letter is set to “Not needed – client’s letter”, and you can mark an FHA, VA or USDA loan under Lender and AMC.</li>
       <li>Drop the CRS report into <b>Documents</b>. The address, APN, owner, county, location and public-record facts fill in. Beds, baths and square feet are never filled in for the subject.</li>
       <li>Fill in the client (or <b>Pick a saved client</b>), lender or AMC if any, inspection date and time, access contact, fee.</li>
       <li>Choose <b>AI use on this job</b>: Yes, Yes with confidential information removed, or No AI.</li>

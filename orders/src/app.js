@@ -15,7 +15,7 @@ let cur = null;           // the letter being edited
 let clientCount = 1;
 
 const NEW_FIELDS = { stage: 'New', inspDate: '', inspTime: '', effDate: '', unit: '', apn: '', county: '', lat: '', lon: '', owner: '', legal: '', borrower: '',
-  lenderDiff: false, lenderCo: '', lenderAddr1: '', lenderAddr2: '', loanNo: '', amcUsed: false, amcCo: '', amcAddr1: '', amcAddr2: '', amcLic: '', amcState: 'CA', amcExp: '', amcFee: '', amcRef: '', notes: '', todos: '' };
+  lenderDiff: false, govAgency: '', investorId: '', lenderCo: '', lenderAddr1: '', lenderAddr2: '', loanNo: '', amcUsed: false, amcCo: '', amcAddr1: '', amcAddr2: '', amcLic: '', amcState: 'CA', amcExp: '', amcFee: '', amcRef: '', notes: '', todos: '' };
 function blankLetter() {
   return { ...NEW_FIELDS, docs: [], crs: null, listings: [], permits: null, created: new Date().toISOString(), id: uid(), status: 'Drafted', fileNo: '', orderDate: todayISO(), dueDate: '', aiUse: '', orderDoc: null, agreeDate: todayISO(), type: 'dod', clients: [{}], address: '', propType: 'sfr', propTypeOther: '',
     interest: '', decedent: '', dod: '', otherUsers: '', inspection: 'interior', apSales: true, apCost: true, apIncome: false, format: '',
@@ -93,7 +93,7 @@ function syncVisibility() {
   $('#f_ea').placeholder = t.ea; $('#f_hc').placeholder = t.hc;
   const ai = (document.querySelector('input[name=aiUse]:checked') || {}).value;
   $('#aiNote').textContent = ai === 'Yes' ? 'AI may be used. The AI-use paragraph is in the letter.' : ai === 'Redacted' ? 'AI only on documents with names and personal information removed. The AI-use paragraph is in the letter.' : ai === 'No' ? 'No AI on this job. The AI-use paragraph is left out of the letter.' : 'Not chosen yet. The letter includes the AI-use paragraph until you choose No AI.';
-  $('#lenderBox').hidden = !$('#f_lenderDiff').checked; $('#amcBox').hidden = !$('#f_amcUsed').checked;
+  $('#gseBox').hidden = !t.uad; $('#lenderBox').hidden = !$('#f_lenderDiff').checked; $('#amcBox').hidden = !$('#f_amcUsed').checked;
   const eff = $('#f_effDate').value || (t.retro ? $('#f_dod').value : $('#f_inspDate').value);
   $('#effNote').textContent = eff ? 'Effective date: ' + longDate(eff) + ($('#f_effDate').value ? ' (typed in)' : t.retro ? ' (the ' + (t.dateLabels ? t.dateLabels[1].toLowerCase() : 'date of death') + ')' : ' (the inspection date)') : t.retro ? 'Effective date: fill in the ' + (t.dateLabels ? t.dateLabels[1].toLowerCase() : 'date of death') + ' below.' : 'Effective date: the inspection date, once it is set.';
   $('#typeNote').textContent = (t.retro ? 'Retrospective value as of the ' + (t.dateLabels ? t.dateLabels[1].toLowerCase() : 'effective date') + '.' : 'Current value as of the inspection date.') + (t.draft ? ' This letter type is a draft – review its wording before you send it.' : '');
@@ -350,7 +350,7 @@ async function start() {
   const old = store.get('letters', null); // orders saved by the old letter writer on this same site
   if (Array.isArray(old) && old.length) { const ids = new Set(letters.map(x => x.id)); const add = old.filter(x => !ids.has(x.id)).map(x => ({ ...NEW_FIELDS, docs: [], ...x })); if (add.length) { await ODB.putMany('orders', add); letters.push(...add); } try { localStorage.removeItem('el.letters'); } catch (e) {} }
   const GROUPS = [['Estate, trust and gift', ['dod', 'altValuation', 'parentChild', 'trust', 'gift']], ['Divorce and co-owners', ['divorce', 'divorceRetro', 'buyout']],
-    ['Buying and selling', ['purchase', 'preListing']], ['Lending', ['lending', 'construction']], ['Tax', ['taxAppeal', 'donation']], ['Other purposes', ['otherCurrent', 'otherRetro']]];
+    ['Lender or AMC order – UAD 3.6', ['uadPurchase', 'uadRefi', 'uadHeloc', 'uadConstruction', 'uadOther']], ['Buying and selling', ['purchase', 'preListing']], ['Private lending', ['lending', 'construction']], ['Tax', ['taxAppeal', 'donation']], ['Other purposes', ['otherCurrent', 'otherRetro']]];
   const listed = new Set(GROUPS.flatMap(g => g[1]));
   $('#f_type').innerHTML = GROUPS.map(([g, ks]) => `<optgroup label="${hesc(g)}">${ks.filter(k => TYPES[k]).map(k => `<option value="${k}">${hesc(TYPES[k].label)}</option>`).join('')}</optgroup>`).join('')
     + Object.keys(TYPES).filter(k => !listed.has(k)).map(k => `<option value="${k}">${hesc(TYPES[k].label)}</option>`).join('');
@@ -358,7 +358,7 @@ async function start() {
   document.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => showTab(b.dataset.tab));
   $('#letterForm').addEventListener('input', update); ['#f_otherUsers', '#f_userText'].forEach(id => $(id).addEventListener('input', syncVisibility)); $('#letterForm').addEventListener('change', update);
   $('#letterForm').addEventListener('submit', e => e.preventDefault());
-  $('#f_type').addEventListener('change', () => { applyTypeDefaults(); syncVisibility(); update(); });
+  $('#f_type').addEventListener('change', () => { applyTypeDefaults(); const T = TYPES[$('#f_type').value] || {}; if (T.uad && $('#f_status').value === 'Drafted') { $('#f_status').value = 'Client letter'; toast('Lender and AMC orders usually come with their own engagement letter – My letter is set to “Not needed”. Change it if you write one.', 6000); } syncVisibility(); update(); });
   $('#f_propType').addEventListener('change', () => { applyPropDefaults(); syncVisibility(); update(); });
   $('#f_listing').addEventListener('change', syncVisibility);
   $('#f_payWhen').addEventListener('change', () => { const w = $('#f_payWhen').value; $('#f_deliveryFrom').value = w === 'report' ? 'inspection' : 'either'; syncVisibility(); update(); }); $('#f_premise').addEventListener('change', syncVisibility); ['#f_rent', '#f_testimony'].forEach(id => $(id).addEventListener('change', syncVisibility));
