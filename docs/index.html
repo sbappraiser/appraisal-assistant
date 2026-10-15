@@ -107,7 +107,7 @@ td.empty { color: var(--muted); padding: 28px 12px; text-align: center; }
 @media (prefers-reduced-motion: no-preference) { .btn, nav.tabs button { transition: background .15s, border-color .15s; } }
 .drop.big { flex-direction: column; align-items: stretch; text-align: left; } .drop.big > div { flex: 0 0 auto; } .drop.big .btn { align-self: flex-start; }
 .pre { white-space: pre-line; } table.docs { width: 100%; } table.docs td { vertical-align: middle; padding: 6px 4px; border-bottom: 1px solid var(--line); } table.docs td small { display: block; color: var(--muted); font-size: 12px; }
-table.docs select { max-width: 260px; } .lnk { border: 0; background: none; padding: 0; color: var(--accent); font: inherit; font-weight: 600; cursor: pointer; text-align: left; text-decoration: underline; }
+table.docs { table-layout: fixed; } table.docs td:first-child { width: 42%; overflow-wrap: anywhere; } table.docs select { max-width: 100%; width: 100%; } table.docs td.acts { width: 132px; } .lnk { border: 0; background: none; padding: 0; color: var(--accent); font: inherit; font-weight: 600; cursor: pointer; text-align: left; text-decoration: underline; }
 .pg { display: inline; font-size: 13px; } .pg input { width: 3em; display: inline; }
 .facts-box h4 { margin: 14px 0 4px; font: 600 13px var(--ui); } table.facts { width: 100%; font-size: 13px; border-collapse: collapse; } table.facts th, table.facts td { text-align: left; padding: 3px 6px; border-bottom: 1px solid var(--line); vertical-align: top; } table.facts th { color: var(--muted); font-weight: 600; width: 40%; }
 .seg2 { display: inline-flex; border: 1px solid var(--line); border-radius: 9px; overflow: hidden; } .seg2 button { border: 0; background: var(--panel); padding: 7px 14px; font: 600 13px var(--ui); color: var(--muted); cursor: pointer; } .seg2 button + button { border-left: 1px solid var(--line); } .seg2 button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
@@ -134,6 +134,8 @@ table.mkrows td small { display: block; color: var(--muted); font-size: 12px; } 
 :root[data-theme="dark"] .sticky, .dark .sticky { color: #3b3000; }
 .help-page details { border: 1px solid var(--line); border-radius: 10px; background: var(--panel); padding: 10px 14px; margin: 8px 0; } .help-page summary { font-weight: 700; cursor: pointer; } .help-page ol { margin: 8px 0 0; padding-left: 22px; } .help-page li { margin: 5px 0; } #helpSearch { width: 100%; margin: 8px 0; }
 ul.hits2 { margin: 0; padding-left: 18px; } ul.hits2 li { margin: 4px 0; } ul.hits2 small { display: block; color: var(--muted); }
+#clientView { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; display: grid; gap: 10px; } #clientView h3 { margin: 0; font: 600 17px var(--ui); }
+.clpages { display: grid; gap: 12px; max-height: 75vh; overflow: auto; padding: 4px; } .clpages canvas { width: 100%; height: auto; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,.15); }
 a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fatal { background: #fde8e8; color: #8a1c1c; padding: 14px; margin: 0; font-weight: 600; }
 </style>
 </head>
@@ -309,7 +311,8 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
     <div class="bar"><span class="fname" id="fileName"></span>
       <a class="btn ghost" id="genieLink" href="../comp-genie/" target="aa-genie">Comp genie</a><button type="button" class="btn ghost" id="btnNew">New order</button><button type="button" class="btn" id="btnSave">Save order</button><button type="button" class="btn primary" id="btnDocx">Download Word letter</button></div>
     <p class="missing" id="missing"></p>
-    <div class="paperWrap"><article id="sheet" aria-label="Letter preview"></article></div>
+    <div class="paperWrap" id="paperWrap"><article id="sheet" aria-label="Letter preview"></article></div>
+    <div id="clientView" hidden></div>
   </div>
  </div>
 </section>
@@ -371,7 +374,7 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
     <details><summary>Engagement letter</summary><ol>
       <li>On <b>Order &amp; letter</b>, the letter preview on the right fills in from the order. Fill the scope, fee and delivery sections.</li>
       <li>Click <b>Download Word letter</b>; it saves to Downloads, named by file number and street. Send it as you do now.</li>
-      <li>Set <b>My letter</b> to Sent or Signed, or "Not needed – client's letter" when the client sent theirs. Drop the client's letter in Documents: it is checked for AI and confidentiality wording.</li>
+      <li>When the client sends their own engagement letter, drop it in Documents. It is checked for AI and confidentiality wording, and it shows on the right instead of your letter (My letter is set to “Not needed – client’s letter”). Click <b>Read and list requirements</b> to note the form, addenda, photo rules, due date, fee and inspection to-dos. <b>Write my own letter instead</b> switches back.</li>
       <li>Change the AI paragraph on <b>Standard wording</b>.</li></ol></details>
     <details><summary>Market conditions</summary><ol>
       <li>Open the order, then the <b>Market</b> tab.</li><li>In Flexmls, search the market area (actives, pendings and sales for the look-back period), export as CSV, and drop it in box 1. Untick listings that are not competitive.</li>
@@ -421,7 +424,7 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
 </div>
 <div id="toast" role="status" hidden></div>
 <script>
-const BUILD='o1-1015-0017';
+const BUILD='o1-1015-0019';
 const G = (() => {
 /* ---------------- small helpers ---------------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -1576,6 +1579,7 @@ async function readDoc(meta, file) { // turns the readable kinds into facts; not
       if (P.parcel && !$('#f_apn').value) $('#f_apn').value = P.parcel;
     } else if (meta.type === 'clientLetter') {
       if (isPdf(file) || /\.(docx|txt)$/i.test(file.name)) { await scanFile(file); meta.note = cur.orderDoc ? 'checked for AI wording' : ''; }
+      if ($('#f_status').value === 'Drafted' && !cur.letterMade) { $('#f_status').value = 'Client letter'; toast('The client’s letter now shows on the right instead of yours. To write your own, set My letter back to Drafted.', 6000); }
     } else if (meta.type === 'floorplan') {
       const prev = await planPreview(file, meta.page || 1); if (prev) { const rec = await ODB.get('docs', meta.id); rec.preview = prev.src; rec.pages = prev.pages; await ODB.put('docs', rec); meta.pages = prev.pages; meta.note = 'ready for the iPad'; }
     }
@@ -2560,6 +2564,9 @@ let tmr = null;
 function update() { clearTimeout(tmr); tmr = setTimeout(render, 60); }
 function render() {
   const f = readForm(); cur = f;
+  const theirs = f.status === 'Client letter';
+  $('#paperWrap').hidden = theirs; $('#btnDocx').hidden = theirs; $('#missing').hidden = theirs; $('#clientView').hidden = !theirs;
+  if (theirs) renderClientView(f);
   $('#sheet').innerHTML = previewHTML(buildLetter(f));
   $('#fileName').textContent = fileName(f);
   const missing = [];
@@ -2616,7 +2623,34 @@ function downloadDocx() {
   const f = readForm();
   download(makeDocx(buildLetter(f), { title: `Engagement Letter – ${f.address || ''}`, footer: f.fileNo ? `File ${f.fileNo} · ` : '' }), fileName(f),
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-  saveLetter(true); toast('Saved ' + fileName(f) + ' to Downloads');
+  cur.letterMade = true; saveLetter(true); toast('Saved ' + fileName(f) + ' to Downloads');
+}
+let clShown = '';
+function renderClientView(f) {
+  const box = $('#clientView'); const L = (f.docs || []).filter(d => d.type === 'clientLetter');
+  const key = L.map(d => d.id).join(',') + '|' + (f.facts || []).length + '|' + ((f.orderDoc || {}).verdict || '');
+  if (key === clShown && box.innerHTML) return; clShown = key;
+  const req = (f.facts || []).filter(x => L.some(d => d.id === x.docId));
+  const V = { stop: 'AI not allowed by this letter.', look: 'AI only with confidential information removed – read the marked paragraphs on the left.', clear: 'No AI or confidentiality restriction found.' };
+  box.innerHTML = `<h3>Client’s engagement letter</h3>
+    ${L.length ? `${L.map(d => `<div class="row"><b>${h(d.name)}</b><span class="grow"></span><button type="button" class="btn small" data-clread="${d.id}">Read and list requirements</button><button type="button" class="btn ghost small" data-clopen="${d.id}">Open</button></div>`).join('')}
+      ${f.orderDoc && f.orderDoc.verdict ? `<p class="help"><b>AI check:</b> ${h(V[f.orderDoc.verdict] || '')}</p>` : ''}
+      ${req.length ? `<table class="facts">${req.map(x => `<tr><th>${h(x.label)}</th><td>${h(x.value)}${x.page ? ' <small class="muted">p. ' + x.page + '</small>' : ''}</td></tr>`).join('')}</table>` : '<p class="help">Click <b>Read and list requirements</b> to note the report form, addenda, photo rules, due date, fee and inspection to-dos from it.</p>'}
+      <div class="clpages" id="clPages"></div>`
+    : '<p class="help">Drop the client’s engagement letter or order into <b>Documents</b> on the left. It shows here instead of your letter.</p>'}
+    <div class="row"><button type="button" class="btn ghost small" id="clMine">Write my own letter instead</button></div>`;
+  box.querySelectorAll('[data-clread]').forEach(b => b.onclick = () => { saveLetter(true, true); openReader(b.dataset.clread); });
+  box.querySelectorAll('[data-clopen]').forEach(b => b.onclick = () => openDoc(b.dataset.clopen));
+  $('#clMine').onclick = () => { $('#f_status').value = 'Drafted'; clShown = ''; update(); };
+  if (L.length) showClientPages(L[0].id);
+}
+async function showClientPages(id) {
+  const out = $('#clPages'); if (!out) return; const rec = await ODB.get('docs', id); if (!rec) return;
+  if (!/pdf/i.test(rec.mime || '') && !/\.pdf$/i.test(rec.name)) { const r = await docPages(id); out.innerHTML = `<pre style="white-space:pre-wrap">${h((r.pagesText || []).join('\n\n'))}</pre>`; return; }
+  const pdfjs = await loadPdfJs(); const doc = await pdfjs.getDocument({ data: new Uint8Array(await rec.blob.arrayBuffer()), isEvalSupported: false, wasmUrl: './wasm/', standardFontDataUrl: './standard_fonts/' }).promise;
+  for (let n = 1; n <= Math.min(doc.numPages, 12); n++) { if (!out.isConnected) return; const pg = await doc.getPage(n); const vp0 = pg.getViewport({ scale: 1 }); const vp = pg.getViewport({ scale: 900 / vp0.width });
+    const cv = document.createElement('canvas'); cv.width = vp.width; cv.height = vp.height; const g = cv.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, cv.width, cv.height); out.appendChild(cv); await pg.render({ canvasContext: g, viewport: vp }).promise; }
+  if (doc.numPages > 12) out.insertAdjacentHTML('beforeend', `<p class="help">${doc.numPages - 12} more pages – click Open to see them all.</p>`);
 }
 function saveContact(i) {
   const c = {}; CLIENT_KEYS.forEach(k => { c[k] = $(`#c${i}_${k}`).value.trim(); });

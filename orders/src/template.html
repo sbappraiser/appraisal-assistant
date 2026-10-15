@@ -107,7 +107,7 @@ td.empty { color: var(--muted); padding: 28px 12px; text-align: center; }
 @media (prefers-reduced-motion: no-preference) { .btn, nav.tabs button { transition: background .15s, border-color .15s; } }
 .drop.big { flex-direction: column; align-items: stretch; text-align: left; } .drop.big > div { flex: 0 0 auto; } .drop.big .btn { align-self: flex-start; }
 .pre { white-space: pre-line; } table.docs { width: 100%; } table.docs td { vertical-align: middle; padding: 6px 4px; border-bottom: 1px solid var(--line); } table.docs td small { display: block; color: var(--muted); font-size: 12px; }
-table.docs select { max-width: 260px; } .lnk { border: 0; background: none; padding: 0; color: var(--accent); font: inherit; font-weight: 600; cursor: pointer; text-align: left; text-decoration: underline; }
+table.docs { table-layout: fixed; } table.docs td:first-child { width: 42%; overflow-wrap: anywhere; } table.docs select { max-width: 100%; width: 100%; } table.docs td.acts { width: 132px; } .lnk { border: 0; background: none; padding: 0; color: var(--accent); font: inherit; font-weight: 600; cursor: pointer; text-align: left; text-decoration: underline; }
 .pg { display: inline; font-size: 13px; } .pg input { width: 3em; display: inline; }
 .facts-box h4 { margin: 14px 0 4px; font: 600 13px var(--ui); } table.facts { width: 100%; font-size: 13px; border-collapse: collapse; } table.facts th, table.facts td { text-align: left; padding: 3px 6px; border-bottom: 1px solid var(--line); vertical-align: top; } table.facts th { color: var(--muted); font-weight: 600; width: 40%; }
 .seg2 { display: inline-flex; border: 1px solid var(--line); border-radius: 9px; overflow: hidden; } .seg2 button { border: 0; background: var(--panel); padding: 7px 14px; font: 600 13px var(--ui); color: var(--muted); cursor: pointer; } .seg2 button + button { border-left: 1px solid var(--line); } .seg2 button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
@@ -134,6 +134,8 @@ table.mkrows td small { display: block; color: var(--muted); font-size: 12px; } 
 :root[data-theme="dark"] .sticky, .dark .sticky { color: #3b3000; }
 .help-page details { border: 1px solid var(--line); border-radius: 10px; background: var(--panel); padding: 10px 14px; margin: 8px 0; } .help-page summary { font-weight: 700; cursor: pointer; } .help-page ol { margin: 8px 0 0; padding-left: 22px; } .help-page li { margin: 5px 0; } #helpSearch { width: 100%; margin: 8px 0; }
 ul.hits2 { margin: 0; padding-left: 18px; } ul.hits2 li { margin: 4px 0; } ul.hits2 small { display: block; color: var(--muted); }
+#clientView { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; display: grid; gap: 10px; } #clientView h3 { margin: 0; font: 600 17px var(--ui); }
+.clpages { display: grid; gap: 12px; max-height: 75vh; overflow: auto; padding: 4px; } .clpages canvas { width: 100%; height: auto; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,.15); }
 a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fatal { background: #fde8e8; color: #8a1c1c; padding: 14px; margin: 0; font-weight: 600; }
 </style>
 </head>
@@ -309,7 +311,8 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
     <div class="bar"><span class="fname" id="fileName"></span>
       <a class="btn ghost" id="genieLink" href="../comp-genie/" target="aa-genie">Comp genie</a><button type="button" class="btn ghost" id="btnNew">New order</button><button type="button" class="btn" id="btnSave">Save order</button><button type="button" class="btn primary" id="btnDocx">Download Word letter</button></div>
     <p class="missing" id="missing"></p>
-    <div class="paperWrap"><article id="sheet" aria-label="Letter preview"></article></div>
+    <div class="paperWrap" id="paperWrap"><article id="sheet" aria-label="Letter preview"></article></div>
+    <div id="clientView" hidden></div>
   </div>
  </div>
 </section>
@@ -371,7 +374,7 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
     <details><summary>Engagement letter</summary><ol>
       <li>On <b>Order &amp; letter</b>, the letter preview on the right fills in from the order. Fill the scope, fee and delivery sections.</li>
       <li>Click <b>Download Word letter</b>; it saves to Downloads, named by file number and street. Send it as you do now.</li>
-      <li>Set <b>My letter</b> to Sent or Signed, or "Not needed – client's letter" when the client sent theirs. Drop the client's letter in Documents: it is checked for AI and confidentiality wording.</li>
+      <li>When the client sends their own engagement letter, drop it in Documents. It is checked for AI and confidentiality wording, and it shows on the right instead of your letter (My letter is set to “Not needed – client’s letter”). Click <b>Read and list requirements</b> to note the form, addenda, photo rules, due date, fee and inspection to-dos. <b>Write my own letter instead</b> switches back.</li>
       <li>Change the AI paragraph on <b>Standard wording</b>.</li></ol></details>
     <details><summary>Market conditions</summary><ol>
       <li>Open the order, then the <b>Market</b> tab.</li><li>In Flexmls, search the market area (actives, pendings and sales for the look-back period), export as CSV, and drop it in box 1. Untick listings that are not competitive.</li>

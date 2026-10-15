@@ -117,6 +117,9 @@ let tmr = null;
 function update() { clearTimeout(tmr); tmr = setTimeout(render, 60); }
 function render() {
   const f = readForm(); cur = f;
+  const theirs = f.status === 'Client letter';
+  $('#paperWrap').hidden = theirs; $('#btnDocx').hidden = theirs; $('#missing').hidden = theirs; $('#clientView').hidden = !theirs;
+  if (theirs) renderClientView(f);
   $('#sheet').innerHTML = previewHTML(buildLetter(f));
   $('#fileName').textContent = fileName(f);
   const missing = [];
@@ -173,7 +176,34 @@ function downloadDocx() {
   const f = readForm();
   download(makeDocx(buildLetter(f), { title: `Engagement Letter – ${f.address || ''}`, footer: f.fileNo ? `File ${f.fileNo} · ` : '' }), fileName(f),
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-  saveLetter(true); toast('Saved ' + fileName(f) + ' to Downloads');
+  cur.letterMade = true; saveLetter(true); toast('Saved ' + fileName(f) + ' to Downloads');
+}
+let clShown = '';
+function renderClientView(f) {
+  const box = $('#clientView'); const L = (f.docs || []).filter(d => d.type === 'clientLetter');
+  const key = L.map(d => d.id).join(',') + '|' + (f.facts || []).length + '|' + ((f.orderDoc || {}).verdict || '');
+  if (key === clShown && box.innerHTML) return; clShown = key;
+  const req = (f.facts || []).filter(x => L.some(d => d.id === x.docId));
+  const V = { stop: 'AI not allowed by this letter.', look: 'AI only with confidential information removed – read the marked paragraphs on the left.', clear: 'No AI or confidentiality restriction found.' };
+  box.innerHTML = `<h3>Client’s engagement letter</h3>
+    ${L.length ? `${L.map(d => `<div class="row"><b>${h(d.name)}</b><span class="grow"></span><button type="button" class="btn small" data-clread="${d.id}">Read and list requirements</button><button type="button" class="btn ghost small" data-clopen="${d.id}">Open</button></div>`).join('')}
+      ${f.orderDoc && f.orderDoc.verdict ? `<p class="help"><b>AI check:</b> ${h(V[f.orderDoc.verdict] || '')}</p>` : ''}
+      ${req.length ? `<table class="facts">${req.map(x => `<tr><th>${h(x.label)}</th><td>${h(x.value)}${x.page ? ' <small class="muted">p. ' + x.page + '</small>' : ''}</td></tr>`).join('')}</table>` : '<p class="help">Click <b>Read and list requirements</b> to note the report form, addenda, photo rules, due date, fee and inspection to-dos from it.</p>'}
+      <div class="clpages" id="clPages"></div>`
+    : '<p class="help">Drop the client’s engagement letter or order into <b>Documents</b> on the left. It shows here instead of your letter.</p>'}
+    <div class="row"><button type="button" class="btn ghost small" id="clMine">Write my own letter instead</button></div>`;
+  box.querySelectorAll('[data-clread]').forEach(b => b.onclick = () => { saveLetter(true, true); openReader(b.dataset.clread); });
+  box.querySelectorAll('[data-clopen]').forEach(b => b.onclick = () => openDoc(b.dataset.clopen));
+  $('#clMine').onclick = () => { $('#f_status').value = 'Drafted'; clShown = ''; update(); };
+  if (L.length) showClientPages(L[0].id);
+}
+async function showClientPages(id) {
+  const out = $('#clPages'); if (!out) return; const rec = await ODB.get('docs', id); if (!rec) return;
+  if (!/pdf/i.test(rec.mime || '') && !/\.pdf$/i.test(rec.name)) { const r = await docPages(id); out.innerHTML = `<pre style="white-space:pre-wrap">${h((r.pagesText || []).join('\n\n'))}</pre>`; return; }
+  const pdfjs = await loadPdfJs(); const doc = await pdfjs.getDocument({ data: new Uint8Array(await rec.blob.arrayBuffer()), isEvalSupported: false, wasmUrl: './wasm/', standardFontDataUrl: './standard_fonts/' }).promise;
+  for (let n = 1; n <= Math.min(doc.numPages, 12); n++) { if (!out.isConnected) return; const pg = await doc.getPage(n); const vp0 = pg.getViewport({ scale: 1 }); const vp = pg.getViewport({ scale: 900 / vp0.width });
+    const cv = document.createElement('canvas'); cv.width = vp.width; cv.height = vp.height; const g = cv.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, cv.width, cv.height); out.appendChild(cv); await pg.render({ canvasContext: g, viewport: vp }).promise; }
+  if (doc.numPages > 12) out.insertAdjacentHTML('beforeend', `<p class="help">${doc.numPages - 12} more pages – click Open to see them all.</p>`);
 }
 function saveContact(i) {
   const c = {}; CLIENT_KEYS.forEach(k => { c[k] = $(`#c${i}_${k}`).value.trim(); });
