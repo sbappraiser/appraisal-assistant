@@ -105,7 +105,7 @@ td.empty { color: var(--muted); padding: 28px 12px; text-align: center; }
 .pill { display: inline-block; font: 600 12px var(--ui); padding: 2px 8px; border-radius: 99px; background: var(--accent-soft); color: var(--ink); } .pill.no { background: var(--warn-bg); color: var(--warn); } .pill.yes { background: var(--ok-bg); color: var(--ok); }
 #toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(env(safe-area-inset-bottom, 0px) + 20px); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 10px; font-weight: 600; font-size: 14px; z-index: 10; max-width: calc(100vw - 32px); }
 @media (prefers-reduced-motion: no-preference) { .btn, nav.tabs button { transition: background .15s, border-color .15s; } }
-.drop.big { flex-direction: column; align-items: stretch; text-align: left; } .drop.big .btn { align-self: flex-start; }
+.drop.big { flex-direction: column; align-items: stretch; text-align: left; } .drop.big > div { flex: 0 0 auto; } .drop.big .btn { align-self: flex-start; }
 .pre { white-space: pre-line; } table.docs { width: 100%; } table.docs td { vertical-align: middle; padding: 6px 4px; border-bottom: 1px solid var(--line); } table.docs td small { display: block; color: var(--muted); font-size: 12px; }
 table.docs select { max-width: 260px; } .lnk { border: 0; background: none; padding: 0; color: var(--accent); font: inherit; font-weight: 600; cursor: pointer; text-align: left; text-decoration: underline; }
 .pg { display: inline; font-size: 13px; } .pg input { width: 3em; display: inline; }
@@ -154,6 +154,19 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
 <section class="panel" id="panel-letter">
  <div class="desk">
   <form id="letterForm" autocomplete="off">
+    <fieldset id="docsSet"><legend>Documents – upload everything here <span class="opt" id="docCount"></span></legend>
+      <div class="drop big" id="dropZone">
+        <div><span class="eyebrow">Drop the files here, or click Choose files</span>
+          <p class="help">Drop every file for this order here: CRS report, engagement letter, MLS listing, plans, specs, budget, HOA documents, purchase contract, counters, addenda, disclosures, leaseback, preliminary title, legal description, permit records. Each one is sorted by kind, kept in this browser on this computer, and shared with the comp genie and the iPad.</p></div>
+        <label class="btn primary" for="docFile">Choose files<input type="file" id="docFile" multiple></label>
+      </div>
+      <p class="help pre" id="docStatus"></p>
+      <div id="docList"></div>
+      <div class="searchrow"><label>Search every document, sticky note and accepted entry in this order<input id="docSearch" type="search" placeholder="for example: easement, rent, credit, Mello-Roos"></label><button type="button" class="btn" id="docSearchBtn">Search</button></div>
+      <div id="docHits"></div>
+      <div id="stickyList" class="facts-box"></div>
+      <div id="factList" class="facts-box"></div>
+    </fieldset>
     <fieldset><legend>Order</legend>
       <div class="grid3">
         <label>File number<input id="f_fileNo" placeholder="26-101"></label>
@@ -172,7 +185,7 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
       </div>
       <p class="help" id="effNote"></p>
       <div><span class="eyebrow">Client’s engagement letter</span>
-        <p class="help" id="docName">Drop it in Documents below (Word or PDF). It is read on this computer only, with no AI, for any wording about AI, confidentiality or third parties.</p></div>
+        <p class="help" id="docName">Drop it in Documents at the top (Word or PDF). It is read on this computer only, with no AI, for any wording about AI, confidentiality or third parties.</p></div>
       <div id="scanBox" hidden></div>
       <div class="aiPick" role="radiogroup" aria-labelledby="aiLbl">
         <span class="eyebrow" id="aiLbl">AI use on this job</span>
@@ -186,19 +199,6 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
         <label>Date of agreement<input id="f_agreeDate" type="date"></label>
         <label>My letter<select id="f_status"><option>Drafted</option><option>Sent</option><option>Signed</option><option value="Client letter">Not needed – client’s letter</option></select></label>
       </div>
-    </fieldset>
-    <fieldset id="docsSet"><legend>Documents <span class="opt" id="docCount"></span></legend>
-      <div class="drop big" id="dropZone">
-        <div><span class="eyebrow">Upload each document once</span>
-          <p class="help">Drop every file for this order here: CRS report, engagement letter, MLS listing, plans, specs, budget, HOA documents, purchase contract, counters, addenda, disclosures, leaseback, preliminary title, legal description, permit records. Each one is sorted by kind, kept in this browser on this computer, and shared with the comp genie and the iPad.</p></div>
-        <label class="btn primary" for="docFile">Choose files<input type="file" id="docFile" multiple></label>
-      </div>
-      <p class="help pre" id="docStatus"></p>
-      <div id="docList"></div>
-      <div class="searchrow"><label>Search every document, sticky note and accepted entry in this order<input id="docSearch" type="search" placeholder="for example: easement, rent, credit, Mello-Roos"></label><button type="button" class="btn" id="docSearchBtn">Search</button></div>
-      <div id="docHits"></div>
-      <div id="stickyList" class="facts-box"></div>
-      <div id="factList" class="facts-box"></div>
     </fieldset>
     <fieldset><legend>Client</legend>
       <div id="clients"></div>
