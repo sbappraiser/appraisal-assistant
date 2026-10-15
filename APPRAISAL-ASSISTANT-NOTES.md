@@ -149,6 +149,9 @@ Source orders/src/market.js. Per order (order.market): lookback, rows from her S
 - To do (her request): BLUR tool on the iPad photo pages (people, artwork, family photographs, religious symbols, graffiti, personal items); keep the unblurred original in the workfile; same tool in the photo review screen. Usually a lender/AMC requirement (not USPAP); USPAP's concern is that a report not be misleading, so note in the report that photos were edited for privacy.
 - Next: requirements checklist from the client's letter → iPad to-dos; contract facts → UAD 3.6 contract section export; workfile AI note text in her wording.
 
+## Redact a copy (Oct 15 2026)
+Reader → "Redact a copy" (every order, no AI needed): same redaction screen as Read with Claude (auto black boxes from order names/patterns, extra names, drawn black/blur boxes) → "Save redacted PDF": a PDF made only of JPEG page pictures (jpegPdf in reader.js; no text layer, no metadata from the original) → Downloads + added to the order's documents as "<name> - REDACTED.pdf". Up to 200 pages a time. Send to Claude from that screen only on AI orders.
+
 ## Assignment types for lender/AMC orders (Oct 15 2026)
 Group "Lender or AMC order – UAD 3.6": uadPurchase, uadRefi, uadHeloc, uadConstruction (premise default "as completed as of today"), uadOther – defined with UAD36() in engagement-letter-writer/src/clauses.js (Fannie-style intended use, federal market value definition, AIR/Reg Z statement). Choosing one sets My letter to "Not needed – client's letter" (still editable). Order fields govAgency (UAD 2.008 FHA/VA/USDA) and investorId (2.009). Old "Lending" types are now under "Private lending".
 

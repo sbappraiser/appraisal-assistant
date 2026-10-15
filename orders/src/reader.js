@@ -113,6 +113,8 @@ function rdRender() {
     ${stickiesHtml()}
     ${C.items.map(rowFor).join('')}
     ${rdExtras(meta)}
+    ${RD.pdf ? `<div class="rdai"><h4>Redact a copy</h4><p class="help">Make a copy with names, phones, emails and numbers removed, plus anything you black out or blur yourself – for your workfile, or to send to someone. Pages <input id="rdRFrom" value="1" size="2" inputmode="numeric"> to <input id="rdRTo" value="${RD.pdf.numPages}" size="2" inputmode="numeric"></p>
+      <button type="button" class="btn" id="rdRedact">Redact pages</button></div>` : ''}
     <div class="rdai"><h4>Read with Claude</h4>${!aiOk ? `<p class="help">${ai === 'No' ? 'This order is set to <b>No AI</b>, so nothing from it can be sent.' : 'Choose <b>AI use on this job</b> on the Order &amp; letter tab first. Until then nothing is sent.'}</p>`
       : !key ? `<p class="help">Add your Claude API key on the Standard wording tab (AI settings) to use this. It stays in this browser.</p>`
       : `<p class="help">Sends page pictures (not the file) of pages <input id="rdFrom" value="1" size="2" inputmode="numeric"> to <input id="rdTo" value="${Math.min(20, RD.pdf ? RD.pdf.numPages : 1)}" size="2" inputmode="numeric"> to Claude. ${ai === 'Redacted' ? 'Names, phones, emails and numbers are painted out first, and you see every page before it is sent.' : 'This order allows AI without redaction; you still see the pages first.'}</p>
@@ -125,7 +127,8 @@ function rdRender() {
   side.querySelectorAll('[data-unfact]').forEach(b => b.onclick = () => { cur.facts = cur.facts.filter(f => f.id !== b.dataset.unfact); saveLetter(true, true); rdRender(); });
   side.querySelectorAll('[data-ownadd]').forEach(b => b.onclick = () => { const k = b.dataset.ownadd, i = side.querySelector(`[data-own="${k}"]`); const v = i.value.trim(); if (!v) return;
     (cur.facts = cur.facts || []).push({ id: uid(), docId: RD.id, doc: meta.name, type: meta.type, key: k, label: (C.items.find(x => x[0] === k) || [, k])[1], value: v, page: RD.page, by: 'you', at: new Date().toISOString() }); saveLetter(true, true); rdRender(); });
-  const prep = $('#rdPrep'); if (prep) prep.onclick = () => rdPrepare();
+  const prep = $('#rdPrep'); if (prep) prep.onclick = () => rdPrepare('claude');
+  const rc = $('#rdRedact'); if (rc) rc.onclick = () => rdPrepare('copy');
   wireStickies(side); rdWireExtras(side);
   const aa = $('#rdAccAll'); if (aa) aa.onclick = () => { side.querySelectorAll('[data-acc]').forEach(b => b.click()); };
 }
@@ -175,15 +178,18 @@ async function redactPage(n, redact) { // → canvas with the page painted, sens
     if (b.mode === 'blur') { pixelate(g, X, Y, W, H); } else { g.fillStyle = '#000'; g.fillRect(X, Y, W, H); } hits++; });
   return { cv, hits };
 }
-async function rdPrepare() {
-  if (!RD.pdf) { toast('Claude reading works on PDF files'); return; }
-  const from = Math.max(1, parseInt($('#rdFrom').value, 10) || 1), to = Math.min(RD.pdf.numPages, parseInt($('#rdTo').value, 10) || from, from + 29);
-  const red = cur.aiUse === 'Redacted'; const pane = $('#rdSend'); pane.hidden = false; if (RD.extra == null) RD.extra = cur.redactNames || '';
+async function rdPrepare(mode) { // mode 'claude' = to send; 'copy' = a redacted copy for the workfile or to send yourself
+  if (!RD.pdf) { toast('This works on PDF files'); return; }
+  if (mode) { RD.prepMode = mode; const fi = mode === 'copy' ? '#rdRFrom' : '#rdFrom', ti = mode === 'copy' ? '#rdRTo' : '#rdTo'; RD.prepFrom = parseInt($(fi).value, 10) || 1; RD.prepTo = parseInt($(ti).value, 10) || RD.prepFrom; }
+  mode = RD.prepMode;
+  const from = Math.max(1, Math.min(RD.pdf.numPages, RD.prepFrom)), to = Math.min(RD.pdf.numPages, Math.max(from, RD.prepTo), from + (mode === 'copy' ? 199 : 29));
+  const red = mode === 'copy' || cur.aiUse === 'Redacted'; const pane = $('#rdSend'); pane.hidden = false; if (RD.extra == null) RD.extra = cur.redactNames || '';
+  const canSend = (cur.aiUse === 'Yes' || cur.aiUse === 'Redacted') && aiKey();
   pane.innerHTML = `<div class="rdsendbar"><b>${red ? 'Redacted pages' : 'Pages'} ${from}–${to}: check every page.</b> ${red ? 'Black boxes are painted into the picture itself, so the hidden words are gone. Drag on a page to black out anything else (signatures, account numbers).' : ''}
     ${red ? `<label>Also remove these names <span class="opt">separate with commas – buyers, sellers, agents, anyone else on the pages</span><input id="rdExtra" value="${h(RD.extra || '')}" placeholder="Broadway Warehouse, Colleen Casey"></label><p class="help">Signatures and initials are pictures, not text: drag a box over each one.</p>
       <div class="row"><span>Drag to:</span><div class="seg2"><button type="button" data-dm="black" aria-pressed="${(RD.drawMode || 'black') === 'black'}">Black box</button><button type="button" data-dm="blur" aria-pressed="${RD.drawMode === 'blur'}">Blur</button></div><button type="button" class="btn ghost small" id="rdUndoBox">Undo last box</button></div>
       <p class="help">Blur scrambles the pixels so nothing underneath can be read back; it looks softer than a black box (good for photos and logos). Names and numbers found in the text are always blacked out.</p>` : ''}
-    <span class="row"><button type="button" class="btn primary" id="rdGo">Send these ${to - from + 1} pages to Claude</button><button type="button" class="btn ghost" id="rdCancel">Cancel</button></span></div><div id="rdThumbs" class="rdthumbs"></div>`;
+    <span class="row">${mode === 'copy' ? `<button type="button" class="btn primary" id="rdSavePdf">Save redacted PDF</button>` : ''}${canSend && (mode === 'claude' || to - from < 30) ? `<button type="button" class="btn ${mode === 'copy' ? '' : 'primary'}" id="rdGo">Send these ${to - from + 1} pages to Claude</button>` : ''}<button type="button" class="btn ghost" id="rdCancel">${mode === 'copy' ? 'Close' : 'Cancel'}</button></span></div><div id="rdThumbs" class="rdthumbs"></div>`;
   const th = $('#rdThumbs'); RD.prepared = [];
   for (let n = from; n <= to; n++) { const { cv, hits } = await redactPage(n, red); cv.dataset.n = n; const wrap = document.createElement('figure'); wrap.innerHTML = `<figcaption>Page ${n}${red ? ` · ${hits} item${hits === 1 ? '' : 's'} blacked out` : ''}</figcaption>`; wrap.prepend(cv); th.appendChild(wrap); RD.prepared.push(n);
     if (red) { let st = null; cv.onpointerdown = e => { const r = cv.getBoundingClientRect(); st = [(e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height]; cv.setPointerCapture(e.pointerId); };
@@ -193,7 +199,35 @@ async function rdPrepare() {
   document.querySelectorAll('[data-dm]').forEach(b => b.onclick = () => { RD.drawMode = b.dataset.dm; document.querySelectorAll('[data-dm]').forEach(x => x.setAttribute('aria-pressed', x === b)); });
   const ub = $('#rdUndoBox'); if (ub) ub.onclick = () => { const ns = Object.keys(RD.boxes).filter(k => RD.boxes[k].length).map(Number); if (!ns.length) return; const last = ns.reduce((a, k) => (RD.boxes[k].at(-1).t || 0) > (RD.boxes[a].at(-1).t || 0) ? k : a, ns[0]); RD.boxes[last].pop(); rdPrepare(); };
   const ex = $('#rdExtra'); if (ex) ex.onchange = () => { RD.extra = ex.value; cur.redactNames = ex.value; saveLetter(true, true); rdPrepare(); };
-  $('#rdGo').onclick = () => rdSend(red);
+  const go = $('#rdGo'); if (go) go.onclick = () => rdSend(red);
+  const sp = $('#rdSavePdf'); if (sp) sp.onclick = () => saveRedactedPdf();
+}
+async function saveRedactedPdf() {
+  const meta = cur.docs.find(d => d.id === RD.id); const b = $('#rdSavePdf'); b.disabled = true; b.textContent = 'Making the PDF…';
+  try {
+    const pages = []; for (const cv of document.querySelectorAll('#rdThumbs canvas')) { const bin = atob(cv.toDataURL('image/jpeg', 0.85).split(',')[1]); const u8 = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i); pages.push({ jpg: u8, w: cv.width, h: cv.height }); }
+    const blob = jpegPdf(pages); const name = meta.name.replace(/\.pdf$/i, '') + ' - REDACTED.pdf'; const file = new File([blob], name, { type: 'application/pdf' });
+    download(new Uint8Array(await blob.arrayBuffer()), name, 'application/pdf');
+    const m2 = { id: uid(), name, type: meta.type, size: blob.size, mime: 'application/pdf', added: new Date().toISOString(), note: 'redacted copy – pictures only, no hidden text' };
+    await ODB.put('docs', { ...m2, orderId: cur.id, blob: file }); cur.docs.push(m2); saveLetter(true, true);
+    toast('Saved ' + name + ' to Downloads and to this order’s documents', 5000);
+  } catch (e) { console.error(e); toast('Could not make the PDF: ' + (e.message || e)); }
+  b.disabled = false; b.textContent = 'Save redacted PDF';
+}
+function jpegPdf(pages) { // a PDF made only of page pictures: no text layer, no hidden data from the original
+  const enc = new TextEncoder(); const parts = []; const offs = []; let len = 0; const push = x => { const u = typeof x === 'string' ? enc.encode(x) : x; parts.push(u); len += u.length; };
+  const n = pages.length; const obj = (i, body) => { offs[i] = len; push(`${i} 0 obj\n`); body(); push('\nendobj\n'); };
+  push('%PDF-1.4\n%\xE2\xE3\xCF\xD3\n');
+  obj(1, () => push('<< /Type /Catalog /Pages 2 0 R >>'));
+  obj(2, () => push(`<< /Type /Pages /Count ${n} /Kids [${pages.map((_, i) => `${3 + i * 3} 0 R`).join(' ')}] >>`));
+  pages.forEach((pg, i) => { const pw = 612, ph = Math.round(612 * pg.h / pg.w); const P = 3 + i * 3, I = P + 1, C = P + 2;
+    obj(P, () => push(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pw} ${ph}] /Resources << /XObject << /Im0 ${I} 0 R >> >> /Contents ${C} 0 R >>`));
+    obj(I, () => { push(`<< /Type /XObject /Subtype /Image /Width ${pg.w} /Height ${pg.h} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${pg.jpg.length} >>\nstream\n`); push(pg.jpg); push('\nendstream'); });
+    const cs = `q ${pw} 0 0 ${ph} 0 0 cm /Im0 Do Q`; obj(C, () => push(`<< /Length ${cs.length} >>\nstream\n${cs}\nendstream`)); });
+  const xref = len; const total = 3 + n * 3;
+  push(`xref\n0 ${total}\n0000000000 65535 f \n` + Array.from({ length: total - 1 }, (_, k) => String(offs[k + 1]).padStart(10, '0') + ' 00000 n \n').join(''));
+  push(`trailer\n<< /Size ${total} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`);
+  return new Blob(parts, { type: 'application/pdf' });
 }
 async function rdSend(red) {
   const meta = cur.docs.find(d => d.id === RD.id), C = checkFor(meta.type); const go = $('#rdGo'); go.disabled = true; go.textContent = 'Claude is reading…';
