@@ -427,7 +427,7 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
 </div>
 <div id="toast" role="status" hidden></div>
 <script>
-const BUILD='o1-1015-0057';
+const BUILD='o1-1015-0210';
 const G = (() => {
 /* ---------------- small helpers ---------------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -2157,7 +2157,9 @@ async function openReader(id, page, q) {
   const rec = await docPages(id); if (!rec) { toast('That file is no longer stored'); return; } RD.rec = rec;
   if (isPdf({ name: rec.name, type: rec.mime })) { const pdfjs = await loadPdfJs(); RD.pdf = await pdfjs.getDocument({ data: new Uint8Array(await rec.blob.arrayBuffer()), isEvalSupported: false, wasmUrl: './wasm/', standardFontDataUrl: './standard_fonts/' }).promise; }
   cur = readForm(); cur.review = cur.review || {}; const rv = cur.review[id] = cur.review[id] || { sugg: [] };
-  if (meta.type === 'prelim' && !rv.sugg.some(s => s.by === 'reader')) { rv.sugg.push(...readPrelim(rec.pagesText).map(s => ({ ...s, id: uid(), state: 'new' }))); saveLetter(true, true); }
+  const PRELIM_V = 3; // bump when the prelim rules change: suggestions not yet accepted or rejected are made again
+  if (meta.type === 'prelim' && (rv.prelimV || 0) < PRELIM_V) { rv.sugg = rv.sugg.filter(s => s.by !== 'reader' || s.state !== 'new'); const seen = new Set(rv.sugg.map(s => s.key + '|' + s.value + '|' + s.page));
+    rv.sugg.push(...readPrelim(rec.pagesText).filter(s => !seen.has(s.key + '|' + s.value + '|' + s.page)).map(s => ({ ...s, id: uid(), state: 'new' }))); rv.prelimV = PRELIM_V; saveLetter(true, true); }
   $('#reader').hidden = false; document.body.classList.add('reading'); rdRender(); rdPage();
 }
 function closeReader() { $('#reader').hidden = true; document.body.classList.remove('reading'); RD.pdf = null; renderDocs(); renderFacts(); }
@@ -2451,6 +2453,7 @@ function shortEx(x) { // one short phrase per exception for the report: no instr
 const PRELIM_SKIP = /^(General and special|General and Special City|The lien of supplemental|Assessments, for community|Assessments for community|The liens? of bonds|A deed of trust|An assignment of|Rights of the public|Water rights|The new lender|An Owner.s Certification|With respect to|Please be advised|Any rights, interests or claims of parties in possession|Rights or claims of parties in possession|The requirement that|Matters which may be disclosed by an inspection|Any facts, rights, interests|Statements? of information)/i;
 function prelimLabel(t) {
   t = String(t).replace(/\s+/g, ' ').trim(); if (PRELIM_SKIP.test(t)) return '';
+  if (/\btax(es)?\b|assessments? (collected|levied)|bonds? and assessments|community facilit|Mello[- ]Roos/i.test(t) && !/delinquent|default|unpaid|tax lien/i.test(t)) return ''; // taxes only when delinquent
   if (/delinquent/i.test(t) && /tax/i.test(t)) return 'delinquent property taxes';
   if (/(oil|gas|mineral|hydrocarbon|subsurface)/i.test(t) && /reserv|lease|rights? to|excepting|claims?/i.test(t) && !/gas (line|main|pipe)|utilit|easement for/i.test(t)) return 'oil, gas and mineral rights';
   if (/easement/i.test(t)) {
