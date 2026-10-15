@@ -81,6 +81,8 @@ async function openReader(id, page, q) {
   if (isPdf({ name: rec.name, type: rec.mime })) { const pdfjs = await loadPdfJs(); RD.pdf = await pdfjs.getDocument({ data: new Uint8Array(await rec.blob.arrayBuffer()), isEvalSupported: false, wasmUrl: './wasm/', standardFontDataUrl: './standard_fonts/' }).promise; }
   cur = readForm(); cur.review = cur.review || {}; const rv = cur.review[id] = cur.review[id] || { sugg: [] };
   const PRELIM_V = 9; // bump when the prelim rules change: suggestions not yet accepted or rejected are made again
+  if (meta.type === 'prelim') { let ch = false; rv.sugg.forEach(sg => { if (sg.state === 'new' && sg.by === 'claude' && sg.key !== 'dated') { const c = cleanPrelimValue(sg.value); if (!c) { sg.state = 'rejected'; ch = true; } else if (c !== sg.value) { sg.quote = sg.quote || sg.value; sg.value = c; sg.key = prelimKey(c); ch = true; } } });
+    (cur.facts || []).forEach(f => { if (f.docId === id && f.key !== 'dated') { const c = cleanPrelimValue(f.value); if (c && c !== f.value) { f.full = f.full || f.value; f.value = c; ch = true; } } }); if (ch) saveLetter(true, true); }
   if (meta.type === 'prelim' && (rv.prelimV || 0) < PRELIM_V) { rv.sugg = rv.sugg.filter(s => s.by !== 'reader' || s.state !== 'new'); const seen = new Set(rv.sugg.map(s => s.key + '|' + s.value + '|' + s.page));
     rv.sugg.push(...readPrelim(rec.pagesText).filter(s => !seen.has(s.key + '|' + s.value + '|' + s.page)).map(s => ({ ...s, id: uid(), state: 'new' }))); rv.prelimV = PRELIM_V; saveLetter(true, true); }
   $('#reader').hidden = false; document.body.classList.add('reading'); rdRender(); rdPage();
@@ -294,7 +296,7 @@ function contractDraft(docId) {
 }
 function prelimDraft(docId) {
   const v = k => fval(docId, k); const dated = v('dated')[0];
-  const items = ['easements', 'restrictions', 'minerals', 'encroach', 'clear', 'other'].flatMap(k => v(k));
+  const items = ['easements', 'restrictions', 'minerals', 'encroach', 'clear', 'other'].flatMap(k => v(k)).map(cleanPrelimValue).filter(Boolean);
   return `A preliminary title report${dated ? ' dated ' + dated : ''} was provided and reviewed.` + (items.length ? ' ' + prelimSentence(items) : ' No exceptions of note were observed.')
     + (v('clear').length ? ' Some items may need to be cleared prior to a transfer.' : '')
     + ` The appraiser is not a title expert. This is a brief summary only; the appraisal assumes the title is marketable and free of adverse encumbrances other than those noted. The client should consult a title officer regarding any title concerns.`;
@@ -435,4 +437,13 @@ function prelimSentence(vals) { // her wording: "Easements for drainage, culvert
   if (groups.length) out.push('Easements for ' + (groups.length > 2 ? groups.slice(0, -1).join('; ') + '; and ' + groups.at(-1) : groups.length === 2 ? groups[0] + ', and ' + groups[1] : groups[0]) + ' exist.');
   if (rest.length) { const j = joinLabels(rest); out.push(j.charAt(0).toUpperCase() + j.slice(1) + (groups.length ? ' also' : '') + ' exist.'); }
   return out.join(' ');
+}
+
+function cleanPrelimValue(v) { // any prelim entry → her short label; anything with recording details is stripped; noise is dropped
+  v = String(v || '').replace(/^#\d+[a-z]?:\s*/, '').trim(); if (!v) return '';
+  const lab = prelimLabel(v); if (lab) return lab;
+  if (prelimNoise(v)) return '';
+  return v.replace(/,?\s*(as\s+)?(set forth in a document\s+)?recorded\s+(on\s+)?([A-Z][a-z]+\.? \d{1,2},? \d{4}|\d{1,2}\/\d{1,2}\/\d{2,4})/gi, '')
+    .replace(/,?\s*(as\s+)?(Instrument|Document|Doc\.?)\s*(No\.?|Number|#)\s*[\w-]+/gi, '').replace(/,?\s*(in\s+)?Book\s+\d+[^,.;]*?,?\s*Page\s+\d+/gi, '')
+    .replace(/,?\s*of\s+(Official\s+Records|Deeds)/gi, '').replace(/\s{2,}/g, ' ').replace(/\s+([,.;])/g, '$1').replace(/[,;]\s*$/, '').trim();
 }
