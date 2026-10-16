@@ -71,14 +71,14 @@ mid = lambda m: m + '-15'                                                       
 
 # TEST adjustments (her decisions in a real report): time 0, usable land $800k/ac, GLA $350/sf, full bath $15k, condition C4→C3 $75k
 def adjustments(c):
-    usable_ac = round((c['usable_sf'] or c['site_sf'] or 0) / 43560, 2)
+    usable_ac = round(c['usable_sf'] / 43560, 2) if c['usable_sf'] else None   # her own measurement only – never MLS / public-record site size
     gla_adj = round((S_GLA - c['gla']) * 350 / 1000) * 1000
-    land = round((S_USABLE_AC - usable_ac) * 800000 / 1000) * 1000
+    land = round((S_USABLE_AC - usable_ac) * 800000 / 1000) * 1000 if usable_ac is not None else 0
     cond = 75000 if (c['condition'] or 3) >= 4 else 0
     rows = [('SaleDate', 0), ('SalesConcessions', 0), ('ContractDate', 0), ('SiteSize', 0),
             ('LivingUnitBedroomCount', 0), ('LivingUnitBathroomCount', (2 - (c['baths_full'] or 2)) * 15000),
             ('LivingUnitStandardFinishedAreaAboveGrade', gla_adj), ('OverallConditionRating', cond), ('YearBuilt', 0)]
-    other = [('Lot Utility/ Usable lot area', '%.2f ac' % usable_ac, land)]
+    other = [('Lot Utility/ Usable lot area', '%.2f ac' % usable_ac, land)] if usable_ac is not None else []   # not measured yet → she measures it
     return rows, other
 
 AMOUNTS = []
