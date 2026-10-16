@@ -66,8 +66,11 @@ function buildCompXML(PROPS, RELS, DSS, c, n, job) {
   const cp = num(g('carport')); if (cp) { any = true; const d = X(X(cs, 'CAR_STORAGE'), 'CAR_STORAGE_DETAIL'); XV(d, 'CarStorageType', 'Carport'); XV(d, 'ParkingSpacesCount', cp); }
   const dw = num(g('driveway')); if (dw) { any = true; const d = X(X(cs, 'CAR_STORAGE'), 'CAR_STORAGE_DETAIL'); XV(d, 'CarStorageType', 'Driveway'); XV(d, 'ParkingSpacesCount', dw); XV(d, 'TenOrMoreParkingSpacesIndicator', dw >= 10 ? 'true' : 'false'); }
   if (!any && gar === 0) XV(X(X(cs, 'CAR_STORAGE'), 'CAR_STORAGE_DETAIL'), 'CarStorageType', 'None');
-  // COMPARABLE_DETAIL (no adjustments – those are yours to make in SFREP)
-  const cd = X(X(P, 'COMPARABLE'), 'COMPARABLE_DETAIL'); const px = proximity(c, job);
+  // COMPARABLE: your adjustments from the grid (if any), then the detail
+  const CMP = X(P, 'COMPARABLE'); const gt = gridAdjustXML(CMP, c, job);
+  const cd = X(CMP, 'COMPARABLE_DETAIL'); const px = proximity(c, job);
+  if (gt && gt.lines) { XV(cd, 'AdjustedSalesPriceAmount', Math.round(gt.adj)); XV(cd, 'SalePriceNetTotalAdjustmentAmount', Math.round(gt.net)); }
+  if (job.grid && job.grid.weights && job.grid.weights[c.id]) XV(cd, 'ComparableWeightType', job.grid.weights[c.id]);
   const price = num(g('salePrice')), list = num(g('listPrice')), gla = num(g('gla')); const status = uadStatus(g('status') || (currentSale(c) || {}).status);
   if (px) XV(cd, 'ComparableToSubjectDirectionType', px.dir);
   if (status === 'Pending') XV(cd, 'ContractAmountUnknownIndicator', price ? 'false' : 'true');
@@ -77,6 +80,7 @@ function buildCompXML(PROPS, RELS, DSS, c, n, job) {
   XV(cd, 'PropertyOrdinalNumber', n);
   if (px) XV(cd, 'ProximityToSubjectDistanceLinearMeasure', px.mi.toFixed(2), { LinearUnitOfMeasureType: 'Miles' });
   if (price && list && status !== 'SettledSale') XV(cd, 'SaleToListPriceRatioPercent', (price / list * 100).toFixed(2));
+  cd.kids.sort((a, b) => a.tag.localeCompare(b.tag)); // UAD order is alphabetical inside COMPARABLE_DETAIL
   // ENERGY_EFFICIENCY_AND_GREEN
   const en = String(g('energy') || ''); if (/solar|geotherm|wind/i.test(en)) { const e = X(P, 'ENERGY_EFFICIENCY_AND_GREEN'); XV(X(e, 'ENERGY_EFFICIENCY_AND_GREEN_DETAIL'), 'RenewableEnergyComponentExistsIndicator', 'true'); XV(X(X(e, 'RENEWABLE_ENERGY_COMPONENTS'), 'RENEWABLE_ENERGY_COMPONENT'), 'RenewableEnergyComponentType', /geotherm/i.test(en) ? 'Geothermal' : /wind/i.test(en) ? 'WindTurbine' : 'Solar'); }
   // HAZARD (from CRS flood zone) goes in SITE below
@@ -139,7 +143,7 @@ function buildCompXML(PROPS, RELS, DSS, c, n, job) {
   if (g('mls') && (c.src.mls || c.src.pdf || /MLS/i.test(g('verification') || ''))) ds('MLS', g('mls'));
   if (c.src.crs) ds('AssessorRecord', null);
   if (c.src.cort.length) ds('Deed', c.src.cort[c.cortPick || 0].doc || null);
-  if (c.src.arch.length) ds('PreviousAppraisal', null);
+  if (c.src.arch.length) ds('PreviousAppraisalFile', null);
 }
 function buildCompsMISMO(job, comps) {
   const root = X(null, 'MESSAGE', { 'xmlns:xlink': 'http://www.w3.org/1999/xlink', xmlns: 'http://www.mismo.org/residential/2009/schemas', 'xmlns:gse': 'http://www.datamodelextension.org', MISMOReferenceModelIdentifier: '3.6.0366' });
@@ -151,10 +155,11 @@ function buildCompsMISMO(job, comps) {
   const DSS = X(va, 'DATA_SOURCES');
   const PROPS = X(va, 'PROPERTIES');
   comps.forEach((c, i) => buildCompXML(PROPS, RELS, DSS, c, i + 1, job));
+  svc.kids = [...svc.kids.filter(k => k !== RELS), RELS]; // UAD order: VALUATION, then RELATIONSHIPS
   XV(X(X(X(va, 'VALUATION_REPORT'), 'VALUATION_SOFTWARE_SYSTEMS'), 'VALUATION_SOFTWARE_SYSTEM'), 'ValuationSoftwareProductName', 'Appraisal Assistant – Comp Genie');
   const dc = X(doc, 'DOCUMENT_CLASSIFICATION'); XV(X(X(dc, 'DOCUMENT_CLASSES'), 'DOCUMENT_CLASS'), 'DocumentType', 'AppraisalReport');
   const dcd = X(dc, 'DOCUMENT_CLASSIFICATION_DETAIL'); XV(dcd, 'DocumentFormIssuingEntityNameType', 'FNM_FRE'); XV(dcd, 'DocumentFormIssuingEntityVersionIdentifier', 'September 2024');
-  return '<?xml version="1.0" encoding="UTF-8"?>\n<!--Sales comparables exported by Comp Genie for import into Appraise-It Pro (Home > Import Forms). Adjustments are not included.-->\n' + xmlOut(root);
+  return '<?xml version="1.0" encoding="UTF-8"?>\n<!--Sales comparables exported by Comp Genie for import into Appraise-It Pro (Home > Import Forms). Adjustments are yours, from the Comp Genie grid.-->\n' + xmlOut(root);
 }
 
 /* ---- comps table ---- */

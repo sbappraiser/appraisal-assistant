@@ -108,7 +108,7 @@ async function ingest(files) {
     try {
       app.busy = 'Reading ' + f.name + '…'; renderBusy();
       const low = f.name.toLowerCase();
-      if (low.endsWith('.zip')) notes.push(await ingestPhotos(f));
+      if (low.endsWith('.zip')) { const z = await readZip(f); notes.push(z.has('inspection-backup.json') ? await ingestInspection(z, f.name) : await ingestPhotos(f, z)); }
       else if (low.endsWith('.csv')) {
         const text = await readText(f); const head = text.slice(0, 2000).toLowerCase();
         if (head.includes('listing number')) notes.push(ingestMls(parseMlsCsv(text), f.name));
@@ -172,8 +172,8 @@ async function ingestCort(rows, name) {
   app.job.comps.forEach(attachCort);
   return `${name}: ${added} new CORT sales saved (${app.cort.length} in your CORT table). They fill in automatically when a comp matches by APN or address.`;
 }
-async function ingestPhotos(f) {
-  const files = await readZip(f); let n = 0; const mlsSet = new Set(); const fid = uid();
+async function ingestPhotos(f, z) {
+  const files = z || await readZip(f); let n = 0; const mlsSet = new Set(); const fid = uid();
   for (const [path, data] of files) {
     const base = path.split('/').pop(); const m = base.match(/^(\d{2}-\d+)_(\d+)\.(jpe?g|png)$/i); if (!m) continue;
     const id = app.job.id + ':' + m[1] + '_' + m[2];
@@ -231,13 +231,14 @@ function render() {
   </section>
   <section class="card" id="compsCard">${compsCardHTML(J)}</section>
   <div id="detail">${app.sel ? detailHTML(J.comps.find(c => c.id === app.sel)) : ''}</div>
+  <section class="card" id="gridCard">${gridHTML(J)}</section>
   <section class="card" id="exportCard"><h2>Export</h2>${exportHTML(J)}</section>
   <footer class="foot">Comp Genie · your data stays on this computer · build ${typeof BUILD !== 'undefined' ? BUILD : ''}</footer>`;
   fillImages();
 }
 /* Redraw after a field changes without losing your place: Tab moves on first, then the page is
    redrawn and the cursor is put back in the field you tabbed (or clicked) into. */
-const FOCUS_KEYS = ['data-subj', 'data-edit', 'data-jobname', 'data-notes', 'id'];
+const FOCUS_KEYS = ['data-subj', 'data-edit', 'data-jobname', 'data-notes', 'data-gadj', 'data-gsubj', 'data-grate', 'data-gvalue', 'data-gnote', 'id'];
 function renderKeepFocus() {
   setTimeout(() => {
     const a = document.activeElement; let key = null;
@@ -254,6 +255,7 @@ function renderParts(opts = {}) {
   const jp = $('#jobpick'); if (jp) jp.innerHTML = app.jobs.map(j => `<option value="${j.id}" ${j.id === J.id ? 'selected' : ''}>${esc(j.name)}</option>`).join('');
   const cc = $('#compsCard'); if (cc) { cc.innerHTML = compsCardHTML(J); fillImages(cc); }
   const ex = $('#exportCard'); if (ex) ex.innerHTML = '<h2>Export</h2>' + exportHTML(J);
+  if (opts.grid !== false) { const gc = $('#gridCard'); if (gc) gc.innerHTML = gridHTML(J); }
   if (opts.field && app.sel) { // one row of the field-by-field table
     const c = J.comps.find(x => x.id === app.sel); const f = FIELD[opts.field]; const u = val(c, f.k);
     const inp = document.querySelector(`[data-edit="${f.k}"]`); const row = inp && inp.closest('tr');
@@ -341,10 +343,10 @@ function detailHTML(c) {
 function exportHTML(J) {
   const used = J.comps.filter(c => c.use).sort((a, b) => a.use - b.use);
   return `<p>${used.length ? `Comps chosen: ${used.map(c => `<b>${c.use}</b> ${esc(compTitle(c))}`).join(' · ')}` : 'Pick comps with “Use as” in the list. If none are picked, the table export includes every comp considered.'}</p>
-  <div class="row"><button class="btn primary" data-act="x-sfrep" ${used.length ? '' : 'disabled'}>SFREP comps file (.zip)</button>
+  <div class="row"><button class="btn primary" data-act="x-full" ${used.length && J.subject.insp ? '' : 'disabled'} title="${J.subject.insp ? '' : 'Drop your iPad Workfile package first'}">Full report for SFREP (.zip)</button><button class="btn primary" data-act="x-sfrep" ${used.length ? '' : 'disabled'}>SFREP comps file (.zip)</button>
   <button class="btn" data-act="x-csv">Comps table (.csv)</button>
   <button class="btn" data-act="x-photos">Front photos (.zip)</button></div>
-  <p class="help">The SFREP file has the chosen comps in grid order with their front photos, sale and listing data, site, view and house facts. Adjustments are not included – you make those in SFREP. Import it into a copy of your report first (Home › Import Forms) to see how SFREP takes it.</p>`;
+  <p class="help"><b>Full report</b> = your iPad inspection (subject, photos, sketch) + these comps with your adjustments, your Lot Utility row, indicated value and comment, in one file. <b>Comps file</b> = the comps and your adjustments only, for a report that already has the inspection. Both carry the front photos, sale and listing data, site, view and house facts. Import into a copy of your report first (Home › Import Forms) to see how SFREP takes it.</p>`;
 }
 function useCrsAsSubject(ch) {
   return removeFile(ch.fid).then(() => { const s = app.job.subject; s.crs = ch.r; ['addr', 'city', 'zip', 'apn'].forEach(k => { if (ch.r[k]) s[k] = ch.r[k]; }); if (ch.r.lat) { s.lat = ch.r.lat; s.lon = ch.r.lon; }
@@ -425,6 +427,7 @@ document.addEventListener('click', async e => {
     case 'close': app.sel = null; render(); break;
     case 'backup': backupJob(); break;
     case 'x-sfrep': exportSfrep(); break;
+    case 'x-full': exportFullReport(); break;
     case 'x-csv': exportCsv(); break;
     case 'x-photos': exportPhotos(); break;
     case 'showall': app.showAll = t.checked; render(); break;
@@ -444,6 +447,17 @@ document.addEventListener('change', async e => {
   if (t.dataset.subj) { app.job.subject[t.dataset.subj] = t.dataset.subj === 'eff' ? (isoDate(t.value) || t.value.trim()) : t.value.trim(); if (t.dataset.subj === 'addr' && (!app.job.name.trim() || app.job.name === 'New assignment')) app.job.name = t.value.trim() || app.job.name; const jn = $('[data-jobname]'); if (jn && document.activeElement !== jn) jn.value = app.job.name; save(); renderParts(); return; }
   if (t.dataset.jobname) { app.job.name = t.value.trim() || 'Assignment'; save(); renderParts(); return; }
   if (t.dataset.notes) { const c = app.job.comps.find(x => x.id === t.dataset.notes); c.notes = t.value; save(); return; }
+  // adjustment grid
+  if (t.dataset.gadj || t.dataset.gsubj || t.dataset.grate || t.dataset.gvalue || t.dataset.gnote || t.dataset.gweight) { const G = G0(app.job); const v = t.value.trim();
+    const n = s => { const x = num(String(s).replace(/[$,\s]/g, '').replace(/^\+/, '')); return x === null ? null : x; };
+    if (t.dataset.gadj) { const [cid, row] = t.dataset.gadj.split('|'); G.cells[cid] = G.cells[cid] || {}; if (v === '') delete G.cells[cid][row]; else G.cells[cid][row] = n(v); }
+    if (t.dataset.gsubj === 'baths') { const m = v.match(/(\d+)\D*(\d+)?/); if (v === '' || !m) { delete G.subj.baths; delete G.subj.full; delete G.subj.half; } else { G.subj.baths = v; G.subj.full = +m[1]; G.subj.half = m[2] ? +m[2] : 0; } }
+    else if (t.dataset.gsubj) { const k = t.dataset.gsubj; if (v === '') delete G.subj[k]; else G.subj[k] = ['site', 'usable', 'year', 'beds', 'full', 'half', 'gla', 'bsmt', 'garage'].includes(k) ? (n(v.replace(/ac$/i, '')) ?? v) : v; }
+    if (t.dataset.grate) { if (v === '') delete G.rates[t.dataset.grate]; else G.rates[t.dataset.grate] = n(v.replace('%', '')); }
+    if (t.dataset.gvalue) G.value = v === '' ? null : n(v);
+    if (t.dataset.gnote) { G.note = t.value; save(); return; }
+    if (t.dataset.gweight) { if (v) G.weights[t.dataset.gweight] = v; else delete G.weights[t.dataset.gweight]; }
+    save(); renderKeepFocus(); return; }
 });
 document.addEventListener('input', e => {
   const t = e.target; if (t.id !== 'addr') return;
