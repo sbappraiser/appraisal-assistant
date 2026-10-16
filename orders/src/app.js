@@ -267,7 +267,11 @@ function renderLetters() {
   $('#letterList').querySelectorAll('[data-stage]').forEach(s => s.onchange = () => { const f = letters.find(x => x.id === s.dataset.stage); f.stage = s.value; ODB.put('orders', f); if (cur && cur.id === f.id) { $('#f_stage').value = s.value; cur.stage = s.value; } renderLetters(); });
 }
 const genieURL = f => '../comp-genie/?order=' + encodeURIComponent(f.id);
-function renderLinks() { const a = $('#genieLink'); if (a && cur) a.href = genieURL(cur); }
+function renderLinks() { const a = $('#genieLink'); if (a && cur) a.href = genieURL(cur); syncGenieTop(); }
+function syncGenieTop() {   // the top-bar button opens the order you are on (Order or Market tab); elsewhere the Comp genie's own list
+  const t = $('#genieTop'); if (!t) return; const onOrder = cur && hasContent(cur) && ['letter', 'market', 'new'].includes(CUR_TAB);
+  t.href = onOrder ? genieURL(cur) : '../comp-genie/'; t.title = onOrder ? 'Open the Comp genie for ' + ([cur.fileNo, street(cur)].filter(Boolean).join(' ') || 'this order') : 'Open the Comp genie';
+}
 function renderContacts() {
   const q = (($('#contactSearch') || {}).value || '').toLowerCase();
   const list = contacts.map((c, j) => [c, j]).filter(([c]) => !q || [c.name, c.company, c.email, c.addr1, c.addr2].join(' ').toLowerCase().includes(q));
@@ -361,10 +365,12 @@ function renderOrderSummary(f) {
   $('#osMine').onclick = () => { cur = readForm(); cur.letterMode = 'mine'; $('#f_status').value = 'Drafted'; update(); };
   $('#osTheirs').onclick = () => { $('#f_status').value = 'Client letter'; update(); document.getElementById('docsSet').scrollIntoView({ behavior: 'smooth' }); };
 }
-function showTab(t) {
+let CUR_TAB = 'home';
+function showTab(t) { CUR_TAB = t;
   document.querySelectorAll('[data-tab]').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === t));
   document.querySelectorAll('.panel').forEach(p => { p.hidden = p.id !== 'panel-' + t; });
   if (t === 'home') renderHome();
+  syncGenieTop();
   if (t === 'market') { $('#mkTitle').textContent = 'Market conditions' + (cur && (cur.fileNo || street(cur)) ? ' – ' + [cur.fileNo, street(cur)].filter(Boolean).join(' ') : ''); mkRender(); }
 }
 
@@ -441,6 +447,7 @@ async function start() {
   $('#btnNew2').onclick = () => startNewOrder(); $('#btnNew').onclick = () => startNewOrder();
   $('#btnIpad').onclick = () => { saveLetter(true); activeOrdersFile(); };
   $('#genieLink').addEventListener('click', () => saveLetter(true));
+  $('#genieTop').addEventListener('click', () => { syncGenieTop(); if ($('#genieTop').href.includes('?order=')) saveLetter(true); });
   ['#f_lenderDiff', '#f_amcUsed', '#f_inspDate', '#f_effDate', '#f_dod'].forEach(id => $(id).addEventListener('change', syncVisibility));
   $('#f_stage').addEventListener('change', () => { cur = readForm(); renderLetters(); });
   document.querySelectorAll('[data-tab]').forEach(b => b.addEventListener('click', () => { if (b.dataset.tab !== 'letter' && cur && hasContent(readForm())) saveLetter(true); }));
