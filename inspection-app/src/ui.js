@@ -2,7 +2,7 @@
 const app = { ins: null, tab: 'property', open: new Set(), groups: {}, cur: null, confirm: null, saving: null, ovrOpen: null, appl: null, missIdx: 0, undo: null };
 const EXTRA_TABS = [{ id: 'photos', title: 'Photos' }, { id: 'summaries', title: 'Summaries' }, { id: 'attention', title: 'Needs Attention' }, { id: 'export', title: 'Save & Export' }];
 const tabShown = (sec, ins) => !sec.showTab || !!sec.showTab(ins || app.ins);
-const ALL_TABS = () => [...SECTIONS.filter(s => tabShown(s)).map(s => ({ id: s.id, title: s.title })), ...EXTRA_TABS];
+const ALL_TABS = () => [{ id: 'dictate', title: '🎤 Dictate' }, ...SECTIONS.filter(s => tabShown(s)).map(s => ({ id: s.id, title: s.title })), ...EXTRA_TABS];
 const CAM_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>';
 const LIB_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-8 8"/></svg>';
 
@@ -225,11 +225,12 @@ function renderTab2() {
   const y = window.scrollY; refreshChrome(); const main = $('#main');
   const sec = SECTIONS.find(s => s.id === app.tab);
   if (sec) main.innerHTML = legend() + renderSection(sec) + extraPhotos(sec);
+  else if (app.tab === 'dictate') main.innerHTML = renderDictate();
   else if (app.tab === 'photos') main.innerHTML = renderGallery();
   else if (app.tab === 'summaries') main.innerHTML = renderSummaries();
   else if (app.tab === 'attention') main.innerHTML = renderAttention();
   else if (app.tab === 'export') main.innerHTML = renderExport();
-  bind(main); fillThumbs(main); window.scrollTo(0, y);
+  bind(main); if (app.tab === 'dictate') bindDictate(main); fillThumbs(main); window.scrollTo(0, y);
   returnBar();
   syncBar();
 }

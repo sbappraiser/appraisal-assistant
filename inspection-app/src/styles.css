@@ -314,3 +314,12 @@ html.testcopy .bar { border-bottom-color: #7b2cbf; }
 .orders-home { margin-bottom: 22px; } .orders-home h2 small { font-size: 14px; font-weight: 400; color: #555; }
 .order-card .meta a { font-weight: 700; } label.todo { display: flex; gap: 10px; align-items: center; font-size: 18px; padding: 8px 0; border-bottom: 1px solid #ddd; } label.todo input { width: 26px; height: 26px; }
 .wordwarn{color:#e00000;font-size:13px;margin-top:3px}.wordwarn:empty{display:none}
+/* dictate */
+.dk-box{width:100%;min-height:9em;font-size:18px;line-height:1.45}
+.dk-h{margin:18px 0 6px}
+.dk-row{display:grid;grid-template-columns:28px minmax(150px,34%) 1fr;gap:4px 10px;align-items:start;padding:9px 4px;border-bottom:1px solid var(--line,#e2e6ea)}
+.dk-row input[type=checkbox]{width:22px;height:22px;accent-color:#0fa84a}
+.dk-where{color:var(--muted,#5b6876);font-size:14px}.dk-what{font-size:16px}.dk-row small{grid-column:3;color:var(--muted,#5b6876)}
+.dk-pick label{display:inline-flex;gap:5px;align-items:center;margin-right:14px}
+.dk-warn{color:#e00000}.dk-left{color:var(--muted,#5b6876)}
+.dk-log p{margin:8px 0}
