@@ -268,3 +268,14 @@ Appendix D-1 SF1 zip; UAD 3.6 template PDF; her SFREP .rptx template) if the new
   keeping: workfile retrievable ≥ 5 years; external drive + OneDrive = two copies.
 - CORT weekly data fields: closings with terms, address, APN, document recording number, and a few
   others – the assistant's closings table should keep all of them.
+
+
+## Grid workbook – her requirements (Oct 16 2026, her words summarized)
+- Office only (desktop, 3 monitors), never in the field.
+- See subject + at least 3 comps at a time, ideally pop-outs: subject + comps 1–3 on the left monitor, 4–6 middle, 7–9 right. Tab moves to the SAME field in the next comp (row-wise), so she adjusts one line across all comps, then goes down line by line. Check consistency (e.g. central A/C $10k on comp 1 vs $15k on comp 6).
+- Working grid of 4–99 comps (usually 4–20): add candidates freely, then narrow; removed comps go to "considered but not used" (UAD 3.6) and to her database. Final report usually 9 comps incl. 1–2 listings/pendings; sometimes 3 closed + 1–2 listings.
+- Only the compared/adjusted lines in the workbook view; data sources, listing history etc. hidden while adjusting; workbook writes everything back in UAD 3.6 order.
+- Photos: each comp needs a street scene; often a hedge/gate → supplemental MLS, listing, online or satellite photo; agents remove photos after closing → flexible photo choice per comp.
+- Suggestions: sensitivity analysis (narrow the adjusted range), matched pairs inside the grid, grouped sales, depreciated cost (cost DB + age/condition), regression where reliable, and her starting points per market segment/value range. Her style: round, consistent $ per tier across the grid (e.g. $5M home: view avg-good→good $500k, avg-good→excellent $1.5M; condition ~5% per tier rounded, e.g. $250k per tier), not raw percentages. Explain how each adjustment was derived (GSE wants support + graphs).
+- Fine condition/quality: C3-, C3, C3+ in a hidden field (UAD shows C3); saved to her database for next time. Her ACI functional-utility field (fu_raw) holds these (≈1,500 records found with C/Q +/-) plus comp notes, doc #/closing date.
+- Comments: she will send sample sales comparison grids + comments so it learns her style; it drafts, she reviews/adds (agent conversations etc.).
