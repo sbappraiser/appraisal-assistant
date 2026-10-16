@@ -14,7 +14,7 @@ let aiText = store.get('aiText', null);
 let cur = null;           // the letter being edited
 let clientCount = 1;
 
-const NEW_FIELDS = { street: '', city: '', state: 'CA', zip: '', zip4: '', stage: 'New', inspDate: '', inspTime: '', effDate: '', unit: '', apn: '', county: '', lat: '', lon: '', owner: '', legal: '', borrower: '',
+const NEW_FIELDS = { jurisdiction: '', street: '', city: '', state: 'CA', zip: '', zip4: '', stage: 'New', inspDate: '', inspTime: '', effDate: '', unit: '', apn: '', county: '', lat: '', lon: '', owner: '', legal: '', borrower: '',
   lenderDiff: false, govAgency: '', investorId: '', reportForm: '', lenderCo: '', lenderAddr1: '', lenderAddr2: '', loanNo: '', amcUsed: false, amcCo: '', amcAddr1: '', amcAddr2: '', amcLic: '', amcState: 'CA', amcExp: '', amcFee: '', amcRef: '', notes: '', todos: '' };
 function blankLetter() {
   return { ...NEW_FIELDS, docs: [], crs: null, listings: [], permits: null, created: new Date().toISOString(), id: uid(), status: 'Client letter', reportForm: 'uad36', fileNo: '', orderDate: todayISO(), dueDate: '', aiUse: '', orderDoc: null, agreeDate: todayISO(), type: 'uadPurchase', clients: [{}], address: '', propType: 'sfr', propTypeOther: '',

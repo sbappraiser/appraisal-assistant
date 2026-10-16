@@ -121,6 +121,7 @@ async function readDoc(meta, file) { // turns the readable kinds into facts; not
       P.file = file.name; const apn = G.apnKey($('#f_apn').value);
       if (apn && P.parcel && G.apnKey(P.parcel) !== apn) { meta.note = 'this is for parcel ' + P.parcel + ', not the subject (' + $('#f_apn').value + ') – not used'; return; }
       cur = readForm(); cur.permits = P; meta.note = (G.permitItems ? G.permitItems(P).length : P.accela.length) + ' permits/cases listed';
+      if (!$('#f_jurisdiction').value) { $('#f_jurisdiction').value = 'Unincorporated Santa Barbara County'; cur.jurisdiction = $('#f_jurisdiction').value; meta.note += ' · unincorporated County'; }   // only the County prints a Permit History by Parcel
       if (P.parcel && !$('#f_apn').value) $('#f_apn').value = P.parcel;
     } else if (meta.type === 'clientLetter') {
       if (isPdf(file) || /\.(docx|txt)$/i.test(file.name)) { await scanFile(file); meta.note = cur.orderDoc ? 'checked for AI wording' : '';

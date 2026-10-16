@@ -266,6 +266,7 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
       <div class="grid2">
         <label>APN<input id="f_apn"></label>
         <label>County<input id="f_county"></label>
+        <label>Jurisdiction <span class="opt">city or county rules</span><select id="f_jurisdiction"><option value=""></option><option>City of Santa Barbara</option><option>City of Goleta</option><option>City of Carpinteria</option><option>Unincorporated Santa Barbara County</option><option>City of Ventura</option><option>City of Ojai</option><option>City of Oxnard</option><option>City of Camarillo</option><option>City of Santa Paula</option><option>Unincorporated Ventura County</option><option>Other</option></select></label>
         <label>Owner of record<input id="f_owner"></label>
         <label>Unit <span class="opt">condo</span><input id="f_unit"></label>
         <label>Latitude<input id="f_lat" inputmode="decimal"></label>
@@ -523,7 +524,7 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
 </div>
 <div id="toast" role="status" hidden></div>
 <script>
-const BUILD='o1-1016-2232';
+const BUILD='o1-1016-2234';
 const G = (() => {
 /* ---------------- small helpers ---------------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -1744,6 +1745,7 @@ async function readDoc(meta, file) { // turns the readable kinds into facts; not
       P.file = file.name; const apn = G.apnKey($('#f_apn').value);
       if (apn && P.parcel && G.apnKey(P.parcel) !== apn) { meta.note = 'this is for parcel ' + P.parcel + ', not the subject (' + $('#f_apn').value + ') – not used'; return; }
       cur = readForm(); cur.permits = P; meta.note = (G.permitItems ? G.permitItems(P).length : P.accela.length) + ' permits/cases listed';
+      if (!$('#f_jurisdiction').value) { $('#f_jurisdiction').value = 'Unincorporated Santa Barbara County'; cur.jurisdiction = $('#f_jurisdiction').value; meta.note += ' · unincorporated County'; }   // only the County prints a Permit History by Parcel
       if (P.parcel && !$('#f_apn').value) $('#f_apn').value = P.parcel;
     } else if (meta.type === 'clientLetter') {
       if (isPdf(file) || /\.(docx|txt)$/i.test(file.name)) { await scanFile(file); meta.note = cur.orderDoc ? 'checked for AI wording' : '';
@@ -2189,7 +2191,7 @@ function mkCommentDraft(R) {
   return keep.map(p => p[1]).join(' ').slice(0, 2500);
 }
 const MK_MIN_SALES = 12;   // fewer competing sales than this: the default “not sufficient” comment and the broader market
-function mkZKey() { const f = cur ? readForm() : {}; const zip = String(f.zip || '').match(/\d{5}/); const by = M().zillowBy || (zip ? 'zip' : 'city'); return by === 'zip' && zip ? 'zip:' + zip[0] : mkCity(); }
+function mkZKey() { const f = cur ? readForm() : {}; const zip = String(f.zip || '').match(/\d{5}/); const by = M().zillowBy || (zip || /Unincorporated/.test(f.jurisdiction || '') ? 'zip' : 'city'); return by === 'zip' && zip ? 'zip:' + zip[0] : mkCity(); }
 function mkCity() { const a = String((cur && cur.address) || '').split(',').map(x => x.trim()); return a[1] || ''; }
 
 /* ---------- 4. graphs (PNG for the report: white page, one hue) ---------- */
@@ -2337,7 +2339,7 @@ function mkRender(redraft) {
     <div class="drop" id="mkStatsDrop"><div><span class="eyebrow">SBMLS Monthly MLS Statistics PDF</span><p class="help">The monthly statistics report from the Santa Barbara Association of REALTORS® (Summary of Stats for Home Estate/PUD Districts 05–35 and condos: sales, pendings, new and active listings, median and average prices, days on market, year-to-date comparisons). Load each month's PDF once; every order uses it. ${Object.keys(MK.stats).length ? 'Loaded: ' + Object.keys(MK.stats).sort().map(monthName).join(', ') + '.' : 'None loaded yet.'}${st ? ' This order uses <b>' + monthName(st.ym) + '</b>.' : ''}</p></div>
       <label class="btn" for="mkStatsFile">Choose PDF<input type="file" id="mkStatsFile" accept=".pdf,application/pdf"></label></div>
     ${st ? mkStatsTable(st[mkSeg()], st.ym) : ''}${(() => { const segW = mkSeg() === 'condo' ? /condo/i : /^(?!.*condo)/i; const w = st && st.warn ? st.warn.filter(x => segW.test(x)) : []; return w.length ? `<p class="help warnTxt">${w.map(h).join(' ')} This month's own totals from its Summary of Stats page were used instead.</p>` : ''; })()}
-    <h4>Zillow – ${h(zKey.startsWith('zip:') ? 'ZIP ' + zKey.slice(4) : (city || 'the subject’s city'))}</h4><div class="zby"><label class="check"><input type="radio" name="zby" value="zip" ${zKey.startsWith('zip:') ? 'checked' : ''} ${zipNow ? '' : 'disabled'}>Subject's ZIP code${zipNow ? ' (' + zipNow + ')' : ''} – best for unincorporated areas</label><label class="check"><input type="radio" name="zby" value="city" ${zKey.startsWith('zip:') ? '' : 'checked'}>Zillow's city page for the mailing city${city ? ' (' + h(city) + ')' : ''}</label></div><p class="help">Type the figures from Zillow's page for this ZIP code or city. They are kept for it and used for every order there. In the comment, ZIP-code data is described as supporting context.</p>
+    <h4>Zillow – ${h(zKey.startsWith('zip:') ? 'ZIP ' + zKey.slice(4) : (city || 'the subject’s city'))}</h4><div class="zby"><label class="check"><input type="radio" name="zby" value="zip" ${zKey.startsWith('zip:') ? 'checked' : ''} ${zipNow ? '' : 'disabled'}>Subject's ZIP code${zipNow ? ' (' + zipNow + ')' : ''} – best for unincorporated areas</label><label class="check"><input type="radio" name="zby" value="city" ${zKey.startsWith('zip:') ? '' : 'checked'}>Zillow's city page for the mailing city${city ? ' (' + h(city) + ')' : ''}</label></div>${/Unincorporated/.test(readForm().jurisdiction || '') ? '<p class="help">This property is in ' + h(readForm().jurisdiction) + ' (from the County permit history), so the mailing city is not its city – use the ZIP code.</p>' : ''}<p class="help">Type the figures from Zillow's page for this ZIP code or city. They are kept for it and used for every order there. In the comment, ZIP-code data is described as supporting context.</p>
     <div class="drop" id="mkZilDrop"><div><span class="eyebrow">Zillow page (PDF or picture)</span><p class="help">Keep the Zillow page with this order (workfile, or a market exhibit). On zillow.com search the ZIP code (for example 93111), choose Single family and 5-yr, then save the page. A screenshot PDF has no readable text, so type its figures above.${(cur.docs || []).filter(d => d.type === 'zillow').map(d => `<br>Kept: <button type="button" class="lnk" data-zopen="${d.id}">${h(d.name)}</button>`).join('')}</p></div>
       <label class="btn" for="mkZilFile">Choose file<input type="file" id="mkZilFile" accept=".pdf,image/*"></label></div>
     <div class="grid3 zil"><label>As of<input type="date" data-z="asOf" value="${h(z.asOf || '')}"></label><label>Typical home value ($)<input data-z="value" inputmode="numeric" value="${h(z.value || '')}"></label><label>1-year change (%)<input data-z="change" inputmode="decimal" value="${h(z.change ?? '')}"></label>
@@ -3025,7 +3027,7 @@ let aiText = store.get('aiText', null);
 let cur = null;           // the letter being edited
 let clientCount = 1;
 
-const NEW_FIELDS = { street: '', city: '', state: 'CA', zip: '', zip4: '', stage: 'New', inspDate: '', inspTime: '', effDate: '', unit: '', apn: '', county: '', lat: '', lon: '', owner: '', legal: '', borrower: '',
+const NEW_FIELDS = { jurisdiction: '', street: '', city: '', state: 'CA', zip: '', zip4: '', stage: 'New', inspDate: '', inspTime: '', effDate: '', unit: '', apn: '', county: '', lat: '', lon: '', owner: '', legal: '', borrower: '',
   lenderDiff: false, govAgency: '', investorId: '', reportForm: '', lenderCo: '', lenderAddr1: '', lenderAddr2: '', loanNo: '', amcUsed: false, amcCo: '', amcAddr1: '', amcAddr2: '', amcLic: '', amcState: 'CA', amcExp: '', amcFee: '', amcRef: '', notes: '', todos: '' };
 function blankLetter() {
   return { ...NEW_FIELDS, docs: [], crs: null, listings: [], permits: null, created: new Date().toISOString(), id: uid(), status: 'Client letter', reportForm: 'uad36', fileNo: '', orderDate: todayISO(), dueDate: '', aiUse: '', orderDoc: null, agreeDate: todayISO(), type: 'uadPurchase', clients: [{}], address: '', propType: 'sfr', propTypeOther: '',
