@@ -41,13 +41,15 @@ function renderWizard() {
   if (WZ.step === 1) {
     box.innerHTML = head + `<section class="mkcard"><div class="grid3"><label>File number<input id="wzFile" value="${h(f.fileNo)}" placeholder="your file number"></label>
       <label style="grid-column:span 2">Property address<input id="wzAddr" value="${h(f.address)}" placeholder="1136 Hill Road, Santa Barbara, CA 93108"></label></div>
+      <p class="help" id="wzFileNote"></p>
       <p class="help">The address is used to check that every document you upload is for this property. If you are not sure of it, leave it blank: the CRS report fills it in.</p>
       ${q('letter', 'Engagement letter', [['client', 'The client sent one (lender / AMC order)'], ['mine', 'I will write one']])}
       ${q('purchase', 'Is this a purchase?', [['yes', 'Yes'], ['no', 'No']])}
       ${q('listed', 'Is the property listed now, or was it in the last 12 months?', [['yes', 'Yes'], ['no', 'No'], ['unsure', 'Not sure']])}
       <div class="row"><button type="button" class="btn primary" id="wzNext1">Next: documents →</button><button type="button" class="btn ghost" id="wzCancel">Cancel</button></div></section>`;
     const sync = () => { $('#f_fileNo').value = $('#wzFile').value; $('#f_address').value = $('#wzAddr').value; update(); };
-    $('#wzFile').oninput = sync; $('#wzAddr').oninput = sync;
+    $('#wzFile').oninput = () => { w.fileTyped = true; sync(); };
+    $('#wzAddr').oninput = () => { if (!w.fileTyped || !$('#wzFile').value.trim()) { const sug = suggestFileNo($('#wzAddr').value); $('#wzFile').value = sug; $('#wzFileNote').textContent = sug ? 'Made from your rule: street letters + house number' + (/-[2-9]\d*$/.test(sug) ? ' – you have appraised this property before in the assistant, so this is report ' + sug.split('-').pop() : '') + '. Change it if needed.' : ''; } sync(); };
     box.querySelectorAll('[data-wq]').forEach(b => b.onclick = () => { w[b.dataset.wq] = b.dataset.v; renderWizard(); });
     $('#wzCancel').onclick = () => { showTab('home'); renderHome(); };
     $('#wzNext1').onclick = () => { if (!w.letter) { toast('Choose who writes the engagement letter'); return; }
@@ -97,3 +99,23 @@ function renderWizard() {
 function q(key, label, opts) { const v = (cur.wizard || {})[key]; return `<div class="wzq"><span>${h(label)}</span><div class="seg2">${opts.map(([k, l]) => `<button type="button" data-wq="${key}" data-v="${k}" aria-pressed="${v === k}">${h(l)}</button>`).join('')}</div></div>`; }
 async function wzAdd(slot, files) { files = [...files]; if (!files.length) return; const st = $('#wzStatus'); if (st) st.textContent = 'Reading ' + files.length + ' file' + (files.length > 1 ? 's' : '') + '…'; await addDocs(files, slot === 'other' ? undefined : slot); }
 function wzRefresh() { if (!$('#panel-new').hidden && WZ.step === 2) renderWizard(); }
+
+/* her file numbers: first letter of the street name + its next consonants (4 letters), house number, unit, report count
+   1729 Bath St → Bath1729-1 (short names use their first 4 letters); 223 W. Arrellaga St #3 → Arrl223-3-1; unit B → Bath1729-b-1; 2nd report → -2 */
+function fileCode(address) {
+  const sp = G.splitAddr(String(address || '').split(',')[0].replace(/\./g, '')); if (!sp.no) return '';
+  const words = sp.street.split(/\s+/).filter(Boolean); const DIR = /^(n|s|e|w|ne|nw|se|sw|north|south|east|west)$/i;
+  while (words.length > 1 && DIR.test(words[0])) words.shift();
+  const name = (words[0] || '').replace(/[^A-Za-z]/g, ''); if (!name) return '';
+  let code = name[0]; for (const ch of name.slice(1)) { if (code.length >= 4) break; if (!/[aeiou]/i.test(ch)) code += ch; }
+  if (code.length < 4) code = name.slice(0, 4);
+  code = code[0].toUpperCase() + code.slice(1).toLowerCase();
+  return code + sp.no.replace(/[^\w]/g, '') + (sp.unit ? '-' + sp.unit.toLowerCase() : '');
+}
+function suggestFileNo(address) {
+  const base = fileCode(address); if (!base) return '';
+  const re = new RegExp('^' + base.replace(/[-]/g, '\\-') + '-(\\d+)$', 'i'); let n = 0;
+  const old = new RegExp('^' + base.replace(/[-]/g, '\\-') + '-?([a-z])$', 'i');   // old ACI style: Bath1729a, b, c… (d = 1004D, clones took the next letter)
+  letters.forEach(o => { if (cur && o.id === cur.id) return; const f = String(o.fileNo || '').trim(); let m = f.match(re); if (m) n = Math.max(n, +m[1]); else if ((m = f.match(old))) n = Math.max(n, m[1].toLowerCase().charCodeAt(0) - 96); });
+  return base + '-' + (n + 1);
+}
