@@ -522,7 +522,7 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
 </div>
 <div id="toast" role="status" hidden></div>
 <script>
-const BUILD='o1-1016-2154';
+const BUILD='o1-1016-2217';
 const G = (() => {
 /* ---------------- small helpers ---------------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -3368,7 +3368,8 @@ async function backup() {
   saveLetter(true, true); toast('Making the backup…');
   const docs = await ODB.all('docs'); const enc = new TextEncoder();
   const meta = docs.map(d => ({ id: d.id, orderId: d.orderId, name: d.name, type: d.type, size: d.size, mime: d.mime, added: d.added, note: d.note, page: d.page, pages: d.pages, preview: d.preview, file: 'documents/' + d.id + '-' + G.safeName(d.name) }));
-  const data = { app: 'appraisal-assistant', version: 1, saved: new Date().toISOString(), contacts, letters, aiText, rates: store.get('rates', {}), docs: meta };
+  const kv = {}; for (const k of ['mk:boundaries', 'mk:stats', 'mk:zillow']) { const r = await ODB.get('kv', k); if (r) kv[k] = r.v; }   // saved market areas, SBMLS monthly statistics, Zillow figures
+  const data = { app: 'appraisal-assistant', version: 1, saved: new Date().toISOString(), contacts, letters, aiText, rates: store.get('rates', {}), docs: meta, kv };
   const entries = [{ name: 'orders.json', data: enc.encode(JSON.stringify(data, null, 1)) }];
   for (const d of docs) entries.push({ name: meta.find(m => m.id === d.id).file, data: new Uint8Array(await d.blob.arrayBuffer()) });
   const zip = await G.makeZip(entries);
@@ -3387,11 +3388,15 @@ async function restore(file) {
     if (d.aiText && !aiText) aiText = d.aiText;
     if (d.rates && !Object.keys(store.get('rates', {})).length) store.set('rates', d.rates);
     if (add.length) await ODB.putMany('orders', add);
+    let na = 0; if (d.kv) { for (const [k, v] of Object.entries(d.kv)) { const have = ((await ODB.get('kv', k)) || {}).v;
+        if (k === 'mk:boundaries') { const list = Array.isArray(have) ? have.slice() : []; (v || []).forEach(b => { if (!list.some(x => x.name === b.name)) { list.push(b); na++; } }); list.sort((a, b) => a.name.localeCompare(b.name)); await ODB.put('kv', { id: k, v: list }); }
+        else await ODB.put('kv', { id: k, v: { ...(v || {}), ...(have || {}) } }); }
+      if (typeof mkLoad === 'function') await mkLoad(); }
     if (files && d.docs) { const have = new Set((await ODB.all('docs')).map(x => x.id));
       for (const m of d.docs) { if (have.has(m.id)) continue; const u8 = files.get(m.file); if (!u8) continue; const { file: _f, ...rest } = m; await ODB.put('docs', { ...rest, blob: new Blob([u8], { type: m.mime || '' }) }); nd++; } }
     contacts.sort((a, b) => (a.name || a.company || '').localeCompare(b.name || b.company || ''));
     store.set('contacts', contacts); store.set('aiText', aiText); renderLetters(); renderContacts();
-    toast(`Restored ${nl} orders, ${nc} clients` + (files ? `, ${nd} documents` : ''));
+    toast(`Restored ${nl} orders, ${nc} clients` + (files ? `, ${nd} documents` : '') + (na ? `, ${na} saved market areas` : ''));
   } catch (e) { console.error(e); toast(e.message || 'Could not read that file'); }
 }
 
