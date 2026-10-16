@@ -172,7 +172,11 @@ Outdoor Living: patio/deck/porch/balcony); Landscaping = Site Characteristics li
 comment (her scale None/Natural, Minimal, Fair, Avg-Fair, Avg, Avg-Gd/AG, Good, Excellent);
 DOM row; concessions incl. seller-paid buyer-broker %. **Usable lot area has no 3.6 field** → own
 assistant field shown under Site Size; exported into Site Characteristics comment ("Usable approx
-1.1 ac of 2.04 ac; sloping"); custom grid row if SFREP allows. LPR/SI → comp comment + DB.
+1.1 ac of 2.04 ac; sloping"); custom grid row if SFREP allows.
+**Her SFREP placement (Oct 15 2026 screenshot):** Site section → "Add Other" row at the end of Site (after
+View) labeled exactly "Lot Utility/ Usable lot area"; subject value "0.16 ac", comp value "0.25" (acres), adjustment in the
+comp's adjustment column (e.g. $(90,000)). Export usable acres + the site adjustment to this row; test whether the MISMO
+import can create an "Other" site row with that label, else she adds the row in SFREP and the assistant gives her the values. LPR/SI → comp comment + DB.
 
 ## 9. Other functions agreed
 - Document reader (AI jobs): contracts (final price, contract date, credits, buyer-broker comp and
