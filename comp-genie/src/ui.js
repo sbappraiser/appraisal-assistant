@@ -37,6 +37,21 @@ async function readOrders() { // read-only; never creates the orders storage if 
   });
 }
 const ORDER_DONE = ['Delivered', 'Paid', 'Cancelled'];
+function readOrderDoc(id) { // one stored document (its file) from the Appraisal Assistant; read-only
+  return new Promise(res => { let r; try { r = indexedDB.open('aa-orders'); } catch (e) { res(null); return; }
+    r.onupgradeneeded = () => { try { r.transaction.abort(); } catch (e) {} }; r.onerror = () => res(null);
+    r.onsuccess = () => { const d = r.result; if (!d.objectStoreNames.contains('docs')) { d.close(); res(null); return; } const q = d.transaction('docs').objectStore('docs').get(id); q.onsuccess = () => { d.close(); res(q.result || null); }; q.onerror = () => { d.close(); res(null); }; }; });
+}
+/* the order's Search Criteria search (the micro market on the Market tab) – its listings become the comps considered, minus the ones she unticked there */
+function orderMicro(o) { const mi = o && o.market && o.market.micro; if (!mi || !mi.file) return null; const doc = (o.docs || []).find(d => d.name === mi.file); return doc ? { file: mi.file, docId: doc.id, exclude: mi.exclude || {}, n: (mi.rows || []).length } : null; }
+const microIn = (J, M) => (J.files || []).some(f => f.kind === 'MLS export' && f.name === M.file);
+async function pullMicro(o, quiet) {
+  const M = orderMicro(o); if (!M || !app.job) return ''; const rec = await readOrderDoc(M.docId); if (!rec || !rec.blob) { if (!quiet) toast('The search file was not found in the Appraisal Assistant'); return ''; }
+  const rows = parseMlsCsv(await readText(new File([rec.blob], M.file))).filter(r => !M.exclude[r.mls]);
+  const note = ingestMls(rows, M.file); const left = Object.keys(M.exclude).length; save(); render();
+  if (!quiet) toast(`Added your Search Criteria search: ${rows.length} listings` + (left ? ` (${left} you unticked on the Market tab left out)` : ''), 6000);
+  return note;
+}
 window.addEventListener('focus', async () => { const o = await readOrders(); if (o.length !== (app.orders || []).length) { app.orders = o; render(); } else app.orders = o; });
 const orderName = o => [o.fileNo, String(o.address || '').split(',')[0].trim()].filter(Boolean).join(' ') || 'Order';
 async function jobFromOrder(o) {
@@ -49,6 +64,7 @@ async function jobFromOrder(o) {
   if (o.crs && !j.subject.crs) j.subject.crs = crsCanon(o.crs);
   j.subject.listings = o.listings || []; j.fileNo = o.fileNo || '';
   app.sel = null; await saveNow(); await loadPhotos(); toast('Opened the assignment for order ' + orderName(o));
+  { const M = orderMicro(o); if (M && !microIn(j, M)) { await pullMicro(o, true); toast('Opened the assignment for order ' + orderName(o) + ' and added your Search Criteria search (' + M.file + ')', 6000); } }
 }
 async function newJob(name) {
   const j = { id: uid(), name: name || 'New assignment', created: Date.now(), updated: Date.now(), subject: { addr: '', city: '', zip: '', apn: '', lat: '', lon: '', eff: todayISO() }, comps: [], files: [] };
@@ -225,6 +241,9 @@ function render() {
     <div class="addrow"><div class="sugwrap"><input id="addr" class="txt big" placeholder="Type a comp address, e.g. 1181 Glenview" autocomplete="off" data-act="sugg"><div class="sugg" id="sugg"></div></div>
       <button class="btn primary" data-act="add">Add comp</button></div>
     <p class="help">If the address is in your archive, it fills in at once with every version you have. Then drop files to add to it.</p>
+    ${(() => { const o = (app.orders || []).find(x => x.id === J.orderId); const M = orderMicro(o); if (!o) return ''; if (!M) return `<p class="help">No Search Criteria search on this order yet. In the Appraisal Assistant, open the order's <b>Market</b> tab and drop it in box 2; it comes in here.</p>`;
+      return microIn(J, M) ? `<p class="help"><b class="ok">✓</b> Your Search Criteria search from the order's Market tab is in: <b>${esc(M.file)}</b>${Object.keys(M.exclude).length ? ` (${Object.keys(M.exclude).length} listing${Object.keys(M.exclude).length > 1 ? 's' : ''} you unticked there left out)` : ''}. <button class="lnk" data-act="pullmicro">Bring it in again</button></p>`
+        : `<div class="row"><button class="btn primary" data-act="pullmicro">Add your Search Criteria search (${M.n} listings)</button><span class="help">from the order's Market tab: ${esc(M.file)}</span></div>`; })()}
     <label class="drop" id="drop"><input type="file" multiple data-act="files" hidden>
       <b>Drop files here</b> or click to choose: MLS export (.csv) · MLS photos (.zip) · MLS printout (.pdf) · CRS reports (.pdf) · CORT table (.csv) · comp archive (.gz)</label>
     ${(J.files || []).length ? `<div class="files"><b>Files in this assignment</b> <small>(✕ takes a file back out)</small><ul>${J.files.map(f => `<li>${esc(f.name)} <small>${esc(f.kind)}${f.n ? ', ' + f.n : ''}</small> ${app.confirm === 'rf:' + f.id ? `<span class="confirm">Take it out? <button class="btn danger solid sm" data-rfyes="${esc(f.id)}">Remove file</button><button class="btn sm" data-act="cancel">Keep</button></span>` : `<button class="btn sm" data-rf="${esc(f.id)}" title="Remove this file and what it added">✕</button>`}</li>`).join('')}</ul></div>` : ''}
@@ -429,6 +448,7 @@ document.addEventListener('click', async e => {
     case 'backup': backupJob(); break;
     case 'x-sfrep': exportSfrep(); break;
     case 'x-full': exportFullReport(); break;
+    case 'pullmicro': { const o = (app.orders || []).find(x => x.id === app.job.orderId); if (o) await pullMicro(o); break; }
     case 'x-csv': exportCsv(); break;
     case 'x-photos': exportPhotos(); break;
     case 'showall': app.showAll = t.checked; render(); break;
