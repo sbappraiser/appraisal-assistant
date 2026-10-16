@@ -76,20 +76,21 @@ async function addDocs(fileList, forcedType) {
   if (docBusy) { toast('Still reading the last files…'); return; }
   docBusy = true; const said = [];
   try {
-    const typed = [];
-    for (const file of files) { $('#docStatus').textContent = 'Sorting ' + file.name + '…'; typed.push([file, forcedType || await detectDocType(file)]); }
+    const typed = []; const seen = new Map(); files.forEach(f => seen.set(f.name.toLowerCase(), f)); // the same file twice in one drop counts once
+    for (const file of seen.values()) { $('#docStatus').textContent = 'Sorting ' + file.name + '…'; typed.push([file, forcedType || await detectDocType(file)]); }
     const FIRST = ['crs', 'mls', 'clientLetter']; const rank = t => { const i = FIRST.indexOf(t); return i < 0 ? 9 : i; };
     typed.sort((a, b) => rank(a[1]) - rank(b[1])); // the CRS first, so later files can be checked against the subject's APN
     for (const [file, type] of typed) {
       $('#docStatus').textContent = 'Reading ' + file.name + '…';
-      const meta = { id: uid(), name: file.name, type, size: file.size, mime: file.type || '', added: new Date().toISOString(), note: '' };
+      cur = readForm(); const old = (cur.docs || []).find(d => (d.name || '').toLowerCase() === file.name.toLowerCase()); // same file name again → replace it, keep its notes and accepted entries
+      const meta = old ? { ...old, type: forcedType || old.type || type, size: file.size, mime: file.type || '', added: new Date().toISOString(), note: '' } : { id: uid(), name: file.name, type, size: file.size, mime: file.type || '', added: new Date().toISOString(), note: '' };
       try { await ODB.put('docs', { ...meta, orderId: cur.id, blob: file }); }
       catch (e) { said.push(file.name + ': could not be stored (' + (e.message || e) + ')'); continue; }
-      cur = readForm(); cur.docs = [...(cur.docs || []), meta];
-      await readDoc(meta, file); said.push(file.name + ' → ' + DOC_LABEL[meta.type] + (meta.note ? ' · ' + meta.note : ''));
+      cur.docs = old ? cur.docs.map(d => d.id === old.id ? meta : d) : [...(cur.docs || []), meta];
+      await readDoc(meta, file); said.push(file.name + (old ? ' → replaced the earlier copy' : ' → ' + DOC_LABEL[meta.type]) + (meta.note ? ' · ' + meta.note : ''));
     }
   } finally { docBusy = false; }
-  $('#docStatus').textContent = said.length === 1 ? said[0] : said.length + ' files added – see each one below.';
+  { const nr = said.filter(x => x.includes('replaced the earlier copy')).length; $('#docStatus').textContent = said.length === 1 ? said[0] : (said.length - nr ? (said.length - nr) + ' files added' : '') + (nr ? (said.length - nr ? ', ' : '') + nr + ' replaced (same file name as one already here)' : '') + ' – see each one below.'; }
   renderDocs(); renderSubject(); syncVisibility(); update(); saveLetter(true); if (typeof wzRefresh === 'function') wzRefresh();
 }
 async function readDoc(meta, file) { // turns the readable kinds into facts; notes what happened
@@ -305,4 +306,16 @@ function sameStreet(a, b) { // "526 CROCKER SPERRY DR Montecito, CA" vs "526 Cro
   const A = String(a || '').toLowerCase(), sp = G.splitAddr(String(b || '').split(',')[0]); if (!sp.no) return true;
   const w = (sp.street.split(/\s+/).find(x => x.length > 2 && !/^(north|south|east|west|n|s|e|w)$/i.test(x)) || '').toLowerCase();
   return new RegExp('\\b' + sp.no.toLowerCase().replace(/[^\w-]/g, '') + '\\b').test(A) && (!w || A.includes(w));
+}
+
+/* orders that already have the same file twice (uploaded before Oct 15 2026): keep one, move its notes and entries over */
+async function dedupeDocs(o) {
+  const docs = o.docs || []; const keep = new Map(), drop = [];
+  docs.forEach(d => { const k = (d.name || '').toLowerCase() + '|' + (d.size || ''); if (keep.has(k)) drop.push([d, keep.get(k)]); else keep.set(k, d); });
+  if (!drop.length) return 0;
+  const map = Object.fromEntries(drop.map(([d, k]) => [d.id, k.id]));
+  Object.keys(o).forEach(key => { if (Array.isArray(o[key])) o[key].forEach(x => { if (x && typeof x === 'object' && map[x.docId]) x.docId = map[x.docId]; }); });
+  o.docs = docs.filter(d => !map[d.id]);
+  for (const [d] of drop) { try { await ODB.del('docs', d.id); } catch (e) {} }
+  return drop.length;
 }
