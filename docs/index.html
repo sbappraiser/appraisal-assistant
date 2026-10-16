@@ -171,6 +171,7 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
 #kindPop .kpg { display: flex; flex-direction: column; } #kindPop .kpg b { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 2px 0 2px; }
 #kindPop button { all: unset; cursor: pointer; padding: 3px 6px; border-radius: 5px; line-height: 1.3; } #kindPop button:hover { background: var(--accent-soft); } #kindPop button.on { background: var(--accent-fill); color: #000; font-weight: 600; }
 @media (max-width: 560px) { #kindPop { grid-template-columns: 1fr 1fr; } }
+.mkrows th.sortable { cursor: pointer; white-space: nowrap; user-select: none; } .mkrows th.sortable:hover { color: #000; text-decoration: underline; } .mkrows th.on { color: #000; } .mkmini { margin-bottom: 10px; }
 .formEnd { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 6px 0 20px; } .sheetHint { margin: 0; }
 .btn.danger.armed { background: var(--warn); color: #fff; border-color: var(--warn); }
 </style>
@@ -437,10 +438,13 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
       <li>When the client sends their own engagement letter, drop it in Documents. It is checked for AI and confidentiality wording, and it shows on the left instead of your letter (My letter is set to “Not needed – client’s letter”). Click <b>Read and list requirements</b> to note the form, addenda, photo rules, due date, fee and inspection to-dos. <b>Write my own letter instead</b> switches back.</li>
       <li>Change the AI paragraph on <b>Standard wording</b>.</li></ol></details>
     <details><summary>Market conditions</summary><ol>
-      <li>Open the order, then the <b>Market</b> tab.</li><li>In Flexmls, search the market area (actives, pendings and sales for the look-back period), export as CSV, and drop it in box 1. Untick listings that are not competitive.</li>
-      <li>Check the UAD 3.6 fields in box 2. Pick demand/supply, marketing time and distressed competition (suggestions are shown). Type or pick the market-area boundary; <b>Save this area</b> to reuse it.</li>
+      <li>Open the order, then the <b>Market</b> tab.</li>
+      <li>Box 1 · <b>Market Area Boundary</b> (macro): in Flexmls search all residential listings inside your boundaries (actives, pendings and sales for the look-back period), export the CSV and drop it here. It is background for the Market Commentary and price trend.</li>
+      <li>Box 2 · <b>Search Criteria</b> (micro): your search of the comparable properties within the boundaries – the same one you use for the 1004MC and, in a 2.6 report, the comparable listings and sales line at the top of the Sales Comparison Approach. Its results fill the UAD 3.6 <b>Search Result Metrics</b> (17.005–17.016), Demand/Supply and Marketing Time.</li>
+      <li>In either table, untick a listing that does not belong (two units on one lot, a different market); click a column heading (List price, Sale price, $ / sq ft, DOM, Sq ft, dates) to sort, and again to reverse.</li>
+      <li>Check the UAD 3.6 Market section in box 3. Pick Demand/Supply, Marketing Time and Distressed Market Competition (suggestions are shown). Type or pick the Market Area Boundary; <b>Save this area</b> to reuse it.</li>
       <li>Edit the search criteria and price trend comment, then <b>Copy</b> into SFREP.</li><li>Save each graph with <b>Save picture</b> for the report.</li>
-      <li>Once a month, drop the SBMLS Monthly MLS Statistics PDF in box 4. Type the Zillow figures for the city.</li></ol></details>
+      <li>Once a month, drop the SBMLS Monthly MLS Statistics PDF in box 5 (South Coast trends). Type the Zillow figures for the city.</li></ol></details>
     <details><summary>Comp genie from an order</summary><ol>
       <li>Click <b>Comp genie</b> on the order (or on its row in Orders). The comp genie opens with the subject filled in from the order.</li>
       <li>In the comp genie, <b>From an order…</b> lists your active orders.</li><li>Use Chrome on this computer for both, so they share the same storage.</li></ol></details>
@@ -457,7 +461,7 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
       <li>Assignment reason, file number, effective date, client, lender and AMC come from the order. Property valuation method is Traditional and "property data report used" is No unless you change them.</li>
       <li>Legal description, number of parcels (from the APNs), zoning code and all rights included. Type the zoning description once for a code (for example 7-R-1); it is remembered for every report with that code.</li>
       <li>Highest and best use: tick the four tests (or click <b>All four tests met · present use</b>), answer the present-use question, click <b>Draft the comment</b> and edit it.</li>
-      <li>Market: comes from the order's <b>Market</b> tab here in the Appraisal Assistant. Drop your SBMLS market-area search CSV there (micro market) and the monthly SBMLS statistics PDF (macro market), check the boundary, criteria and price trend comment, then go back to the Comp genie.</li>
+      <li>Market: comes from the order's <b>Market</b> tab here in the Appraisal Assistant: box 1 Market Area Boundary search (macro), box 2 Search Criteria search (micro – the Search Result Metrics), and once a month the SBMLS statistics PDF. Check the boundary, search criteria and Price Trend Analysis Commentary, then go back to the Comp genie.</li>
       <li>The sales contract answers come from the document reader (Read on the purchase contract).</li>
       <li>Type your opinion of market value, the value condition, the exposure time and a reconciliation comment. Then click <b>Full report for SFREP</b>.</li>
       <li>The usable lot area also goes into the Site Features comment as "Usable Lot Area/Utility: 0.18 ac." – it is not a site influence.</li></ol></details>
@@ -518,7 +522,7 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
 </div>
 <div id="toast" role="status" hidden></div>
 <script>
-const BUILD='o1-1016-2148';
+const BUILD='o1-1016-2154';
 const G = (() => {
 /* ---------------- small helpers ---------------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -2025,12 +2029,13 @@ function statusAt(r, eff) { // what the listing was on the effective date
   return r.listDate ? 'active' : '';
 }
 function mkEff() { return (cur && effectiveDate(readForm())) || todayISO(); }
-function mkCompute() {
-  const m = M(), eff = mkEff(), L = +m.lookback || 12, start = isoAddMonths(eff, -L);
+function MI() { const m = M(); m.micro = m.micro || { rows: [], exclude: {}, types: null }; return m.micro; }
+function mkCompute(src) {   // src: the market-area search (default) or the comparable-sales search
+  const m = M(), eff = mkEff(), L = +m.lookback || 12, start = isoAddMonths(eff, -L); src = src || m;
   const nearToday = daysBetween(eff, todayISO()) <= 3; // current assignment: MLS days on market are as of the export
-  const types = m.types; const out = { eff, start, L, rows: [] };
-  (m.rows || []).forEach(r => {
-    const s = statusAt(r, eff); let use = s && !(m.exclude || {})[r.mls] && (!types || types.includes(r.typ));
+  const types = src.types; const out = { eff, start, L, rows: [] };
+  (src.rows || []).forEach(r => {
+    const s = statusAt(r, eff); let use = s && !(src.exclude || {})[r.mls] && (!types || types.includes(r.typ));
     if (s === 'sold' && r.saleDate <= start) use = false;
     const dom = s === 'active' ? (nearToday && r.dom != null ? r.dom : (r.listDate ? daysBetween(r.listDate, eff) : null)) : r.cdom ?? r.dom;
     out.rows.push({ ...r, at: s === 'sold' && r.saleDate <= start ? 'older sale' : s, use, domAt: dom });
@@ -2142,10 +2147,10 @@ function mkStatsFor(eff) { // the latest statistics month on or before the effec
 /* ---------- 3. drafts ---------- */
 const mkSeg = () => ['condo', 'coop'].includes((cur || {}).propType) ? 'condo' : 'he';
 function mkCriteriaDraft(R) {
-  const m = M(); const dists = [...new Set((m.rows || []).map(r => r.district).filter(Boolean))];
+  const m = M(); const dists = [...new Set(((MI().rows || []).length ? MI().rows : m.rows || []).map(r => r.district).filter(Boolean))];
   const types = [...new Set(R.rows.filter(r => r.use).map(r => r.typ).filter(Boolean))];
   const TYP = { HE: 'single-family homes (Home/Estate)', PU: 'PUD homes', CO: 'condominiums', DU: 'duplexes' };
-  const excl = (m.rows || []).filter(r => (m.exclude || {})[r.mls]);
+  const src = (MI().rows || []).length ? MI() : m; const excl = (src.rows || []).filter(r => (src.exclude || {})[r.mls]);
   return `SBMLS search of ${types.map(t => TYP[t] || t).join(', ') || 'residential listings'}${dists.length ? ' in District' + (dists.length > 1 ? 's ' : ' ') + dists.join(', ') : ''}: closed sales from ${shortDate(R.start)} through the effective date of ${shortDate(R.eff)} (${R.L} months), and listings active or pending on the effective date.`
     + (excl.length ? ` ${excl.length} listing${excl.length > 1 ? 's' : ''} not competitive with the subject ${excl.length > 1 ? 'were' : 'was'} excluded (${excl.map(r => r.addr).join('; ')}).` : '');
 }
@@ -2154,9 +2159,11 @@ function mkCommentDraft(R) {
   const segName = seg === 'condo' ? 'condominium' : 'Home Estate/PUD';
   parts.push([1, `Market conditions are analyzed as of the effective date of ${shortDate(R.eff)}.`]);
   if (R.salesN || R.activeN) {
-    let s = `Within the subject's competitive market area, SBMLS reports ${R.salesN} closed sale${R.salesN === 1 ? '' : 's'} in the ${R.L} months before the effective date` + (R.salesN ? ` (${$m(R.saleLow)} to ${$m(R.saleHigh)}, median ${$m(R.saleMed)})` : '')
+    let s = `The search of competing properties within the market area boundary (search criteria above) shows ${R.salesN} closed sale${R.salesN === 1 ? '' : 's'} in the ${R.L} months before the effective date` + (R.salesN ? ` (${$m(R.saleLow)} to ${$m(R.saleHigh)}, median ${$m(R.saleMed)})` : '')
       + `, ${R.activeN} active listing${R.activeN === 1 ? '' : 's'}` + (R.activeN ? ` (median list price ${$m(R.activeMed)}, median ${Math.round(R.activeDom)} days on market)` : '') + ` and ${R.pendingN} pending sale${R.pendingN === 1 ? '' : 's'}.`;
     parts.push([1, s]);
+    { const Q = MI().rows.length ? mkCompute(M()) : null; if (Q && Q.salesN) { const ppsf = Q.S.filter(r => r.salePrice && r.gla).map(r => r.salePrice / r.gla); const stl = Q.S.filter(r => r.salePrice && r.listPrice).map(r => r.salePrice / r.listPrice);
+      parts.push([1, `All residential sales within the market area boundary (${Q.salesN} sale${Q.salesN === 1 ? '' : 's'} (${$m(Q.saleLow)} to ${$m(Q.saleHigh)}, median ${$m(Q.saleMed)}${ppsf.length ? ', median ' + $m(median(ppsf)) + ' per square foot' : ''}${stl.length ? ', median sale-to-list ' + Math.round(median(stl) * 1000) / 10 + '%' : ''}${Q.saleDom != null ? ', median ' + Math.round(Q.saleDom) + ' days on market' : ''}) were considered as context.`]); } }
     if (R.supply != null) parts.push([1, `At the rate of about ${(Math.round(R.perMonth * 10) / 10)} sale${Math.round(R.perMonth * 10) === 10 ? '' : 's'} per month, current inventory represents approximately ${(Math.round(R.supply * 10) / 10)} months of supply` + (R.saleDom != null ? `, and the median marketing time of the sales was ${Math.round(R.saleDom)} days.` : '.')]);
     else parts.push([1, `There were no closed sales in the lookback period, so an absorption rate could not be measured; the available listings and pending sales were considered.`]);
     if (R.trend.ok) parts.push([2, Math.abs(R.trend.annual) < 3 || R.trend.r2 < 0.15
@@ -2233,9 +2240,22 @@ function savePng(cv, name) { cv.toBlob(b => { const u = URL.createObjectURL(b); 
 
 /* ---------- 5. the Market tab ---------- */
 let mkLast = null;
-async function mkAddSearch(file) {
-  try { const rows = parseMarketCsv(await G.readText(file)); const m = M(); m.rows = rows; m.file = file.name; m.exclude = {}; rows.filter(r => r.twoUnits).forEach(r => { m.exclude[r.mls] = true; });
-    m.types = null; mkChanged(); mkRender(true); toast(`${rows.length} listings read from ${file.name}`);
+const MKSORT = { macro: { k: 'at', dir: 1 }, micro: { k: 'at', dir: 1 } };
+const AT_ORDER = ['active', 'pending', 'sold', 'older sale', ''];
+function mkTable(R, src, which) {
+  const S = MKSORT[which]; const val = (r, k) => k === 'at' ? AT_ORDER.indexOf(r.at || '') : k === 'ppsf' ? (r.salePrice && r.gla ? r.salePrice / r.gla : null) : k === 'addr' ? String(r.addr || '').toLowerCase() : r[k];
+  const rows = R.rows.slice().sort((a, b) => { const x = val(a, S.k), y = val(b, S.k); if (x == null && y == null) return 0; if (x == null) return 1; if (y == null) return -1; return (x < y ? -1 : x > y ? 1 : 0) * S.dir || String(b.saleDate || b.listDate).localeCompare(String(a.saleDate || a.listDate)); });
+  const th = (k, l) => `<th data-mksort="${which}|${k}" class="sortable${S.k === k ? ' on' : ''}" title="Sort">${l}${S.k === k ? (S.dir > 0 ? ' ▲' : ' ▼') : ''}</th>`;
+  const inc = which === 'micro' ? 'data-mkinc2' : 'data-mkinc';
+  return `<div class="tableWrap"><table class="facts mkrows"><tr><th></th>${th('addr', 'Address')}${th('at', 'On ' + h(shortDate(R.eff)))}${th('listDate', 'Listed')}${th('listPrice', 'List price')}${th('contractDate', 'Contract')}${th('saleDate', 'Sold')}${th('salePrice', 'Sale price')}${th('ppsf', '$ / sq ft')}${th('domAt', 'DOM')}${th('gla', 'Sq ft')}<th>Notes</th></tr>
+    ${rows.map(r => `<tr class="${r.use ? '' : 'off'}">
+      <td><input type="checkbox" ${inc}="${h(r.mls)}" ${(src.exclude || {})[r.mls] ? '' : 'checked'} title="Use this listing" aria-label="Use ${h(r.addr)}"></td><td>${h(r.addr)}${r.unit ? ' #' + h(r.unit) : ''}<small>MLS ${h(r.mls)} · ${h(r.typ)}</small></td>
+      <td>${h(r.at || 'not on the market')}</td><td>${h(shortDate(r.listDate))}</td><td>${h($m(r.listPrice))}</td><td>${h(shortDate(r.contractDate))}</td><td>${h(shortDate(r.saleDate))}</td><td>${h($m(r.salePrice))}</td><td>${r.salePrice && r.gla ? h($m(r.salePrice / r.gla)) : ''}</td><td>${h(r.domAt ?? '')}</td><td>${r.gla ? Math.round(r.gla).toLocaleString() : ''}</td>
+      <td>${[r.twoUnits ? 'two units? (left out)' : '', r.distressed ? '<b>distressed: ' + h(r.details.join(', ')) + '</b>' : r.details.length ? h(r.details.join(', ')) : ''].filter(Boolean).join(' · ')}</td></tr>`).join('')}</table></div>`;
+}
+async function mkAddSearch(file, which) {
+  try { const rows = parseMarketCsv(await G.readText(file)); const m = which === 'micro' ? MI() : M(); m.rows = rows; m.file = file.name; m.exclude = {}; rows.filter(r => r.twoUnits).forEach(r => { m.exclude[r.mls] = true; });
+    m.types = null; mkChanged(); mkRender(true); toast(`${rows.length} listings read from ${file.name}` + (which === 'micro' ? ' (comparable-sales search)' : ' (market area)'));
     if (!(cur.docs || []).some(d => d.name === file.name)) addDocs([file]); // keep the search with the order's documents
   } catch (e) { toast(e.message || 'Could not read that file'); }
 }
@@ -2245,7 +2265,7 @@ async function mkAddStats(file) {
   catch (e) { console.error(e); toast(e.message || 'Could not read that PDF'); }
 }
 function mkRender(redraft) {
-  const box = $('#mkBody'); if (!box || !cur) return; const m = M(); const R = mkCompute(); mkLast = R;
+  const box = $('#mkBody'); if (!box || !cur) return; const m = M(); const RA = mkCompute(); const R = MI().rows.length ? mkCompute(MI()) : RA; mkLast = R;
   if (redraft || m.comment == null) { if (R.rows.length || Object.keys(MK.stats).length) { if (!m.commentEdited) m.comment = mkCommentDraft(R); if (!m.criteriaEdited) m.criteria = mkCriteriaDraft(R); } }
   const pick = (k, list) => m[k] || R.suggest[{ supply: 'supply', mktime: 'mktime', distress: 'distress' }[k]] || '';
   const sel = (k, list, sug) => `<select data-mk="${k}">${['', ...list.map(x => x[0])].map(v => `<option value="${v}"${pick(k) === v ? ' selected' : ''}>${v ? list.find(x => x[0] === v)[1] : '—'}</option>`).join('')}</select>${sug ? ` <small class="${m[k] && m[k] !== sug ? 'warnTxt' : 'muted'}">suggested: ${h((list.find(x => x[0] === sug) || [, ''])[1])}</small>` : ''}`;
@@ -2259,47 +2279,51 @@ function mkRender(redraft) {
   const cnt = (id, max) => `<span class="cnt" data-cnt="${id}" data-max="${max}"></span>`;
   box.innerHTML = `
   <div class="mkgrid">
-  <section class="mkcard"><h3>1 · Market-area search</h3>
+  <section class="mkcard"><h3>1 · Market Area Boundary (17.003) – everything inside your boundaries <small>background for the Market Commentary and price trend</small></h3>
     <div class="grid3"><label>Effective date<input value="${h(shortDate(R.eff))}" disabled></label>
       <label>Look back<select data-mk="lookback">${[3, 6, 12, 18, 24, 36].map(n => `<option value="${n}"${+m.lookback === n ? ' selected' : ''}>${n} months</option>`).join('')}</select></label>
       <label>Property types${typesAll.length ? `<span class="types">${typesAll.map(t => `<label class="check"><input type="checkbox" data-mktype="${h(t)}" ${!m.types || m.types.includes(t) ? 'checked' : ''}>${h(t)}</label>`).join('')}</span>` : '<input disabled value="from the search">'}</label></div>
     <p class="help">The effective date comes from the order (inspection date, or the date of death for retrospective work). Change it on the Order &amp; letter tab.</p>
-    <div class="drop" id="mkDrop"><div><span class="eyebrow">SBMLS market-area search</span><p class="help">In Flexmls, search the subject's market area (actives, pendings, and sales for the look-back period), export it as a CSV with your usual columns, and drop it here.${m.file ? ' Loaded: <b>' + h(m.file) + '</b>' : ''}</p></div>
+    <div class="drop" id="mkDrop"><div><span class="eyebrow">Market Area Boundary search (macro)</span><p class="help">In Flexmls, search all residential listings inside your market area boundaries (actives, pendings and sales for the look-back period), export the CSV and drop it here.${m.file ? ' Loaded: <b>' + h(m.file) + '</b>' : ''}</p></div>
       <label class="btn" for="mkFile">Choose CSV<input type="file" id="mkFile" accept=".csv,text/csv"></label></div>
     ${(cur.docs || []).some(d => d.type === 'marketSearch' && /\.csv$/i.test(d.name)) && !m.rows.length ? '<p><button type="button" class="btn small" id="mkFromDocs">Use the market search in this order’s documents</button></p>' : ''}
-    ${m.rows.length ? `<div class="tableWrap"><table class="facts mkrows"><tr><th></th><th>Address</th><th>On ${h(shortDate(R.eff))}</th><th>Listed</th><th>List price</th><th>Contract</th><th>Sold</th><th>Sale price</th><th>DOM</th><th>Sq ft</th><th>Notes</th></tr>
-      ${R.rows.sort((a, b) => (['active', 'pending', 'sold', 'older sale', ''].indexOf(a.at) - ['active', 'pending', 'sold', 'older sale', ''].indexOf(b.at)) || String(b.saleDate || b.listDate).localeCompare(String(a.saleDate || a.listDate))).map(r => `<tr class="${r.use ? '' : 'off'}">
-        <td><input type="checkbox" data-mkinc="${h(r.mls)}" ${(m.exclude || {})[r.mls] ? '' : 'checked'} title="Use this listing" aria-label="Use ${h(r.addr)}"></td><td>${h(r.addr)}${r.unit ? ' #' + h(r.unit) : ''}<small>MLS ${h(r.mls)} · ${h(r.typ)}</small></td>
-        <td>${h(r.at || 'not on the market')}</td><td>${h(shortDate(r.listDate))}</td><td>${h($m(r.listPrice))}</td><td>${h(shortDate(r.contractDate))}</td><td>${h(shortDate(r.saleDate))}</td><td>${h($m(r.salePrice))}</td><td>${h(r.domAt ?? '')}</td><td>${r.gla ? Math.round(r.gla).toLocaleString() : ''}</td>
-        <td>${[r.twoUnits ? 'two units? (left out)' : '', r.distressed ? '<b>distressed: ' + h(r.details.join(', ')) + '</b>' : r.details.length ? h(r.details.join(', ')) : ''].filter(Boolean).join(' · ')}</td></tr>`).join('')}</table></div>
-      <p class="help">Untick a listing that is not competitive with the subject (wrong property type, two units on one lot, a different market). It is left out of every number below.</p>` : ''}
+    ${m.rows.length ? mkTable(RA, m, 'macro') + '<p class="help">Untick a listing that is not competitive with the subject (wrong property type, two units on one lot, a different market). It is left out of every number below. Click a column heading to sort.</p>' : ''}
   </section>
-  <section class="mkcard"><h3>2 · UAD 3.6 market fields</h3>
-    <table class="facts uad"><tr><th>17.003 Market area boundary</th><td><textarea data-mk="boundary" rows="3" maxlength="1250" placeholder="e.g. Samarkand neighborhood: bounded by De la Vina St, State St, Las Positas Rd and Highway 101">${h(m.boundary || '')}</textarea>${cnt('boundary', 1250)}
+  <section class="mkcard"><h3>2 · Search Criteria (17.004) – the comparable properties within the boundaries <small>fills the UAD 3.6 Search Result Metrics (17.005–17.016)</small></h3>
+    <div class="drop" id="mkDrop2"><div><span class="eyebrow">Search Criteria search (micro)</span><p class="help">Your Flexmls search of the properties within the boundaries that compete with the subject (the same one you use for the 1004MC and, in a 2.6 report, the comparable listings and sales line at the top of the Sales Comparison Approach). Export the CSV and drop it here. Its results are the 3.6 Search Result Metrics, Demand/Supply and Marketing Time. Until it is loaded, the boundary search above is used.${MI().file ? ' Loaded: <b>' + h(MI().file) + '</b>' : ''}</p></div>
+      <label class="btn" for="mkFile2">Choose CSV<input type="file" id="mkFile2" accept=".csv,text/csv"></label></div>
+    ${MI().rows.length ? (() => { const Q = R; const ppsf = Q.S.filter(r => r.salePrice && r.gla).map(r => r.salePrice / r.gla), stl = Q.S.filter(r => r.salePrice && r.listPrice).map(r => r.salePrice / r.listPrice);
+      return `<table class="facts uad mkmini"><tr><th>Sales in the look-back</th><td>${Q.salesN}${Q.salesN ? ` · ${$m(Q.saleLow)} / ${$m(Q.saleMed)} / ${$m(Q.saleHigh)} (low / median / high)` : ''}</td></tr>
+        <tr><th>Median price per sq ft</th><td>${ppsf.length ? $m(median(ppsf)) : '—'}</td></tr><tr><th>Median sale-to-list</th><td>${stl.length ? Math.round(median(stl) * 1000) / 10 + '%' : '—'}</td></tr>
+        <tr><th>Median days on market (sales)</th><td>${Q.saleDom != null ? Math.round(Q.saleDom) : '—'}</td></tr><tr><th>Active / pending now</th><td>${Q.activeN} / ${Q.pendingN}</td></tr>
+        <tr><th>Price trend</th><td>${Q.trend.ok ? (Math.abs(Q.trend.annual) < 3 || Q.trend.r2 < 0.15 ? 'no consistent trend' : (Q.trend.annual > 0 ? 'rising ' : 'declining ') + Math.abs(Math.round(Q.trend.annual)) + '% a year') + ' (' + Q.trend.n + ' sales)' : 'too few sales to measure'}</td></tr></table>` + mkTable(Q, MI(), 'micro'); })() : ''}
+  </section>
+  <section class="mkcard"><h3>3 · UAD 3.6 Market section</h3><p class="help">${MI().rows.length ? 'Search Result Metrics from the Search Criteria search (box 2).' : '<b class="warnTxt">Box 2 is empty</b> – these metrics use the Market Area Boundary search (box 1) for now.'}</p>
+    <table class="facts uad"><tr><th>17.003 Market Area Boundary</th><td><textarea data-mk="boundary" rows="3" maxlength="1250" placeholder="e.g. Samarkand neighborhood: bounded by De la Vina St, State St, Las Positas Rd and Highway 101">${h(m.boundary || '')}</textarea>${cnt('boundary', 1250)}
       <div class="row"><select id="mkBndPick"><option value="">Use a saved area…</option>${MK.boundaries.map((b, i) => `<option value="${i}">${h(b.name)}</option>`).join('')}</select><button type="button" class="btn ghost small" id="mkBndSave">Save this area</button><button type="button" class="btn ghost small" data-copy="boundary">Copy</button></div></td></tr>
-    <tr><th>17.004 Search criteria</th><td><textarea data-mk="criteria" rows="3" maxlength="1250">${h(m.criteria || '')}</textarea>${cnt('criteria', 1250)}<div class="row"><button type="button" class="btn ghost small" data-redraft="criteria">Draft again</button><button type="button" class="btn ghost small" data-copy="criteria">Copy</button></div></td></tr>
-    <tr><th>17.011 Look-back months</th><td>${R.L}</td></tr>
-    <tr><th>17.005 Active listings</th><td>${R.activeN}</td></tr>
-    <tr><th>17.007 / 17.008 / 17.009 List price low / median / high</th><td>${R.activeN ? `${$m(R.activeLow)} / ${$m(R.activeMed)} / ${$m(R.activeHigh)}` : '<small class="muted">not needed when there are no actives</small>'}</td></tr>
-    <tr><th>17.006 Median days on market (actives)</th><td>${R.activeN ? Math.round(R.activeDom) : '<small class="muted">not needed when there are no actives</small>'}</td></tr>
-    <tr><th>17.010 Pending sales</th><td>${R.pendingN}</td></tr>
-    <tr><th>17.012 Sales in past ${R.L} months</th><td>${R.salesN}</td></tr>
-    <tr><th>17.013 / 17.014 / 17.015 Sale price low / median / high</th><td>${R.salesN ? `${$m(R.saleLow)} / ${$m(R.saleMed)} / ${$m(R.saleHigh)}` : '<small class="muted">not needed when there are no sales</small>'}</td></tr>
-    <tr><th>17.016 Distressed market competition</th><td>${sel('distress', [['false', 'No'], ['true', 'Yes']], R.rows.length ? R.suggest.distress : '')}${R.distressed.length ? `<small> ${R.distressed.length} REO / short sale / foreclosure listing${R.distressed.length > 1 ? 's' : ''}. Estate and trust sales are not distressed.</small>` : ''}</td></tr>
-    <tr><th>17.021 Demand / supply</th><td>${sel('supply', SUPPLY, R.suggest.supply)}<small class="muted"> ${R.supply != null ? `${(Math.round(R.supply * 10) / 10)} months of supply (${R.activeN} actives ÷ ${(Math.round(R.perMonth * 100) / 100)} sales a month). Guide: under 4 shortage, 4–6 in balance, over 6 oversupply.` : 'No sales in the look-back period, so no months of supply.'}</small></td></tr>
-    <tr><th>17.022 Marketing time</th><td>${sel('mktime', MKTIME, R.suggest.mktime)}<small class="muted"> ${R.saleDom != null ? `median ${Math.round(R.saleDom)} days on market (cumulative) for the sales` : ''}</small></td></tr>
-    <tr><th>17.018 Data sources <small>one per line, 33 characters each</small></th><td><textarea data-mk="sources" rows="2">${h(sources.join('\n'))}</textarea></td></tr>
-    <tr><th>17.019 Price trend analysis</th><td><textarea data-mk="comment" rows="10" maxlength="2500">${h(m.comment || '')}</textarea>${cnt('comment', 2500)}
+    <tr><th>17.004 Search Criteria Description</th><td><textarea data-mk="criteria" rows="3" maxlength="1250">${h(m.criteria || '')}</textarea>${cnt('criteria', 1250)}<div class="row"><button type="button" class="btn ghost small" data-redraft="criteria">Draft again</button><button type="button" class="btn ghost small" data-copy="criteria">Copy</button></div></td></tr>
+    <tr><th>17.011 Sales in Past ___ Months (look-back)</th><td>${R.L}</td></tr>
+    <tr><th>17.005 Active Listings</th><td>${R.activeN}</td></tr>
+    <tr><th>17.007 / 17.008 / 17.009 Lowest / Median / Highest List Price</th><td>${R.activeN ? `${$m(R.activeLow)} / ${$m(R.activeMed)} / ${$m(R.activeHigh)}` : '<small class="muted">not needed when there are no actives</small>'}</td></tr>
+    <tr><th>17.006 Median Days on Market (actives)</th><td>${R.activeN ? Math.round(R.activeDom) : '<small class="muted">not needed when there are no actives</small>'}</td></tr>
+    <tr><th>17.010 Pending Sales</th><td>${R.pendingN}</td></tr>
+    <tr><th>17.012 Sales in Past ${R.L} Months</th><td>${R.salesN}</td></tr>
+    <tr><th>17.013 / 17.014 / 17.015 Lowest / Median / Highest Sale Price</th><td>${R.salesN ? `${$m(R.saleLow)} / ${$m(R.saleMed)} / ${$m(R.saleHigh)}` : '<small class="muted">not needed when there are no sales</small>'}</td></tr>
+    <tr><th>17.016 Distressed Market Competition</th><td>${sel('distress', [['false', 'No'], ['true', 'Yes']], R.rows.length ? R.suggest.distress : '')}${R.distressed.length ? `<small> ${R.distressed.length} REO / short sale / foreclosure listing${R.distressed.length > 1 ? 's' : ''}. Estate and trust sales are not distressed.</small>` : ''}</td></tr>
+    <tr><th>17.021 Demand/Supply</th><td>${sel('supply', SUPPLY, R.suggest.supply)}<small class="muted"> ${R.supply != null ? `${(Math.round(R.supply * 10) / 10)} months of supply (${R.activeN} actives ÷ ${(Math.round(R.perMonth * 100) / 100)} sales a month). Guide: under 4 shortage, 4–6 in balance, over 6 oversupply.` : 'No sales in the look-back period, so no months of supply.'}</small></td></tr>
+    <tr><th>17.022 Marketing Time</th><td>${sel('mktime', MKTIME, R.suggest.mktime)}<small class="muted"> ${R.saleDom != null ? `median ${Math.round(R.saleDom)} days on market (cumulative) for the sales` : ''}</small></td></tr>
+    <tr><th>17.018 Price Trend Source <small>one per line, 33 characters each</small></th><td><textarea data-mk="sources" rows="2">${h(sources.join('\n'))}</textarea></td></tr>
+    <tr><th>17.019 Price Trend Analysis Commentary</th><td><textarea data-mk="comment" rows="10" maxlength="2500">${h(m.comment || '')}</textarea>${cnt('comment', 2500)}
       <div class="row"><button type="button" class="btn ghost small" data-redraft="comment">Draft again</button><button type="button" class="btn ghost small" data-copy="comment">Copy</button></div>
       <p class="help">Drafted from the numbers on this page in your wording. Edit freely; your edits are kept until you press Draft again.</p></td></tr></table>
   </section>
-  <section class="mkcard"><h3>3 · Graphs for the report</h3>
+  <section class="mkcard"><h3>4 · Graphs for the report</h3>
     <p class="help">Each one saves as a picture for the report's market exhibits (UAD image types: Price Trend, Absorption Rate).</p>
     <figure><canvas id="mkG1"></canvas><div class="row"><label class="check"><input type="checkbox" id="mkPsf" ${m.perSf ? 'checked' : ''}>Price per square foot</label><button type="button" class="btn small" data-png="mkG1">Save picture</button></div></figure>
     <figure><canvas id="mkG2"></canvas><div class="row"><button type="button" class="btn small" data-png="mkG2">Save picture</button></div></figure>
     <figure><canvas id="mkG3"></canvas><div class="row"><button type="button" class="btn small" data-png="mkG3">Save picture</button></div></figure>
   </section>
-  <section class="mkcard"><h3>4 · Big picture: SBMLS monthly statistics and Zillow</h3>
+  <section class="mkcard"><h3>5 · Big picture: SBMLS monthly statistics and Zillow</h3>
     <div class="drop" id="mkStatsDrop"><div><span class="eyebrow">Monthly MLS Statistics PDF</span><p class="help">Load each month's PDF once; every order uses it. ${Object.keys(MK.stats).length ? 'Loaded: ' + Object.keys(MK.stats).sort().map(monthName).join(', ') + '.' : 'None loaded yet.'}${st ? ' This order uses <b>' + monthName(st.ym) + '</b>.' : ''}</p></div>
       <label class="btn" for="mkStatsFile">Choose PDF<input type="file" id="mkStatsFile" accept=".pdf,application/pdf"></label></div>
     ${st ? mkStatsTable(st[mkSeg()], st.ym) : ''}${st && st.warn && st.warn.length ? `<p class="help warnTxt">${st.warn.map(h).join(' ')} This month's own totals from its Summary of Stats page were used instead.</p>` : ''}
@@ -2313,6 +2337,10 @@ function mkRender(redraft) {
   const dz = $('#mkDrop'); ['dragover', 'dragleave', 'drop'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.toggle('over', ev === 'dragover'); if (ev === 'drop' && e.dataTransfer.files[0]) mkAddSearch(e.dataTransfer.files[0]); }));
   const sz = $('#mkStatsDrop'); ['dragover', 'dragleave', 'drop'].forEach(ev => sz.addEventListener(ev, e => { e.preventDefault(); sz.classList.toggle('over', ev === 'dragover'); if (ev === 'drop' && e.dataTransfer.files[0]) mkAddStats(e.dataTransfer.files[0]); }));
   $('#mkFile').onchange = e => { const f = e.target.files[0]; e.target.value = ''; if (f) mkAddSearch(f); };
+  $('#mkFile2').onchange = e => { const f = e.target.files[0]; e.target.value = ''; if (f) mkAddSearch(f, 'micro'); };
+  { const z2 = $('#mkDrop2'); ['dragover', 'dragleave', 'drop'].forEach(ev => z2.addEventListener(ev, e => { e.preventDefault(); z2.classList.toggle('over', ev === 'dragover'); if (ev === 'drop' && e.dataTransfer.files[0]) mkAddSearch(e.dataTransfer.files[0], 'micro'); })); }
+  box.querySelectorAll('[data-mksort]').forEach(th => th.onclick = () => { const [w, k] = th.dataset.mksort.split('|'); const S = MKSORT[w]; MKSORT[w] = { k, dir: S.k === k ? -S.dir : (['listPrice', 'salePrice', 'domAt', 'gla', 'ppsf'].includes(k) ? -1 : 1) }; mkRender(); });
+  box.querySelectorAll('[data-mkinc2]').forEach(cb => cb.onchange = () => { const q = MI(); q.exclude = q.exclude || {}; if (cb.checked) delete q.exclude[cb.dataset.mkinc2]; else q.exclude[cb.dataset.mkinc2] = true; mkChanged(); mkRender(true); });
   $('#mkStatsFile').onchange = e => { const f = e.target.files[0]; e.target.value = ''; if (f) mkAddStats(f); };
   const fd = $('#mkFromDocs'); if (fd) fd.onclick = async () => { const d = cur.docs.find(d => d.type === 'marketSearch' && /\.csv$/i.test(d.name)); const f = await docFile(d.id); if (f) mkAddSearch(f); };
   box.querySelectorAll('[data-mkinc]').forEach(cb => cb.onchange = () => { m.exclude = m.exclude || {}; if (cb.checked) delete m.exclude[cb.dataset.mkinc]; else m.exclude[cb.dataset.mkinc] = true; mkChanged(); mkRender(true); });

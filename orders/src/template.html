@@ -171,6 +171,7 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
 #kindPop .kpg { display: flex; flex-direction: column; } #kindPop .kpg b { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 2px 0 2px; }
 #kindPop button { all: unset; cursor: pointer; padding: 3px 6px; border-radius: 5px; line-height: 1.3; } #kindPop button:hover { background: var(--accent-soft); } #kindPop button.on { background: var(--accent-fill); color: #000; font-weight: 600; }
 @media (max-width: 560px) { #kindPop { grid-template-columns: 1fr 1fr; } }
+.mkrows th.sortable { cursor: pointer; white-space: nowrap; user-select: none; } .mkrows th.sortable:hover { color: #000; text-decoration: underline; } .mkrows th.on { color: #000; } .mkmini { margin-bottom: 10px; }
 .formEnd { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 6px 0 20px; } .sheetHint { margin: 0; }
 .btn.danger.armed { background: var(--warn); color: #fff; border-color: var(--warn); }
 </style>
@@ -437,10 +438,13 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
       <li>When the client sends their own engagement letter, drop it in Documents. It is checked for AI and confidentiality wording, and it shows on the left instead of your letter (My letter is set to “Not needed – client’s letter”). Click <b>Read and list requirements</b> to note the form, addenda, photo rules, due date, fee and inspection to-dos. <b>Write my own letter instead</b> switches back.</li>
       <li>Change the AI paragraph on <b>Standard wording</b>.</li></ol></details>
     <details><summary>Market conditions</summary><ol>
-      <li>Open the order, then the <b>Market</b> tab.</li><li>In Flexmls, search the market area (actives, pendings and sales for the look-back period), export as CSV, and drop it in box 1. Untick listings that are not competitive.</li>
-      <li>Check the UAD 3.6 fields in box 2. Pick demand/supply, marketing time and distressed competition (suggestions are shown). Type or pick the market-area boundary; <b>Save this area</b> to reuse it.</li>
+      <li>Open the order, then the <b>Market</b> tab.</li>
+      <li>Box 1 · <b>Market Area Boundary</b> (macro): in Flexmls search all residential listings inside your boundaries (actives, pendings and sales for the look-back period), export the CSV and drop it here. It is background for the Market Commentary and price trend.</li>
+      <li>Box 2 · <b>Search Criteria</b> (micro): your search of the comparable properties within the boundaries – the same one you use for the 1004MC and, in a 2.6 report, the comparable listings and sales line at the top of the Sales Comparison Approach. Its results fill the UAD 3.6 <b>Search Result Metrics</b> (17.005–17.016), Demand/Supply and Marketing Time.</li>
+      <li>In either table, untick a listing that does not belong (two units on one lot, a different market); click a column heading (List price, Sale price, $ / sq ft, DOM, Sq ft, dates) to sort, and again to reverse.</li>
+      <li>Check the UAD 3.6 Market section in box 3. Pick Demand/Supply, Marketing Time and Distressed Market Competition (suggestions are shown). Type or pick the Market Area Boundary; <b>Save this area</b> to reuse it.</li>
       <li>Edit the search criteria and price trend comment, then <b>Copy</b> into SFREP.</li><li>Save each graph with <b>Save picture</b> for the report.</li>
-      <li>Once a month, drop the SBMLS Monthly MLS Statistics PDF in box 4. Type the Zillow figures for the city.</li></ol></details>
+      <li>Once a month, drop the SBMLS Monthly MLS Statistics PDF in box 5 (South Coast trends). Type the Zillow figures for the city.</li></ol></details>
     <details><summary>Comp genie from an order</summary><ol>
       <li>Click <b>Comp genie</b> on the order (or on its row in Orders). The comp genie opens with the subject filled in from the order.</li>
       <li>In the comp genie, <b>From an order…</b> lists your active orders.</li><li>Use Chrome on this computer for both, so they share the same storage.</li></ol></details>
@@ -457,7 +461,7 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
       <li>Assignment reason, file number, effective date, client, lender and AMC come from the order. Property valuation method is Traditional and "property data report used" is No unless you change them.</li>
       <li>Legal description, number of parcels (from the APNs), zoning code and all rights included. Type the zoning description once for a code (for example 7-R-1); it is remembered for every report with that code.</li>
       <li>Highest and best use: tick the four tests (or click <b>All four tests met · present use</b>), answer the present-use question, click <b>Draft the comment</b> and edit it.</li>
-      <li>Market: comes from the order's <b>Market</b> tab here in the Appraisal Assistant. Drop your SBMLS market-area search CSV there (micro market) and the monthly SBMLS statistics PDF (macro market), check the boundary, criteria and price trend comment, then go back to the Comp genie.</li>
+      <li>Market: comes from the order's <b>Market</b> tab here in the Appraisal Assistant: box 1 Market Area Boundary search (macro), box 2 Search Criteria search (micro – the Search Result Metrics), and once a month the SBMLS statistics PDF. Check the boundary, search criteria and Price Trend Analysis Commentary, then go back to the Comp genie.</li>
       <li>The sales contract answers come from the document reader (Read on the purchase contract).</li>
       <li>Type your opinion of market value, the value condition, the exposure time and a reconciliation comment. Then click <b>Full report for SFREP</b>.</li>
       <li>The usable lot area also goes into the Site Features comment as "Usable Lot Area/Utility: 0.18 ac." – it is not a site influence.</li></ol></details>
