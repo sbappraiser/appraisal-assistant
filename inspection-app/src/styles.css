@@ -313,3 +313,4 @@ html.testcopy .bar { border-bottom-color: #7b2cbf; }
 
 .orders-home { margin-bottom: 22px; } .orders-home h2 small { font-size: 14px; font-weight: 400; color: #555; }
 .order-card .meta a { font-weight: 700; } label.todo { display: flex; gap: 10px; align-items: center; font-size: 18px; padding: 8px 0; border-bottom: 1px solid #ddd; } label.todo input { width: 26px; height: 26px; }
+.wordwarn{color:#e00000;font-size:13px;margin-top:3px}.wordwarn:empty{display:none}

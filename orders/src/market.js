@@ -278,6 +278,10 @@ function mkRender(redraft) {
   if (redraft || m.comment == null) { if (R.rows.length || Object.keys(MK.stats).length) { if (!m.commentEdited) m.comment = mkCommentDraft(R); if (!m.criteriaEdited) m.criteria = mkCriteriaDraft(R); } }
   const pick = (k, list) => m[k] || R.suggest[{ supply: 'supply', mktime: 'mktime', distress: 'distress' }[k]] || '';
   const sel = (k, list, sug) => `<select data-mk="${k}">${['', ...list.map(x => x[0])].map(v => `<option value="${v}"${pick(k) === v ? ' selected' : ''}>${v ? list.find(x => x[0] === v)[1] : '—'}</option>`).join('')}</select>${sug ? ` <small class="${m[k] && m[k] !== sug ? 'warnTxt' : 'muted'}">suggested: ${h((list.find(x => x[0] === sug) || [, ''])[1])}</small>` : ''}`;
+  { // snapshot for the full report (Comp genie reads it from this order)
+    const U = { eff: R.eff, L: R.L, boundary: m.boundary || '', criteria: m.criteria || '', comment: m.comment || '', activeN: R.activeN, activeLow: R.activeLow, activeMed: R.activeMed, activeHigh: R.activeHigh, activeDom: R.activeDom,
+      pendingN: R.pendingN, salesN: R.salesN, saleLow: R.saleLow, saleMed: R.saleMed, saleHigh: R.saleHigh, supply: pick('supply'), mktime: pick('mktime'), distress: pick('distress'), sources: m.sources || ['SBMLS'] };
+    if (R.rows.length && JSON.stringify(U) !== JSON.stringify(m.uad)) { m.uad = U; mkChanged(); } }
   const typesAll = [...new Set((m.rows || []).map(r => r.typ).filter(Boolean))];
   const st = mkStatsFor(R.eff); const city = mkCity(); const z = MK.zillow[city] || {};
   const sources = m.sources || ['SBMLS'].concat(z.value ? ['Zillow'] : []);
@@ -343,7 +347,7 @@ function mkRender(redraft) {
   box.querySelectorAll('[data-mkinc]').forEach(cb => cb.onchange = () => { m.exclude = m.exclude || {}; if (cb.checked) delete m.exclude[cb.dataset.mkinc]; else m.exclude[cb.dataset.mkinc] = true; mkChanged(); mkRender(true); });
   box.querySelectorAll('[data-mktype]').forEach(cb => cb.onchange = () => { m.types = [...box.querySelectorAll('[data-mktype]:checked')].map(x => x.dataset.mktype); mkChanged(); mkRender(true); });
   box.querySelectorAll('select[data-mk]').forEach(s => s.onchange = () => { const k = s.dataset.mk; if (k === 'lookback') { m.lookback = +s.value; mkChanged(); mkRender(true); return; } m[k] = s.value; mkChanged(); mkRender(); });
-  box.querySelectorAll('textarea[data-mk]').forEach(t => t.oninput = () => { const k = t.dataset.mk; if (k === 'sources') m.sources = t.value.split('\n').map(x => x.trim().slice(0, 33)).filter(Boolean); else { m[k] = t.value; if (k === 'comment') m.commentEdited = true; if (k === 'criteria') m.criteriaEdited = true; } mkCounts(); mkChanged(); });
+  box.querySelectorAll('textarea[data-mk]').forEach(t => t.oninput = () => { const k = t.dataset.mk; if (k === 'sources') m.sources = t.value.split('\n').map(x => x.trim().slice(0, 33)).filter(Boolean); else { m[k] = t.value; if (k === 'comment') m.commentEdited = true; if (k === 'criteria') m.criteriaEdited = true; } if (m.uad && ['boundary', 'criteria', 'comment'].includes(k)) m.uad[k] = t.value; mkCounts(); mkChanged(); });
   box.querySelectorAll('[data-redraft]').forEach(b => b.onclick = () => { const k = b.dataset.redraft; m[k] = k === 'comment' ? mkCommentDraft(R) : mkCriteriaDraft(R); m[k + 'Edited'] = false; mkChanged(); mkRender(); toast('Drafted again from the current numbers'); });
   box.querySelectorAll('[data-copy]').forEach(b => b.onclick = async () => { try { await navigator.clipboard.writeText(m[b.dataset.copy] || ''); toast('Copied – paste it into SFREP'); } catch (e) { toast('Select the text and press Ctrl+C'); } });
   box.querySelectorAll('[data-png]').forEach(b => b.onclick = () => savePng($('#' + b.dataset.png), G.safeName(`${cur.fileNo || street(cur) || 'Market'} ${{ mkG1: 'Price Trend', mkG2: 'Absorption Rate', mkG3: 'SBMLS South Coast Median' }[b.dataset.png]}`) + '.png'));

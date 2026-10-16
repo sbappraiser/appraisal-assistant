@@ -382,7 +382,8 @@ function renderField(f, d, ctx) {
     case 'text': html += `<input class="txt" spellcheck="true" autocorrect="on" autocapitalize="sentences" ${attr} value="${esc(v || '')}" ${f.lim ? `maxlength="${f.lim}"` : ''}>`; break;
     case 'note':
       html += `<textarea class="txt" spellcheck="true" autocorrect="on" autocapitalize="sentences" ${attr} placeholder="${f.lim ? 'Max ' + f.lim + ' characters' : 'Notes for your workfile'}">${esc(v || '')}</textarea>`;
-      if (f.lim) html += `<div class="limit ${over ? 'over' : ''}" data-limit="${f.lim}">${(v || '').length} / ${f.lim}</div>`; break;
+      if (f.lim) html += `<div class="limit ${over ? 'over' : ''}" data-limit="${f.lim}">${(v || '').length} / ${f.lim}</div>`;
+      html += `<div class="wordwarn">${wordWarn(v)}</div>`; break;
     case 'count':
       html += `<div class="stepper"><button ${attr} data-step="-1" aria-label="Decrease">−</button><output>${v ?? '–'}</output><button ${attr} data-step="1" aria-label="Increase">+</button></div>`; break;
     case 'review': { const items = f.items(ins) || [];
@@ -929,7 +930,7 @@ function computeIssues(ins) {
 // Words that bias / fair-housing checkers commonly flag, plus obvious dictation slips
 const FLAG_RX = new RegExp('\\b(' + [
   // Fannie Mae / Freddie Mac unacceptable subjective terms
-  'pride of ownership', '(?:good|poor|bad|nice|declining) (?:neighborhood|area|location)', '(?:un)?desirable (?:neighborhood|area|location)', 'desirable', 'undesirable', 'crime[- ]ridden', 'crime', 'criminal\\w*',
+  'pride of ownership', 'mature', '(?:good|poor|bad|nice|declining) (?:neighborhood|area|location)', '(?:un)?desirable (?:neighborhood|area|location)', 'desirable', 'undesirable', 'crime[- ]ridden', 'crime', 'criminal\\w*',
   // safety / exclusivity language
   'safe(?:ty)? (?:neighborhood|area|community|street)', 'unsafe', 'dangerous', 'gangs?', 'ghetto', 'exclusive', 'prestigious', 'upscale', 'elite',
   // protected classes: national origin, race, religion, familial status, age, disability, sex
@@ -940,6 +941,9 @@ const FLAG_RX = new RegExp('\\b(' + [
   // dictation slips seen so far
   'terror\\w*'
 ].join('|') + ')\\b', 'gi');
+/* live warning under a comment box while she types or dictates */
+function wordWarn(t) { const w = [...new Set((String(t || '').match(FLAG_RX) || []).map(x => x.toLowerCase()))]; return w.length ? `Avoid ${w.map(x => '“' + esc(x) + '”').join(', ')} – reviewers and SFREP treat ${w.length > 1 ? 'these words' : 'this word'} as biased or subjective.` : ''; }
+document.addEventListener('input', e => { const t = e.target; if (t.tagName !== 'TEXTAREA') return; const ww = t.parentElement && t.parentElement.querySelector('.wordwarn'); if (ww) ww.innerHTML = wordWarn(t.value); });
 function wordFlags(ins) {
   const out = []; const seen = new Set();
   const scan = (text, where, tab, group, anchor, item) => { (String(text || '').match(FLAG_RX) || []).forEach(m => { const k = where + m.toLowerCase(); if (!seen.has(k)) { seen.add(k); out.push({ word: m, where, tab, group, anchor, item }); } }); };

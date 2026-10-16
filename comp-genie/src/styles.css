@@ -65,3 +65,11 @@ table.grid input.adj.auto::placeholder{color:var(--teal-d);font-style:italic;opa
 table.grid tr.tot td,table.grid tr.tot th{background:#f7fbfb}table.grid tr.big td{font-size:16px}small.over{color:var(--bad);font-weight:700}.measure{color:var(--bad);font-weight:700}
 .gsum{display:flex;flex-wrap:wrap;gap:12px;margin:12px 0}.gsum>div,.gsum>label{background:var(--teal-l);border-radius:8px;padding:8px 12px;display:grid;gap:2px;min-width:160px}.gsum span{font-size:12px;color:var(--muted)}.gsum b{font-size:18px}
 input.xs{width:80px}
+/* report details */
+.rptgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px 22px}
+.rptgrid section h3{margin:4px 0 8px}
+.rptgrid .fld{display:block;margin:0 0 8px}.rptgrid .fld>span{display:block;font-size:.85em;color:var(--muted,#5b6876)}
+.rptgrid .fld input.txt,.rptgrid .fld textarea{width:100%;box-sizing:border-box}
+.rptgrid label.check{display:block;margin:2px 0}
+.rptgrid input::placeholder,.rptgrid textarea::placeholder{color:#8a96a3}
+.warnTxt{color:#e00000}

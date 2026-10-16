@@ -139,6 +139,10 @@ function normalize(ins) {
   { const STONE = new Set(['Quartzite','Quartz','Granite','Marble','Soapstone','Limestone Slab','Engineered Stone']);
     const fixc = it => ['counter','vanCounter'].forEach(k => { if (Array.isArray(it[k])) it[k] = [...new Set(it[k].map(v => STONE.has(v) ? 'Stone Slab' : v))]; });
     ['kitchens','baths','wetbars'].forEach(k => (ins.lists[k] || []).forEach(fixc)); }
+  // 6g (Oct 16 2026): "mature" is treated as biased wording – landscape option renamed; CRS room counts and sq ft never kept for the subject
+  { const D = ins.data; if (!D._v6g) { D._v6g = true; const S = D.site || {};
+    ['landFeat'].forEach(k => { Object.values(D).forEach(sec => { if (sec && Array.isArray(sec[k])) sec[k] = sec[k].map(v => v === 'Mature Trees' ? 'Established Trees' : v); }); });
+    const c = D.property && D.property.crs; if (c) ['beds', 'bedsMls', 'baths', 'bathsMls', 'sqft', 'sqftAssessor', 'sqftMls', 'rooms', 'roomsMls'].forEach(k => delete c[k]); } }
   // 6f (Oct 2026): duplicate questions merged – carry answers to the one place they are asked now
   { const D = ins.data, L = ins.lists; if (!D._v6f) { D._v6f = true;
     const has = (o, k, v) => Array.isArray(o[k]) && o[k].includes(v), take = (o, k, v) => { if (has(o, k, v)) o[k] = o[k].filter(x => x !== v); };
