@@ -418,7 +418,7 @@ async function ordersBlock(all) {
   const list = (rec && rec.orders) || [];
   const card = o => { const ins = all.find(i => i.orderId === o.id); const street = String(o.address || '').split(',')[0];
     return `<div class="card order-card"><b>${esc(street || '(no address)')}</b>
-      <div class="meta">${esc([o.fileNo && 'File ' + o.fileNo, o.type].filter(Boolean).join(' · '))}</div>
+      <div class="meta">${esc([o.fileNo && 'File ' + o.fileNo, o.type, o.reportForm].filter(Boolean).join(' · '))}</div>
       ${o.inspDate ? `<div class="meta"><b>Inspection ${esc(fmtD(o.inspDate))}${o.inspTime ? ' at ' + esc(fmtT(o.inspTime)) : ''}</b></div>` : ''}
       ${o.access && (o.access.name || o.access.phone) ? `<div class="meta">Access: ${esc([o.access.name, o.access.rel].filter(Boolean).join(', '))} ${o.access.phone ? `<a href="tel:${esc(o.access.phone.replace(/[^\d+]/g, ''))}">${esc(o.access.phone)}</a>` : ''}</div>` : ''}
       ${o.todos && o.todos.length ? `<div class="meta">${o.todos.length} to-do${o.todos.length > 1 ? 's' : ''} from the order</div>` : ''}
@@ -460,13 +460,13 @@ async function startFromOrder(id) {
   p.addr = street || p.addr; if (o.unit) p.unit = o.unit;
   if (o.inspDate) p.inspDate = o.inspDate;
   if (o.permits) { p.permits = o.permits; if (o.permits.zoning && !ins.data.site.zoneCode) ins.data.site.zoneCode = o.permits.zoning; }
-  p.order = { id: o.id, fileNo: o.fileNo, client: o.client, type: o.type, effDate: o.effDate, inspDate: o.inspDate, inspTime: o.inspTime, access: o.access || {}, todos: o.todos || [], done: {}, notes: o.notes || '',
+  p.order = { id: o.id, fileNo: o.fileNo, client: o.client, type: o.type, reportForm: o.reportForm || '', effDate: o.effDate, inspDate: o.inspDate, inspTime: o.inspTime, access: o.access || {}, todos: o.todos || [], done: {}, notes: o.notes || '',
     listings: o.listings || [], docs: o.docs || [], plans: o.plans || [], apn: o.apn || '', lat: o.lat || '', lon: o.lon || '' };
   await DB.put('inspections', ins); toast('Inspection started from order ' + (o.fileNo || street)); openInspection(ins.id);
 }
 function orderWidget() {
   const O = app.ins.data.property.order; if (!O) return ''; const done = O.done || {};
-  const rows = [['File', O.fileNo], ['Client', O.client], ['Assignment', O.type], ['Effective date', fmtD(O.effDate)], ['Inspection', [fmtD(O.inspDate), fmtT(O.inspTime)].filter(Boolean).join(' at ')], ['APN', O.apn]].filter(r => r[1]);
+  const rows = [['File', O.fileNo], ['Client', O.client], ['Assignment', O.type], ['Report form', O.reportForm], ['Effective date', fmtD(O.effDate)], ['Inspection', [fmtD(O.inspDate), fmtT(O.inspTime)].filter(Boolean).join(' at ')], ['APN', O.apn]].filter(r => r[1]);
   return `<div class="crs"><table class="crs-table">${rows.map(r => `<tr><th>${esc(r[0])}</th><td>${esc(r[1])}</td></tr>`).join('')}
     ${O.access && (O.access.name || O.access.phone) ? `<tr><th>Access contact</th><td>${esc([O.access.name, O.access.rel].filter(Boolean).join(', '))} ${O.access.phone ? `<a href="tel:${esc(O.access.phone.replace(/[^\d+]/g, ''))}">${esc(O.access.phone)}</a>` : ''}</td></tr>` : ''}
     ${O.notes ? `<tr><th>Notes</th><td>${esc(O.notes)}</td></tr>` : ''}</table>

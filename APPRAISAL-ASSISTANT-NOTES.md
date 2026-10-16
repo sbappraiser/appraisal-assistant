@@ -158,6 +158,9 @@ No recording dates, names or instrument numbers. Short labels only: road easemen
 ## Redact a copy (Oct 15 2026)
 Reader → "Redact a copy" (every order, no AI needed): same redaction screen as Read with Claude (auto black boxes from order names/patterns, extra names, drawn black/blur boxes) → "Save redacted PDF": a PDF made only of JPEG page pictures (jpegPdf in reader.js; no text layer, no metadata from the original) → Downloads + added to the order's documents as "<name> - REDACTED.pdf". Up to 200 pages a time. Send to Claude from that screen only on AI orders.
 
+## Report form per order (Oct 16 2026)
+Lending groups listed first ("Lender or AMC order", then "Private lending"); a new order starts as Lender / AMC – Purchase, My letter "Not needed – client's letter", report form UAD 3.6. Order field reportForm: uad36 | uad26 (legacy 1004/1073/1025) | gpar | other; goes to the iPad (shown in the order card and order box). UAD 2.6: GSEs require UAD 3.6 for reports submitted to UCDP on or after Nov 2, 2026 (Freddie Mac FAQ); portfolio lenders may still order legacy forms. One inspection app for all forms (it collects the 3.6 superset); a 2.6 worksheet/export is a later item.
+
 ## Assignment types for lender/AMC orders (Oct 15 2026)
 Group "Lender or AMC order – UAD 3.6": uadPurchase, uadRefi, uadHeloc, uadConstruction (premise default "as completed as of today"), uadOther – defined with UAD36() in engagement-letter-writer/src/clauses.js (Fannie-style intended use, federal market value definition, AIR/Reg Z statement). Choosing one sets My letter to "Not needed – client's letter" (still editable). Order fields govAgency (UAD 2.008 FHA/VA/USDA) and investorId (2.009). Old "Lending" types are now under "Private lending".
 

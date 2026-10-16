@@ -224,7 +224,7 @@ async function activeOrdersFile() {
     for (const d of (o.docs || []).filter(d => d.type === 'floorplan')) { const r = await ODB.get('docs', d.id); if (r && r.preview) plans.push({ name: d.name + (d.page > 1 ? ' (page ' + d.page + ')' : ''), src: r.preview }); }
     const T = TYPES[o.type] || {}; const c0 = (o.clients || [])[0] || {};
     out.push({ id: o.id, fileNo: o.fileNo, address: o.address, unit: o.unit || '', apn: o.apn, county: o.county, lat: o.lat, lon: o.lon, owner: o.owner, legal: o.legal,
-      stage: o.stage || 'New', inspDate: o.inspDate, inspTime: o.inspTime, effDate: effectiveDate(o), dueDate: o.dueDate, type: T.label || o.type, retro: !!T.retro, propType: o.propType,
+      stage: o.stage || 'New', reportForm: ({ uad36: 'UAD 3.6 – new URAR', uad26: 'UAD 2.6 – Form 1004 (legacy)', gpar: 'GPAR', other: 'Other / narrative' })[o.reportForm] || '', inspDate: o.inspDate, inspTime: o.inspTime, effDate: effectiveDate(o), dueDate: o.dueDate, type: T.label || o.type, retro: !!T.retro, propType: o.propType,
       inspection: o.inspection, client: [c0.name, c0.company].filter(Boolean).join(', '), access: { name: o.accessName, rel: o.accessRel, phone: o.accessPhone },
       notes: o.notes || '', todos: String(o.todos || '').split('\n').map(s => s.trim()).filter(Boolean), aiUse: o.aiUse,
       crs: o.crs ? crsForSubject(o.crs) : null, permits: o.permits || null,
