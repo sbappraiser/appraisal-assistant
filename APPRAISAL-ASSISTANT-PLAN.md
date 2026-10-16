@@ -176,7 +176,14 @@ assistant field shown under Site Size; exported into Site Characteristics commen
 **Her SFREP placement (Oct 15 2026 screenshot):** Site section → "Add Other" row at the end of Site (after
 View) labeled exactly "Lot Utility/ Usable lot area"; subject value "0.16 ac", comp value "0.25" (acres), adjustment in the
 comp's adjustment column (e.g. $(90,000)). Export usable acres + the site adjustment to this row; test whether the MISMO
-import can create an "Other" site row with that label, else she adds the row in SFREP and the assistant gives her the values. LPR/SI → comp comment + DB.
+import can create an "Other" site row with that label, else she adds the row in SFREP and the assistant gives her the values.
+**Found in Fannie's D-1 sample (SF1_Appraisal_v1.4.xml):** an "Add Other" grid row = COMPARABLE_ADJUSTMENT with
+ComparableAdjustmentType SalesComparableAdditionalAdjustableComparisonItem, AdditionalComparisonLineItemIdentifier = row label
+(e.g. "Below Grade Exterior Access" → ours "Lot Utility/ Usable lot area"), AdditionalComparisonLineItemDescription = value
+("Walk Out" → "0.16 ac"), ComparableAdjustmentAmount on comps (subject has no amount). Other adjustment types in the sample:
+SaleDate, ContractDate, SalesConcessions, SiteSize, SiteInfluence, Topography, NeighborhoodName, YearBuilt, OverallConditionRating,
+LivingUnitBedroomCount/BathroomCount, LivingUnitStandardFinishedAreaAboveGrade/BelowGrade, LivingUnitUnfinishedAreaBelowGrade,
+OutdoorLivingAmenity, WaterFeaturesAmenity, MiscellaneousAmenity, EnergyEfficientAndGreenFeatures. LPR/SI → comp comment + DB.
 
 ## 9. Other functions agreed
 - Document reader (AI jobs): contracts (final price, contract date, credits, buyer-broker comp and
@@ -201,7 +208,7 @@ import can create an "Other" site row with that label, else she adds the row in 
 ## 10. Build order (each step useful on its own)
 1. Foundation: Chrome desktop shell, job folders in her structure, AI switch, order intake +
    contact book + engagement letters, inspection workfile import, comment library reorganized for
-   3.6, SFREP comp-grid import test (needs a completed 3.6 report MISMO zip from her).
+   3.6, SFREP comp-grid import test (grid export built from Fannie's D-1 sample; she test-imports into SFREP – an SFREP export is not needed).
 2. Comp genie: ACI conversion (dictionary) + regression reliability test (first deliverable),
    MLS/CRS/CORT importers, three-way compare, resale flags, comps considered, comp photo app.
 3. Adjustment assistant: sensitivity, regression (if reliable), depreciated cost, market conditions.
