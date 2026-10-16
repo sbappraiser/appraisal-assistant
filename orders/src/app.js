@@ -94,7 +94,16 @@ function syncVisibility() {
   const ai = (document.querySelector('input[name=aiUse]:checked') || {}).value;
   $('#aiNote').textContent = ai === 'Yes' ? 'AI may be used. The AI-use paragraph is in the letter.' : ai === 'Redacted' ? 'AI only on documents with names and personal information removed. The AI-use paragraph is in the letter.' : ai === 'No' ? 'No AI on this job. The AI-use paragraph is left out of the letter.' : 'Not chosen yet. The letter includes the AI-use paragraph until you choose No AI.';
   if (!$('#f_reportForm').value) $('#f_reportForm').value = defaultForm($('#f_type').value, $('#f_propType').value);
-  const rf = $('#f_reportForm').value; $('#formNote').textContent = rf === 'uad26' ? 'Legacy UAD 2.6 forms: Fannie Mae and Freddie Mac require UAD 3.6 for reports submitted on or after November 2, 2026; lenders keeping a loan in portfolio may still ask for the old form.' : rf === 'uad36' ? 'UAD 3.6 (new URAR): the inspection app and SFREP export are built for this.' : '';
+  const wv = waiverFor(); const wvOk = wv && waiverActive(wv);
+  if (wv && !(cur && cur.formPicked)) { if (wvOk && $('#f_reportForm').value === 'uad36') $('#f_reportForm').value = 'uad26'; else if (!wvOk && $('#f_reportForm').value === 'uad26') $('#f_reportForm').value = 'uad36'; }
+  const who = (wv && (wv.company || wv.name)) || clientNames()[0] || 'this client';
+  $('#waiverBox').hidden = !t.uad && $('#f_reportForm').value !== 'uad26'; $('#wvLabel').textContent = (clientNames()[0] ? who : 'This client') + ' has a UAD 3.6 waiver (still uses UAD 2.6)';
+  $('#wvOn').checked = !!wv; $('#wvUntil').value = (wv && wv.formUntil) || ''; $('#wvUntilL').hidden = !wv;
+  const rf = $('#f_reportForm').value;
+  $('#formNote').textContent = wv && !wvOk ? '⚠ ' + who + "'s UAD 3.6 waiver ended " + longDate(wv.formUntil) + ' – use UAD 3.6 unless they have extended it.'
+    : rf === 'uad26' ? (wvOk ? who + ' has a UAD 3.6 waiver' + (wv.formUntil ? ' until ' + longDate(wv.formUntil) : '') + ', so this order uses UAD 2.6.' : 'Legacy UAD 2.6 forms: Fannie Mae and Freddie Mac require UAD 3.6 for reports submitted on or after November 2, 2026, unless the client has a waiver – tick the waiver box below to remember it for this client.')
+    : rf === 'uad36' ? 'UAD 3.6 (new URAR): the inspection app and SFREP export are built for this.' : '';
+  $('#formNote').classList.toggle('warnTxt', !!(wv && !wvOk));
   $('#gseBox').hidden = !t.uad; $('#lenderBox').hidden = !$('#f_lenderDiff').checked; $('#amcBox').hidden = !$('#f_amcUsed').checked;
   const eff = $('#f_effDate').value || (t.retro ? $('#f_dod').value : $('#f_inspDate').value);
   $('#effNote').textContent = eff ? 'Effective date: ' + longDate(eff) + ($('#f_effDate').value ? ' (typed in)' : t.retro ? ' (the ' + (t.dateLabels ? t.dateLabels[1].toLowerCase() : 'date of death') + ')' : ' (the inspection date)') : t.retro ? 'Effective date: fill in the ' + (t.dateLabels ? t.dateLabels[1].toLowerCase() : 'date of death') + ' below.' : 'Effective date: the inspection date, once it is set.';
@@ -261,8 +270,9 @@ function renderContacts() {
   $('#contactCount').textContent = contacts.length ? `${contacts.length} clients · added automatically from each saved letter` : '';
   $('#contactList').innerHTML = list.length ? list.map(([c, j]) => `<tr><td>${hesc(c.name || '')}</td><td>${hesc(c.company || '')}</td><td>${hesc([c.addr1, c.addr2].filter(Boolean).join(', '))}</td><td class="num">${hesc(c.phone || '')}</td><td>${hesc(c.email || '')}</td>
     <td class="num" title="${hesc((c.jobs || []).join(', '))}">${(c.jobs || []).length || ''}</td><td class="num">${hesc(longDate(c.lastLetter || ''))}</td>
+    <td class="num">${c.form === 'uad26' ? 'UAD 2.6' + (c.formUntil ? ' until ' + hesc(longDate(c.formUntil)) : '') : ''}</td>
     <td class="acts"><button class="btn small" data-use="${j}">Use in a new letter</button><button class="btn ghost small danger" data-cdel="${j}">Delete</button></td></tr>`).join('')
-    : `<tr><td colspan="8" class="empty">${contacts.length ? 'No client matches that search.' : 'No clients yet. Each client is added here the first time you save or download a letter for them.'}</td></tr>`;
+    : `<tr><td colspan="9" class="empty">${contacts.length ? 'No client matches that search.' : 'No clients yet. Each client is added here the first time you save or download a letter for them.'}</td></tr>`;
   $('#contactList').querySelectorAll('[data-use]').forEach(b => b.onclick = () => { const x = contacts[b.dataset.use]; newLetter(); CLIENT_KEYS.forEach(k => { $('#c0_' + k).value = x[k] || ''; }); update(); });
   $('#contactList').querySelectorAll('[data-cdel]').forEach(b => b.onclick = () => {
     if (b.dataset.armed) { contacts.splice(+b.dataset.cdel, 1); store.set('contacts', contacts); renderContacts(); renderClients(readForm().clients); toast('Client deleted'); }
@@ -404,8 +414,11 @@ async function start() {
   document.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => showTab(b.dataset.tab));
   $('#letterForm').addEventListener('input', update); ['#f_otherUsers', '#f_userText'].forEach(id => $(id).addEventListener('input', syncVisibility)); $('#letterForm').addEventListener('change', update);
   $('#letterForm').addEventListener('submit', e => e.preventDefault());
-  $('#f_reportForm').addEventListener('change', syncVisibility);
-  $('#f_type').addEventListener('change', () => { applyTypeDefaults(); $('#f_reportForm').value = defaultForm($('#f_type').value, $('#f_propType').value); const T = TYPES[$('#f_type').value] || {}; if (T.uad && $('#f_status').value === 'Drafted') { $('#f_status').value = 'Client letter'; toast('Lender and AMC orders usually come with their own engagement letter – My letter is set to “Not needed”. Change it if you write one.', 6000); } syncVisibility(); update(); });
+  $('#f_reportForm').addEventListener('change', () => { if (cur) cur.formPicked = true; syncVisibility(); });
+  $('#wvOn').addEventListener('change', e => { setWaiver(e.target.checked ? { form: 'uad26', formUntil: $('#wvUntil').value } : null); if (cur) cur.formPicked = false; $('#f_reportForm').value = e.target.checked ? 'uad26' : defaultForm($('#f_type').value, $('#f_propType').value); syncVisibility(); update(); });
+  $('#letterForm').addEventListener('input', e => { if (/^(c0_company|c0_name|f_amcCo|f_dueDate)$/.test(e.target.id)) syncVisibility(); });
+  $('#wvUntil').addEventListener('change', e => { setWaiver({ form: 'uad26', formUntil: e.target.value }); syncVisibility(); });
+  $('#f_type').addEventListener('change', () => { applyTypeDefaults(); if (cur) cur.formPicked = false; $('#f_reportForm').value = defaultForm($('#f_type').value, $('#f_propType').value); const T = TYPES[$('#f_type').value] || {}; if (T.uad && $('#f_status').value === 'Drafted') { $('#f_status').value = 'Client letter'; toast('Lender and AMC orders usually come with their own engagement letter – My letter is set to “Not needed”. Change it if you write one.', 6000); } syncVisibility(); update(); });
   $('#f_propType').addEventListener('change', () => { applyPropDefaults(); syncVisibility(); update(); });
   $('#f_listing').addEventListener('change', syncVisibility);
   $('#f_payWhen').addEventListener('change', () => { const w = $('#f_payWhen').value; $('#f_deliveryFrom').value = w === 'report' ? 'inspection' : 'either'; syncVisibility(); update(); }); $('#f_premise').addEventListener('change', syncVisibility); ['#f_rent', '#f_testimony'].forEach(id => $(id).addEventListener('change', syncVisibility));
@@ -449,4 +462,19 @@ document.addEventListener('DOMContentLoaded', start);
 function defaultForm(type, propType) { // which report form an order starts with; she can change it
   const T = TYPES[type] || {}; if (T.uad) return 'uad36';
   return 'gpar';
+}
+
+/* UAD 3.6 waivers: some clients may keep using UAD 2.6 until a date. Saved on the client (contacts), matched by client or AMC name. */
+function clientNames() { return [($('#c0_company') || {}).value, ($('#c0_name') || {}).value, $('#f_amcUsed') && $('#f_amcUsed').checked ? ($('#f_amcCo') || {}).value : ''].map(v => (v || '').trim()).filter(Boolean); }
+const nmKey = v => String(v || '').toLowerCase().replace(/[.,]/g, '').replace(/\s+/g, ' ').trim();
+function waiverFor() { const ns = clientNames().map(nmKey); if (!ns.length) return null;
+  return contacts.find(c => c.form === 'uad26' && ns.some(n => n && (n === nmKey(c.company) || n === nmKey(c.name)))) || null; }
+function waiverActive(w) { if (!w.formUntil) return true; const d = ($('#f_dueDate') && $('#f_dueDate').value) || todayISO(); return d <= w.formUntil; }
+function setWaiver(w) {
+  const name = clientNames()[0]; if (!name) { toast('Type the client first, then tick the waiver box.'); $('#wvOn').checked = false; return; }
+  let c = waiverFor() || contacts.find(x => nmKey(x.company) === nmKey(name) || nmKey(x.name) === nmKey(name));
+  if (!c) { c = { company: ($('#c0_company').value || '').trim(), name: ($('#c0_company').value ? '' : name), added: todayISO(), jobs: [] }; contacts.push(c); }
+  if (w) { c.form = w.form; c.formUntil = w.formUntil || ''; } else { delete c.form; delete c.formUntil; }
+  contacts.sort((a, b) => (a.name || a.company || '').localeCompare(b.name || b.company || ''));
+  store.set('contacts', contacts); renderContacts(); toast(w ? (c.company || c.name) + ': UAD 3.6 waiver saved' : 'Waiver removed');
 }

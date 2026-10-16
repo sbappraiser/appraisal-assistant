@@ -149,6 +149,7 @@ button.homecard:hover { border-color: var(--accent); } .hmrow { display: grid; g
 #orderSummary { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; display: grid; gap: 10px; } #orderSummary h3 { margin: 0; font: 600 17px var(--ui); } ul.toread { margin: 0; padding-left: 18px; } ul.toread li { margin: 6px 0; }
 a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fatal { background: var(--warn-bg); color: var(--warn); padding: 14px; margin: 0; font-weight: 600; }
 .ck { display: inline-grid; place-items: center; width: 1.25em; height: 1.25em; border-radius: 50%; background: var(--go); color: #fff; font-weight: 900; font-size: .9em; line-height: 1; vertical-align: -.15em; } .facts tr.warnTxt th { color: var(--warn); } .missing.ok::before, .pill.yes::before { content: '✓'; display: inline-grid; place-items: center; width: 1.2em; height: 1.2em; margin-right: 4px; border-radius: 50%; background: var(--go); color: #fff; font-weight: 900; font-size: .85em; }
+.waiver { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; } .waiver label.check { display: flex; gap: 6px; align-items: center; font-weight: 600; } #wvUntilL { display: flex; gap: 6px; align-items: center; } #wvUntilL input { width: auto; }
 </style>
 </head>
 <body>
@@ -274,6 +275,7 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
         <div class="checks"><label class="check"><input type="checkbox" id="f_apSales">Sales Comparison</label><label class="check"><input type="checkbox" id="f_apCost">Cost (as applicable)</label><label class="check"><input type="checkbox" id="f_apIncome">Income (as applicable)</label></div></div>
       <label>Report form<select id="f_reportForm"><option value="uad36">UAD 3.6 – new URAR (Traditional)</option><option value="uad26">UAD 2.6 – Form 1004 / 1073 / 1025 (legacy)</option><option value="gpar">GPAR (non-lender)</option><option value="other">Other / narrative</option></select></label>
       <p class="help" id="formNote"></p>
+      <div class="waiver" id="waiverBox"><label class="check"><input type="checkbox" id="wvOn"> <span id="wvLabel">This client has a UAD 3.6 waiver (still uses UAD 2.6)</span></label><label id="wvUntilL">until<input type="date" id="wvUntil"></label></div>
       <label>Report format <span class="opt">blank = the form for this property type</span><input id="f_format"></label>
       <div class="grid2">
         <label>Listing / contract status<select id="f_listing"><option value="omit">Leave this section out</option><option value="notListed">Not listed for sale</option><option value="listed">Currently listed</option><option value="contract">Under contract</option></select></label>
@@ -355,6 +357,11 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
       <li><b>3 · Check:</b> see what was filled in. The client’s letter sets the client, loan number, borrower, due date, fee, report form, rent schedule, and <b>AI use</b>: a ban (for example “no AI without prior authorization”) sets No AI; confidentiality wording sets Yes – only with confidential information removed; nothing sets Yes. You can change any of it on the order.</li>
       <li>Click <b>Read</b> next to the prelim or contract to summarize it, then <b>Open the order</b> – or, if you are writing the letter, <b>Next: write my engagement letter</b>.</li>
       <li>The order saves by itself. To find it again: <b>Home → Open an order</b>, or <b>All files</b>.</li></ol></details>
+    <details><summary>Report form, and clients with a UAD 3.6 waiver</summary><ol>
+      <li>Each order has a <b>Report form</b> (in Scope and report): UAD 3.6 – new URAR (Traditional), UAD 2.6 legacy, GPAR or Other. Lender and AMC orders start as UAD 3.6; a client letter that names a 1004 / 1073 / 1025 sets UAD 2.6.</li>
+      <li>If a client has a waiver to keep using UAD 2.6: open one of their orders, tick <b>[client] has a UAD 3.6 waiver</b> under Report form, and type the <b>until</b> date. It is saved on the client, so every new order for that client (or that AMC) starts as UAD 2.6.</li>
+      <li>When an order's due date is after the waiver date, the order goes back to UAD 3.6 and a red note says the waiver ended. If the client extends it, change the until date.</li>
+      <li>The <b>Clients</b> tab shows each waiver and its date. Untick the box to remove it.</li></ol></details>
     <details><summary>Documents: upload once, kinds, search, sticky notes</summary><ol>
       <li>Drop every file for the order into the <b>Documents</b> box, or click <b>Choose files</b>. Each one is sorted by kind; change the kind with its drop-down if it guessed wrong.</li>
       <li>Click a file name to open it. Click <b>Read</b> to open the reader (next section). <b>Remove</b> takes it out of the order.</li>
@@ -420,7 +427,7 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
 </section>
 <section class="panel" id="panel-contacts" hidden>
   <div class="listHead"><div><h2>Clients</h2><p class="help" id="contactCount"></p></div><input id="contactSearch" type="search" placeholder="Search name, firm, email"></div>
-  <div class="tableWrap"><table><thead><tr><th>Name</th><th>Firm</th><th>Address</th><th>Phone</th><th>Email</th><th>Letters</th><th>Last letter</th><th></th></tr></thead><tbody id="contactList"></tbody></table></div>
+  <div class="tableWrap"><table><thead><tr><th>Name</th><th>Firm</th><th>Address</th><th>Phone</th><th>Email</th><th>Letters</th><th>Last letter</th><th>UAD 3.6 waiver</th><th></th></tr></thead><tbody id="contactList"></tbody></table></div>
 </section>
 <section class="panel" id="panel-wording" hidden>
   <div class="wording">
