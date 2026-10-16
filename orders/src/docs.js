@@ -8,7 +8,7 @@ const h = s => hesc(s ?? '');
 const DOC_TYPES = [
   ['Order and client', [['clientLetter', 'Client’s engagement letter / order'], ['myLetter', 'My engagement letter (signed)'], ['invoice', 'Invoice / payment']]],
   ['Public record', [['crs', 'CRS property report'], ['permitsCounty', 'Permit history by parcel (County)'], ['permitsPdf', 'Permit records'], ['legal', 'Legal description'], ['prelim', 'Preliminary title report']]],
-  ['MLS', [['mls', 'MLS listing (subject)'], ['marketSearch', 'MLS market-area search']]],
+  ['MLS and market', [['mls', 'MLS listing (subject)'], ['marketSearch', 'MLS market-area search'], ['mlsStats', 'SBMLS monthly statistics'], ['zillow', 'Zillow market page']]],
   ['Plans and construction', [['floorplan', 'Floor plan (to trace in the sketch)'], ['plans', 'Plans'], ['specs', 'Specifications'], ['budget', 'Construction budget']]],
   ['HOA', [['condoQ', 'Condo questionnaire'], ['ccrs', 'CC&Rs'], ['hoaBudget', 'HOA budget'], ['bylaws', 'HOA bylaws'], ['minutes', 'HOA minutes']]],
   ['Sale', [['contract', 'Purchase contract'], ['counter', 'Counter offer'], ['addendum', 'Addendum'], ['disclosures', 'Disclosures'], ['leaseback', 'Leaseback / rent-back']]],
@@ -22,6 +22,7 @@ const TEXT_RULES = [
   [/CRS Data|APN\/Tax ID|LOCATION PROPERTY SUMMARY/i, 'crs'],
   [/Permit History by Parcel/i, 'permitsCounty'],
   [/Search Statistics|Search Criteria:/i, 'marketSearch'],
+  [/Zillow Home Value Index|Housing Market Overview|zillow\.com/i, 'zillow'],
   [/flexmls|MLS #\s?\d/i, 'mls'],
   [/Client hereby engages Appraiser|PARTIES TO AGREEMENT[\s\S]{0,800}Jennifer L\.? Heath/i, 'myLetter'],
   [/ENGAGEMENT LETTER|Letter of Engagement|Engagement Agreement|Appraisal (Order|Request)|Order Detail|Scope of Work/i, 'clientLetter'],
@@ -51,7 +52,7 @@ async function recheckDocTypes(o) { let n = 0;
     try { const f = await docFile(d.id); const said = f && await textDocType(f); if (said && said !== d.type && STRONG_TYPES.includes(said)) { await retypeDoc(d.id, said); n++; } } catch (e) {} }
   if (n) toast(n + ' document' + (n > 1 ? 's were' : ' was') + ' in the wrong kind and ' + (n > 1 ? 'have' : 'has') + ' been corrected (see Documents)', 6000); }
 const NAME_RULES = [
-  [/\bCRS\b|Property[_ ]Report/i, 'crs'], [/CrystalViewer|permit[_ ]?hist/i, 'permitsCounty'], [/flexmls|\bMLS\b|customexport/i, 'mls'],
+  [/zillow/i, 'zillow'], [/\bCRS\b|Property[_ ]Report/i, 'crs'], [/CrystalViewer|permit[_ ]?hist/i, 'permitsCounty'], [/flexmls|\bMLS\b|customexport/i, 'mls'],
   [/engagement|order[_ ]?form|appraisal[_ ]?order/i, 'clientLetter'], [/floor[_ ]?plan|floorplan/i, 'floorplan'], [/plans?\b|drawings|architect/i, 'plans'], [/spec/i, 'specs'],
   [/questionnaire/i, 'condoQ'], [/cc&?rs?\b|declaration/i, 'ccrs'], [/bylaws?/i, 'bylaws'], [/minutes/i, 'minutes'], [/hoa.*budget|reserve/i, 'hoaBudget'], [/budget|cost/i, 'budget'],
   [/prelim|title/i, 'prelim'], [/lease[_ ]?after|lease[_ ]?back|rent[_ ]?back|\bsip\b|\bbip\b/i, 'leaseback'], [/counter/i, 'counter'], [/addend/i, 'addendum'],

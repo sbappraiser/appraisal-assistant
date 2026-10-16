@@ -289,7 +289,12 @@ async function mkAddSearch(file, which) {
 async function mkAddStats(file) {
   try { toast('Reading the statistics PDF…'); const st = parseStatsPdf(await pdfItems(file)); st.file = file.name; MK.stats[st.ym] = st; await mkSave('stats');
     const n = Object.keys(st.he.monthly).length; mkRender(); toast(`SBMLS statistics for ${monthName(st.ym)} loaded (${n} months of medians)` + (st.warn.length ? ' – see the note about its charts' : ''), 5000); }
-  catch (e) { console.error(e); toast(e.message || 'Could not read that PDF'); }
+  catch (e) { console.error(e);
+    if (/zillow/i.test(file.name)) { await mkAddZillow(file); return; }
+    toast((e.message || 'Could not read that PDF') + ' This box is for the monthly statistics report from SBAOR. A Zillow page goes under Zillow below.', 7000); }
+}
+async function mkAddZillow(file) {   // kept with the order's documents (workfile / market exhibit); she types the figures
+  await addDocs([file], 'zillow'); mkRender(); toast('Zillow page kept with this order’s documents. Type its figures in the boxes under Zillow.', 6000);
 }
 function mkRender(redraft) {
   const box = $('#mkBody'); if (!box || !cur) return; const m = M(); const RA = mkCompute(); const R = MI().rows.length ? mkCompute(MI()) : RA; mkLast = R;
@@ -352,10 +357,12 @@ function mkRender(redraft) {
     <figure><canvas id="mkG3"></canvas><div class="row"><button type="button" class="btn small" data-png="mkG3">Save picture</button></div></figure>
   </section>
   <section class="mkcard"><h3>5 · Big picture: SBMLS monthly statistics and Zillow</h3>
-    <div class="drop" id="mkStatsDrop"><div><span class="eyebrow">Monthly MLS Statistics PDF</span><p class="help">Load each month's PDF once; every order uses it. ${Object.keys(MK.stats).length ? 'Loaded: ' + Object.keys(MK.stats).sort().map(monthName).join(', ') + '.' : 'None loaded yet.'}${st ? ' This order uses <b>' + monthName(st.ym) + '</b>.' : ''}</p></div>
+    <div class="drop" id="mkStatsDrop"><div><span class="eyebrow">SBMLS Monthly MLS Statistics PDF</span><p class="help">The monthly statistics report from the Santa Barbara Association of REALTORS® (Summary of Stats for Home Estate/PUD Districts 05–35 and condos: sales, pendings, new and active listings, median and average prices, days on market, year-to-date comparisons). Load each month's PDF once; every order uses it. ${Object.keys(MK.stats).length ? 'Loaded: ' + Object.keys(MK.stats).sort().map(monthName).join(', ') + '.' : 'None loaded yet.'}${st ? ' This order uses <b>' + monthName(st.ym) + '</b>.' : ''}</p></div>
       <label class="btn" for="mkStatsFile">Choose PDF<input type="file" id="mkStatsFile" accept=".pdf,application/pdf"></label></div>
     ${st ? mkStatsTable(st[mkSeg()], st.ym) : ''}${st && st.warn && st.warn.length ? `<p class="help warnTxt">${st.warn.map(h).join(' ')} This month's own totals from its Summary of Stats page were used instead.</p>` : ''}
     <h4>Zillow – ${h(zKey.startsWith('zip:') ? 'ZIP ' + zKey.slice(4) : (city || 'the subject’s city'))}</h4><div class="row"><label class="check"><input type="radio" name="zby" value="zip" ${zKey.startsWith('zip:') ? 'checked' : ''} ${zipNow ? '' : 'disabled'}>Subject's ZIP code${zipNow ? ' (' + zipNow + ')' : ''}</label><label class="check"><input type="radio" name="zby" value="city" ${zKey.startsWith('zip:') ? '' : 'checked'}>City${city ? ' (' + h(city) + ')' : ''}</label></div><p class="help">Type the figures from Zillow's page for this ZIP code or city. They are kept for it and used for every order there. In the comment, ZIP-code data is described as supporting context.</p>
+    <div class="drop" id="mkZilDrop"><div><span class="eyebrow">Zillow page (PDF or picture)</span><p class="help">Keep the Zillow page with this order (workfile, or a market exhibit). On zillow.com search the ZIP code (for example 93111), choose Single family and 5-yr, then save the page. A screenshot PDF has no readable text, so type its figures above.${(cur.docs || []).filter(d => d.type === 'zillow').map(d => `<br>Kept: <button type="button" class="lnk" data-zopen="${d.id}">${h(d.name)}</button>`).join('')}</p></div>
+      <label class="btn" for="mkZilFile">Choose file<input type="file" id="mkZilFile" accept=".pdf,image/*"></label></div>
     <div class="grid3 zil"><label>As of<input type="date" data-z="asOf" value="${h(z.asOf || '')}"></label><label>Typical home value ($)<input data-z="value" inputmode="numeric" value="${h(z.value || '')}"></label><label>1-year change (%)<input data-z="change" inputmode="decimal" value="${h(z.change ?? '')}"></label>
       <label>Median sale price ($)<input data-z="medSale" inputmode="numeric" value="${h(z.medSale || '')}"></label><label>Sale-to-list ratio<input data-z="stl" inputmode="decimal" value="${h(z.stl || '')}"></label><label>Median days to pending<input data-z="dtp" inputmode="numeric" value="${h(z.dtp || '')}"></label></div>
   </section></div>`;
@@ -381,6 +388,9 @@ function mkRender(redraft) {
   $('#mkPsf').onchange = e => { m.perSf = e.target.checked; mkChanged(); drawPriceTrend($('#mkG1'), R, m.perSf); };
   $('#mkBndPick').onchange = e => { const b = MK.boundaries[e.target.value]; if (b) { m.boundary = b.text; mkChanged(); mkRender(); } };
   $('#mkBndSave').onclick = () => { const t = (m.boundary || '').trim(); if (!t) { toast('Type the boundary first'); return; } const name = prompt('Name for this market area (for example "Samarkand")'); if (!name) return; const i = MK.boundaries.findIndex(b => b.name === name); if (i >= 0) MK.boundaries[i].text = t; else MK.boundaries.push({ name, text: t }); MK.boundaries.sort((a, b) => a.name.localeCompare(b.name)); mkSave('boundaries'); mkRender(); toast('Saved “' + name + '” for later orders'); };
+  $('#mkZilFile').onchange = e => { const f = e.target.files[0]; e.target.value = ''; if (f) mkAddZillow(f); };
+  { const zd = $('#mkZilDrop'); ['dragover', 'dragleave', 'drop'].forEach(ev => zd.addEventListener(ev, e => { e.preventDefault(); zd.classList.toggle('over', ev === 'dragover'); if (ev === 'drop' && e.dataTransfer.files[0]) mkAddZillow(e.dataTransfer.files[0]); })); }
+  box.querySelectorAll('[data-zopen]').forEach(b => b.onclick = () => openDoc(b.dataset.zopen));
   box.querySelectorAll('input[name=zby]').forEach(r => r.onchange = () => { m.zillowBy = r.value; mkChanged(); mkRender(!m.commentEdited); });
   box.querySelectorAll('[data-z]').forEach(i => i.onchange = () => { if (!zKey) { toast('Fill in the property address first'); return; } const zz = MK.zillow[zKey] = MK.zillow[zKey] || {}; const k = i.dataset.z; zz[k] = k === 'asOf' ? i.value : i.value === '' ? '' : Number(String(i.value).replace(/[$,%\s]/g, '')); mkSave('zillow'); if (!m.commentEdited) { m.comment = mkCommentDraft(mkLast || mkCompute()); const t = box.querySelector('textarea[data-mk=comment]'); if (t) t.value = m.comment; mkCounts(); mkChanged(); } });
   mkCounts();
