@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,500;6..72,600&display=swap">
 <style>
-/* Layout: a working desk – intake form on the left, the signed-paper preview pinned on the right. */
+/* Layout: a working desk – letter and order form on the left, documents on the right (her choice Oct 15 2026). */
 :root {
   --bg: #eef1f4; --panel: #ffffff; --ink: #1c2631; --muted: #5b6876; --line: #d6dce3; --field: #f8fafb;
   --accent: #b35a00; --accent-fill: #ff8a00; --accent-ink: #000000; --accent-soft: #ffdcb5; --warn: #e00000; --warn-bg: #ffe1e1; --ok: #0b8a3d; --go: #0fa84a; --ok-bg: #e1f5e8; --danger: #e00000;
@@ -37,7 +37,7 @@ nav.tabs button { border: 0; background: transparent; color: var(--muted); font:
 nav.tabs button[aria-selected="true"] { background: var(--accent-soft); color: var(--ink); }
 .toolrow { display: flex; gap: 8px; flex-wrap: wrap; }
 main { max-width: 1480px; margin: 0 auto; }
-.desk { display: grid; grid-template-columns: minmax(0, 560px) minmax(0, 1fr); gap: 24px; align-items: start; }
+.desk { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; align-items: start; }
 @media (max-width: 1020px) { .desk { grid-template-columns: minmax(0, 1fr); } .previewCol { position: static !important; } }
 form#letterForm { display: grid; gap: 14px; }
 fieldset { margin: 0; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); padding: 14px 16px 16px; display: grid; gap: 12px; min-width: 0; }
@@ -161,6 +161,7 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
 .addrrow { display: grid; grid-template-columns: minmax(0, 2.4fr) minmax(0, 1.4fr) 64px minmax(0, 1fr) 76px; gap: 10px 12px; } #addrBox .addrrow { grid-template-columns: minmax(0, 1.5fr) 60px minmax(0, 1fr) 72px; } #addrBox .a-street { grid-column: 1 / -1; }
 @media (max-width: 700px) { .addrrow { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } .addrrow .a-street { grid-column: 1 / -1; } }
 .addrrow select + input { margin-top: 6px; }
+.leftCol { display: grid; gap: 14px; min-width: 0; } .previewCol { position: static; }
 </style>
 </head>
 <body>
@@ -182,20 +183,12 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
 <section class="panel" id="panel-new" hidden><div class="listHead"><div><h2>New order</h2></div></div><div id="newBody"></div></section>
 <section class="panel" id="panel-letter" hidden>
  <div class="desk">
+  <div class="leftCol">
+    <p class="missing" id="missing"></p>
+    <div class="paperWrap" id="paperWrap"><article id="sheet" aria-label="Letter preview"></article></div>
+    <div id="clientView" hidden></div>
+    <div id="orderSummary" hidden></div>
   <form id="letterForm" autocomplete="off">
-    <fieldset id="docsSet"><legend>Documents – upload everything here <span class="opt" id="docCount"></span></legend>
-      <div class="drop big" id="dropZone">
-        <div><span class="eyebrow">Drop the files here, or click Choose files</span>
-          <p class="help">Drop every file for this order here: CRS report, engagement letter, MLS listing, plans, specs, budget, HOA documents, purchase contract, counters, addenda, disclosures, leaseback, preliminary title, legal description, permit records. Each one is sorted by kind, kept in this browser on this computer, and shared with the comp genie and the iPad.</p></div>
-        <label class="btn primary" for="docFile">Choose files<input type="file" id="docFile" multiple></label>
-      </div>
-      <p class="help pre" id="docStatus"></p>
-      <div id="docList"></div>
-      <div class="searchrow"><label>Search every document, sticky note and accepted entry in this order<input id="docSearch" type="search" placeholder="for example: easement, rent, credit, Mello-Roos"></label><button type="button" class="btn" id="docSearchBtn">Search</button></div>
-      <div id="docHits"></div>
-      <div id="stickyList" class="facts-box"></div>
-      <div id="factList" class="facts-box"></div>
-    </fieldset>
     <fieldset><legend>Order</legend>
       <div class="grid3">
         <label>File number<input id="f_fileNo" placeholder="your file number"></label>
@@ -335,13 +328,23 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
       <label>To-dos at the inspection <span class="opt">one per line · they show on the iPad</span><textarea id="f_todos" placeholder="Photo of smoke detector in every bedroom&#10;House number at the curb"></textarea></label>
     </fieldset>
   </form>
+  </div>
   <div class="previewCol">
     <div class="bar"><span class="fname" id="fileName"></span>
       <a class="btn ghost" id="genieLink" href="../comp-genie/" target="aa-genie">Comp genie</a><button type="button" class="btn ghost" id="btnNew">New order</button><button type="button" class="btn" id="btnSave">Save order</button><button type="button" class="btn primary" id="btnDocx">Download Word letter</button></div>
-    <p class="missing" id="missing"></p>
-    <div class="paperWrap" id="paperWrap"><article id="sheet" aria-label="Letter preview"></article></div>
-    <div id="clientView" hidden></div>
-    <div id="orderSummary" hidden></div>
+    <fieldset id="docsSet"><legend>Documents – upload everything here <span class="opt" id="docCount"></span></legend>
+      <div class="drop big" id="dropZone">
+        <div><span class="eyebrow">Drop the files here, or click Choose files</span>
+          <p class="help">Drop every file for this order here: CRS report, engagement letter, MLS listing, plans, specs, budget, HOA documents, purchase contract, counters, addenda, disclosures, leaseback, preliminary title, legal description, permit records. Each one is sorted by kind, kept in this browser on this computer, and shared with the comp genie and the iPad.</p></div>
+        <label class="btn primary" for="docFile">Choose files<input type="file" id="docFile" multiple></label>
+      </div>
+      <p class="help pre" id="docStatus"></p>
+      <div id="docList"></div>
+      <div class="searchrow"><label>Search every document, sticky note and accepted entry in this order<input id="docSearch" type="search" placeholder="for example: easement, rent, credit, Mello-Roos"></label><button type="button" class="btn" id="docSearchBtn">Search</button></div>
+      <div id="docHits"></div>
+      <div id="stickyList" class="facts-box"></div>
+      <div id="factList" class="facts-box"></div>
+    </fieldset>
   </div>
  </div>
 </section>
@@ -409,9 +412,9 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
       <li>In about half a minute Claude’s findings appear as blue suggestions in the checklist, each with its page number. Click the page number to check it, edit if needed, then <b>Accept</b> or <b>Reject</b>. Only accepted entries go into the order and into the drafted summaries (title summary, contract analysis), which you copy into SFREP.</li>
       <li>Each send is recorded on the order (date, document, pages, redacted or not). On a <b>Yes</b> order you may also use <b>Send without redacting</b>.</li></ol></details>
     <details><summary>Engagement letter</summary><ol>
-      <li>On <b>Order &amp; letter</b>, the letter preview on the right fills in from the order. Fill the scope, fee and delivery sections.</li>
+      <li>On <b>Order &amp; letter</b>, the letter preview on the left fills in from the order. Fill the scope, fee and delivery sections.</li>
       <li>Click <b>Download Word letter</b>; it saves to Downloads, named by file number and street. Send it as you do now.</li>
-      <li>When the client sends their own engagement letter, drop it in Documents. It is checked for AI and confidentiality wording, and it shows on the right instead of your letter (My letter is set to “Not needed – client’s letter”). Click <b>Read and list requirements</b> to note the form, addenda, photo rules, due date, fee and inspection to-dos. <b>Write my own letter instead</b> switches back.</li>
+      <li>When the client sends their own engagement letter, drop it in Documents. It is checked for AI and confidentiality wording, and it shows on the left instead of your letter (My letter is set to “Not needed – client’s letter”). Click <b>Read and list requirements</b> to note the form, addenda, photo rules, due date, fee and inspection to-dos. <b>Write my own letter instead</b> switches back.</li>
       <li>Change the AI paragraph on <b>Standard wording</b>.</li></ol></details>
     <details><summary>Market conditions</summary><ol>
       <li>Open the order, then the <b>Market</b> tab.</li><li>In Flexmls, search the market area (actives, pendings and sales for the look-back period), export as CSV, and drop it in box 1. Untick listings that are not competitive.</li>
@@ -461,7 +464,7 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
 </div>
 <div id="toast" role="status" hidden></div>
 <script>
-const BUILD='o1-1016-0111';
+const BUILD='o1-1016-0114';
 const G = (() => {
 /* ---------------- small helpers ---------------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -1672,7 +1675,7 @@ async function readDoc(meta, file) { // turns the readable kinds into facts; not
     } else if (meta.type === 'clientLetter') {
       if (isPdf(file) || /\.(docx|txt)$/i.test(file.name)) { await scanFile(file); meta.note = cur.orderDoc ? 'checked for AI wording' : '';
         try { const F = await readClientLetter(file); const did = applyClientLetter(F); cur = readForm(); cur.letterFill = did; cur.letterFields = F; if (did.length) meta.note += ' · ' + did.length + ' items filled in'; } catch (e) { console.warn('letter fill', e); } }
-      if ($('#f_status').value === 'Drafted' && !cur.letterMade) { $('#f_status').value = 'Client letter'; toast('The client’s letter now shows on the right instead of yours. To write your own, set My letter back to Drafted.', 6000); }
+      if ($('#f_status').value === 'Drafted' && !cur.letterMade) { $('#f_status').value = 'Client letter'; toast('The client’s letter now shows on the left instead of yours. To write your own, set My letter back to Drafted.', 6000); }
     } else if (meta.type === 'floorplan') {
       const prev = await planPreview(file, meta.page || 1); if (prev) { const rec = await ODB.get('docs', meta.id); rec.preview = prev.src; rec.pages = prev.pages; await ODB.put('docs', rec); meta.pages = prev.pages; meta.note = 'ready for the iPad'; }
     }
@@ -3061,13 +3064,13 @@ function renderClientView(f) {
   const key = L.map(d => d.id).join(',') + '|' + (f.facts || []).length + '|' + ((f.orderDoc || {}).verdict || '');
   if (key === clShown && box.innerHTML) return; clShown = key;
   const req = (f.facts || []).filter(x => L.some(d => d.id === x.docId));
-  const V = { stop: 'AI not allowed by this letter.', look: 'AI only with confidential information removed – read the marked paragraphs on the left.', clear: 'No AI or confidentiality restriction found.' };
+  const V = { stop: 'AI not allowed by this letter.', look: 'AI only with confidential information removed – read the marked paragraphs below.', clear: 'No AI or confidentiality restriction found.' };
   box.innerHTML = `<h3>Client’s engagement letter</h3>
     ${L.length ? `${L.map(d => `<div class="row"><b>${h(d.name)}</b><span class="grow"></span><button type="button" class="btn small" data-clread="${d.id}">Read and list requirements</button><button type="button" class="btn ghost small" data-clopen="${d.id}">Open</button></div>`).join('')}
       ${f.orderDoc && f.orderDoc.verdict ? `<p class="help"><b>AI check:</b> ${h(V[f.orderDoc.verdict] || '')}</p>` : ''}
       ${req.length ? `<table class="facts">${req.map(x => `<tr><th>${h(x.label)}</th><td>${h(x.value)}${x.page ? ' <small class="muted">p. ' + x.page + '</small>' : ''}</td></tr>`).join('')}</table>` : '<p class="help">Click <b>Read and list requirements</b> to note the report form, addenda, photo rules, due date, fee and inspection to-dos from it.</p>'}
       <div class="clpages" id="clPages"></div>`
-    : '<p class="help">Drop the client’s engagement letter or order into <b>Documents</b> on the left. It shows here instead of your letter.</p>'}
+    : '<p class="help">Drop the client’s engagement letter or order into <b>Documents</b> on the right. It shows here instead of your letter.</p>'}
     <div class="row"><button type="button" class="btn ghost small" id="clMine">Write my own letter instead</button></div>`;
   box.querySelectorAll('[data-clread]').forEach(b => b.onclick = () => { saveLetter(true, true); openReader(b.dataset.clread); });
   box.querySelectorAll('[data-clopen]').forEach(b => b.onclick = () => openDoc(b.dataset.clopen));

@@ -190,13 +190,13 @@ function renderClientView(f) {
   const key = L.map(d => d.id).join(',') + '|' + (f.facts || []).length + '|' + ((f.orderDoc || {}).verdict || '');
   if (key === clShown && box.innerHTML) return; clShown = key;
   const req = (f.facts || []).filter(x => L.some(d => d.id === x.docId));
-  const V = { stop: 'AI not allowed by this letter.', look: 'AI only with confidential information removed – read the marked paragraphs on the left.', clear: 'No AI or confidentiality restriction found.' };
+  const V = { stop: 'AI not allowed by this letter.', look: 'AI only with confidential information removed – read the marked paragraphs below.', clear: 'No AI or confidentiality restriction found.' };
   box.innerHTML = `<h3>Client’s engagement letter</h3>
     ${L.length ? `${L.map(d => `<div class="row"><b>${h(d.name)}</b><span class="grow"></span><button type="button" class="btn small" data-clread="${d.id}">Read and list requirements</button><button type="button" class="btn ghost small" data-clopen="${d.id}">Open</button></div>`).join('')}
       ${f.orderDoc && f.orderDoc.verdict ? `<p class="help"><b>AI check:</b> ${h(V[f.orderDoc.verdict] || '')}</p>` : ''}
       ${req.length ? `<table class="facts">${req.map(x => `<tr><th>${h(x.label)}</th><td>${h(x.value)}${x.page ? ' <small class="muted">p. ' + x.page + '</small>' : ''}</td></tr>`).join('')}</table>` : '<p class="help">Click <b>Read and list requirements</b> to note the report form, addenda, photo rules, due date, fee and inspection to-dos from it.</p>'}
       <div class="clpages" id="clPages"></div>`
-    : '<p class="help">Drop the client’s engagement letter or order into <b>Documents</b> on the left. It shows here instead of your letter.</p>'}
+    : '<p class="help">Drop the client’s engagement letter or order into <b>Documents</b> on the right. It shows here instead of your letter.</p>'}
     <div class="row"><button type="button" class="btn ghost small" id="clMine">Write my own letter instead</button></div>`;
   box.querySelectorAll('[data-clread]').forEach(b => b.onclick = () => { saveLetter(true, true); openReader(b.dataset.clread); });
   box.querySelectorAll('[data-clopen]').forEach(b => b.onclick = () => openDoc(b.dataset.clopen));

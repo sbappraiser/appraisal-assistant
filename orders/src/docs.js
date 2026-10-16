@@ -111,7 +111,7 @@ async function readDoc(meta, file) { // turns the readable kinds into facts; not
     } else if (meta.type === 'clientLetter') {
       if (isPdf(file) || /\.(docx|txt)$/i.test(file.name)) { await scanFile(file); meta.note = cur.orderDoc ? 'checked for AI wording' : '';
         try { const F = await readClientLetter(file); const did = applyClientLetter(F); cur = readForm(); cur.letterFill = did; cur.letterFields = F; if (did.length) meta.note += ' · ' + did.length + ' items filled in'; } catch (e) { console.warn('letter fill', e); } }
-      if ($('#f_status').value === 'Drafted' && !cur.letterMade) { $('#f_status').value = 'Client letter'; toast('The client’s letter now shows on the right instead of yours. To write your own, set My letter back to Drafted.', 6000); }
+      if ($('#f_status').value === 'Drafted' && !cur.letterMade) { $('#f_status').value = 'Client letter'; toast('The client’s letter now shows on the left instead of yours. To write your own, set My letter back to Drafted.', 6000); }
     } else if (meta.type === 'floorplan') {
       const prev = await planPreview(file, meta.page || 1); if (prev) { const rec = await ODB.get('docs', meta.id); rec.preview = prev.src; rec.pages = prev.pages; await ODB.put('docs', rec); meta.pages = prev.pages; meta.note = 'ready for the iPad'; }
     }
