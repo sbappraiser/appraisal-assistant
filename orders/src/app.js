@@ -14,7 +14,7 @@ let aiText = store.get('aiText', null);
 let cur = null;           // the letter being edited
 let clientCount = 1;
 
-const NEW_FIELDS = { stage: 'New', inspDate: '', inspTime: '', effDate: '', unit: '', apn: '', county: '', lat: '', lon: '', owner: '', legal: '', borrower: '',
+const NEW_FIELDS = { street: '', city: '', state: 'CA', zip: '', zip4: '', stage: 'New', inspDate: '', inspTime: '', effDate: '', unit: '', apn: '', county: '', lat: '', lon: '', owner: '', legal: '', borrower: '',
   lenderDiff: false, govAgency: '', investorId: '', reportForm: '', lenderCo: '', lenderAddr1: '', lenderAddr2: '', loanNo: '', amcUsed: false, amcCo: '', amcAddr1: '', amcAddr2: '', amcLic: '', amcState: 'CA', amcExp: '', amcFee: '', amcRef: '', notes: '', todos: '' };
 function blankLetter() {
   return { ...NEW_FIELDS, docs: [], crs: null, listings: [], permits: null, created: new Date().toISOString(), id: uid(), status: 'Client letter', reportForm: 'uad36', fileNo: '', orderDate: todayISO(), dueDate: '', aiUse: '', orderDoc: null, agreeDate: todayISO(), type: 'uadPurchase', clients: [{}], address: '', propType: 'sfr', propTypeOther: '',
@@ -39,7 +39,8 @@ function readForm() {
 function writeForm(f) {
   if (!f.payWhen) f.payWhen = (f.payDue || '').trim() ? 'other' : 'inspection';
   if (!f.deliveryN) { const dp = deliveryParts(f, TYPES[f.type] || TYPES.dod); f.deliveryN = dp.n; f.deliveryUnit = dp.unit; f.deliveryFrom = f.deliveryFrom || 'either'; }
-  FIELDS.forEach(k => { const el = $('#f_' + k); if (!el) return; if (el.type === 'checkbox') el.checked = f[k] !== false && !!f[k]; else el.value = f[k] ?? ''; });
+  loadOrderAddr(f);
+  FIELDS.forEach(k => { if (ADDR_KEYS.includes(k) || k === 'address') return; const el = $('#f_' + k); if (!el) return; if (el.type === 'checkbox') el.checked = f[k] !== false && !!f[k]; else el.value = f[k] ?? ''; });
   clientCount = Math.max(1, Math.min(3, (f.clients || []).length || 1));
   renderClients(f.clients || [{}]);
   document.querySelectorAll('input[name=aiUse]').forEach(r => { r.checked = r.value === f.aiUse; });

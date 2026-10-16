@@ -177,7 +177,7 @@ function applyCRS(c) {
   set('county', (c.county || '').replace(/,\s*[A-Z]{2}$/, '').replace(/\s+County$/i, ''));
   const line = [G.titleCase(c.addr), [G.titleCase(c.city), [c.state, c.zip].filter(Boolean).join(' ')].filter(Boolean).join(', ')].filter(Boolean).join(', ');
   const a = $('#f_address');
-  if (!a.value.trim()) a.value = line;
+  if (!a.value.trim() || !c.addr || sameStreet(c.addr, a.value.split(',')[0])) { if (c.addr) setOrderAddr({ street: G.titleCase(c.addr), city: G.titleCase(c.city || ''), state: c.state || '', zip: c.zip || '', zip4: c.zip4 || '' }, true); } // the CRS has the USPS form of the address
   else if (c.addr && G.addrKey(c.addr) !== G.addrKey(a.value.split(',')[0])) { toast('Note: this CRS report is for ' + G.titleCase(c.addr) + ', not ' + a.value.split(',')[0], 6000); const m = (cur.docs || []).find(d => d.name === c.file); if (m) m.warn = 'This CRS report is for ' + G.titleCase(c.addr) + ', not ' + a.value.split(',')[0] + '.'; }
   if (/condo/i.test(c.landUse || '') && $('#f_propType').value === 'sfr') { $('#f_propType').value = 'condo'; applyPropDefaults(); }
 }
@@ -195,7 +195,7 @@ function applyListings(rows, fileName) {
   const old = (cur.listings || []).filter(x => !mine.some(r => r.mls === x.mls));
   cur.listings = [...old, ...mine.map(keep)].sort((a, b) => String(b.listDate || '').localeCompare(String(a.listDate || '')));
   const a = $('#f_address'); const r0 = mine[0];
-  if (!a.value.trim() && r0.addr) a.value = [r0.addr, r0.city, 'CA ' + (r0.zip || '')].filter(Boolean).join(', ').trim();
+  if (!a.value.trim() && r0.addr) setOrderAddr({ street: r0.addr + (r0.unit && !/#|unit|apt/i.test(r0.addr) ? ' #' + r0.unit : ''), city: r0.city || '', state: 'CA', zip: r0.zip || '' });
   if (!$('#f_apn').value && r0.apn) $('#f_apn').value = r0.apn;
   if (!$('#f_lat').value && r0.lat) { $('#f_lat').value = r0.lat; $('#f_lon').value = r0.lon; }
   // the letter's listing / contract line
@@ -286,7 +286,7 @@ function applyClientLetter(F) { // fills only empty boxes (type, form, client al
   set('fee', F.fee ? Number(String(F.fee).replace(/[^\d.]/g, '')).toLocaleString() : '', 'Fee'); set('amcRef', F.ref, 'Client / AMC reference');
   set('otherUsers', F.users && client && F.users.toLowerCase().includes(client.toLowerCase().slice(0, 12)) ? '' : F.users, 'Other intended users');
   if (F.rent) set('rent', true, 'Rent schedule (1007) requested'); if (F.cost) set('apCost', true, 'Cost approach required'); if (F.exterior) { $('#f_inspection').value = 'exterior'; did.push(['Inspection', 'Exterior only']); }
-  if (F.propAddr) { const a = $('#f_address'); if (!a.value.trim()) { a.value = G.titleCase(F.propAddr).replace(/\b(Ca)\b/, 'CA'); did.push(['Property address', a.value]); } else if (!sameStreet(F.propAddr, a.value)) did.push(['⚠ Address in the letter', F.propAddr + ' – not the same as the order']); }
+  if (F.propAddr) { const a = $('#f_address'); if (!a.value.trim()) { setOrderAddr(splitAddr(G.titleCase(F.propAddr).replace(/\b(Ca)\b/, 'CA'))); did.push(['Property address', a.value]); } else if (!sameStreet(F.propAddr, a.value)) did.push(['⚠ Address in the letter', F.propAddr + ' – not the same as the order']); }
   const notes = [F.use && 'Intended use per client: ' + F.use, F.users && 'Intended user per client: ' + F.users, F.price && 'Sales price per order: $' + Number(String(F.price).replace(/[^\d.]/g, '')).toLocaleString(), F.mc && '1004MC required', F.occupancy && 'Occupancy: ' + F.occupancy].filter(Boolean);
   if (notes.length) { const n = $('#f_notes'); const add = notes.filter(x => !n.value.includes(x)); if (add.length) { n.value = (n.value ? n.value + '\n' : '') + add.join('\n'); did.push(['Notes', add.join('; ')]); } }
   return did;

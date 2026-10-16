@@ -165,6 +165,9 @@ Client letter reader (readClientLetter/applyClientLetter in docs.js): label/valu
 ## Colours (Oct 15 2026, her choice)
 Same colours as her inspection app: tangerine #ff8a00 fills (buttons, current step, black text and border), #b35a00 orange text, #ffdcb5 soft; green #0fa84a round check marks (--go) on finished items; warnings red #e00000 on #ffe1e1. Done items get a green ✓. Market graphs for the report kept neutral blue.
 
+## Property address in parts (Oct 15 2026, her request) – orders/src/addr.js
+Fields street, city, state (CA), zip, zip4; #f_address (hidden) = joined line the rest of the app reads. City select: SB County (Santa Barbara, Goleta, Montecito, Summerland, Carpinteria) then Ventura County (Ventura, Ojai, Oak View, Oxnard, Camarillo, Santa Paula) + "Other – type it". ZIP select: her ZIPs 93101 93103 93105 93108 93109 93110 93111 93117 93013 93067 + Other. ZIP→city and city→ZIP fill only empty boxes. CRS (same street) overwrites all parts with its USPS form incl. ZIP+4; old orders split from the address line on open. County fills Santa Barbara for her ZIPs if empty.
+
 ## File numbers (Oct 16 2026, her rule) – wizard.js fileCode / suggestFileNo
 First letter of the street name + following consonants to 4 letters (if fewer than 4 consonants, first 4 letters: Bath, Hill, Oak), capitalized; directions (W., East) skipped; then house number, "-unit" lowercased, then "-N". N = 1 + highest prior report for the same code among hub orders; old ACI-style numbers (code + letter a/b/c…, d was 1004D, crashed clones took the next letter) count by letter position. Filled in New order step 1 until she types her own. ACI archive not yet checked for prior reports.
 

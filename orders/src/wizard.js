@@ -63,17 +63,18 @@ function renderWizard() {
   const head = `<ol class="wzsteps">${steps.map((s, i) => `<li class="${WZ.step === i + 1 ? 'on' : WZ.step > i + 1 ? 'done' : ''}">${i + 1} · ${s}</li>`).join('')}</ol>`;
   if (WZ.step === 1) {
     box.innerHTML = head + `<section class="mkcard"><div class="grid3"><label>File number<input id="wzFile" value="${h(f.fileNo)}" placeholder="your file number"></label>
-      <label style="grid-column:span 2">Property address<input id="wzAddr" value="${h(f.address)}" placeholder="1136 Hill Road, Santa Barbara, CA 93108"></label></div>
+</div>${addrRowHTML('wz_', readAddr('f_'))}
       <p class="help" id="wzFileNote"></p>
-      <p class="help">The address is used to check that every document you upload is for this property. If you are not sure of it, leave it blank: the CRS report fills it in.</p>
+      <p class="help">Type the street address (with the unit, e.g. #3). City and ZIP: pick them, or leave them for the CRS report to fill in the USPS form with the ZIP+4. The address is used to check that every document you upload is for this property.</p>
       ${q('letter', 'Engagement letter', [['client', 'The client sent one (lender / AMC order)'], ['mine', 'I will write one']])}
       ${q('form', 'Report form', [['uad36', 'UAD 3.6 (Traditional)'], ['uad26', 'UAD 2.6'], ['gpar', 'GPAR'], ['other', 'Other']])}
       ${q('purchase', 'Is this a purchase?', [['yes', 'Yes'], ['no', 'No']])}
       ${q('listed', 'Is the property listed now, or was it in the last 12 months?', [['yes', 'Yes'], ['no', 'No'], ['unsure', 'Not sure']])}
       <div class="row"><button type="button" class="btn primary" id="wzNext1">Next: documents →</button><button type="button" class="btn ghost" id="wzCancel">Cancel</button></div></section>`;
-    const sync = () => { $('#f_fileNo').value = $('#wzFile').value; $('#f_address').value = $('#wzAddr').value; update(); };
+    const sync = () => { $('#f_fileNo').value = $('#wzFile').value; { const v = readAddr('wz_'); writeAddr('f_', v); $('#f_address').value = joinAddr(v); } update(); };
     $('#wzFile').oninput = () => { w.fileTyped = true; sync(); };
-    $('#wzAddr').oninput = () => { if (!w.fileTyped || !$('#wzFile').value.trim()) { const sug = suggestFileNo($('#wzAddr').value); $('#wzFile').value = sug; $('#wzFileNote').textContent = sug ? 'Made from your rule: street letters + house number' + (/-[2-9]\d*$/.test(sug) ? ' – you have appraised this property before in the assistant, so this is report ' + sug.split('-').pop() : '') + '. Change it if needed.' : ''; } sync(); };
+    const addrIn = () => { if (!w.fileTyped || !$('#wzFile').value.trim()) { const sug = suggestFileNo($('#wz_street').value); $('#wzFile').value = sug; $('#wzFileNote').textContent = sug ? 'Made from your rule: street letters + house number' + (/-[2-9]\d*$/.test(sug) ? ' – you have appraised this property before in the assistant, so this is report ' + sug.split('-').pop() : '') + '. Change it if needed.' : ''; } sync(); };
+    wireAddr('wz_', () => { addrIn(); });
     box.querySelectorAll('[data-wq]').forEach(b => b.onclick = () => { w[b.dataset.wq] = b.dataset.v; if (b.dataset.wq === 'form') { $('#f_reportForm').value = b.dataset.v; cur.formPicked = true; syncVisibility(); } renderWizard(); });
     $('#wzCancel').onclick = () => { showTab('home'); renderHome(); };
     $('#wzNext1').onclick = () => { if (!w.letter) { toast('Choose who writes the engagement letter'); return; }

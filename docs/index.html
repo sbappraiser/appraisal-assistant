@@ -158,6 +158,9 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
 .hmpanel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; } .hmpanel h3 { margin: 0; font: 600 18px var(--display); }
 .hmtable tbody tr { cursor: pointer; } .hmtable tbody tr:hover, .hmtable tbody tr:focus { background: var(--accent-soft); outline: none; }
 .hmfind { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) auto; gap: 10px; align-items: end; margin-top: 10px; } @media (max-width: 760px) { .hmfind { grid-template-columns: minmax(0, 1fr); } }
+.addrrow { display: grid; grid-template-columns: minmax(0, 2.4fr) minmax(0, 1.4fr) 64px minmax(0, 1fr) 76px; gap: 10px 12px; } #addrBox .addrrow { grid-template-columns: minmax(0, 1.5fr) 60px minmax(0, 1fr) 72px; } #addrBox .a-street { grid-column: 1 / -1; }
+@media (max-width: 700px) { .addrrow { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } .addrrow .a-street { grid-column: 1 / -1; } }
+.addrrow select + input { margin-top: 6px; }
 </style>
 </head>
 <body>
@@ -196,8 +199,8 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
     <fieldset><legend>Order</legend>
       <div class="grid3">
         <label>File number<input id="f_fileNo" placeholder="your file number"></label>
-        <label style="grid-column:span 2">Property address<input id="f_address" placeholder="1450 East Valley Road, Santa Barbara, CA 93108"></label>
-      </div>
+        </div>
+      <div id="addrBox"></div><input type="hidden" id="f_address">
       <div class="grid3">
         <label>Order received<input id="f_orderDate" type="date"></label>
         <label>Report due<input id="f_dueDate" type="date"></label>
@@ -359,7 +362,7 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
     <input id="helpSearch" type="search" placeholder="for example: sticky, blur, iPad, backup, market">
     <details><summary>Start a new order</summary><ol>
       <li>On <b>Home</b>, click <b>New order</b>.</li>
-      <li><b>1 · Order:</b> type the property address and the file number fills in by your rule: the first 4 consonants of the street name (short names like Bath or Hill keep their first 4 letters), the house number, the unit if any, and the report count. 1729 Bath St → <b>Bath1729-1</b>; unit B → <b>Bath1729-b-1</b>; 223 W. Arrellaga St #3 → <b>Arrl223-3-1</b>. If you have done this property before in the assistant (or an old order is numbered the ACI way, like Bath1729a or Bath1729b), the count goes up: <b>Bath1729-2</b>. You can always type over it. Answer three questions: did the client send an engagement letter or will you write one, is it a purchase, and is the property listed now or in the last 12 months. Click <b>Next</b>.</li>
+      <li><b>1 · Order:</b> type the <b>street address</b> only (with the unit, e.g. #3), then Tab to <b>City</b>, <b>State</b>, <b>ZIP</b> and <b>+4</b>. City and ZIP are drop-down lists of the places you work (Santa Barbara County first, then Ventura County) – click and scroll with the mouse wheel. Not in the list? Pick <b>Other – type it</b>. Picking a ZIP fills the city, and Goleta, Carpinteria, Summerland or Montecito fill their ZIP; you can change either. When you upload the CRS report, it puts in the USPS form of the address with the ZIP+4. The file number fills in by your rule: the first 4 consonants of the street name (short names like Bath or Hill keep their first 4 letters), the house number, the unit if any, and the report count. 1729 Bath St → <b>Bath1729-1</b>; unit B → <b>Bath1729-b-1</b>; 223 W. Arrellaga St #3 → <b>Arrl223-3-1</b>. If you have done this property before in the assistant (or an old order is numbered the ACI way, like Bath1729a or Bath1729b), the count goes up: <b>Bath1729-2</b>. You can always type over it. Answer three questions: did the client send an engagement letter or will you write one, is it a purchase, and is the property listed now or in the last 12 months. Click <b>Next</b>.</li>
       <li><b>2 · Documents:</b> drop each file in its box – client’s engagement letter, CRS report, legal description, MLS listing with history, purchase contract with counters and addenda (as many PDFs as you have), preliminary title report, and anything else under <b>Other documents</b>. Each file is read as you add it, and checked against the property address: a file for another property is marked ⚠ and nothing is filled in from it.</li>
       <li><b>3 · Check:</b> see what was filled in. The client’s letter sets the client, loan number, borrower, due date, fee, report form, rent schedule, and <b>AI use</b>: a ban (for example “no AI without prior authorization”) sets No AI; confidentiality wording sets Yes – only with confidential information removed; nothing sets Yes. You can change any of it on the order.</li>
       <li>Click <b>Read</b> next to the prelim or contract to summarize it, then <b>Open the order</b> – or, if you are writing the letter, <b>Next: write my engagement letter</b>.</li>
@@ -456,7 +459,7 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
 </div>
 <div id="toast" role="status" hidden></div>
 <script>
-const BUILD='o1-1016-0059';
+const BUILD='o1-1016-0106';
 const G = (() => {
 /* ---------------- small helpers ---------------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -1500,6 +1503,60 @@ const ODB = (() => {
   };
 })();
 
+/* Property address in parts (her request Oct 15 2026): street typed by her; city, state, ZIP, ZIP+4 picked or filled from the CRS (USPS format).
+   #f_address stays the full line "street, city, ST zip-zip4" that the rest of the app reads. */
+const AA_CITIES = [['Santa Barbara County', ['Santa Barbara', 'Goleta', 'Montecito', 'Summerland', 'Carpinteria']], ['Ventura County', ['Ventura', 'Ojai', 'Oak View', 'Oxnard', 'Camarillo', 'Santa Paula']]];
+const AA_ZIPS = { '93101': 'Santa Barbara', '93103': 'Santa Barbara', '93105': 'Santa Barbara', '93108': 'Santa Barbara', '93109': 'Santa Barbara', '93110': 'Santa Barbara', '93111': 'Santa Barbara', '93117': 'Goleta', '93013': 'Carpinteria', '93067': 'Summerland' };
+const CITY_ZIP = { Goleta: '93117', Carpinteria: '93013', Summerland: '93067', Montecito: '93108' };
+const ADDR_KEYS = ['street', 'city', 'state', 'zip', 'zip4'];
+const cityList = () => AA_CITIES.flatMap(g => g[1]);
+function addrRowHTML(p, v) {
+  v = v || {}; const esc = x => String(x ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+  return `<div class="addrrow">
+    <label class="a-street">Property address<input id="${p}street" value="${esc(v.street)}" placeholder="Property address" autocomplete="off"></label>
+    <label class="a-city">City<select id="${p}citySel"><option value=""></option>${AA_CITIES.map(([g, cs]) => `<optgroup label="${g}">${cs.map(c => `<option>${c}</option>`).join('')}</optgroup>`).join('')}<option value="__other">Other – type it</option></select><input id="${p}city" value="${esc(v.city)}" placeholder="type the city" hidden></label>
+    <label class="a-state">State<input id="${p}state" value="${esc(v.state || 'CA')}" maxlength="2"></label>
+    <label class="a-zip">ZIP<select id="${p}zipSel"><option value=""></option>${Object.keys(AA_ZIPS).map(z => `<option>${z}</option>`).join('')}<option value="__other">Other – type it</option></select><input id="${p}zip" value="${esc(v.zip)}" placeholder="ZIP" inputmode="numeric" maxlength="5" hidden></label>
+    <label class="a-zip4">+4<input id="${p}zip4" value="${esc(v.zip4)}" placeholder="0000" inputmode="numeric" maxlength="4"></label></div>`;
+}
+/* show a picked value in the select, or switch to the typed box when it is not in the list */
+function syncPick(p, key, list) {
+  const inp = document.getElementById(p + key), sel = document.getElementById(p + key + 'Sel'); if (!inp || !sel) return;
+  const v = inp.value.trim(); const hit = list.find(x => x.toLowerCase() === v.toLowerCase());
+  if (!v && sel.value !== '__other') { sel.value = ''; inp.hidden = true; } else if (hit) { sel.value = hit; inp.value = hit; inp.hidden = true; } else if (v) { sel.value = '__other'; inp.hidden = false; }
+}
+function wireAddr(p, onChange) {
+  const g = k => document.getElementById(p + k);
+  const pick = (key, list, after) => { const sel = g(key + 'Sel'), inp = g(key);
+    sel.onchange = () => { if (sel.value === '__other') { inp.hidden = false; inp.value = ''; inp.focus(); } else { inp.value = sel.value; inp.hidden = true; if (after) after(sel.value); } onChange(); };
+    inp.oninput = () => onChange(); syncPick(p, key, list); };
+  pick('city', cityList(), c => { if (!g('zip').value && CITY_ZIP[c]) { g('zip').value = CITY_ZIP[c]; syncPick(p, 'zip', Object.keys(AA_ZIPS)); } });
+  pick('zip', Object.keys(AA_ZIPS), z => { if (!g('city').value && AA_ZIPS[z]) { g('city').value = AA_ZIPS[z]; syncPick(p, 'city', cityList()); } });
+  g('street').addEventListener('input', onChange); g('state').oninput = () => { g('state').value = g('state').value.toUpperCase(); onChange(); };
+  g('zip4').oninput = () => { g('zip4').value = g('zip4').value.replace(/\D/g, ''); onChange(); };
+}
+function readAddr(p) { const o = {}; ADDR_KEYS.forEach(k => { const el = document.getElementById(p + k); o[k] = el ? el.value.trim() : ''; }); return o; }
+function writeAddr(p, v) { ADDR_KEYS.forEach(k => { const el = document.getElementById(p + k); if (el && v[k] !== undefined) el.value = v[k]; }); syncPick(p, 'city', cityList()); syncPick(p, 'zip', Object.keys(AA_ZIPS)); }
+function joinAddr(v) { return [v.street, v.city, [v.state, v.zip ? v.zip + (v.zip4 ? '-' + v.zip4 : '') : ''].filter(Boolean).join(' ')].filter(Boolean).join(', '); }
+function splitAddr(line) { /* "1729 Bath St, Santa Barbara, CA 93101-1234" → parts */
+  const parts = String(line || '').split(',').map(s => s.trim()).filter(Boolean); const o = { street: parts[0] || '', city: '', state: '', zip: '', zip4: '' };
+  const last = parts.length > 1 ? parts[parts.length - 1] : ''; const m = last.match(/^([A-Za-z]{2})?\s*(\d{5})?(?:-(\d{4}))?$/);
+  if (m && (m[1] || m[2])) { o.state = (m[1] || '').toUpperCase(); o.zip = m[2] || ''; o.zip4 = m[3] || ''; if (parts.length > 2) o.city = parts.slice(1, -1).join(', '); }
+  else if (parts.length > 1) { const m2 = last.match(/^(.*?)\s+([A-Za-z]{2})\s*(\d{5})?(?:-(\d{4}))?$/); if (m2) { o.city = m2[1]; o.state = m2[2].toUpperCase(); o.zip = m2[3] || ''; o.zip4 = m2[4] || ''; } else o.city = parts.slice(1).join(', '); }
+  return o;
+}
+/* the order page */
+function orderAddrChanged() { $('#f_address').value = joinAddr(readAddr('f_')); const z = $('#f_zip').value; if (!$('#f_county').value.trim()) { if (AA_ZIPS[z]) $('#f_county').value = 'Santa Barbara'; else if (/^930(0[0-9]|1[0-2]|2[0-9]|3[0-6]|4[0-9]|6[0-6])$/.test(z) && !AA_ZIPS[z]) {} } update(); }
+function loadOrderAddr(f) { const box = $('#addrBox'); if (!box) return;
+  let v = { street: f.street || '', city: f.city || '', state: f.state || '', zip: f.zip || '', zip4: f.zip4 || '' };
+  if (!v.street && f.address) v = { ...splitAddr(f.address) }; if (!v.state) v.state = 'CA';
+  if (!box.dataset.built) { box.innerHTML = addrRowHTML('f_', v); box.dataset.built = '1'; wireAddr('f_', orderAddrChanged); }
+  writeAddr('f_', v); $('#f_address').value = joinAddr(v);
+}
+/* used by the CRS, MLS and letter readers */
+function setOrderAddr(v, force) { const old = readAddr('f_'); const n = { ...old };
+  ADDR_KEYS.forEach(k => { if (v[k] && (force || !old[k] || (k === 'state' && old[k] === 'CA'))) n[k] = v[k]; }); writeAddr('f_', n); $('#f_address').value = joinAddr(n); return n; }
+
 /* =====================================================================
    Documents: one upload per order. Each file is kept in this browser (IndexedDB),
    typed, and – for the kinds the assistant can read – turned into order facts.
@@ -1679,7 +1736,7 @@ function applyCRS(c) {
   set('county', (c.county || '').replace(/,\s*[A-Z]{2}$/, '').replace(/\s+County$/i, ''));
   const line = [G.titleCase(c.addr), [G.titleCase(c.city), [c.state, c.zip].filter(Boolean).join(' ')].filter(Boolean).join(', ')].filter(Boolean).join(', ');
   const a = $('#f_address');
-  if (!a.value.trim()) a.value = line;
+  if (!a.value.trim() || !c.addr || sameStreet(c.addr, a.value.split(',')[0])) { if (c.addr) setOrderAddr({ street: G.titleCase(c.addr), city: G.titleCase(c.city || ''), state: c.state || '', zip: c.zip || '', zip4: c.zip4 || '' }, true); } // the CRS has the USPS form of the address
   else if (c.addr && G.addrKey(c.addr) !== G.addrKey(a.value.split(',')[0])) { toast('Note: this CRS report is for ' + G.titleCase(c.addr) + ', not ' + a.value.split(',')[0], 6000); const m = (cur.docs || []).find(d => d.name === c.file); if (m) m.warn = 'This CRS report is for ' + G.titleCase(c.addr) + ', not ' + a.value.split(',')[0] + '.'; }
   if (/condo/i.test(c.landUse || '') && $('#f_propType').value === 'sfr') { $('#f_propType').value = 'condo'; applyPropDefaults(); }
 }
@@ -1697,7 +1754,7 @@ function applyListings(rows, fileName) {
   const old = (cur.listings || []).filter(x => !mine.some(r => r.mls === x.mls));
   cur.listings = [...old, ...mine.map(keep)].sort((a, b) => String(b.listDate || '').localeCompare(String(a.listDate || '')));
   const a = $('#f_address'); const r0 = mine[0];
-  if (!a.value.trim() && r0.addr) a.value = [r0.addr, r0.city, 'CA ' + (r0.zip || '')].filter(Boolean).join(', ').trim();
+  if (!a.value.trim() && r0.addr) setOrderAddr({ street: r0.addr + (r0.unit && !/#|unit|apt/i.test(r0.addr) ? ' #' + r0.unit : ''), city: r0.city || '', state: 'CA', zip: r0.zip || '' });
   if (!$('#f_apn').value && r0.apn) $('#f_apn').value = r0.apn;
   if (!$('#f_lat').value && r0.lat) { $('#f_lat').value = r0.lat; $('#f_lon').value = r0.lon; }
   // the letter's listing / contract line
@@ -1788,7 +1845,7 @@ function applyClientLetter(F) { // fills only empty boxes (type, form, client al
   set('fee', F.fee ? Number(String(F.fee).replace(/[^\d.]/g, '')).toLocaleString() : '', 'Fee'); set('amcRef', F.ref, 'Client / AMC reference');
   set('otherUsers', F.users && client && F.users.toLowerCase().includes(client.toLowerCase().slice(0, 12)) ? '' : F.users, 'Other intended users');
   if (F.rent) set('rent', true, 'Rent schedule (1007) requested'); if (F.cost) set('apCost', true, 'Cost approach required'); if (F.exterior) { $('#f_inspection').value = 'exterior'; did.push(['Inspection', 'Exterior only']); }
-  if (F.propAddr) { const a = $('#f_address'); if (!a.value.trim()) { a.value = G.titleCase(F.propAddr).replace(/\b(Ca)\b/, 'CA'); did.push(['Property address', a.value]); } else if (!sameStreet(F.propAddr, a.value)) did.push(['⚠ Address in the letter', F.propAddr + ' – not the same as the order']); }
+  if (F.propAddr) { const a = $('#f_address'); if (!a.value.trim()) { setOrderAddr(splitAddr(G.titleCase(F.propAddr).replace(/\b(Ca)\b/, 'CA'))); did.push(['Property address', a.value]); } else if (!sameStreet(F.propAddr, a.value)) did.push(['⚠ Address in the letter', F.propAddr + ' – not the same as the order']); }
   const notes = [F.use && 'Intended use per client: ' + F.use, F.users && 'Intended user per client: ' + F.users, F.price && 'Sales price per order: $' + Number(String(F.price).replace(/[^\d.]/g, '')).toLocaleString(), F.mc && '1004MC required', F.occupancy && 'Occupancy: ' + F.occupancy].filter(Boolean);
   if (notes.length) { const n = $('#f_notes'); const add = notes.filter(x => !n.value.includes(x)); if (add.length) { n.value = (n.value ? n.value + '\n' : '') + add.join('\n'); did.push(['Notes', add.join('; ')]); } }
   return did;
@@ -2715,17 +2772,18 @@ function renderWizard() {
   const head = `<ol class="wzsteps">${steps.map((s, i) => `<li class="${WZ.step === i + 1 ? 'on' : WZ.step > i + 1 ? 'done' : ''}">${i + 1} · ${s}</li>`).join('')}</ol>`;
   if (WZ.step === 1) {
     box.innerHTML = head + `<section class="mkcard"><div class="grid3"><label>File number<input id="wzFile" value="${h(f.fileNo)}" placeholder="your file number"></label>
-      <label style="grid-column:span 2">Property address<input id="wzAddr" value="${h(f.address)}" placeholder="1136 Hill Road, Santa Barbara, CA 93108"></label></div>
+</div>${addrRowHTML('wz_', readAddr('f_'))}
       <p class="help" id="wzFileNote"></p>
-      <p class="help">The address is used to check that every document you upload is for this property. If you are not sure of it, leave it blank: the CRS report fills it in.</p>
+      <p class="help">Type the street address (with the unit, e.g. #3). City and ZIP: pick them, or leave them for the CRS report to fill in the USPS form with the ZIP+4. The address is used to check that every document you upload is for this property.</p>
       ${q('letter', 'Engagement letter', [['client', 'The client sent one (lender / AMC order)'], ['mine', 'I will write one']])}
       ${q('form', 'Report form', [['uad36', 'UAD 3.6 (Traditional)'], ['uad26', 'UAD 2.6'], ['gpar', 'GPAR'], ['other', 'Other']])}
       ${q('purchase', 'Is this a purchase?', [['yes', 'Yes'], ['no', 'No']])}
       ${q('listed', 'Is the property listed now, or was it in the last 12 months?', [['yes', 'Yes'], ['no', 'No'], ['unsure', 'Not sure']])}
       <div class="row"><button type="button" class="btn primary" id="wzNext1">Next: documents →</button><button type="button" class="btn ghost" id="wzCancel">Cancel</button></div></section>`;
-    const sync = () => { $('#f_fileNo').value = $('#wzFile').value; $('#f_address').value = $('#wzAddr').value; update(); };
+    const sync = () => { $('#f_fileNo').value = $('#wzFile').value; { const v = readAddr('wz_'); writeAddr('f_', v); $('#f_address').value = joinAddr(v); } update(); };
     $('#wzFile').oninput = () => { w.fileTyped = true; sync(); };
-    $('#wzAddr').oninput = () => { if (!w.fileTyped || !$('#wzFile').value.trim()) { const sug = suggestFileNo($('#wzAddr').value); $('#wzFile').value = sug; $('#wzFileNote').textContent = sug ? 'Made from your rule: street letters + house number' + (/-[2-9]\d*$/.test(sug) ? ' – you have appraised this property before in the assistant, so this is report ' + sug.split('-').pop() : '') + '. Change it if needed.' : ''; } sync(); };
+    const addrIn = () => { if (!w.fileTyped || !$('#wzFile').value.trim()) { const sug = suggestFileNo($('#wz_street').value); $('#wzFile').value = sug; $('#wzFileNote').textContent = sug ? 'Made from your rule: street letters + house number' + (/-[2-9]\d*$/.test(sug) ? ' – you have appraised this property before in the assistant, so this is report ' + sug.split('-').pop() : '') + '. Change it if needed.' : ''; } sync(); };
+    wireAddr('wz_', () => { addrIn(); });
     box.querySelectorAll('[data-wq]').forEach(b => b.onclick = () => { w[b.dataset.wq] = b.dataset.v; if (b.dataset.wq === 'form') { $('#f_reportForm').value = b.dataset.v; cur.formPicked = true; syncVisibility(); } renderWizard(); });
     $('#wzCancel').onclick = () => { showTab('home'); renderHome(); };
     $('#wzNext1').onclick = () => { if (!w.letter) { toast('Choose who writes the engagement letter'); return; }
@@ -2812,7 +2870,7 @@ let aiText = store.get('aiText', null);
 let cur = null;           // the letter being edited
 let clientCount = 1;
 
-const NEW_FIELDS = { stage: 'New', inspDate: '', inspTime: '', effDate: '', unit: '', apn: '', county: '', lat: '', lon: '', owner: '', legal: '', borrower: '',
+const NEW_FIELDS = { street: '', city: '', state: 'CA', zip: '', zip4: '', stage: 'New', inspDate: '', inspTime: '', effDate: '', unit: '', apn: '', county: '', lat: '', lon: '', owner: '', legal: '', borrower: '',
   lenderDiff: false, govAgency: '', investorId: '', reportForm: '', lenderCo: '', lenderAddr1: '', lenderAddr2: '', loanNo: '', amcUsed: false, amcCo: '', amcAddr1: '', amcAddr2: '', amcLic: '', amcState: 'CA', amcExp: '', amcFee: '', amcRef: '', notes: '', todos: '' };
 function blankLetter() {
   return { ...NEW_FIELDS, docs: [], crs: null, listings: [], permits: null, created: new Date().toISOString(), id: uid(), status: 'Client letter', reportForm: 'uad36', fileNo: '', orderDate: todayISO(), dueDate: '', aiUse: '', orderDoc: null, agreeDate: todayISO(), type: 'uadPurchase', clients: [{}], address: '', propType: 'sfr', propTypeOther: '',
@@ -2837,7 +2895,8 @@ function readForm() {
 function writeForm(f) {
   if (!f.payWhen) f.payWhen = (f.payDue || '').trim() ? 'other' : 'inspection';
   if (!f.deliveryN) { const dp = deliveryParts(f, TYPES[f.type] || TYPES.dod); f.deliveryN = dp.n; f.deliveryUnit = dp.unit; f.deliveryFrom = f.deliveryFrom || 'either'; }
-  FIELDS.forEach(k => { const el = $('#f_' + k); if (!el) return; if (el.type === 'checkbox') el.checked = f[k] !== false && !!f[k]; else el.value = f[k] ?? ''; });
+  loadOrderAddr(f);
+  FIELDS.forEach(k => { if (ADDR_KEYS.includes(k) || k === 'address') return; const el = $('#f_' + k); if (!el) return; if (el.type === 'checkbox') el.checked = f[k] !== false && !!f[k]; else el.value = f[k] ?? ''; });
   clientCount = Math.max(1, Math.min(3, (f.clients || []).length || 1));
   renderClients(f.clients || [{}]);
   document.querySelectorAll('input[name=aiUse]').forEach(r => { r.checked = r.value === f.aiUse; });

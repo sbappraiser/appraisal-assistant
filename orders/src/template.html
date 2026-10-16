@@ -158,6 +158,9 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
 .hmpanel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; } .hmpanel h3 { margin: 0; font: 600 18px var(--display); }
 .hmtable tbody tr { cursor: pointer; } .hmtable tbody tr:hover, .hmtable tbody tr:focus { background: var(--accent-soft); outline: none; }
 .hmfind { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) auto; gap: 10px; align-items: end; margin-top: 10px; } @media (max-width: 760px) { .hmfind { grid-template-columns: minmax(0, 1fr); } }
+.addrrow { display: grid; grid-template-columns: minmax(0, 2.4fr) minmax(0, 1.4fr) 64px minmax(0, 1fr) 76px; gap: 10px 12px; } #addrBox .addrrow { grid-template-columns: minmax(0, 1.5fr) 60px minmax(0, 1fr) 72px; } #addrBox .a-street { grid-column: 1 / -1; }
+@media (max-width: 700px) { .addrrow { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } .addrrow .a-street { grid-column: 1 / -1; } }
+.addrrow select + input { margin-top: 6px; }
 </style>
 </head>
 <body>
@@ -196,8 +199,8 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
     <fieldset><legend>Order</legend>
       <div class="grid3">
         <label>File number<input id="f_fileNo" placeholder="your file number"></label>
-        <label style="grid-column:span 2">Property address<input id="f_address" placeholder="1450 East Valley Road, Santa Barbara, CA 93108"></label>
-      </div>
+        </div>
+      <div id="addrBox"></div><input type="hidden" id="f_address">
       <div class="grid3">
         <label>Order received<input id="f_orderDate" type="date"></label>
         <label>Report due<input id="f_dueDate" type="date"></label>
@@ -359,7 +362,7 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
     <input id="helpSearch" type="search" placeholder="for example: sticky, blur, iPad, backup, market">
     <details><summary>Start a new order</summary><ol>
       <li>On <b>Home</b>, click <b>New order</b>.</li>
-      <li><b>1 · Order:</b> type the property address and the file number fills in by your rule: the first 4 consonants of the street name (short names like Bath or Hill keep their first 4 letters), the house number, the unit if any, and the report count. 1729 Bath St → <b>Bath1729-1</b>; unit B → <b>Bath1729-b-1</b>; 223 W. Arrellaga St #3 → <b>Arrl223-3-1</b>. If you have done this property before in the assistant (or an old order is numbered the ACI way, like Bath1729a or Bath1729b), the count goes up: <b>Bath1729-2</b>. You can always type over it. Answer three questions: did the client send an engagement letter or will you write one, is it a purchase, and is the property listed now or in the last 12 months. Click <b>Next</b>.</li>
+      <li><b>1 · Order:</b> type the <b>street address</b> only (with the unit, e.g. #3), then Tab to <b>City</b>, <b>State</b>, <b>ZIP</b> and <b>+4</b>. City and ZIP are drop-down lists of the places you work (Santa Barbara County first, then Ventura County) – click and scroll with the mouse wheel. Not in the list? Pick <b>Other – type it</b>. Picking a ZIP fills the city, and Goleta, Carpinteria, Summerland or Montecito fill their ZIP; you can change either. When you upload the CRS report, it puts in the USPS form of the address with the ZIP+4. The file number fills in by your rule: the first 4 consonants of the street name (short names like Bath or Hill keep their first 4 letters), the house number, the unit if any, and the report count. 1729 Bath St → <b>Bath1729-1</b>; unit B → <b>Bath1729-b-1</b>; 223 W. Arrellaga St #3 → <b>Arrl223-3-1</b>. If you have done this property before in the assistant (or an old order is numbered the ACI way, like Bath1729a or Bath1729b), the count goes up: <b>Bath1729-2</b>. You can always type over it. Answer three questions: did the client send an engagement letter or will you write one, is it a purchase, and is the property listed now or in the last 12 months. Click <b>Next</b>.</li>
       <li><b>2 · Documents:</b> drop each file in its box – client’s engagement letter, CRS report, legal description, MLS listing with history, purchase contract with counters and addenda (as many PDFs as you have), preliminary title report, and anything else under <b>Other documents</b>. Each file is read as you add it, and checked against the property address: a file for another property is marked ⚠ and nothing is filled in from it.</li>
       <li><b>3 · Check:</b> see what was filled in. The client’s letter sets the client, loan number, borrower, due date, fee, report form, rent schedule, and <b>AI use</b>: a ban (for example “no AI without prior authorization”) sets No AI; confidentiality wording sets Yes – only with confidential information removed; nothing sets Yes. You can change any of it on the order.</li>
       <li>Click <b>Read</b> next to the prelim or contract to summarize it, then <b>Open the order</b> – or, if you are writing the letter, <b>Next: write my engagement letter</b>.</li>
