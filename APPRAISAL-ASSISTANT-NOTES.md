@@ -190,3 +190,10 @@ Group "Lender or AMC order – UAD 3.6": uadPurchase, uadRefi, uadHeloc, uadCons
 
 ## Master checklist
 Her live checklist page (she ticks items and adds her own): https://claude.ai/artifact/FZzBaFYusgsZtyQeajE2jy — read it (Artifact action "read") at the start of a session to see what she has checked or added. CHECKLIST.html here is the Oct 14 2026 starting copy only.
+
+## SFREP import test, Oct 16 2026 (Berkeley Rd grid full report)
+- Imported well: comps, data sources, sale data, site, views, year, design, rooms, indicated value.
+- Only the condition adjustments landed; GLA and Lot Utility did not. Fix tried: adjustments now go out in 3.6 grid order (Add Other rows first, then site, dwelling, units incl. GLA, then quality/condition, then amenities), as in Fannie's D-1 sample. Waiting on her re-import (TEST2) to confirm.
+- Her SFREP template's Add Other row is named exactly "Usable Lot Area/Utility"; the genie now uses that name letter for letter.
+- Bug fixed: "Windows" in a comp's energy text was read as a wind turbine (now only "wind turbine/power/generator/mill").
+- Bug fixed (iPad 6g): lot acreage was being written as a site influence "Other – Topography: 0.18 ac."; removed.

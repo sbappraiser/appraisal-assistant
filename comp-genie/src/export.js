@@ -82,7 +82,7 @@ function buildCompXML(PROPS, RELS, DSS, c, n, job) {
   if (price && list && status !== 'SettledSale') XV(cd, 'SaleToListPriceRatioPercent', (price / list * 100).toFixed(2));
   cd.kids.sort((a, b) => a.tag.localeCompare(b.tag)); // UAD order is alphabetical inside COMPARABLE_DETAIL
   // ENERGY_EFFICIENCY_AND_GREEN
-  const en = String(g('energy') || ''); if (/solar|geotherm|wind/i.test(en)) { const e = X(P, 'ENERGY_EFFICIENCY_AND_GREEN'); XV(X(e, 'ENERGY_EFFICIENCY_AND_GREEN_DETAIL'), 'RenewableEnergyComponentExistsIndicator', 'true'); XV(X(X(e, 'RENEWABLE_ENERGY_COMPONENTS'), 'RENEWABLE_ENERGY_COMPONENT'), 'RenewableEnergyComponentType', /geotherm/i.test(en) ? 'Geothermal' : /wind/i.test(en) ? 'WindTurbine' : 'Solar'); }
+  const en = String(g('energy') || ''); if (/solar|photovolt|geotherm|wind\s*(turbine|power|generator|mill)/i.test(en)) { const e = X(P, 'ENERGY_EFFICIENCY_AND_GREEN'); XV(X(e, 'ENERGY_EFFICIENCY_AND_GREEN_DETAIL'), 'RenewableEnergyComponentExistsIndicator', 'true'); XV(X(X(e, 'RENEWABLE_ENERGY_COMPONENTS'), 'RENEWABLE_ENERGY_COMPONENT'), 'RenewableEnergyComponentType', /geotherm/i.test(en) ? 'Geothermal' : /wind\s*(turbine|power|generator|mill)/i.test(en) ? 'WindTurbine' : 'Solar'); }
   // HAZARD (from CRS flood zone) goes in SITE below
   // IMPROVEMENTS
   const imp = X(X(P, 'IMPROVEMENTS'), 'IMPROVEMENT'); const idt = X(imp, 'IMPROVEMENT_DETAIL'); const cool = uadCool(g('heatCool'));

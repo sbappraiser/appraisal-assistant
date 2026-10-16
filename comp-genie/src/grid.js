@@ -17,27 +17,27 @@ const ADJ_ROWS = [
   ['sale', 'Sale date (market conditions)', 'Sales and listing', 'SaleDate', 'timePct'],
   ['dom', 'Days on market', 'Sales and listing', null],
   ['site', 'Site size', 'Site', 'SiteSize'],
-  ['usable', 'Lot Utility/ Usable lot area', 'Site', 'OTHER', 'usableAc'],
+  ['nbhd', 'Neighborhood name', 'Site', 'NeighborhoodName'],
   ['loc', 'Site influence (location)', 'Site', 'SiteInfluence'],
   ['view', 'View', 'Site', 'View'],
+  ['usable', 'Usable Lot Area/Utility', 'Site', 'OTHER', 'usableAc'],
   ['topo', 'Topography', 'Site', 'Topography'],
-  ['nbhd', 'Neighborhood name', 'Site', 'NeighborhoodName'],
-  ['style', 'Design (style)', 'Dwelling', 'DwellingStyle'],
   ['year', 'Year built', 'Dwelling', 'YearBuilt'],
-  ['q', 'Overall quality', 'Dwelling', 'OverallQualityRating'],
-  ['c', 'Overall condition', 'Dwelling', 'OverallConditionRating'],
+  ['style', 'Design (style)', 'Dwelling', 'DwellingStyle'],
+  ['energy', 'Energy efficient features', 'Dwelling', 'EnergyEfficientAndGreenFeatures'],
   ['beds', 'Bedrooms', 'Dwelling', 'LivingUnitBedroomCount', 'bed'],
   ['baths', 'Baths (full / half)', 'Dwelling', 'LivingUnitBathroomCount', 'bath'],
   ['gla', 'Living area above grade (sq ft)', 'Dwelling', 'LivingUnitStandardFinishedAreaAboveGrade', 'gla'],
   ['bsmt', 'Below grade finished (sq ft)', 'Dwelling', 'LivingUnitStandardFinishedAreaBelowGrade'],
-  ['garage', 'Vehicle storage', 'Dwelling', 'VehicleStorage', 'space'],
-  ['energy', 'Energy efficient features', 'Dwelling', 'EnergyEfficientAndGreenFeatures'],
-  ['pool', 'Pool / spa', 'Amenities', 'WaterFeaturesAmenity'],
+  ['q', 'Overall quality', 'Dwelling', 'OverallQualityRating'],
+  ['c', 'Overall condition', 'Dwelling', 'OverallConditionRating'],
   ['porch', 'Porch / patio / deck', 'Amenities', 'OutdoorLivingAmenity'],
+  ['pool', 'Pool / spa', 'Amenities', 'WaterFeaturesAmenity'],
   ['adu', 'ADU / guest house / outbuildings', 'Amenities', 'Outbuilding'],
   ['other', 'Other amenities', 'Amenities', 'MiscellaneousAmenity'],
+  ['garage', 'Vehicle storage', 'Amenities', 'VehicleStorage', 'space'],
 ];
-const LOT_UTILITY = 'Lot Utility/ Usable lot area';      // her exact SFREP "Add Other" row name
+const LOT_UTILITY = 'Usable Lot Area/Utility';      // her exact SFREP template "Add Other" row name (must match letter for letter)
 const RATES = { gla: ['$ per sq ft', 'subject − comp sq ft × rate'], usableAc: ['$ per usable acre', 'subject − comp usable acres × rate'], bed: ['$ per bedroom', 'bedroom difference × rate'],
   bath: ['$ per full bath', 'full-bath difference × rate (half baths at half the rate)'], space: ['$ per garage space', 'space difference × rate'], timePct: ['% per month', 'months from sale to effective date × % × price'] };
 
@@ -93,7 +93,8 @@ function cellAmount(J, c, row) {
 }
 function compTotals(J, c) {
   const C = compFacts(c, J); let net = 0, gross = 0, lines = 0;
-  ADJ_ROWS.filter(r => r[3]).forEach(r => { const a = cellAmount(J, c, r).v; if (a) { net += a; gross += Math.abs(a); lines++; } });
+  // order as on the 3.6 grid (D-1 sample): Add Other rows first, then site, dwelling, units, quality/condition, amenities
+  ADJ_ROWS.filter(r => r[3]).sort((x, y) => (y[3] === 'OTHER') - (x[3] === 'OTHER')).forEach(r => { const a = cellAmount(J, c, r).v; if (a) { net += a; gross += Math.abs(a); lines++; } });
   const price = C.price || 0; return { price, net, gross, lines, adj: price + net, netPct: price ? net / price * 100 : 0, grossPct: price ? gross / price * 100 : 0, adjPsf: C.gla ? (price + net) / C.gla : null };
 }
 
@@ -160,7 +161,8 @@ async function ingestInspection(files, name) {
 /* ---------------- adjustments into the SFREP file ---------------- */
 function gridAdjustXML(CMP, c, job) {
   const G = job.grid; if (!G) return null; const box = X(CMP, 'COMPARABLE_ADJUSTMENTS'); const C = compFacts(c, job); let any = false;
-  ADJ_ROWS.filter(r => r[3]).forEach(r => { const a = cellAmount(job, c, r).v;
+  // order as on the 3.6 grid (D-1 sample): Add Other rows first, then site, dwelling, units, quality/condition, amenities
+  ADJ_ROWS.filter(r => r[3]).sort((x, y) => (y[3] === 'OTHER') - (x[3] === 'OTHER')).forEach(r => { const a = cellAmount(job, c, r).v;
     if (r[3] === 'OTHER') { if (blank(C.usable) && !a) return; const e = X(box, 'COMPARABLE_ADJUSTMENT'); XV(e, 'AdditionalComparisonLineItemDescription', blank(C.usable) ? null : (+C.usable).toFixed(2) + ' ac'); XV(e, 'AdditionalComparisonLineItemIdentifier', LOT_UTILITY); XV(e, 'ComparableAdjustmentAmount', a || 0); XV(e, 'ComparableAdjustmentType', 'SalesComparableAdditionalAdjustableComparisonItem'); any = true; return; }
     if (a === null || a === undefined) return; const e = X(box, 'COMPARABLE_ADJUSTMENT'); XV(e, 'ComparableAdjustmentAmount', Math.round(a)); XV(e, 'ComparableAdjustmentType', r[3]); any = true; });
   if (!any) CMP.kids = CMP.kids.filter(k => k !== box);
