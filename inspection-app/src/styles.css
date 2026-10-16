@@ -323,3 +323,9 @@ html.testcopy .bar { border-bottom-color: #7b2cbf; }
 .dk-pick label{display:inline-flex;gap:5px;align-items:center;margin-right:14px}
 .dk-warn{color:#e00000}.dk-left{color:var(--muted,#5b6876)}
 .dk-log p{margin:8px 0}
+.dk-h4{margin:16px 0 4px;font-size:15px}
+.dk-roomBox{border:1px solid var(--line,#e2e6ea);border-radius:8px;margin:8px 0;padding:0 6px 4px}
+.dk-roomBox.off .dk-sub{opacity:.35}
+.dk-room .dk-what{font-size:17px}
+.dk-sub{margin-left:30px}.dk-sub.dk-row{grid-template-columns:28px minmax(130px,32%) 1fr;padding:6px 4px}
+.dk-info{padding:6px 4px;font-size:15px;color:var(--muted,#5b6876)}
