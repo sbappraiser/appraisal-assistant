@@ -166,6 +166,11 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
 .savedAt { display: block; font-weight: 600; color: var(--go); } .savedAt:empty { display: none; } .bar .fname { display: flex; flex-direction: column; gap: 2px; }
 @media print { @page { size: letter; margin: 0.75in; } body { background: #fff !important; } body * { visibility: hidden !important; } #sheet, #sheet * { visibility: visible !important; }
   #sheet { position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 0; box-shadow: none; border: 0; } .paperWrap { overflow: visible !important; max-height: none !important; box-shadow: none !important; } }
+.kindBtn { font: inherit; font-size: 14px; background: var(--panel); border: 1.5px solid var(--line); border-radius: 8px; padding: 6px 10px; cursor: pointer; color: var(--ink); text-align: left; max-width: 260px; } .kindBtn:hover { border-color: #000; }
+#kindPop { position: fixed; z-index: 60; background: var(--panel); border: 1.5px solid #000; border-radius: 10px; box-shadow: 0 8px 28px rgba(0,0,0,.18); padding: 10px 12px; display: grid; grid-template-columns: repeat(3, minmax(150px, 1fr)); gap: 6px 16px; max-width: min(640px, calc(100vw - 16px)); font-size: 13px; }
+#kindPop .kpg { display: flex; flex-direction: column; } #kindPop .kpg b { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 2px 0 2px; }
+#kindPop button { all: unset; cursor: pointer; padding: 3px 6px; border-radius: 5px; line-height: 1.3; } #kindPop button:hover { background: var(--accent-soft); } #kindPop button.on { background: var(--accent-fill); color: #000; font-weight: 600; }
+@media (max-width: 560px) { #kindPop { grid-template-columns: 1fr 1fr; } }
 .formEnd { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 6px 0 20px; } .sheetHint { margin: 0; }
 .btn.danger.armed { background: var(--warn); color: #fff; border-color: var(--warn); }
 </style>
@@ -465,7 +470,8 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
       <li>Drop all the files at once in <b>Drop everything here</b>. Each file is sorted by what its first page says (CRS report, County permit history, prelim, contract, counters, MLS, plans …). The boxes below it are your checklist and show what arrived.</li>
       <li>You can still drop a file in a box. If its first page plainly says it is something else (for example a County “Permit History by Parcel” dropped in the prelim box), it is filed as what it really is and the status line tells you.</li>
       <li>Orders opened after this change are checked once, and a document filed under the wrong kind is corrected.</li>
-      <li>To change a document's kind yourself: on the order page, under Documents, pick the kind from its list; it is read again.</li></ol></details>
+      <li>To change a document's kind yourself: on the order page, under Documents, click the kind button next to the file. A small panel shows every kind at once; click the right one and the file is read again.</li>
+      <li>Your own letter, signed and sent back, is filed as <b>My engagement letter (signed)</b> (it is recognized by its first page). It is not checked for AI wording, and the order's My letter is set to Signed.</li></ol></details>
     <details><summary>Dictate your notes (iPad)</summary><ol>
       <li>In an inspection, tap the first tab, <b>🎤 Dictate</b>. Tap in the box, then the microphone on the iPad keyboard, and talk.</li>
       <li>Say the area or room first, then what you see: exterior, garage, view, topography, site, landscaping, interior, heating / cooling / water heater, then each room – entry, living room, kitchen, family room, powder room, primary bedroom, primary bath, bedroom 2, hall bath, laundry room.</li>
@@ -512,7 +518,7 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
 </div>
 <div id="toast" role="status" hidden></div>
 <script>
-const BUILD='o1-1016-2143';
+const BUILD='o1-1016-2148';
 const G = (() => {
 /* ---------------- small helpers ---------------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -1635,6 +1641,7 @@ const TEXT_RULES = [
   [/Permit History by Parcel/i, 'permitsCounty'],
   [/Search Statistics|Search Criteria:/i, 'marketSearch'],
   [/flexmls|MLS #\s?\d/i, 'mls'],
+  [/Client hereby engages Appraiser|PARTIES TO AGREEMENT[\s\S]{0,800}Jennifer L\.? Heath/i, 'myLetter'],
   [/ENGAGEMENT LETTER|Letter of Engagement|Engagement Agreement|Appraisal (Order|Request)|Order Detail|Scope of Work/i, 'clientLetter'],
   [/Condominium Questionnaire|Condo Questionnaire|Project Questionnaire|HOA Questionnaire/i, 'condoQ'],
   [/Declaration of (Covenants|Restrictions|CC&Rs)|CC&R/i, 'ccrs'],
@@ -1655,10 +1662,10 @@ const TEXT_RULES = [
   [/LEGAL DESCRIPTION|EXHIBIT ["“]?A/i, 'legal'],
   [/INVOICE/i, 'invoice'],
 ];
-const STRONG_TYPES = ['crs', 'permitsCounty', 'marketSearch', 'prelim', 'condoQ', 'ccrs', 'leaseback', 'counter', 'contract'];   // page 1 says so plainly
+const STRONG_TYPES = ['myLetter', 'crs', 'permitsCounty', 'marketSearch', 'prelim', 'condoQ', 'ccrs', 'leaseback', 'counter', 'contract'];   // page 1 says so plainly
 // documents filed in the wrong box before Oct 16 2026: check them once when the order opens
 async function recheckDocTypes(o) { let n = 0;
-  for (const d of (o.docs || [])) { if (d.typeChecked || !['prelim', 'legal', 'other', 'permitsPdf', 'disclosures'].includes(d.type)) continue; d.typeChecked = true;
+  for (const d of (o.docs || [])) { if (d.typeChecked2 || !['prelim', 'legal', 'other', 'permitsPdf', 'disclosures', 'clientLetter'].includes(d.type)) continue; d.typeChecked2 = true; d.typeChecked = true;
     try { const f = await docFile(d.id); const said = f && await textDocType(f); if (said && said !== d.type && STRONG_TYPES.includes(said)) { await retypeDoc(d.id, said); n++; } } catch (e) {} }
   if (n) toast(n + ' document' + (n > 1 ? 's were' : ' was') + ' in the wrong kind and ' + (n > 1 ? 'have' : 'has') + ' been corrected (see Documents)', 6000); }
 const NAME_RULES = [
@@ -1736,6 +1743,10 @@ async function readDoc(meta, file) { // turns the readable kinds into facts; not
       if (isPdf(file) || /\.(docx|txt)$/i.test(file.name)) { await scanFile(file); meta.note = cur.orderDoc ? 'checked for AI wording' : '';
         try { const F = await readClientLetter(file); const did = applyClientLetter(F); cur = readForm(); cur.letterFill = did; cur.letterFields = F; if (did.length) meta.note += ' · ' + did.length + ' items filled in'; } catch (e) { console.warn('letter fill', e); } }
       if ($('#f_status').value === 'Drafted' && !cur.letterMade) { $('#f_status').value = 'Client letter'; toast('The client’s letter now shows on the left instead of yours. To write your own, set My letter back to Drafted.', 6000); }
+    } else if (meta.type === 'myLetter') {   // her own letter, signed and sent back: it is not the client's letter and is not checked for AI wording
+      cur = readForm(); if (cur.orderDoc && cur.orderDoc.name === meta.name) cur.orderDoc = null;
+      if (!(cur.docs || []).some(d => d.type === 'clientLetter' && d.id !== meta.id)) { cur.letterMode = 'mine'; if (['Client letter', 'Drafted', 'Sent'].includes($('#f_status').value)) $('#f_status').value = /sign/i.test(meta.name) ? 'Signed' : 'Sent'; }
+      meta.note = 'your letter' + ($('#f_status').value === 'Signed' ? ' · marked Signed' : ''); if (typeof renderScan === 'function') renderScan(cur.orderDoc);
     } else if (meta.type === 'floorplan') {
       const prev = await planPreview(file, meta.page || 1); if (prev) { const rec = await ODB.get('docs', meta.id); rec.preview = prev.src; rec.pages = prev.pages; await ODB.put('docs', rec); meta.pages = prev.pages; meta.note = 'ready for the iPad'; }
     }
@@ -1754,19 +1765,33 @@ async function removeDoc(id) {
   cur = readForm(); cur.docs = (cur.docs || []).filter(d => d.id !== id); await ODB.del('docs', id).catch(() => {});
   renderDocs(); update(); saveLetter(true); toast('File removed from this order');
 }
+/* the kinds in one small panel, all visible at once, placed so it fits in the window */
+function kindPop(btn) {
+  let pop = $('#kindPop'); if (pop && pop.dataset.for === btn.dataset.dkind) { pop.remove(); return; } if (pop) pop.remove();
+  const id = btn.dataset.dkind; const cur0 = ((cur.docs || []).find(d => d.id === id) || {}).type;
+  pop = document.createElement('div'); pop.id = 'kindPop'; pop.dataset.for = id; pop.setAttribute('role', 'menu');
+  pop.innerHTML = DOC_TYPES.map(([g, ks]) => `<div class="kpg"><b>${h(g)}</b>${ks.map(([k, l]) => `<button type="button" role="menuitem" data-k="${k}" class="${k === cur0 ? 'on' : ''}">${h(l)}</button>`).join('')}</div>`).join('');
+  document.body.appendChild(pop);
+  const r = btn.getBoundingClientRect(), W = window.innerWidth, H = window.innerHeight, pw = pop.offsetWidth, ph = pop.offsetHeight;
+  let left = Math.min(Math.max(8, r.right - pw), W - pw - 8), top = r.bottom + 6; if (top + ph > H - 8) top = Math.max(8, r.top - ph - 6);
+  pop.style.left = left + 'px'; pop.style.top = top + 'px';
+  pop.querySelectorAll('[data-k]').forEach(b => b.onclick = () => { pop.remove(); if (b.dataset.k !== cur0) retypeDoc(id, b.dataset.k); });
+  const close = e => { if (!pop.contains(e.target) || e.key === 'Escape') { pop.remove(); document.removeEventListener('click', close); document.removeEventListener('keydown', close); window.removeEventListener('scroll', close, true); } };
+  setTimeout(() => { document.addEventListener('click', close); document.addEventListener('keydown', close); window.addEventListener('scroll', close, true); }, 0);
+}
 function renderDocs() {
   const list = (cur && cur.docs) || []; const box = $('#docList');
   const opts = sel => DOC_TYPES.map(([g, ks]) => `<optgroup label="${h(g)}">${ks.map(([k, l]) => `<option value="${k}"${k === sel ? ' selected' : ''}>${h(l)}</option>`).join('')}</optgroup>`).join('');
   box.innerHTML = list.length ? `<table class="docs"><tbody>${list.map(d => `<tr>
       <td><button type="button" class="lnk" data-dopen="${d.id}" title="Open">${h(d.name)}</button><small>${Math.max(1, Math.round(d.size / 1024)).toLocaleString()} KB${d.note ? ' · ' + h(d.note) : READS[d.type] ? '' : ''}</small>${d.warn ? `<small class="warnTxt">⚠ ${h(d.warn)}</small>` : ''}</td>
-      <td><select data-dtype="${d.id}" aria-label="Kind of document">${opts(d.type)}</select>${d.type === 'floorplan' && d.pages > 1 ? ` <label class="pg">page <input data-dpage="${d.id}" inputmode="numeric" value="${d.page || 1}" size="2"> of ${d.pages}</label>` : ''}</td>
+      <td><button type="button" class="kindBtn" data-dkind="${d.id}" aria-haspopup="true" title="Change the kind of document">${h(DOC_LABEL[d.type] || 'Other')} ▾</button>${d.type === 'floorplan' && d.pages > 1 ? ` <label class="pg">page <input data-dpage="${d.id}" inputmode="numeric" value="${d.page || 1}" size="2"> of ${d.pages}</label>` : ''}</td>
       <td class="acts"><button type="button" class="btn small" data-dread="${d.id}">Read</button><button type="button" class="btn ghost small danger" data-ddel="${d.id}">Remove</button></td></tr>`).join('')}</tbody></table>`
     : '<p class="help">No documents yet.</p>';
   $('#docCount').textContent = list.length ? list.length + ' file' + (list.length > 1 ? 's' : '') : '';
   box.querySelectorAll('[data-dopen]').forEach(b => b.onclick = () => openDoc(b.dataset.dopen));
   box.querySelectorAll('[data-dread]').forEach(b => b.onclick = () => { saveLetter(true, true); openReader(b.dataset.dread); });
   if (typeof renderFacts === 'function') renderFacts();
-  box.querySelectorAll('[data-dtype]').forEach(s => s.onchange = () => retypeDoc(s.dataset.dtype, s.value));
+  box.querySelectorAll('[data-dkind]').forEach(b => b.onclick = e => { e.stopPropagation(); kindPop(b); });
   box.querySelectorAll('[data-dpage]').forEach(i => i.onchange = async () => { cur = readForm(); const m = cur.docs.find(d => d.id === i.dataset.dpage); m.page = Math.max(1, Math.min(m.pages || 1, parseInt(i.value, 10) || 1)); const f = await docFile(m.id); await readDoc(m, f); renderDocs(); saveLetter(true); toast('Floor plan page ' + m.page + ' will go to the iPad'); });
   box.querySelectorAll('[data-ddel]').forEach(b => b.onclick = () => {
     if (b.dataset.armed) removeDoc(b.dataset.ddel);

@@ -23,6 +23,7 @@ const TEXT_RULES = [
   [/Permit History by Parcel/i, 'permitsCounty'],
   [/Search Statistics|Search Criteria:/i, 'marketSearch'],
   [/flexmls|MLS #\s?\d/i, 'mls'],
+  [/Client hereby engages Appraiser|PARTIES TO AGREEMENT[\s\S]{0,800}Jennifer L\.? Heath/i, 'myLetter'],
   [/ENGAGEMENT LETTER|Letter of Engagement|Engagement Agreement|Appraisal (Order|Request)|Order Detail|Scope of Work/i, 'clientLetter'],
   [/Condominium Questionnaire|Condo Questionnaire|Project Questionnaire|HOA Questionnaire/i, 'condoQ'],
   [/Declaration of (Covenants|Restrictions|CC&Rs)|CC&R/i, 'ccrs'],
@@ -43,10 +44,10 @@ const TEXT_RULES = [
   [/LEGAL DESCRIPTION|EXHIBIT ["“]?A/i, 'legal'],
   [/INVOICE/i, 'invoice'],
 ];
-const STRONG_TYPES = ['crs', 'permitsCounty', 'marketSearch', 'prelim', 'condoQ', 'ccrs', 'leaseback', 'counter', 'contract'];   // page 1 says so plainly
+const STRONG_TYPES = ['myLetter', 'crs', 'permitsCounty', 'marketSearch', 'prelim', 'condoQ', 'ccrs', 'leaseback', 'counter', 'contract'];   // page 1 says so plainly
 // documents filed in the wrong box before Oct 16 2026: check them once when the order opens
 async function recheckDocTypes(o) { let n = 0;
-  for (const d of (o.docs || [])) { if (d.typeChecked || !['prelim', 'legal', 'other', 'permitsPdf', 'disclosures'].includes(d.type)) continue; d.typeChecked = true;
+  for (const d of (o.docs || [])) { if (d.typeChecked2 || !['prelim', 'legal', 'other', 'permitsPdf', 'disclosures', 'clientLetter'].includes(d.type)) continue; d.typeChecked2 = true; d.typeChecked = true;
     try { const f = await docFile(d.id); const said = f && await textDocType(f); if (said && said !== d.type && STRONG_TYPES.includes(said)) { await retypeDoc(d.id, said); n++; } } catch (e) {} }
   if (n) toast(n + ' document' + (n > 1 ? 's were' : ' was') + ' in the wrong kind and ' + (n > 1 ? 'have' : 'has') + ' been corrected (see Documents)', 6000); }
 const NAME_RULES = [
@@ -124,6 +125,10 @@ async function readDoc(meta, file) { // turns the readable kinds into facts; not
       if (isPdf(file) || /\.(docx|txt)$/i.test(file.name)) { await scanFile(file); meta.note = cur.orderDoc ? 'checked for AI wording' : '';
         try { const F = await readClientLetter(file); const did = applyClientLetter(F); cur = readForm(); cur.letterFill = did; cur.letterFields = F; if (did.length) meta.note += ' · ' + did.length + ' items filled in'; } catch (e) { console.warn('letter fill', e); } }
       if ($('#f_status').value === 'Drafted' && !cur.letterMade) { $('#f_status').value = 'Client letter'; toast('The client’s letter now shows on the left instead of yours. To write your own, set My letter back to Drafted.', 6000); }
+    } else if (meta.type === 'myLetter') {   // her own letter, signed and sent back: it is not the client's letter and is not checked for AI wording
+      cur = readForm(); if (cur.orderDoc && cur.orderDoc.name === meta.name) cur.orderDoc = null;
+      if (!(cur.docs || []).some(d => d.type === 'clientLetter' && d.id !== meta.id)) { cur.letterMode = 'mine'; if (['Client letter', 'Drafted', 'Sent'].includes($('#f_status').value)) $('#f_status').value = /sign/i.test(meta.name) ? 'Signed' : 'Sent'; }
+      meta.note = 'your letter' + ($('#f_status').value === 'Signed' ? ' · marked Signed' : ''); if (typeof renderScan === 'function') renderScan(cur.orderDoc);
     } else if (meta.type === 'floorplan') {
       const prev = await planPreview(file, meta.page || 1); if (prev) { const rec = await ODB.get('docs', meta.id); rec.preview = prev.src; rec.pages = prev.pages; await ODB.put('docs', rec); meta.pages = prev.pages; meta.note = 'ready for the iPad'; }
     }
@@ -142,19 +147,33 @@ async function removeDoc(id) {
   cur = readForm(); cur.docs = (cur.docs || []).filter(d => d.id !== id); await ODB.del('docs', id).catch(() => {});
   renderDocs(); update(); saveLetter(true); toast('File removed from this order');
 }
+/* the kinds in one small panel, all visible at once, placed so it fits in the window */
+function kindPop(btn) {
+  let pop = $('#kindPop'); if (pop && pop.dataset.for === btn.dataset.dkind) { pop.remove(); return; } if (pop) pop.remove();
+  const id = btn.dataset.dkind; const cur0 = ((cur.docs || []).find(d => d.id === id) || {}).type;
+  pop = document.createElement('div'); pop.id = 'kindPop'; pop.dataset.for = id; pop.setAttribute('role', 'menu');
+  pop.innerHTML = DOC_TYPES.map(([g, ks]) => `<div class="kpg"><b>${h(g)}</b>${ks.map(([k, l]) => `<button type="button" role="menuitem" data-k="${k}" class="${k === cur0 ? 'on' : ''}">${h(l)}</button>`).join('')}</div>`).join('');
+  document.body.appendChild(pop);
+  const r = btn.getBoundingClientRect(), W = window.innerWidth, H = window.innerHeight, pw = pop.offsetWidth, ph = pop.offsetHeight;
+  let left = Math.min(Math.max(8, r.right - pw), W - pw - 8), top = r.bottom + 6; if (top + ph > H - 8) top = Math.max(8, r.top - ph - 6);
+  pop.style.left = left + 'px'; pop.style.top = top + 'px';
+  pop.querySelectorAll('[data-k]').forEach(b => b.onclick = () => { pop.remove(); if (b.dataset.k !== cur0) retypeDoc(id, b.dataset.k); });
+  const close = e => { if (!pop.contains(e.target) || e.key === 'Escape') { pop.remove(); document.removeEventListener('click', close); document.removeEventListener('keydown', close); window.removeEventListener('scroll', close, true); } };
+  setTimeout(() => { document.addEventListener('click', close); document.addEventListener('keydown', close); window.addEventListener('scroll', close, true); }, 0);
+}
 function renderDocs() {
   const list = (cur && cur.docs) || []; const box = $('#docList');
   const opts = sel => DOC_TYPES.map(([g, ks]) => `<optgroup label="${h(g)}">${ks.map(([k, l]) => `<option value="${k}"${k === sel ? ' selected' : ''}>${h(l)}</option>`).join('')}</optgroup>`).join('');
   box.innerHTML = list.length ? `<table class="docs"><tbody>${list.map(d => `<tr>
       <td><button type="button" class="lnk" data-dopen="${d.id}" title="Open">${h(d.name)}</button><small>${Math.max(1, Math.round(d.size / 1024)).toLocaleString()} KB${d.note ? ' · ' + h(d.note) : READS[d.type] ? '' : ''}</small>${d.warn ? `<small class="warnTxt">⚠ ${h(d.warn)}</small>` : ''}</td>
-      <td><select data-dtype="${d.id}" aria-label="Kind of document">${opts(d.type)}</select>${d.type === 'floorplan' && d.pages > 1 ? ` <label class="pg">page <input data-dpage="${d.id}" inputmode="numeric" value="${d.page || 1}" size="2"> of ${d.pages}</label>` : ''}</td>
+      <td><button type="button" class="kindBtn" data-dkind="${d.id}" aria-haspopup="true" title="Change the kind of document">${h(DOC_LABEL[d.type] || 'Other')} ▾</button>${d.type === 'floorplan' && d.pages > 1 ? ` <label class="pg">page <input data-dpage="${d.id}" inputmode="numeric" value="${d.page || 1}" size="2"> of ${d.pages}</label>` : ''}</td>
       <td class="acts"><button type="button" class="btn small" data-dread="${d.id}">Read</button><button type="button" class="btn ghost small danger" data-ddel="${d.id}">Remove</button></td></tr>`).join('')}</tbody></table>`
     : '<p class="help">No documents yet.</p>';
   $('#docCount').textContent = list.length ? list.length + ' file' + (list.length > 1 ? 's' : '') : '';
   box.querySelectorAll('[data-dopen]').forEach(b => b.onclick = () => openDoc(b.dataset.dopen));
   box.querySelectorAll('[data-dread]').forEach(b => b.onclick = () => { saveLetter(true, true); openReader(b.dataset.dread); });
   if (typeof renderFacts === 'function') renderFacts();
-  box.querySelectorAll('[data-dtype]').forEach(s => s.onchange = () => retypeDoc(s.dataset.dtype, s.value));
+  box.querySelectorAll('[data-dkind]').forEach(b => b.onclick = e => { e.stopPropagation(); kindPop(b); });
   box.querySelectorAll('[data-dpage]').forEach(i => i.onchange = async () => { cur = readForm(); const m = cur.docs.find(d => d.id === i.dataset.dpage); m.page = Math.max(1, Math.min(m.pages || 1, parseInt(i.value, 10) || 1)); const f = await docFile(m.id); await readDoc(m, f); renderDocs(); saveLetter(true); toast('Floor plan page ' + m.page + ' will go to the iPad'); });
   box.querySelectorAll('[data-ddel]').forEach(b => b.onclick = () => {
     if (b.dataset.armed) removeDoc(b.dataset.ddel);

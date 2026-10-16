@@ -166,6 +166,11 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
 .savedAt { display: block; font-weight: 600; color: var(--go); } .savedAt:empty { display: none; } .bar .fname { display: flex; flex-direction: column; gap: 2px; }
 @media print { @page { size: letter; margin: 0.75in; } body { background: #fff !important; } body * { visibility: hidden !important; } #sheet, #sheet * { visibility: visible !important; }
   #sheet { position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 0; box-shadow: none; border: 0; } .paperWrap { overflow: visible !important; max-height: none !important; box-shadow: none !important; } }
+.kindBtn { font: inherit; font-size: 14px; background: var(--panel); border: 1.5px solid var(--line); border-radius: 8px; padding: 6px 10px; cursor: pointer; color: var(--ink); text-align: left; max-width: 260px; } .kindBtn:hover { border-color: #000; }
+#kindPop { position: fixed; z-index: 60; background: var(--panel); border: 1.5px solid #000; border-radius: 10px; box-shadow: 0 8px 28px rgba(0,0,0,.18); padding: 10px 12px; display: grid; grid-template-columns: repeat(3, minmax(150px, 1fr)); gap: 6px 16px; max-width: min(640px, calc(100vw - 16px)); font-size: 13px; }
+#kindPop .kpg { display: flex; flex-direction: column; } #kindPop .kpg b { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 2px 0 2px; }
+#kindPop button { all: unset; cursor: pointer; padding: 3px 6px; border-radius: 5px; line-height: 1.3; } #kindPop button:hover { background: var(--accent-soft); } #kindPop button.on { background: var(--accent-fill); color: #000; font-weight: 600; }
+@media (max-width: 560px) { #kindPop { grid-template-columns: 1fr 1fr; } }
 .formEnd { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 6px 0 20px; } .sheetHint { margin: 0; }
 .btn.danger.armed { background: var(--warn); color: #fff; border-color: var(--warn); }
 </style>
@@ -465,7 +470,8 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
       <li>Drop all the files at once in <b>Drop everything here</b>. Each file is sorted by what its first page says (CRS report, County permit history, prelim, contract, counters, MLS, plans …). The boxes below it are your checklist and show what arrived.</li>
       <li>You can still drop a file in a box. If its first page plainly says it is something else (for example a County “Permit History by Parcel” dropped in the prelim box), it is filed as what it really is and the status line tells you.</li>
       <li>Orders opened after this change are checked once, and a document filed under the wrong kind is corrected.</li>
-      <li>To change a document's kind yourself: on the order page, under Documents, pick the kind from its list; it is read again.</li></ol></details>
+      <li>To change a document's kind yourself: on the order page, under Documents, click the kind button next to the file. A small panel shows every kind at once; click the right one and the file is read again.</li>
+      <li>Your own letter, signed and sent back, is filed as <b>My engagement letter (signed)</b> (it is recognized by its first page). It is not checked for AI wording, and the order's My letter is set to Signed.</li></ol></details>
     <details><summary>Dictate your notes (iPad)</summary><ol>
       <li>In an inspection, tap the first tab, <b>🎤 Dictate</b>. Tap in the box, then the microphone on the iPad keyboard, and talk.</li>
       <li>Say the area or room first, then what you see: exterior, garage, view, topography, site, landscaping, interior, heating / cooling / water heater, then each room – entry, living room, kitchen, family room, powder room, primary bedroom, primary bath, bedroom 2, hall bath, laundry room.</li>
