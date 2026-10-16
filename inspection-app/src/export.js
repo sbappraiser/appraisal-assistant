@@ -98,7 +98,8 @@ function buildMISMO(ins, imgName) {
 
   // CAR_STORAGES
   const cs = X(P, 'CAR_STORAGES');
-  if (d.garage.hasGarage) {
+  const privGar = d.garage.hasGarage && d.garage.garShared !== true; // a shared parking garage is sent as ParkingGarage spaces below
+  if (privGar) {
     const c = X(cs, 'CAR_STORAGE'); const det = X(c, 'CAR_STORAGE_DETAIL');
     V(det, 'CarStorageAreaMeasure', skGarage(ins, false), SQFT); V(det, 'CarStorageAttachmentType', d.garage.garAttach); V(det, 'CarStorageType', 'Garage'); V(det, 'ParkingSpacesCount', d.garage.garSpaces);
     imagesInto(c, take(p => p.sec === 'garage'));
@@ -114,14 +115,15 @@ function buildMISMO(ins, imgName) {
   if (d.garage.carport) { const det = X(X(cs, 'CAR_STORAGE'), 'CAR_STORAGE_DETAIL'); V(det, 'CarStorageAreaMeasure', skGarage(ins, true), SQFT); V(det, 'CarStorageAttachmentType', d.garage.carportAttach); V(det, 'CarStorageType', 'Carport'); V(det, 'ParkingSpacesCount', d.garage.carport); }
   const projSpaces = isHoa ? [['ParkingGarage', 'pgSpaces', 'pgAssign'], ['CommonCarport', 'ccSpaces', 'ccAssign'], ['OpenLot', 'olSpaces', 'olAssign']].filter(([, n]) => (d.garage[n] || 0) > 0) : [];
   projSpaces.forEach(([type, n, a]) => { const det = X(X(cs, 'CAR_STORAGE'), 'CAR_STORAGE_DETAIL'); V(det, 'CarStorageType', type); V(det, 'ParkingSpacesCount', d.garage[n]); V(det, 'ProjectParkingSpaceAssignmentType', d.garage[a]); });
-  if (!d.driveway.hasDrive && !d.garage.hasGarage && !d.garage.carport && !projSpaces.length) V(X(X(cs, 'CAR_STORAGE'), 'CAR_STORAGE_DETAIL'), 'CarStorageType', 'None');
+  if (!d.driveway.hasDrive && !privGar && !d.garage.carport && !projSpaces.length) V(X(X(cs, 'CAR_STORAGE'), 'CAR_STORAGE_DETAIL'), 'CarStorageType', 'None');
 
   // DISASTER_MITIGATION_FEATURES
   const dm = X(P, 'DISASTER_MITIGATION_FEATURES'); (d.interview.disaster || []).forEach(t => V(X(dm, 'DISASTER_MITIGATION_FEATURE'), 'DisasterMitigationFeatureType', t));
 
   // ENCUMBRANCES: age restriction from the CC&Rs (e.g. 55+)
-  if (isHoa && PJ.ageRestr === true) { const en = X(X(P, 'ENCUMBRANCES'), 'ENCUMBRANCE'); const cr = X(X(en, 'CONDITION_COVENANT_RESTRICTIONS'), 'CONDITION_COVENANT_RESTRICTION');
-    V(cr, 'RestrictionDescription', PJ.ageDesc); V(cr, 'RestrictionType', 'Age'); V(cr, 'ValueMarketabilityImpactType', PJ.ageImpact); V(X(en, 'ENCUMBRANCE_DETAIL'), 'EncumbranceType', 'ConditionsCovenantsRestrictions'); }
+  const AG = d.site.ageRestr !== undefined ? d.site : PJ; // 6f: asked on the Site tab for every property type
+  if (AG.ageRestr === true) { const en = X(X(P, 'ENCUMBRANCES'), 'ENCUMBRANCE'); const cr = X(X(en, 'CONDITION_COVENANT_RESTRICTIONS'), 'CONDITION_COVENANT_RESTRICTION');
+    V(cr, 'RestrictionDescription', AG.ageDesc); V(cr, 'RestrictionType', 'Age'); V(cr, 'ValueMarketabilityImpactType', AG.ageImpact); V(X(en, 'ENCUMBRANCE_DETAIL'), 'EncumbranceType', 'ConditionsCovenantsRestrictions'); }
 
   // ENERGY_EFFICIENCY_AND_GREEN
   const s = d.systems; const eg = X(P, 'ENERGY_EFFICIENCY_AND_GREEN'); const egd = X(eg, 'ENERGY_EFFICIENCY_AND_GREEN_DETAIL');
@@ -227,7 +229,7 @@ function buildMISMO(ins, imgName) {
   V(X(X(ST, 'CONSTRUCTION_METHODS'), 'CONSTRUCTION_METHOD'), 'ConstructionMethodType', d.front.constr);
   const SC = hoExt ? X(ST, 'STRUCTURE_COMPONENTS') : new XN('STRUCTURE_COMPONENTS'); // not sent when the HOA maintains the exterior
   if ((d.front.walls || []).length) { const c = X(SC, 'STRUCTURE_COMPONENT'); const w = X(c, 'EXTERIOR_WALLS'); d.front.walls.forEach(m => V(X(w, 'EXTERIOR_WALL'), 'WallMaterialType', m)); const dt = X(c, 'STRUCTURE_COMPONENT_DETAIL'); V(dt, 'ImprovementComponentConditionStatusType', d.front.wallsCond); V(dt, 'ImprovementComponentType', 'ExteriorWallsAndTrim'); }
-  if ((d.front.foundType || []).length) { const c = X(SC, 'STRUCTURE_COMPONENT'); const f = X(X(c, 'FOUNDATIONS'), 'FOUNDATION'); const fm = X(f, 'FOUNDATION_MATERIALS'); (d.front.foundMat || []).forEach(m => V(X(fm, 'FOUNDATION_MATERIAL'), 'FoundationMaterialType', m)); const fs = X(f, 'FOUNDATION_STYLES'); d.front.foundType.forEach(t => V(X(fs, 'FOUNDATION_STYLE'), 'FoundationType', t)); const dt = X(c, 'STRUCTURE_COMPONENT_DETAIL'); V(dt, 'ImprovementComponentConditionStatusType', d.front.foundCond); V(dt, 'ImprovementComponentType', 'Foundation'); }
+  if ((d.front.foundType || []).length) { const c = X(SC, 'STRUCTURE_COMPONENT'); const f = X(X(c, 'FOUNDATIONS'), 'FOUNDATION'); const fm = X(f, 'FOUNDATION_MATERIALS'); const perim = d.front.foundType.includes('ConcretePerimeter'); [...new Set([...(d.front.foundMat || []), ...(perim ? ['PouredConcrete'] : [])])].forEach(m => V(X(fm, 'FOUNDATION_MATERIAL'), 'FoundationMaterialType', m)); const fs = X(f, 'FOUNDATION_STYLES'); [...new Set(d.front.foundType.map(t => t === 'ConcretePerimeter' ? 'CrawlSpace' : t))].forEach(t => V(X(fs, 'FOUNDATION_STYLE'), 'FoundationType', t)); const dt = X(c, 'STRUCTURE_COMPONENT_DETAIL'); V(dt, 'ImprovementComponentConditionStatusType', d.front.foundCond); V(dt, 'ImprovementComponentType', 'Foundation'); }
   if (d.front.roofObs !== undefined || (d.front.roofMat || []).length) { const c = X(SC, 'STRUCTURE_COMPONENT'); const r = X(c, 'ROOF'); const rd = X(r, 'ROOF_DETAIL'); V(rd, 'RoofEstimatedAgeRangeType', d.front.roofAge); V(rd, 'RoofObservableIndicator', yn(d.front.roofObs)); const rm = X(r, 'ROOF_MATERIALS'); (d.front.roofMat || []).forEach(m => V(X(rm, 'ROOF_MATERIAL'), 'RoofMaterialType', m)); const dt = X(c, 'STRUCTURE_COMPONENT_DETAIL'); if (d.front.roofObs !== false) V(dt, 'ImprovementComponentConditionStatusType', d.front.roofCond); V(dt, 'ImprovementComponentType', 'Roof'); }
   if ((d.front.windows || []).length) { const c = X(SC, 'STRUCTURE_COMPONENT'); const dt = X(c, 'STRUCTURE_COMPONENT_DETAIL'); V(dt, 'ImprovementComponentConditionStatusType', d.front.winCond); V(dt, 'ImprovementComponentType', 'Windows'); V(dt, 'ImprovementComponentTypeAdditionalDescription', d.front.windows.join(', ').slice(0, 100)); }
   const sd = X(ST, 'STRUCTURE_DETAIL'); if (hoExt) { V(sd, 'ExteriorConditionRatingCode', d.front.ec); V(sd, 'ExteriorQualityRatingCode', d.front.eq); } V(sd, 'FrontDoorApproximateElevationRangeType', d.front.frontElev);
@@ -299,10 +301,10 @@ function buildMISMO(ins, imgName) {
   if (crs.apn || d.site.apnDesc) { const pr = X(X(P, 'PARCELS'), 'PARCEL'); const pdd = X(pr, 'PARCEL_DETAIL'); V(pdd, 'ParcelAreaMeasure', crs.lotSf, SQFT); V(pdd, 'ParcelDescriptionClassificationType', d.site.apnDesc); if (d.site.apnDesc === 'Other') V(pdd, 'ParcelDescriptionClassificationTypeOtherDescription', (d.site.apnOther || '').slice(0, 50));
     if (crs.apn) { const pid = X(X(pr, 'PARCEL_IDENTIFICATIONS'), 'PARCEL_IDENTIFICATION'); V(pid, 'ParcelIdentificationType', 'AssessorUnformattedIdentifier'); V(pid, 'ParcelIdentifier', crs.apn); } }
   // PROPERTY_AMENITY
-  const CAT = { Fence: 'OutdoorAccessories', IrrigationSystem: 'OutdoorAccessories', OutdoorFireplace: 'OutdoorAccessories', OutdoorKitchen: 'OutdoorAccessories', SportsCourt: 'OutdoorAccessories', Deck: 'OutdoorLiving', Patio: 'OutdoorLiving', Porch: 'OutdoorLiving', Balcony: 'OutdoorLiving', Gazebo: 'OutdoorLiving', Portico: 'OutdoorLiving', IngroundPool: 'WaterFeatures', IngroundSpa: 'WaterFeatures', OutdoorShower: 'WaterFeatures', Elevator: 'WholeHome', FireSuppressionSystem: 'WholeHome', ElectricVehicleChargingStation: 'WholeHome', SmartHomeSystem: 'WholeHome', IndoorFireplace: 'WholeHome', MultipleZoneHeatingVentilationAndAirConditioning: 'WholeHome', WholeHouseVentilation: 'WholeHome', WoodStove: 'WholeHome', Sauna: 'Miscellaneous', OutdoorRidingRing: 'Miscellaneous', Other: 'Miscellaneous' };
+  const CAT = { Fence: 'OutdoorAccessories', IrrigationSystem: 'OutdoorAccessories', OutdoorFireplace: 'OutdoorAccessories', OutdoorKitchen: 'OutdoorAccessories', SportsCourt: 'OutdoorAccessories', Deck: 'OutdoorLiving', Patio: 'OutdoorLiving', Porch: 'OutdoorLiving', Balcony: 'OutdoorLiving', Gazebo: 'OutdoorLiving', Portico: 'OutdoorLiving', IngroundPool: 'WaterFeatures', IngroundSpa: 'WaterFeatures', OutdoorShower: 'WaterFeatures', Elevator: 'WholeHome', FireSuppressionSystem: 'WholeHome', ElectricVehicleChargingStation: 'WholeHome', SmartHomeSystem: 'WholeHome', IndoorFireplace: 'WholeHome', MultipleZoneHeatingVentilationAndAirConditioning: 'WholeHome', WholeHouseVentilation: 'WholeHome', WoodStove: 'WholeHome', Sauna: 'WaterFeatures', OutdoorRidingRing: 'Miscellaneous', Other: 'Miscellaneous' };
   const amen = []; // {type, other, mat, area, count, photos, pool:[]}
   Lx.outdoorLiving.forEach(o => { const t = ['Porch', 'Patio', 'Deck', 'Balcony', 'Portico'].includes(o.type) ? o.type : 'Other'; amen.push({ type: t, other: t === 'Other' ? o.type : null, mat: o.material, photos: take(p => p.list === 'outdoorLiving' && p.item === o.id) }); });
-  Lx.waterFeatures.filter(w => !/^Above-ground/.test(w.type || '')).forEach(w => { const t = ['IngroundPool', 'IngroundSpa', 'OutdoorShower'].includes(w.type) ? w.type : 'Other'; const pf = ['IngroundPool', 'IngroundSpa'].includes(t) ? (w.feat || []).filter(f => ['Heated', 'Caged', 'Indoor'].includes(f)) : []; amen.push({ type: t, other: t === 'Other' ? w.type : null, photos: take(p => p.list === 'waterFeatures' && p.item === w.id), pool: pf, cat: 'WaterFeatures' }); });
+  Lx.waterFeatures.filter(w => !/^Above-ground/.test(w.type || '')).forEach(w => { const t = ['IngroundPool', 'IngroundSpa', 'OutdoorShower', 'Sauna'].includes(w.type) ? w.type : 'Other'; const pf = ['IngroundPool', 'IngroundSpa'].includes(t) ? (w.feat || []).filter(f => ['Heated', 'Caged', 'Indoor'].includes(f)) : []; amen.push({ type: t, other: t === 'Other' ? w.type : null, photos: take(p => p.list === 'waterFeatures' && p.item === w.id), pool: pf, cat: 'WaterFeatures' }); });
   const a = d.amenities; const hs = a.hardscape || [], od = a.outdoor || [], rec = a.rec || [], sm = d.systems.smart || [], ie = d.interior.intFeat || [], eff = d.systems.eff || [];
   if (hs.includes('Fencing') || (a.fenceMat || []).length) amen.push({ type: 'Fence', other: null, mat: { Wood: 'Wood', Vinyl: 'Vinyl', 'Wrought Iron': 'Metal', 'Chain Link': 'Metal', 'Block / Masonry': 'Concrete' }[(a.fenceMat || [])[0]] });
   if ((a.landSys || []).some(x => /Irrigation/.test(x))) amen.push({ type: 'IrrigationSystem' });
@@ -310,7 +312,7 @@ function buildMISMO(ins, imgName) {
   if (od.includes('Outdoor Kitchen') || od.includes('Built-in BBQ Area')) amen.push({ type: 'OutdoorKitchen' });
   if (rec.some(x => /Court/.test(x))) amen.push({ type: 'SportsCourt', count: rec.filter(x => /Court/.test(x)).length });
   if (od.includes('Gazebo') || hs.includes('Gazebo')) amen.push({ type: 'Gazebo' });
-  if (od.includes('Sauna')) amen.push({ type: 'Sauna' });
+  if (od.includes('Sauna') && !amen.some(x => x.type === 'Sauna')) amen.push({ type: 'Sauna' });
   if (od.includes('Outdoor Shower') && !amen.some(x => x.type === 'OutdoorShower')) amen.push({ type: 'OutdoorShower' });
   if (ie.includes('Elevator')) amen.push({ type: 'Elevator' });
   if (ie.includes('Fire Sprinklers')) amen.push({ type: 'FireSuppressionSystem' });

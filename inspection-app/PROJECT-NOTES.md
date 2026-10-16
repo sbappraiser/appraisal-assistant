@@ -74,3 +74,16 @@ To do: rename GLA areas to UAD 3.6 / ANSI terms (finished above grade, nonstanda
 - Doors (symbols with door:true): Door, Double door, Sliding door, Open doorway, Exterior entry (door + arrow). "◜ Door" button. Dropped within 3 ft of a wall they seat on it and swing into the room; Hinge side / Swing in-out buttons; width only. Opening painted in the room's fill colour.
 - L-shaped stairs symbol.
 - Floor plan underlay (More → Floor plan underlay): picture or PDF page (choose page), stored as 'under:<id>' record in the sketches store, faint on screen only (never printed); set scale by tapping two points + real length; move; lighter/darker; turn 90°; hide; remove.
+
+## 6f (Oct 16 2026) – her field-test list
+- 10-key pads (custom, inputmode none): money ($ prefix), num, year, phone (auto (xxx) xxx-xxxx, t:'phone'), date (MM/DD/YYYY shown, ISO stored; t:'date' no longer the native picker). hoaPhone → phone; grExp → date (ISO; export accepts both).
+- Top bar is position:fixed; #app:has(> header.bar) padded by --barh (ResizeObserver in syncBar()).
+- Age-restricted (55+) yes/no moved to Site → Restrictions, required for every property type; export reads site (falls back to project); summary in project or site comment.
+- Roof style chips show line sketches (ROOF_ICONS); gutters split into gutterMat (workfile) + gutters features.
+- Walls: Asbestos removed (her call – never seen in SB); Stucco labeled "Stucco / cement plaster (incl. color coat)". Foundation: ConcretePerimeter → CrawlSpace + PouredConcrete.
+- Exterior features: porch/balcony/solar removed (Outdoor and Systems tabs have them). Outdoor list quick-add chips (several porches/patios/decks at once).
+- Condo/HOA: garShared (shared parking garage → pgSpaces), ownYard question; water features, landscaping, recreation only for SFR or a condo with its own yard; usable lot hidden; exterior Q/C group hidden when HOA maintains the exterior; floor number select 1–40; corner unit asked once (removed from unit position list; End Unit hidden for townhouses, which ask it separately).
+- Ratings: only UAD ones kept (exterior, interior, overall, ADU interior). Removed bath, kitchen and outbuilding Q/C, kitchen "remodel" (Interview has it).
+- Duplicates removed: interview "Other systems mentioned" + solar info (kept as notes), well items in utility details, hardscape gazebo/trellis/pergola/courtyard, outdoor sauna/cold plunge/outdoor shower/cabana (sauna is a water feature, category WaterFeatures), garage EV charger (Energy), interior wine cellar (room type) and radiant floors (heating). Interview years fill kitchen/bath update time frames and roof age when empty.
+- Fixture finish: Gold tone – polished / Gold tone – brushed / satin (gold-colored, not gold).
+- normalize() _v6f migration carries old answers to the new places.

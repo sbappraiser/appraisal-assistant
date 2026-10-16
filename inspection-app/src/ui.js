@@ -14,12 +14,23 @@ const groupShown = (g, sec, ins) => tabShown(sec, ins) && (!g.showGroup || g.sho
 async function writeNow() { await DB.put('inspections', JSON.parse(JSON.stringify(app.ins))); }
 function save() {
   if (!app.ins) return;
+  deriveFromInterview(app.ins);
   app.ins.updated = Date.now();
   clearTimeout(app.saving); setSaved('Saving…');
   app.saving = setTimeout(async () => {
     try { await writeNow(); setSaved(DB.persistent ? 'Saved ✓' : 'Saved (session only)'); }
     catch (e) { setSaved('NOT SAVED – storage error'); }
   }, 200);
+}
+/* asked once: years the owner gives on the Interview tab fill the UAD time frames (only when still empty) */
+function deriveFromInterview(ins) {
+  const iv = ins.data.interview || {}; const base = parseInt(String(ins.data.property.inspDate || '').slice(0, 4), 10) || new Date().getFullYear();
+  const age = y => { const n = parseInt(String(y || ''), 10); return n && n <= base ? base - n : null; };
+  const tf = a => a === null ? undefined : a < 1 ? 'LessThanOneYear' : a < 5 ? 'OneToFiveYears' : a < 10 ? 'FiveToTenYears' : 'TenOrMoreYears';
+  const k0 = (ins.lists.kitchens || [])[0], ka = age(iv.kitYear), ba = age(iv.bathYear), ra = age(iv.roofYear);
+  if (k0 && ka !== null && k0.time === undefined && k0.upd && k0.upd !== 'NotUpdated') k0.time = tf(ka);
+  if (ba !== null) (ins.lists.baths || []).forEach(b => { if (b.time === undefined && b.upd && b.upd !== 'NotUpdated') b.time = tf(ba); });
+  if (ra !== null && ins.data.front.roofAge === undefined) ins.data.front.roofAge = ra < 1 ? 'LessThanOneYear' : ra < 10 ? 'OneToTenYears' : ra < 20 ? 'TenToTwentyYears' : 'TwentyOrMoreYears';
 }
 async function saveNow(announce) {
   if (!app.ins) return; clearTimeout(app.saving);
@@ -73,6 +84,7 @@ async function renderHome() {
     const ins = all.find(x => x.id === b.dataset.backup); if (!ins) return;
     app.ins = ins; try { await doExport('workfile', b); } finally { app.ins = null; }
   });
+  syncBar();
 }
 function safeCard(i) {
   try { if (i._broken) throw new Error(i._broken); return homeCard(i); }
@@ -219,8 +231,12 @@ function renderTab2() {
   else if (app.tab === 'export') main.innerHTML = renderExport();
   bind(main); fillThumbs(main); window.scrollTo(0, y);
   returnBar();
-  const bar = $('.bar'); if (bar) document.documentElement.style.setProperty('--barh', bar.offsetHeight + 'px');
+  syncBar();
 }
+/* the top bar is fixed: keep the page padded by its real height (it wraps on narrow screens) */
+function syncBar() { const bar = $('.bar'); if (!bar) return; document.documentElement.style.setProperty('--barh', bar.offsetHeight + 'px');
+  if (!syncBar.ro && window.ResizeObserver) { syncBar.ro = new ResizeObserver(() => { const b = $('.bar'); if (b) document.documentElement.style.setProperty('--barh', b.offsetHeight + 'px'); }); }
+  if (syncBar.ro && syncBar.watched !== bar) { syncBar.ro.disconnect(); syncBar.ro.observe(bar); syncBar.watched = bar; } }
 /* "Done – back to …" bar after jumping from a review list (Systems / Utilities / Counts confirmed) */
 function returnBar() {
   const r = app.returnTo; let bar = document.querySelector('.return-bar');
@@ -352,14 +368,16 @@ function renderField(f, d, ctx) {
       html += `<div class="chips yn">${[[true, 'Yes'], [false, 'No']].map(([val, l]) => `<button class="chip radio" ${attr} data-v="${val}" aria-pressed="${v === val}"><span class="box"></span>${l}</button>`).join('')}</div>`; break;
     case 'one': case 'multi': {
       const multi = f.t === 'multi'; const arr = multi ? (v || []) : [v];
-      html += `<div class="chips">${o.map(([c, l]) => `<button class="chip ${multi ? '' : 'radio'}" ${attr} data-v="${esc(c)}" aria-pressed="${arr.includes(c)}"><span class="box"></span>${esc(l)}</button>`).join('')}</div>`; break;
+      const ic = f.icons === 'roof' ? ROOF_ICONS : null;
+      html += `<div class="chips">${o.map(([c, l]) => `<button class="chip ${multi ? '' : 'radio'} ${ic && ic[c] ? 'withicon' : ''}" ${attr} data-v="${esc(c)}" aria-pressed="${arr.includes(c)}"><span class="box"></span>${ic && ic[c] ? `<svg class="chipicon" viewBox="0 0 64 40" aria-hidden="true">${ic[c]}</svg>` : ''}${esc(l)}</button>`).join('')}</div>`; break;
     }
     case 'sel': html += `<select class="txt" ${attr}><option value="">Choose…</option>${o.map(([c, l]) => `<option value="${esc(c)}" ${v === c ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>`; break;
-    case 'money': // dollar fields get their own 10-key pad (the iPad keyboard has no number pad)
-      html += `<div class="padwrap"><input class="txt num" inputmode="none" data-tenkey="1" ${attr} value="${esc(v ?? '')}" placeholder="$"><div class="tenkey" hidden>${['7','8','9','4','5','6','1','2','3','.','0','⌫'].map(k => `<button type="button" class="tk" data-tk="${k}">${k}</button>`).join('')}<button type="button" class="tk done" data-tk="done">Done</button></div></div>`; break;
-    case 'num': case 'year':
-      html += `<input class="txt num" inputmode="${'numeric'}" ${attr} value="${esc(v ?? '')}" placeholder="${f.t === 'year' ? 'YYYY' : ''}">`; break;
-    case 'date': html += `<input class="txt num" type="date" ${attr} value="${esc(v || '')}">`; break;
+    // numbers, money, phone and dates get their own 10-key pad (the iPad keyboard has no number pad)
+    case 'money': html += tenkey(attr, v ?? '', '0', true, '$'); break;
+    case 'num': html += tenkey(attr, v ?? '', '', true); break;
+    case 'year': html += tenkey(attr, v ?? '', 'YYYY', false); break;
+    case 'phone': html += tenkey(attr, fmtPhone(v || ''), '(805) 555-1234', false); break;
+    case 'date': html += tenkey(attr, fmtDateUS(v || ''), 'MM/DD/YYYY', false); break;
     case 'month': html += `<input class="txt num" type="month" ${attr} value="${esc(v || '')}" placeholder="YYYY-MM">`; break;
     case 'text': html += `<input class="txt" spellcheck="true" autocorrect="on" autocapitalize="sentences" ${attr} value="${esc(v || '')}" ${f.lim ? `maxlength="${f.lim}"` : ''}>`; break;
     case 'note':
@@ -376,6 +394,25 @@ function renderField(f, d, ctx) {
   return html + '</div>';
 }
 
+/* roof style line sketches (front elevation, 64×40) */
+const ROOF_ICONS = (() => { const W = 'fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"', box = '<path d="M14 38V24h36v14" ' + W + '/>';
+  const r = d => `<path d="${d}" ${W}/>` + box;
+  return {
+    Gable: r('M10 24L32 6l22 18'), Hip: r('M10 24l12-14h20l12 14'), Flat: r('M11 24h42M11 21h42'), Shed: r('M10 24h44V10z'),
+    Mansard: r('M10 24l5-12h34l5 12M15 12l4-6h26l4 6'), Gambrel: r('M10 24l7-11 15-7 15 7 7 11'), 'Dutch Gable': r('M10 24l10-10h24l10 10M24 14l8-8 8 8'),
+    Butterfly: r('M10 10l22 10 22-10'), 'Multiple Ridges': r('M8 24l12-12 12 12 12-12 12 12'), 'Steep Pitch': r('M12 24L32 2l20 22'),
+    'Low Pitch': r('M9 24l23-10 23 10'), Dormers: r('M10 24L32 6l22 18M24 17v-6h8v6M40 19v-5h6v5') };
+})();
+function tenkey(attr, val, ph, dot, prefix) {
+  const keys = ['7','8','9','4','5','6','1','2','3', dot ? '.' : '', '0','⌫'];
+  return `<div class="padwrap">${prefix ? `<span class="pfx">${prefix}</span>` : ''}<input class="txt num${prefix ? ' haspfx' : ''}" inputmode="none" data-tenkey="1" ${attr} value="${esc(val)}" placeholder="${esc(ph)}"><div class="tenkey" hidden>${keys.map(k => k ? `<button type="button" class="tk" data-tk="${k}">${k}</button>` : '<span></span>').join('')}<button type="button" class="tk done" data-tk="done">Done</button></div></div>`;
+}
+const fmtPhone = v => { const d = String(v).replace(/\D/g, '').slice(0, 10); if (!d) return ''; if (d.length < 4) return '(' + d; if (d.length < 7) return `(${d.slice(0, 3)}) ${d.slice(3)}`; return `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}`; };
+const fmtDateUS = v => { v = String(v || ''); const iso = v.match(/^(\d{4})-(\d{2})-(\d{2})$/); if (iso) return `${iso[2]}/${iso[3]}/${iso[1]}`;
+  const d = v.replace(/\D/g, '').slice(0, 8); if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(v)) { const [m, dd, y] = v.split('/'); return `${m.padStart(2, '0')}/${dd.padStart(2, '0')}/${y}`; }
+  return d.length > 4 ? `${d.slice(0, 2)}/${d.slice(2, 4)}/${d.slice(4)}` : d.length > 2 ? `${d.slice(0, 2)}/${d.slice(2)}` : d; };
+const usToIso = s => { const m = String(s).match(/^(\d{2})\/(\d{2})\/(\d{4})$/); if (!m) return undefined; const [mo, dd, y] = [+m[1], +m[2], +m[3]]; const t = new Date(y, mo - 1, dd);
+  return t.getFullYear() === y && t.getMonth() === mo - 1 && t.getDate() === dd ? `${m[3]}-${m[1]}-${m[2]}` : undefined; };
 /* Kitchen appliances: tap appliance -> quantity (if any) -> brand -> folds closed */
 function applianceWidget(d, ctx, f) {
   const val = d[f.k] || {}; const key = ctx.item + ':';
@@ -573,7 +610,8 @@ function renderList(key) {
         <div class="gfoot"><button class="btn sm done" data-toggle="${it.id}">Done with ${esc(name)} ▴</button></div></div>` : ''}
     </div>`;
   }).join('');
-  return `<div class="list-items">${items}</div><div class="add-row" id="add-${key}"><button class="btn primary" data-add="${key}">+ ${esc(def.addLabel)}</button>
+  const qa = def.quickAdd ? `<div class="flabel"><span class="lab">Tap each one this property has (tap again to add another of the same kind)</span></div><div class="chips">${def.quickAdd.o.map(t => { const n = list.filter(x => x[def.quickAdd.k] === t).length; return `<button class="chip ${n ? 'appl-on' : ''}" data-add="${key}" data-preset="${esc(t)}" aria-pressed="${n > 0}"><span class="box"></span>${esc(t)}${n > 1 ? ' ×' + n : ''}</button>`; }).join('')}</div>` : '';
+  return `<div class="list-items">${items}</div>${qa}<div class="add-row" id="add-${key}">${def.quickAdd ? '' : `<button class="btn primary" data-add="${key}">+ ${esc(def.addLabel)}</button>`}
     ${key === 'baths' ? '<button class="btn primary" data-add="baths" data-kind="HalfBathroom">+ Add half bath</button>' : ''}
     ${list.length > 1 ? `<button class="btn sm" data-expand="${key}">${list.every(x => app.open.has(x.id)) ? 'Collapse all' : 'Expand all'}</button>` : ''}</div>`;
 }
@@ -596,8 +634,9 @@ function qualityPreview(key, it) {
   const t = roomQualityComment(key, it);
   return `<div class="field wide"><div class="flabel"><span class="tag">Auto</span><span class="lab">Quality comment for SFREP (10.040)</span></div><div class="calc-text">${esc(t || 'Check cabinets, counters and features above to build this comment.')}</div><div class="limit">${t.length} characters</div></div>`;
 }
-function addItem(key, kind) {
+function addItem(key, kind, preset) {
   const ins = app.ins, list = ins.lists[key]; const it = { id: uid() };
+  if (preset && LISTS[key].quickAdd) it[LISTS[key].quickAdd.k] = preset;
   if (key === 'bedrooms') { it.label = 'Bedroom ' + (list.length + 1); it.level = 'LevelOne'; }
   if (key === 'baths') { it.kind = kind || 'FullBathroom'; const n = list.filter(b => b.kind === it.kind).length + 1; it.label = (it.kind === 'HalfBathroom' ? 'Half Bath ' : 'Bath ') + n; it.level = 'LevelOne'; }
   if (key === 'kitchens') it.level = 'LevelOne';
@@ -655,7 +694,9 @@ function bind(root) {
     let before = inp.value;
     const upd = () => {
       const { obj, f } = target(inp); let v = inp.value;
-      if (['num', 'money', 'year'].includes(f.t)) { v = v.replace(/[^0-9.]/g, ''); obj[f.k] = v === '' ? undefined : Number(v); }
+      if (f.t === 'phone') { inp.value = fmtPhone(v); obj[f.k] = inp.value || undefined; }
+      else if (f.t === 'date') { inp.value = fmtDateUS(v.replace(/\D/g, '')); obj[f.k] = usToIso(inp.value); inp.classList.toggle('bad', inp.value.length === 10 && !obj[f.k]); }
+      else if (['num', 'money', 'year'].includes(f.t)) { v = v.replace(/[^0-9.]/g, ''); if (f.t === 'year') v = v.replace(/\./g, '').slice(0, 4); obj[f.k] = v === '' ? undefined : Number(v); }
       else obj[f.k] = v === '' ? undefined : v;
       if (inp.tagName === 'TEXTAREA' && before.trim().length >= 15 && inp.value.trim() === '') offerUndo(obj, f.k, before);
       before = inp.value || before;
@@ -697,7 +738,7 @@ function bind(root) {
     if (!wasOpen) scrollToEl('item-' + id);
     else if (b.closest('.gfoot')) { const key = Object.keys(app.ins.lists).find(k => app.ins.lists[k].some(x => x.id === id)); const add = key && document.getElementById('add-' + key); if (add) { const top = add.getBoundingClientRect().top + window.scrollY - window.innerHeight / 2; window.scrollTo(0, Math.max(0, top)); add.classList.add('flash'); setTimeout(() => add.classList.remove('flash'), 1600); } } });
   root.querySelectorAll('[data-expand]').forEach(b => b.onclick = () => { const l = app.ins.lists[b.dataset.expand]; const all = l.every(x => app.open.has(x.id)); l.forEach(x => all ? app.open.delete(x.id) : app.open.add(x.id)); renderTab(); });
-  root.querySelectorAll('[data-add]').forEach(b => b.onclick = () => { if (Date.now() - (app.shiftAt || 0) < 700) return; addItem(b.dataset.add, b.dataset.kind); });
+  root.querySelectorAll('[data-add]').forEach(b => b.onclick = () => { if (Date.now() - (app.shiftAt || 0) < 700) return; addItem(b.dataset.add, b.dataset.kind, b.dataset.preset); });
   root.querySelectorAll('[data-rename]').forEach(b => b.onclick = () => { app.renaming = b.dataset.rename; renderTab(); const i = document.getElementById('rename-' + app.renaming); if (i) { i.focus(); i.select(); } });
   root.querySelectorAll('[data-renameno]').forEach(b => b.onclick = () => { app.renaming = null; renderTab(); });
   root.querySelectorAll('[data-renameform]').forEach(f => f.onsubmit = e => {
@@ -911,7 +952,7 @@ function measureReminders(ins) {
   const m = [];
   ins.lists.outdoorLiving.forEach(o => { if (['Deck', 'Balcony', 'Portico', 'Porch', 'Veranda', 'Roof Deck', 'Patio'].includes(o.type)) m.push(o.type); });
   if ((ins.data.amenities.outdoor || []).includes('Gazebo')) m.push('Gazebo');
-  if (ins.data.garage.hasGarage) m.push('Garage');
+  if (ins.data.garage.hasGarage && ins.data.garage.garShared !== true) m.push('Garage');
   ins.lists.outbuildings.forEach(o => m.push(LISTS.outbuildings.name(o)));
   ins.lists.adus.forEach((a, i) => m.push(LISTS.adus.name(a, i)));
   ins.lists.noncont.forEach((n, i) => m.push(LISTS.noncont.name(n, i)));

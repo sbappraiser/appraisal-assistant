@@ -61,6 +61,7 @@ const GEN = {
   },
   siteFeatures(ins) {
     const s = ins.data.site, a = ins.data.amenities, out = [];
+    if (s.ageRestr === true && !IS_HOA(ins)) out.push(S(`The property is age restricted${s.ageDesc ? ' (' + (s.ageDesc.charAt(0).toLowerCase() + s.ageDesc.slice(1)).replace(/\.$/, '') + ')' : ''}; the effect on value and marketability is considered ${(s.ageImpact || 'neutral').toLowerCase()}`, 1));
     out.push(S(s.siteDefects === true ? 'Adverse site conditions observed are described in the site defects section' : 'No readily observable adverse site conditions or material encroachments were noted during observation', 1));
     out.push(S('This analysis does not determine precise boundaries, easements, or legal matters requiring a professional survey or title examination. Site data (boundaries, dimensions, configuration) is based on available public records, plat maps, and aerial imagery considered reliable for appraisal purposes', 1));
     if ((a.hardscape || []).includes('Fencing') || (a.hardscape || []).includes('Perimeter Walls')) out.push(S('Perimeter fencing provides an effective physical buffer from adjacent parcels, supporting typical residential usage within this market segment', 2));
@@ -116,7 +117,8 @@ const GEN = {
     const ef = lvl(ins, 'front', 'extFeat'); if (ef.length) out.push(S(`Exterior features include ${listJoin(ef)}`, 2));
     const fd = lvl(ins, 'front', 'frontDoor'); if (fd.length) out.push(S(`${cap(listJoin(fd))} front entry door`, 3));
     const xd = lvl(ins, 'interior', 'extDoors'); if (xd.length) out.push(S(`Exterior doors include ${listJoin(xd)}`, 2));
-    const g = lvl(ins, 'front', 'gutters'); if (g.length) out.push(S(`${cap(listJoin(g))}`, 3));
+    { const gm = lvl(ins, 'front', 'gutterMat').filter(x => !/^none$/i.test(x)), g = lvl(ins, 'front', 'gutters');
+      if (gm.length || g.length) out.push(S(`${gm.length ? cap(listJoin(gm)) + ' gutters' : 'Gutters'}${g.length ? ' (' + listJoin(g) + ')' : ''}`, 3)); }
     if (f.converted) out.push(S(`A converted ${lc(sv(ins, 'front', 'convFrom'))} area is ${lc(sv(ins, 'front', 'convSim'))} to the rest of the living area`, 1));
     if (iv.addDesc) out.push(S(`Reported additions / conversions: ${iv.addDesc}${iv.addPermit === 'Yes' ? ' (reported as permitted)' : iv.addPermit === 'No' ? ' (reported as not permitted)' : ''}`, 1));
     return out;
@@ -198,12 +200,13 @@ const GEN = {
   },
   vehicle(ins) {
     const g = ins.data.garage, d = ins.data.driveway, out = [];
-    if (g.hasGarage) {
+    if (g.garShared === true) out.push(S('The unit has the use of a shared (common) parking garage', 1));
+    if (g.hasGarage && g.garShared !== true) {
       const att = lc(sv(ins, 'garage', 'garAttach')); const tandem = g.garTandemYN && g.garTandem;
       out.push(S(`Property features a${/^[aeiou]/.test(att) ? 'n' : ''} ${att} ${g.garSpaces || '[ ]'}-car garage${tandem ? ' with ' + (g.garTandem > 1 ? g.garTandem + ' tandem bays' : 'one tandem bay') : ''}. ${tandem ? 'Reduced tandem utility is adjusted via the grid' : 'Structural utility is standard; evaluated in the grid'}`, 1));
       if (g.garConverted) out.push(S(`The garage has been converted (${lc(g.garConvPermit || 'permit status unknown')})`, 1));
       const feat = lvl(ins, 'garage', 'garFeat').filter(x => !/^ev charger$/i.test(x)); if (feat.length || g.garFinish) out.push(S(`${feat.length ? 'Garage features include ' + listJoin(feat) : 'Garage'}${g.garFinish ? (feat.length ? '; ' : ' is ') + lc(g.garFinish) : ''}`, 2));
-    } else if (g.hasGarage === false && !(IS_HOA(ins) && ((g.pgSpaces || 0) + (g.ccSpaces || 0) + (g.olSpaces || 0)) > 0)) out.push(S('There is no garage', 1));
+    } else if (g.hasGarage === false && g.garShared !== true && !(IS_HOA(ins) && ((g.pgSpaces || 0) + (g.ccSpaces || 0) + (g.olSpaces || 0)) > 0)) out.push(S('There is no garage', 1));
     if (g.carport) out.push(S(`${g.carport}-car carport`, 2));
     if (IS_HOA(ins)) [['pgSpaces', 'pgAssign', 'parking garage'], ['ccSpaces', 'ccAssign', 'common carport'], ['olSpaces', 'olAssign', 'open lot']].forEach(([n, a, t]) => { if ((g[n] || 0) > 0) out.push(S(`${g[n]} ${g[a] ? lc(g[a]) + ' ' : ''}${t} space${g[n] > 1 ? 's' : ''}${g.spaceIds ? ' (' + g.spaceIds + ')' : ''}`, 1)); });
     const op = lvl(ins, 'garage', 'otherPark'); if (op.length) out.push(S(`Other parking: ${listJoin(op)}`, 3));
@@ -260,9 +263,9 @@ const GEN = {
     out.push(S(`The subject is ${unitDesc ? 'a ' + unitDesc + ' unit' : 'located'} in ${J.projName ? J.projName + ', a' : 'a'} ${des}${kind}${P0.condotel ? ' operated with a hotel-style rental program (condotel)' : ''}`, 1));
     const am = (J.projAmen || []).filter(x => x !== 'None').map(x => x === 'Other' ? (J.projAmenOther || 'other amenities') : x.startsWith('Other:') ? x.slice(6) : labelOf(PROJ_AMEN, x)).map(lc);
     if (am.length) out.push(S(`Common elements include ${listJoin([...new Set(am)])}`, 2));
-    if (J.ageRestr === true) out.push(S(`The project is age restricted${J.ageDesc ? ' (' + (J.ageDesc.charAt(0).toLowerCase() + J.ageDesc.slice(1)).replace(/\.$/, '') + ')' : ''}`, 1));
+    { const AG = ins.data.site.ageRestr !== undefined ? ins.data.site : J; if (AG.ageRestr === true) out.push(S(`The project is age restricted${AG.ageDesc ? ' (' + (AG.ageDesc.charAt(0).toLowerCase() + AG.ageDesc.slice(1)).replace(/\.$/, '') + ')' : ''}`, 1)); }
     if (J.clubReq === true) out.push(S(`Ownership requires ${J.clubName ? 'membership in ' + J.clubName : 'a club membership'}${J.clubInit ? ', with an initiation fee of $' + Number(J.clubInit).toLocaleString() : ''}${J.clubDues ? (J.clubInit ? ' and' : ',') + ' club dues of $' + Number(J.clubDues).toLocaleString() + ' per month' : ''}, in addition to the association dues`, 1));
-    if (J.groundRent === true) out.push(S(`The project is on leased land${J.grMonthly ? ' with a land lease payment of $' + Number(J.grMonthly).toLocaleString() + ' per month' : ''}${J.grExp ? ', expiring ' + J.grExp : ''}, in addition to the association dues`, 1));
+    if (J.groundRent === true) out.push(S(`The project is on leased land${J.grMonthly ? ' with a land lease payment of $' + Number(J.grMonthly).toLocaleString() + ' per month' : ''}${J.grExp ? ', expiring ' + String(J.grExp).replace(/^(\d{4})-(\d{2})-(\d{2})$/, '$2/$3/$1') : ''}, in addition to the association dues`, 1));
     const cond = { 'Well Kept': 'Common elements appear adequately maintained', 'Typical Wear and Tear': 'Common elements show typical wear and tear', 'Deferred Maintenance': 'Common elements show deferred maintenance', 'Under Renovation': 'Common elements are under renovation' }[J.projCond];
     if (cond) out.push(S(cond, 2));
     if (J.dues !== undefined) { const ut = (J.duesUtil || []).filter(x => x !== 'None').flatMap(x => x === 'Other' ? ([...(J.duesUtilOtherPick || []), J.duesUtilOther].filter(Boolean).map(lc).length ? [...(J.duesUtilOtherPick || []), J.duesUtilOther].filter(Boolean).map(lc) : ['other']) : [x === 'SanitarySewer' ? 'sewer' : lc(x)]); const inc = [...ut, ...(J.duesIncl || []).map(lc)];

@@ -26,7 +26,7 @@ const CEIL_S = opts(['Flat','Flat'],['Vaulted','Vaulted'],['Cathedral','Cathedra
 const FLOORING = opts('Tile','Stone Tile','Stone Slab',['Hardwood','Hardwood'],['EngineeredWood','Engineered Wood'],'Bamboo',['Laminate','Laminate'],'LVP','Vinyl Tile','Vinyl Sheet',['Carpet','Carpet'],['FinishedConcrete','Finished Concrete'],'Plywood','None',['Microcement / Plaster','Other','Other']);
 const COUNTERS = opts('Stone Slab','Tile','Corian / Solid Surface','Butcher Block','Concrete','Stainless Steel','Porcelain Slab','Laminate','Microcement / Plaster','Other');
 const CABINETS = opts('Custom Built','Semi-Custom','Stock','Solid Wood','Painted Wood','Stained Wood','Matched Grain Laminate','Lacquer / High Gloss','Thermofoil','Laminate','MDF','Metal','Glass Front','Inset','Frameless (Full Overlay)','Slab / Flat Panel','Shaker','Raised Panel','White Oak','Rift-sawn Oak','Walnut','Panel-ready Appliance Fronts','Other');
-const FIXTURE_FIN = opts('Polished Chrome','Brushed Nickel','Polished Nickel','Stainless','Unlacquered Brass','Brushed Brass / Gold','Matte Black','Oil-rubbed Bronze','Mixed Metals');
+const FIXTURE_FIN = opts('Polished Chrome','Brushed Nickel','Polished Nickel','Stainless','Unlacquered Brass',['Polished Gold Tone','Gold tone – polished'],['Brushed Brass / Gold','Gold tone – brushed / satin'],'Matte Black','Oil-rubbed Bronze','Mixed Metals');
 const BATH_MAT = opts('Stone Tile','Stone Slab','Tile','Corian','Glass Tile','Acrylic / Fiberglass','Cast Iron','Enameled Steel','Copper','Concrete','Waterproof Plaster (Tadelakt / Microcement)','Other');
 const REMODEL = opts('Gutted and Remodeled','Remodeled','Updated','Partially Updated','Older Remodel','Dated','Original','New Construction');
 const BRANDS = ['Wolf','Viking','Miele','Sub-Zero','Thermador','Dacor','Bosch','GE Profile','GE Monogram','GE Café','KitchenAid','La Cornue','Bertazzoni','Gaggenau','JennAir','Fisher & Paykel','Sharp','LG','Samsung','Maytag','Kenmore','Frigidaire','Whirlpool','Asko','BlueStar','O\'Keefe & Merritt','Other'];
@@ -90,7 +90,7 @@ const PROJ_SRC = opts(['CondominiumQuestionnaire','Condominium Questionnaire'],[
 
 const LISTS = {
   outdoorLiving: {
-    title: 'Porches, Patios, Decks & Balconies', addLabel: 'Add porch / patio / deck',
+    title: 'Porches, Patios, Decks & Balconies', addLabel: 'Add porch / patio / deck', quickAdd: { k: 'type', o: ['Patio','Porch','Deck','Balcony','Portico','Veranda','Terrace','Loggia','Courtyard','Roof Deck'] },
     name: (it, i) => it.type || ('Outdoor area ' + (i + 1)),
     fields: [
       { k: 'type', l: 'Type', t: 'one', req: true, o: opts('Patio','Porch','Deck','Balcony','Portico','Veranda','Terrace','Loggia','Courtyard','Roof Deck'), uad: 'AmenityType' },
@@ -107,7 +107,7 @@ const LISTS = {
     title: 'Pool, Spa & Water Features', addLabel: 'Add pool / spa / water feature',
     name: (it, i) => labelOf(LISTS.waterFeatures.fields[0].o, it.type) || ('Water feature ' + (i + 1)),
     fields: [
-      { k: 'type', l: 'Type', t: 'one', req: true, o: opts(['IngroundPool','In-ground Pool'],'Above-ground Pool',['IngroundSpa','In-ground Spa'],'Above-ground Spa / Hot Tub','Lap Pool','Infinity Edge Pool','Plunge Pool','Cold Plunge',['OutdoorShower','Outdoor Shower'],'Pond','Koi Pond','Fountain','Waterfall','Stream','Reflecting Pool','Splash Pad','Other') },
+      { k: 'type', l: 'Type', t: 'one', req: true, o: opts(['IngroundPool','In-ground Pool'],'Above-ground Pool',['IngroundSpa','In-ground Spa'],'Above-ground Spa / Hot Tub','Lap Pool','Infinity Edge Pool','Plunge Pool','Cold Plunge',['OutdoorShower','Outdoor Shower'],['Sauna','Sauna'],'Pond','Koi Pond','Fountain','Waterfall','Stream','Reflecting Pool','Splash Pad','Other') },
       { k: 'mat', l: 'Material / finish', t: 'one', o: opts('Gunite / Plaster','Pebble Finish','Tile','Fiberglass','Vinyl Liner','Concrete','Natural Stone','Other'), req: it => it.type === 'IngroundPool' },
       { k: 'feat', l: 'Features', t: 'multi', o: opts('Heated','Solar Heated','Salt Water','Automatic Cover','Safety Fence','Caged','Spa Spillover','Water Slide','Diving Board','Baja Shelf','Lighting','Automation','Indoor') },
       { k: 'cond', l: 'Condition', t: 'one', o: COMP_COND },
@@ -159,8 +159,6 @@ const LISTS = {
       { k: 'fullBaths', l: 'Full baths', t: 'count', show: it => it.living === true, req: it => it.living === true },
       { k: 'halfBaths', l: 'Half baths', t: 'count', show: it => it.living === true, req: it => it.living === true },
       { k: 'kitchen', l: 'Kitchen', t: 'one', o: opts('Full Kitchen','Kitchenette','Wet Bar Only','None'), show: it => it.living === true, req: it => it.living === true },
-      { k: 'q', l: 'Quality', t: 'one', o: QR },
-      { k: 'c', l: 'Condition', t: 'one', o: CR },
       { k: 'defects', l: 'Outbuilding defects present?', t: 'yn', req: true, uad: 'OutbuildingDefectsExistIndicator' },
       { k: 'note', l: 'Notes', t: 'note' },
     ],
@@ -300,8 +298,6 @@ const LISTS = {
       { k: 'upd', l: 'Update status', t: 'one', req: true, o: UPDATE, uad: 'RoomUpdateStatusType' },
       { k: 'time', l: 'Update time frame', t: 'one', o: TIMEFRAME, show: it => it.upd && it.upd !== 'NotUpdated', req: it => it.upd && it.upd !== 'NotUpdated', uad: 'RoomUpdatedTimeframeType' },
       { k: 'condStat', l: 'Condition status', t: 'one', req: true, o: COND_STATUS, uad: 'RoomConditionStatusType' },
-      { k: 'q', l: 'Quality rating', t: 'one', req: true, o: QR },
-      { k: 'c', l: 'Condition rating', t: 'one', req: true, o: CR },
       { k: 'condNote', l: 'Condition comment', t: 'note', lim: 120, uad: 'RoomConditionAdditionalDescription', fid: '10.042', show: it => it.condStat && it.condStat.startsWith('Damaged'), req: it => it.condStat && it.condStat.startsWith('Damaged') },
       { k: 'note', l: 'Notes', t: 'note' },
     ],
@@ -323,12 +319,9 @@ const LISTS = {
       { k: 'islandSeat', l: 'Island bar seating', t: 'yn', show: it => (it.islands || 0) > 0 },
       { k: 'finish', l: 'Fixture finish', t: 'multi', o: FIXTURE_FIN },
       { k: 'amen', l: 'Amenities', t: 'multi', o: opts('Waterfall Counter Edge','Peninsula','Breakfast Bar','Eat-in Area','Dual Waterfall Island','Mitered Counter Edge','Floating Shelves','No Upper Cabinets','Full-height Cabinet Wall','Panel-ready / Integrated Appliances','Plaster Range Hood','Pantry','Walk-in Pantry','Butler\'s Pantry','Cabinet Organizers / Pull-outs','Under-cabinet Lighting','Pendant Lighting','Prep Sink','Farmhouse Sink','Double Sink','Desk Area','Glass-front Cabinets','Open Shelving','Tile Backsplash','Slab Backsplash') },
-      { k: 'remodel', l: 'Remodel status (your notes)', t: 'one', o: REMODEL },
       { k: 'upd', l: 'Update status', t: 'one', req: true, o: UPDATE, uad: 'RoomUpdateStatusType' },
       { k: 'time', l: 'Update time frame', t: 'one', o: TIMEFRAME, show: it => it.upd && it.upd !== 'NotUpdated', req: it => it.upd && it.upd !== 'NotUpdated', uad: 'RoomUpdatedTimeframeType' },
       { k: 'condStat', l: 'Condition status', t: 'one', req: true, o: COND_STATUS, uad: 'RoomConditionStatusType' },
-      { k: 'q', l: 'Kitchen quality', t: 'one', req: true, o: QR },
-      { k: 'c', l: 'Kitchen condition', t: 'one', req: true, o: CR },
       { k: 'condNote', l: 'Condition comment', t: 'note', lim: 120, uad: 'RoomConditionAdditionalDescription', show: it => it.condStat && it.condStat.startsWith('Damaged'), req: it => it.condStat && it.condStat.startsWith('Damaged') },
       { k: 'note', l: 'Notes', t: 'note' },
     ],
@@ -522,9 +515,6 @@ const SECTIONS = [
       { k: 'photoAmen2', l: 'Project amenity 2', t: 'photo', cat: 'ProjectAmenity', show: d => (d.projAmen || []).some(x => x !== 'None') },
       { k: 'photoAmen3', l: 'Project amenity 3', t: 'photo', cat: 'ProjectAmenity', show: d => (d.projAmen || []).some(x => x !== 'None') },
       { k: 'photoAmen4', l: 'Project amenity 4', t: 'photo', cat: 'ProjectAmenity', show: d => (d.projAmen || []).some(x => x !== 'None') },
-      { k: 'ageRestr', l: 'Age-restricted community (e.g. 55+)', t: 'yn', help: 'An owner or occupant must meet an age requirement in the CC&Rs. Sent to SFREP as a property restriction (Age).', uad: 'RestrictionType', fid: '1.025' },
-      { k: 'ageDesc', l: 'Age restriction – what it requires', t: 'text', lim: 250, show: d => d.ageRestr === true, help: 'e.g. At least one owner must be 55 or older.', uad: 'RestrictionDescription', fid: '4.053' },
-      { k: 'ageImpact', l: 'Effect of the age restriction on value / marketability', t: 'one', o: IMPACT, show: d => d.ageRestr === true, req: d => d.ageRestr === true, uad: 'ValueMarketabilityImpactType', fid: '4.052' },
       { k: 'projDef', l: 'Deficiencies observed in the project (common areas, buildings)', t: 'yn', req: (d, ins) => IS_PROJ(ins), uad: 'ProjectDeficiencyObservedIndicator', fid: '1.019' },
       { k: 'projDefDesc', l: 'Describe the deficiencies', t: 'note', lim: 2500, show: d => d.projDef === true, req: d => d.projDef === true, uad: 'ProjectConditionAndQualityDescription', fid: '18.015' },
       { k: 'photoProjDef', l: 'Project deficiency', t: 'photo', cat: 'ProjectDeficiency', show: d => d.projDef === true, recommended: true },
@@ -545,7 +535,7 @@ const SECTIONS = [
       { k: 'hoaHasContact', l: 'Does the owner have an HOA contact?', t: 'yn', req: true, help: 'No = follow up from the MLS, title or escrow; the contact is then not counted as missing.' },
       { k: 'hoaName', l: 'HOA / management company', t: 'text', show: d => d.hoaHasContact !== false, req: d => d.hoaHasContact === true },
       { k: 'hoaContactName', l: 'HOA contact name', t: 'text', show: d => d.hoaHasContact !== false, req: d => d.hoaHasContact === true },
-      { k: 'hoaPhone', l: 'HOA contact phone', t: 'text', show: d => d.hoaHasContact !== false, req: d => d.hoaHasContact === true && !d.hoaEmail, help: 'Phone or email is enough.' },
+      { k: 'hoaPhone', l: 'HOA contact phone', t: 'phone', show: d => d.hoaHasContact !== false, req: d => d.hoaHasContact === true && !d.hoaEmail, help: 'Phone or email is enough.' },
       { k: 'hoaEmail', l: 'HOA contact email', t: 'text', show: d => d.hoaHasContact !== false },
       { k: 'dues', l: 'HOA dues ($), per owner', t: 'money', uad: 'AssociationChargeAmount', fid: '18.011', help: 'Leave blank if the owner does not know.' },
       { k: 'duesFreq', l: 'Dues are paid', t: 'one', o: opts('Monthly','Quarterly','Semi-annually','Annually'), show: d => d.dues !== undefined, help: 'Sent to SFREP as a monthly amount.' },
@@ -559,7 +549,7 @@ const SECTIONS = [
       { k: 'clubDues', l: 'Club dues ($ per month)', t: 'money', show: d => d.clubReq === true },
       { k: 'groundRent', l: 'On leased land (land lease / ground rent)', t: 'yn', uad: 'ProjectAnalysisGroundRentIndicator', fid: '18.019' },
       { k: 'grMonthly', l: 'Land lease fee ($ per month)', t: 'money', show: d => d.groundRent === true, help: 'Sent to SFREP as the annual amount (× 12), separate from the HOA dues.', uad: 'ProjectAnalysisGroundRentAmount', fid: '18.020' },
-      { k: 'grExp', l: 'Land lease expires', t: 'text', show: d => d.groundRent === true, help: 'mm/dd/yyyy, if the owner knows.', uad: 'ProjectAnalysisGroundRentExpirationDate', fid: '18.021' },
+      { k: 'grExp', l: 'Land lease expires', t: 'date', show: d => d.groundRent === true, help: 'If the owner knows.', uad: 'ProjectAnalysisGroundRentExpirationDate', fid: '18.021' },
       { k: 'grDesc', l: 'Land lease notes (lessor, renewal, rent increases)', t: 'text', lim: 250, show: d => d.groundRent === true, uad: 'ProjectAnalysisGroundRentDescription', fid: '18.022' },
       { k: 'specAssess', l: 'Special assessment the owner knows of', t: 'one', o: opts(['None','None known'],['Existing','Existing'],['Proposed','Proposed'],['Unknown','Owner not sure']), uad: 'AssociationSpecialAssessmentStatusType' },
       { k: 'specDesc', l: 'Special assessment – what the owner said (purpose, amount)', t: 'text', show: d => ['Existing','Proposed'].includes(d.specAssess) },
@@ -617,37 +607,38 @@ const SECTIONS = [
       { k: 'hoaExt1', t: 'info', l: 'The HOA maintains the exterior, so UAD does not require exterior component conditions or exterior quality/condition ratings and they are not sent to SFREP. Fill in what you want for your comments and workfile.', show: (d, ins) => !HO_EXT(ins) },
       { k: 'roofObs', l: 'Roof observable', t: 'yn', req: (d, ins) => HO_EXT(ins), uad: 'RoofObservableIndicator' },
       { k: 'roofMat', l: 'Roof material', t: 'multi', req: (d, ins) => HO_EXT(ins), o: U('RoofMaterialType'), uad: 'RoofMaterialType' },
-      { k: 'roofStyle', l: 'Roof style', t: 'multi', o: opts('Gable','Hip','Flat','Shed','Mansard','Gambrel','Dutch Gable','Butterfly','Multiple Ridges','Steep Pitch','Low Pitch','Dormers') },
+      { k: 'roofStyle', l: 'Roof style (your notes – not a UAD field)', t: 'multi', icons: 'roof', o: opts('Gable','Hip','Flat','Shed','Mansard','Gambrel','Dutch Gable','Butterfly','Multiple Ridges','Steep Pitch','Low Pitch','Dormers') },
       { k: 'roofAge', l: 'Roof estimated age', t: 'one', req: (d, ins) => HO_EXT(ins), o: order(U('RoofEstimatedAgeRangeType'), ['LessThanOneYear','OneToTenYears','TenToTwentyYears','TwentyOrMoreYears']), uad: 'RoofEstimatedAgeRangeType' },
       { k: 'roofCond', l: 'Roof condition', t: 'one', show: d => d.roofObs !== false, req: (d, ins) => d.roofObs !== false && HO_EXT(ins), o: COMP_COND, uad: 'ImprovementComponentConditionStatusType' },
       { k: 'roofMoreInfo', t: 'info', l: 'Other roofs (garage, addition, ADU, patio cover…): add them below. They go into the exterior comment; the main roof stays in the UAD roof fields.' },
-      { k: 'gutters', l: 'Gutters / downspouts', t: 'multi', o: opts('Gutters','Downspouts','Copper Gutters','Seamless Gutters','Rain Chains','Gutter Guards','None') },
+      { k: 'gutterMat', l: 'Gutter material (your notes – not a UAD field)', t: 'multi', o: opts('None','Aluminum','Copper','Galvanized Steel','Zinc','Vinyl','Stainless Steel','Painted Steel','Wood') },
+      { k: 'gutters', l: 'Gutters & downspouts', t: 'multi', show: d => !(d.gutterMat || []).includes('None'), o: opts('Seamless','Half-round','K-style (ogee)','Box Gutters','Downspouts','Rain Chains','Gutter Guards','Underground Drains') },
     ], list: 'roofs2' },
     { id: 'walls', title: 'Exterior walls, windows & foundation', fields: [
       { k: 'hoaExt2', t: 'info', l: 'The HOA maintains the exterior, so UAD does not require exterior component conditions or exterior quality/condition ratings and they are not sent to SFREP. Fill in what you want for your comments and workfile.', show: (d, ins) => !HO_EXT(ins) },
-      { k: 'walls', l: 'Exterior walls', t: 'multi', req: (d, ins) => HO_EXT(ins), o: U('WallMaterialType'), uad: 'WallMaterialType' },
+      { k: 'walls', l: 'Exterior walls', t: 'multi', req: (d, ins) => HO_EXT(ins), o: U('WallMaterialType').filter(x => x[0] !== 'Asbestos').map(x => x[0] === 'Stucco' ? ['Stucco', 'Stucco / cement plaster (incl. color coat)'] : x), uad: 'WallMaterialType' },
       { k: 'wallsCond', l: 'Exterior walls & trim condition', t: 'one', req: (d, ins) => HO_EXT(ins), o: COMP_COND, uad: 'ImprovementComponentConditionStatusType' },
       { k: 'windows', l: 'Windows', t: 'multi', req: (d, ins) => HO_EXT(ins), o: opts('Dual Pane','Single Pane','Triple Pane','Low-E','Vinyl','Wood','Aluminum','Clad Wood','Fiberglass','Steel','Bronze','Casement','Double Hung','Sliding','Picture','Bay / Bow','Divided Lite','Impact Glass') },
       { k: 'winCond', l: 'Windows condition', t: 'one', req: (d, ins) => HO_EXT(ins), o: COMP_COND, uad: 'ImprovementComponentConditionStatusType' },
-      { k: 'foundType', l: 'Foundation type', t: 'multi', req: (d, ins) => HO_EXT(ins), o: U('FoundationType'), uad: 'FoundationType' },
+      { k: 'foundType', l: 'Foundation type', t: 'multi', req: (d, ins) => HO_EXT(ins), o: [...U('FoundationType').filter(x => x[0] !== 'Other'), ['ConcretePerimeter', 'Concrete perimeter (raised floor)'], ...U('FoundationType').filter(x => x[0] === 'Other')], uad: 'FoundationType', help: 'Concrete perimeter goes to SFREP as crawl space with poured concrete.' },
       { k: 'foundMat', l: 'Foundation material', t: 'multi', req: (d, ins) => HO_EXT(ins), o: U('FoundationMaterialType'), uad: 'FoundationMaterialType' },
       { k: 'foundCond', l: 'Foundation condition', t: 'one', req: (d, ins) => HO_EXT(ins), o: COMP_COND, uad: 'ImprovementComponentConditionStatusType' },
-      { k: 'extFeat', l: 'Exterior features', t: 'multi', o: opts('Front Porch','Covered Entry','Courtyard Entry','Balcony','Shutters','Columns','Exterior Lighting','Exterior Speakers','Solar Panels Visible','Palapa / Thatch Shade','Cable / Wire Mesh Rails','Exposed Rafter Tails','Chimney') },
+      { k: 'extFeat', l: 'Exterior features', t: 'multi', help: 'Porches, patios, decks and balconies are on the Outdoor tab; solar is on the Systems tab.', o: opts('Covered Entry','Courtyard Entry','Shutters','Columns','Exterior Lighting','Exterior Speakers','Palapa / Thatch Shade','Cable / Wire Mesh Rails','Exposed Rafter Tails','Chimney') },
       { k: 'converted', l: 'Converted area (garage, porch, patio)?', t: 'yn', req: true, uad: 'ConvertedAreaExistsIndicator', fid: '8.012' },
       { k: 'convFrom', l: 'Converted from', t: 'one', o: U('ConvertedAreaOriginalUseType'), show: d => d.converted === true, req: d => d.converted === true, uad: 'ConvertedAreaOriginalUseType' },
       { k: 'convSim', l: 'Converted area vs. rest of living area', t: 'one', o: UN('ConvertedAreaFinishComparisonType'), show: d => d.converted === true, req: d => d.converted === true, uad: 'ConvertedAreaFinishComparisonType' },
       { k: 'note', l: 'Front / exterior notes', t: 'note' },
     ]},
     { id: 'extQC', title: 'Exterior quality & condition', fields: [
-      { k: 'hoaExt3', t: 'info', l: 'The HOA maintains the exterior, so UAD does not require exterior component conditions or exterior quality/condition ratings and they are not sent to SFREP. Fill in what you want for your comments and workfile.', show: (d, ins) => !HO_EXT(ins) },
-      { k: 'eq', l: 'Exterior quality', t: 'one', req: (d, ins) => HO_EXT(ins), o: QR, uad: 'ExteriorQualityRatingCode' },
-      { k: 'ec', l: 'Exterior condition', t: 'one', req: (d, ins) => HO_EXT(ins), o: CR, uad: 'ExteriorConditionRatingCode' },
-    ]},
+      { k: 'eq', l: 'Exterior quality', t: 'one', req: true, o: QR, uad: 'ExteriorQualityRatingCode' },
+      { k: 'ec', l: 'Exterior condition', t: 'one', req: true, o: CR, uad: 'ExteriorConditionRatingCode' },
+    ], showGroup: (d, ins) => HO_EXT(ins) },
   ]},
 
   { id: 'garage', title: 'Garage', groups: [
     { id: 'vs', title: 'Vehicle storage', fields: [
-      { k: 'hasGarage', l: 'Garage', t: 'yn', req: true },
+      { k: 'garShared', l: 'Is the garage shared with other units (a common parking garage)?', t: 'yn', show: (d, ins) => IS_HOA(ins), req: (d, ins) => IS_PROJ(ins), help: 'Yes = enter the unit\'s spaces under Parking garage spaces below. No = the unit has its own private garage.' },
+      { k: 'hasGarage', l: 'Private garage (the unit\'s own)', t: 'yn', req: d => d.garShared !== true, show: d => d.garShared !== true },
       { k: 'garAttach', l: 'Garage attachment', t: 'one', o: U('CarStorageAttachmentType'), show: d => d.hasGarage === true, req: d => d.hasGarage === true, uad: 'CarStorageAttachmentType' },
       { k: 'garSpaces', l: 'Vehicle spaces', t: 'count', show: d => d.hasGarage === true, req: d => d.hasGarage === true, uad: 'ParkingSpacesCount' },
       { k: 'garTandemYN', l: 'Any tandem spaces?', t: 'yn', show: d => d.hasGarage === true, req: d => d.hasGarage === true },
@@ -656,11 +647,11 @@ const SECTIONS = [
       { k: 'garFinish', l: 'Finish status', t: 'one', show: d => d.hasGarage === true, req: d => d.hasGarage === true, o: opts('Finished','Partially Finished','Unfinished','Drywall Unpainted','Fully Finished with Flooring') },
       { k: 'garConverted', l: 'Garage converted?', t: 'yn', show: d => d.hasGarage === true, req: d => d.hasGarage === true },
       { k: 'garConvPermit', l: 'Conversion permitted?', t: 'one', o: opts('Permitted','Unpermitted','Unknown'), show: d => d.garConverted === true, req: d => d.garConverted === true },
-      { k: 'garFeat', l: 'Garage features', t: 'multi', show: d => d.hasGarage === true, o: opts('Automatic Door Opener','Loft','Cabinetry','Epoxy Floor','Workshop Area','EV Charger','Sink','Storage Racks','Heated','Cooled','Insulated','Windows','Side Door','Car Lift','Workbench','Second Refrigerator','Other') },
+      { k: 'garFeat', l: 'Garage features', t: 'multi', show: d => d.hasGarage === true, o: opts('Automatic Door Opener','Loft','Cabinetry','Epoxy Floor','Workshop Area','Sink','Storage Racks','Heated','Cooled','Insulated','Windows','Side Door','Car Lift','Workbench','Second Refrigerator','Other') },
       { k: 'carport', l: 'Carport spaces (private)', t: 'count' },
       { k: 'carportAttach', l: 'Carport attachment', t: 'one', o: U('CarStorageAttachmentType'), show: d => (d.carport || 0) > 0, req: d => (d.carport || 0) > 0, uad: 'CarStorageAttachmentType' },
       { k: 'projPark', t: 'info', l: 'Project parking: enter the spaces this unit has the right to use, and how they are held.', show: (d, ins) => IS_HOA(ins) },
-      { k: 'pgSpaces', l: 'Parking garage spaces', t: 'count', show: (d, ins) => IS_HOA(ins), uad: 'ParkingSpacesCount', fid: '13.002' },
+      { k: 'pgSpaces', l: 'Parking garage spaces', t: 'count', show: (d, ins) => IS_HOA(ins), req: d => d.garShared === true, uad: 'ParkingSpacesCount', fid: '13.002' },
       { k: 'pgAssign', l: 'Parking garage spaces are', t: 'one', o: ASSIGN, show: (d, ins) => IS_HOA(ins) && (d.pgSpaces || 0) > 0, req: (d, ins) => IS_HOA(ins) && (d.pgSpaces || 0) > 0, uad: 'ProjectParkingSpaceAssignmentType' },
       { k: 'ccSpaces', l: 'Common carport spaces', t: 'count', show: (d, ins) => IS_HOA(ins), uad: 'ParkingSpacesCount' },
       { k: 'ccAssign', l: 'Common carport spaces are', t: 'one', o: ASSIGN, show: (d, ins) => IS_HOA(ins) && (d.ccSpaces || 0) > 0, req: (d, ins) => IS_HOA(ins) && (d.ccSpaces || 0) > 0, uad: 'ProjectParkingSpaceAssignmentType' },
@@ -697,7 +688,7 @@ const SECTIONS = [
       { k: 'zoneCode', l: 'Zoning code', t: 'text', help: 'Filled from the County permit history or CRS report when loaded', uad: 'SiteZoningClassificationIdentifier' },
       { k: 'zoneDesc', l: 'Zoning description', t: 'text', help: 'e.g. Single-family residential, 10,000 sq. ft. minimum lot', uad: 'SiteZoningClassificationDescription' },
       { k: 'zoneComp', l: 'Zoning compliance', t: 'one', req: true, o: opts(['Legal','Legal'],['LegalNonConforming','Legal Nonconforming'],['Illegal','Illegal'],['NoZoning','No Zoning']), uad: 'SiteZoningComplianceType' },
-      { k: 'usable', l: 'Usable lot area', t: 'one', o: opts('All Usable','Mostly Usable','Partially Usable','Limited Usable Area') },
+      { k: 'usable', l: 'Usable lot area', t: 'one', show: (d, ins) => !IS_PROJ(ins), o: opts('All Usable','Mostly Usable','Partially Usable','Limited Usable Area') },
       { k: 'siteFeat', l: 'Site characteristics affecting value', t: 'multi', req: true, o: noneFirst(UN('SiteFeatureType')), uad: 'SiteFeatureType' },
       { k: 'siteFeatImpact', l: 'Impact of site characteristics', t: 'one', o: UN('ValueMarketabilityImpactType'), show: d => (d.siteFeat || []).some(x => x !== 'None'), req: d => (d.siteFeat || []).some(x => x !== 'None') },
       { k: 'siteFeatDesc', l: 'Site characteristic comment', t: 'note', lim: 140, show: d => (d.siteFeat || []).some(x => x !== 'None'), req: d => d.siteFeatImpact && d.siteFeatImpact !== 'Neutral', uad: 'SiteFeatureDescription', fid: '4.065' },
@@ -705,6 +696,11 @@ const SECTIONS = [
       { k: 'photoSite', l: 'Site', t: 'photo', cat: 'SiteCharacteristic', recommended: true },
       { k: 'photoSite2', l: 'Site 2', t: 'photo', cat: 'SiteCharacteristic' },
       { k: 'photoSite3', l: 'Site 3', t: 'photo', cat: 'SiteCharacteristic' },
+    ]},
+    { id: 'restr', title: 'Restrictions', fields: [
+      { k: 'ageRestr', l: 'Age-restricted (55+)?', t: 'yn', req: true, help: 'An owner or occupant must meet an age requirement (CC&Rs / deed). Sent to SFREP as a property restriction (Age).', uad: 'RestrictionType', fid: '4.051' },
+      { k: 'ageDesc', l: 'Age restriction – what it requires', t: 'text', lim: 250, show: d => d.ageRestr === true, help: 'e.g. At least one owner must be 55 or older.', uad: 'RestrictionDescription', fid: '4.053' },
+      { k: 'ageImpact', l: 'Effect of the age restriction on value / marketability', t: 'one', o: IMPACT, show: d => d.ageRestr === true, req: d => d.ageRestr === true, uad: 'ValueMarketabilityImpactType', fid: '4.052' },
     ]},
     { id: 'infl', title: 'Site influences', fields: [
       { k: 'influences', l: 'Site influences', t: 'multi', req: true, o: [['Residential','Residential']].concat(U('SiteInfluenceType').filter(x => x[0] !== 'Residential' && x[0] !== 'BodyOfWater' && x[0] !== 'Other')).concat([['BodyOfWater','Body of Water'],['Other','Other']]), uad: 'SiteInfluenceType' },
@@ -761,22 +757,25 @@ const SECTIONS = [
   ]},
 
   { id: 'amenities', title: 'Outdoor', groups: [
+    { id: 'yard', title: 'The unit\'s own outdoor space', showGroup: (d, ins) => IS_PROJ(ins), fields: [
+      { k: 'ownYard', l: 'Does the unit have its own yard (exclusive use, not common area)?', t: 'yn', req: (d, ins) => IS_PROJ(ins), help: 'Common pool, spa, landscaping and recreation belong on the Project / HOA tab (common amenities). Answer Yes only if this unit has its own yard; then its pool, landscaping and outdoor items are asked here.' },
+    ]},
     { id: 'olv', title: 'Porches, patios, decks & balconies', fields: [], list: 'outdoorLiving' },
-    { id: 'wf', title: 'Pool, spa & water features', fields: [], list: 'waterFeatures' },
-    { id: 'land', title: 'Landscaping', fields: [
+    { id: 'wf', title: 'Pool, spa & water features', fields: [], list: 'waterFeatures', showGroup: (d, ins) => !IS_PROJ(ins) || d.ownYard === true },
+    { id: 'land', title: 'Landscaping', showGroup: (d, ins) => !IS_PROJ(ins) || d.ownYard === true, fields: [
       { k: 'landArea', l: 'Landscaped area', t: 'one', o: opts('Fully Landscaped','Usable Lot Area Fully Landscaped','Mostly Landscaped','Partially Landscaped','Minimal Landscaping','Natural / Native','Drought Tolerant','Overgrown','None') },
       { k: 'landFeat', l: 'Landscape features', t: 'multi', o: opts('Lawn','Mature Trees','Specimen Trees','Shrubs','Bushes','Hedges','Ground Cover','Flower Beds','Rose Garden','Vegetable Garden','Raised Beds','Orchard','Fruit Trees','Citrus Trees','Avocado Trees','Vineyard','Wooded','Boulders / Rocky','Native Plants','Succulents','Drought Tolerant','Artificial Turf','Meadow') },
       { k: 'landSys', l: 'Systems', t: 'multi', o: opts('Automatic Irrigation','Drip Irrigation','Manual Irrigation','Drainage System','Subsurface Drains','Landscape Lighting','Outdoor Speakers') },
-      { k: 'hardscape', l: 'Hardscape & structures', t: 'multi', o: opts('Perimeter Walls','Fencing','Retaining Walls','Terraces','Garden Walls','Stone Steps','Pathways','Bridge','Courtyard','Arbor','Trellis','Pergola','Gazebo','Other') },
+      { k: 'hardscape', l: 'Hardscape & structures', t: 'multi', o: opts('Perimeter Walls','Fencing','Retaining Walls','Terraces','Garden Walls','Stone Steps','Pathways','Bridge','Arbor','Other') },
       { k: 'fenceMat', l: 'Fencing material', t: 'multi', show: d => (d.hardscape || []).includes('Fencing'), o: opts('Wood','Wrought Iron','Vinyl','Chain Link','Block / Masonry','Stucco Wall','Split Rail','Hedge') },
       { k: 'walks', l: 'Walks', t: 'multi', o: opts('Concrete','Pavers','Flagstone','Brick','Decomposed Granite','Gravel','Stamped Concrete','Wood','Stone') },
       { k: 'photoLand', l: 'Landscape', t: 'photo', cat: 'SubjectPropertyAmenitiesExhibit', recommended: true },
       { k: 'photoLand2', l: 'Landscape 2', t: 'photo', cat: 'SubjectPropertyAmenitiesExhibit' },
       { k: 'photoLand3', l: 'Landscape 3', t: 'photo', cat: 'SubjectPropertyAmenitiesExhibit' },
     ]},
-    { id: 'rec', title: 'Recreation & outdoor living', fields: [
+    { id: 'rec', title: 'Recreation & outdoor living', showGroup: (d, ins) => !IS_PROJ(ins) || d.ownYard === true, fields: [
       { k: 'rec', l: 'Recreation', t: 'multi', o: opts('Tennis Court','Sport Court','Pickleball Court','Basketball Court','Bocce Court','Putting Green','Playground','Play Structure','Trampoline (in-ground)','Skate Ramp','Volleyball','Batting Cage') },
-      { k: 'outdoor', l: 'Outdoor living', t: 'multi', o: opts('Outdoor Dining','Outdoor Kitchen','Built-in BBQ Area','Pizza Oven','Outdoor Bar','Outdoor Fireplace','Fire Pit','Sauna','Cold Plunge','Gazebo','Trellis','Pergola','Cabana','Outdoor Shower','Outdoor TV','Hammock Area','Dog Run','Chicken Coop','Other') },
+      { k: 'outdoor', l: 'Outdoor living', t: 'multi', o: opts('Outdoor Dining','Outdoor Kitchen','Built-in BBQ Area','Pizza Oven','Outdoor Bar','Outdoor Fireplace','Fire Pit','Gazebo','Trellis','Pergola','Outdoor TV','Hammock Area','Dog Run','Chicken Coop','Other') },
       { k: 'gazeboMeasure', t: 'info', l: 'Measure it: SFREP requires the gazebo area. Enter it in SFREP from your sketch.', show: d => (d.outdoor || []).includes('Gazebo') },
       { k: 'equestrian', l: 'Equestrian', t: 'yn' },
       { k: 'equine', l: 'Horse amenities', t: 'multi', show: d => d.equestrian === true, o: opts('Barn','Stable','Stalls','Paddocks','Pasture','Corrals','Pens','Arena','Covered Arena','Round Pen','Riding Ring','Hot Walker','Wash Rack','Tack Room','Hay Barn','Manure Area','Trail Access','Fencing','Water Troughs','Horse Trailer Parking') },
@@ -796,12 +795,12 @@ const SECTIONS = [
       { k: 'halfBaths', l: 'Total half baths', t: 'calc', calc: ins => (ins.lists.baths || []).filter(b => b.kind === 'HalfBathroom').length, uad: 'HalfBathroomCount' },
       { k: 'levelCount', l: 'Levels in unit', t: 'calc', calc: ins => (ins.lists.levels || []).length, uad: 'LevelCount' },
       { k: 'bgCompare', l: 'Below-grade finish compared to above grade', t: 'one', o: opts('Superior','Similar','Inferior'), show: (d, ins) => (ins.lists.levels || []).some(l => l.grade && l.grade !== 'AboveGrade'), req: (d, ins) => (ins.lists.levels || []).some(l => l.grade && l.grade !== 'AboveGrade'), uad: 'UnitBelowGradeFinishComparisonType', fid: '10.010', help: 'Required when there is finished below-grade area.' },
-      { k: 'floorNum', l: 'Floor number of the unit', t: 'text', lim: 10, show: (d, ins) => RISE(ins), req: (d, ins) => RISE(ins), uad: 'FloorIdentifier', fid: '10.018', help: 'The floor of the unit\'s main entry level, e.g. 3' },
+      { k: 'floorNum', l: 'Floor number of the unit', t: 'sel', o: Array.from({ length: 40 }, (_, i) => [String(i + 1), String(i + 1)]), show: (d, ins) => RISE(ins), req: (d, ins) => RISE(ins), uad: 'FloorIdentifier', fid: '10.018', help: 'The floor of the unit\'s main entry level, e.g. 3' },
       { k: 'corner', l: 'Corner unit', t: 'yn', show: (d, ins) => RISE(ins), req: (d, ins) => RISE(ins), uad: 'CornerUnitIndicator', fid: '10.019' },
       { k: 'unitMixed', l: 'Non-residential use in the unit', t: 'yn', show: (d, ins) => PRP(ins).siteCommon === true, req: (d, ins) => PRP(ins).siteCommon === true, uad: 'UnitMixedUsageIndicator', fid: '10.026' },
       { k: 'liveWork', l: 'Live/work space available within the unit', t: 'yn', show: (d, ins) => PRP(ins).siteCommon === true, req: (d, ins) => PRP(ins).siteCommon === true, uad: 'AllowableLiveWorkSpaceIndicator', fid: '10.027' },
       { k: 'liveWorkInfo', t: 'info', l: 'Enter the allowable work space (sq. ft.) in SFREP from your sketch.', show: d => d.liveWork === true },
-      { k: 'unitPos', l: 'Unit location / exposure', t: 'multi', show: (d, ins) => IS_HOA(ins) || PRP(ins).attach === 'Attached', o: opts('Ground Floor','Top Floor','Penthouse','End Unit','Interior Unit','Corner Unit','Faces Street','Faces Courtyard','Faces Pool','Faces Parking','Ocean Facing','Mountain Facing','Near Elevator','Near Trash / Mechanical','Private Entry','Private Yard / Patio','Shared Walls: One Side','Shared Walls: Two Sides','Units Above','Units Below','No Units Above','Elevator Access to Unit','Stairs Only') },
+      { k: 'unitPos', l: 'Unit location / exposure', t: 'multi', show: (d, ins) => IS_HOA(ins) || PRP(ins).attach === 'Attached', o: (d, ins) => opts('Ground Floor','Top Floor','Penthouse', ...(PRP(ins).structDesign === 'RowhouseTownhouse' ? [] : ['End Unit']),'Interior Unit','Faces Street','Faces Courtyard','Faces Pool','Faces Parking','Ocean Facing','Mountain Facing','Near Elevator','Near Trash / Mechanical','Private Entry','Private Yard / Patio','Shared Walls: One Side','Shared Walls: Two Sides','Units Above','Units Below','No Units Above','Elevator Access to Unit','Stairs Only') },
       { k: 'sketchRev', l: 'Area from the sketch (tap ✏️ Sketch at the top to draw or change it)', t: 'review', items: ins => sketchItems(ins) },
       { k: 'measure', t: 'info', l: 'No sketch yet: square footage will be entered in SFREP from your sketch.', show: (d, ins) => !(ins && ins.sketch && ins.sketch.areaCount) },
       { k: 'sketchImg', l: 'Sketch image (made by the sketch page)', t: 'photo', cat: 'SubjectPropertyImprovementSketch' },
@@ -825,7 +824,7 @@ const SECTIONS = [
       { k: 'bathUpd', l: 'Overall bathrooms update status', t: 'one', req: true, o: UN('OverallBathroomsUpdateStatusType'), uad: 'OverallBathroomsUpdateStatusType' },
     ]},
     { id: 'feat', title: 'Interior features, windows & doors', fields: [
-      { k: 'intFeat', l: 'Interior features', t: 'multi', o: opts('Ceiling Fans','Plaster Walls (Venetian / Lime / Tadelakt)','Exposed Beams','Wood Plank Ceilings','Wallpaper','Wood Paneling','Built-in Shelving','Built-in Hutch','Built-in Desk','Crown Molding','Wainscoting','Skylights','Solatubes','Clerestory Windows','Pocket Doors','Recessed LED Lighting','Custom Light Fixtures','Chandeliers','Dimmers','Elevator','Dumbwaiter','Laundry Chute','Wine Storage','Wine Cellar','Safe Room','Hidden Room','Radiant Floors','Fire Sprinklers') },
+      { k: 'intFeat', l: 'Interior features', t: 'multi', o: opts('Ceiling Fans','Plaster Walls (Venetian / Lime / Tadelakt)','Exposed Beams','Wood Plank Ceilings','Wallpaper','Wood Paneling','Built-in Shelving','Built-in Hutch','Built-in Desk','Crown Molding','Wainscoting','Skylights','Solatubes','Clerestory Windows','Pocket Doors','Recessed LED Lighting','Custom Light Fixtures','Chandeliers','Dimmers','Elevator','Dumbwaiter','Laundry Chute','Wine Storage','Safe Room','Hidden Room','Fire Sprinklers') },
       { k: 'fireplaces', l: 'Fireplaces', t: 'count' },
       { k: 'fpType', l: 'Fireplace type', t: 'multi', show: d => (d.fireplaces || 0) > 0, o: opts('Wood Burning','Gas','Gas Insert','Electric','Pellet Stove','Wood Stove','See-through') },
       { k: 'winCover', l: 'Window coverings', t: 'multi', o: opts('None','Drapes','Curtains','Plantation Shutters','Blinds','Wood Blinds','Automatic / Motorized Shades','Roman Shades','Roller Shades','Blackout Shades','Solar Shades','Sheers') },
@@ -943,8 +942,6 @@ const SECTIONS = [
         ['Mechanical / water systems', 'systems', 'mech'], ['Renewable energy', 'systems', 'renew'], ['Solar ownership', 'systems', 'solarOwn'],
         ['Efficiency items', 'systems', 'eff'], ['Smart home', 'systems', 'smart'], ['Security', 'systems', 'security'], ['Technology', 'systems', 'tech']]) },
       { k: 'sysOk', l: 'Systems confirmed with interviewee', t: 'yn' },
-      { k: 'sys', l: 'Other systems mentioned', t: 'multi', o: opts('Soft Water','Water Filtration','Recirculating Hot Water','Radiant Floor Heat','Whole House Fan','Fire Sprinklers','Central Vacuum','Elevator','Generator','Backup Battery System','EV Charger','Built-in Speakers','LED Recessed Lighting','Custom Lighting Fixtures','Automatic Irrigation','Owned Solar','Leased Solar') },
-      { k: 'solarInfo', l: 'Owned solar: year purchased, cost, kilowatts', t: 'text', show: d => (d.sys || []).includes('Owned Solar') },
       { k: 'otherSys', l: 'Systems notes', t: 'note' },
     ]},
     { id: 'utilConf', title: 'Utilities confirmed', fields: [
@@ -953,8 +950,7 @@ const SECTIONS = [
         .concat(ins.lists.adus.map((a, i) => ({ label: LISTS.adus.name(a, i) + ' – separately metered', value: a.metered === undefined ? '' : (a.metered ? 'Yes' : 'No'), go: 'buildings|item-' + a.id + '|' + a.id + '|adu' })))
         .concat(ins.lists.outbuildings.filter(o => (o.util || []).length).map((o, i) => ({ label: LISTS.outbuildings.name(o, i) + ' – utilities', value: valText(LISTS.outbuildings.fields.find(f => f.k === 'util'), o.util, o), go: 'buildings|item-' + o.id + '|' + o.id + '|outb' }))) },
       { k: 'utilOk', l: 'Utilities confirmed with interviewee', t: 'yn' },
-      { k: 'utilMore', l: 'Utility details', t: 'multi', o: opts('Water Well – Private','Water Well – Shared','Mutual Water Company','Propane Tank – Owned','Propane Tank – Leased','Septic Recently Pumped / Inspected','Sewer Lateral Replaced','Underground Utilities','Fiber Internet Available') },
-      { k: 'wellInfo', l: 'Water well: shared / private, use, testing', t: 'text', show: d => (d.utilMore || []).some(x => x.startsWith('Water Well')) },
+      { k: 'utilMore', l: 'Utility details', t: 'multi', o: opts('Mutual Water Company','Propane Tank – Owned','Propane Tank – Leased','Septic Recently Pumped / Inspected','Sewer Lateral Replaced','Underground Utilities','Fiber Internet Available') },
       { k: 'utilNote', l: 'Utilities notes', t: 'note' },
     ]},
     { id: 'ea', title: 'Extraordinary assumptions & hypothetical conditions', fields: [

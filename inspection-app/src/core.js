@@ -4,7 +4,7 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': 
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 const todayISO = () => { const d = new Date(); return new Date(d - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10); };
 const isEmpty = v => v === undefined || v === null || v === '' || (Array.isArray(v) && v.length === 0);
-const optsOf = (f, d) => (typeof f.o === 'function' ? f.o(d || {}) : f.o) || [];
+const optsOf = (f, d, ins) => (typeof f.o === 'function' ? f.o(d || {}, ins || (typeof app !== 'undefined' ? app.ins : null)) : f.o) || [];
 const labelFor = (f, v, d) => { const o = optsOf(f, d).find(x => x[0] === v); return o ? o[1] : v; };
 const applText = v => Object.entries(v || {}).map(([k, s]) => { const a = APPLIANCES.find(x => x.k === k); return a ? `${a.l}${s.brand ? ' (' + s.brand + ')' : ''}${s.qty > 1 ? ' ×' + s.qty : ''}` : k; }).join(', ');
 const valText = (f, v, d) => {
@@ -139,6 +139,27 @@ function normalize(ins) {
   { const STONE = new Set(['Quartzite','Quartz','Granite','Marble','Soapstone','Limestone Slab','Engineered Stone']);
     const fixc = it => ['counter','vanCounter'].forEach(k => { if (Array.isArray(it[k])) it[k] = [...new Set(it[k].map(v => STONE.has(v) ? 'Stone Slab' : v))]; });
     ['kitchens','baths','wetbars'].forEach(k => (ins.lists[k] || []).forEach(fixc)); }
+  // 6f (Oct 2026): duplicate questions merged – carry answers to the one place they are asked now
+  { const D = ins.data, L = ins.lists; if (!D._v6f) { D._v6f = true;
+    const has = (o, k, v) => Array.isArray(o[k]) && o[k].includes(v), take = (o, k, v) => { if (has(o, k, v)) o[k] = o[k].filter(x => x !== v); };
+    const addWF = t => { if (!L.waterFeatures.some(w => w.type === t)) L.waterFeatures.push({ id: uid(), type: t }); };
+    const addOL = t => { if (!L.outdoorLiving.some(w => w.type === t)) L.outdoorLiving.push({ id: uid(), type: t }); };
+    const A = D.amenities, F = D.front, G = D.garage, I = D.interior, S = D.systems, V = D.interview, P = D.project, SI = D.site;
+    [['Sauna', 'Sauna'], ['Cold Plunge', 'Cold Plunge'], ['Outdoor Shower', 'OutdoorShower']].forEach(([o, t]) => { if (has(A, 'outdoor', o)) { addWF(t); take(A, 'outdoor', o); } });
+    ['Gazebo', 'Trellis', 'Pergola'].forEach(o => { if (has(A, 'hardscape', o)) { A.outdoor = [...new Set([...(A.outdoor || []), o])]; take(A, 'hardscape', o); } });
+    if (has(F, 'extFeat', 'Front Porch')) addOL('Porch'); if (has(F, 'extFeat', 'Balcony')) addOL('Balcony');
+    if (has(G, 'garFeat', 'EV Charger')) S.eff = [...new Set([...(S.eff || []), 'EV Charging'])];
+    if (has(I, 'intFeat', 'Radiant Floors') && !has(S, 'heat', 'Radiant')) S.heat = [...new Set([...(S.heat || []), 'Radiant'])];
+    if (Array.isArray(F.gutters)) { const g = F.gutters; F.gutterMat = [...new Set([...(F.gutterMat || []), ...(g.includes('Copper Gutters') ? ['Copper'] : []), ...(g.includes('None') ? ['None'] : [])])];
+      F.gutters = [...new Set(g.map(x => ({ 'Seamless Gutters': 'Seamless', 'Downspouts': 'Downspouts', 'Rain Chains': 'Rain Chains', 'Gutter Guards': 'Gutter Guards' })[x]).filter(Boolean))]; }
+    if (P && P.ageRestr !== undefined && SI.ageRestr === undefined) { SI.ageRestr = P.ageRestr; SI.ageDesc = P.ageDesc; SI.ageImpact = P.ageImpact; delete P.ageRestr; delete P.ageDesc; delete P.ageImpact; }
+    if (has(I, 'unitPos', 'Corner Unit')) { if (I.corner === undefined) I.corner = true; take(I, 'unitPos', 'Corner Unit'); }
+    if (I.floorNum !== undefined) I.floorNum = String(I.floorNum).replace(/\D/g, '') || undefined;
+    if (Array.isArray(V.sys) && V.sys.length) V.otherSys = [V.otherSys, 'Also mentioned: ' + V.sys.join(', ') + (V.solarInfo ? ' (solar: ' + V.solarInfo + ')' : '')].filter(Boolean).join('\n');
+    delete V.sys; delete V.solarInfo;
+    if (V.wellInfo) { V.utilNote = [V.utilNote, 'Well: ' + V.wellInfo].filter(Boolean).join('\n'); delete V.wellInfo; }
+    [...(L.baths || []), ...(L.kitchens || []), ...(L.outbuildings || [])].forEach(it => { delete it.q; delete it.c; }); (L.kitchens || []).forEach(it => delete it.remodel);
+    if (P && P.grExp && /^\d{1,2}\/\d{1,2}\/\d{4}$/.test(P.grExp)) { const [m, d, y] = P.grExp.split('/'); P.grExp = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`; } } }
   // field types changed between versions (e.g. single choice -> multiple): repair stored values to match
   const fix = (f, d) => {
     if (!d || !f || !f.k) return; const v = d[f.k]; if (v === undefined || v === null) return;

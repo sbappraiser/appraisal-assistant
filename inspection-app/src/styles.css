@@ -32,7 +32,8 @@
   color-scheme: light;
 }
 * { box-sizing: border-box; }
-html, body { height: 100%; }
+html, body { min-height: 100%; }
+#app:has(> header.bar) { padding-top: var(--barh, 130px); }
 body { margin: 0; background: var(--bg); color: var(--ink); font: 19px/1.4 var(--font); -webkit-text-size-adjust: 100%; }
 button, input, select, textarea { font: inherit; color: inherit; }
 button { cursor: pointer; }
@@ -41,7 +42,8 @@ button:disabled { cursor: default; }
 h1, h2, h3 { text-wrap: balance; margin: 0; }
 
 /* ---------- Top bar ---------- */
-.bar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; background: var(--bar); color: var(--ink); border-bottom: 5px solid var(--tangerine); }
+/* fixed (not sticky) so it never slides away when iOS scrolls or the keyboard opens; #app is padded by its height */
+.bar { position: fixed; top: 0; left: 0; right: 0; padding-top: env(safe-area-inset-top, 0px); z-index: 20; background: var(--bar); color: var(--ink); border-bottom: 5px solid var(--tangerine); }
 .bar-row { display: flex; align-items: center; gap: 8px; padding: 8px 12px; min-height: 60px; flex-wrap: wrap; }
 .bar .title { flex: 1; min-width: 160px; }
 .bar .title b { display: block; font-size: 20px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -265,7 +267,7 @@ html.hc .group { border-width: 4px; }
 .rv-v.empty { color: var(--warn); font-weight: 700; }
 
 /* keep the open room's name in view while scrolling through it */
-.item.open > .item-head { position: sticky; top: calc(var(--barh, 120px) + env(safe-area-inset-top, 0px)); z-index: 6; border-bottom: 3px solid #000; }
+.item.open > .item-head { position: sticky; top: var(--barh, 120px); z-index: 6; border-bottom: 3px solid #000; }
 
 /* pale fills need an edge to read in sun */
 .flabel .tag, .lg.req, .lg.opt { border: 2px solid #000; }
@@ -302,6 +304,8 @@ html.testcopy .bar { border-bottom-color: #7b2cbf; }
 .sk-btn { background: #fff7d6; }
 
 .padwrap{position:relative}
+.padwrap{position:relative}.padwrap .pfx{position:absolute;left:14px;top:13px;font-weight:700;pointer-events:none}.padwrap input.haspfx{padding-left:30px}input.txt.bad{border-color:var(--warn);background:var(--warn-lt)}
+.chip.withicon{display:inline-flex;align-items:center;gap:8px}.chipicon{width:56px;height:35px;flex:none}
 .tenkey{display:grid;grid-template-columns:repeat(3,64px);gap:6px;margin-top:8px;touch-action:manipulation;user-select:none;-webkit-user-select:none}
 .tenkey[hidden]{display:none}
 .tk{font:700 24px system-ui,sans-serif;min-height:52px;border:2px solid #0b8f96;border-radius:8px;background:#fff;color:#066a70;touch-action:manipulation}
