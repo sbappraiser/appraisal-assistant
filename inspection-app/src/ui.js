@@ -476,16 +476,18 @@ async function loadOrdersFile(file) {
     const d = JSON.parse(await file.text()); if (d.app !== 'appraisal-assistant' || d.kind !== 'active-orders') throw new Error('That is not an Active Orders file from the Appraisal Assistant.');
     const old = await DB.get('sketches', 'orders:active');
     const keep = new Set(); const orders = [];
-    for (const o of d.orders || []) {
+    const incoming = d.orders || [];
+    if (d.single && old) for (const o of old.orders || []) if (!incoming.some(x => x.id === o.id)) { orders.push(o); (o.plans || []).forEach(pl => keep.add(pl.key)); }   // one order: add it to the list, keep the others
+    for (const o of incoming) {
       const plans = [];
       for (let n = 0; n < (o.plans || []).length; n++) { const key = 'plan:' + o.id + ':' + n; await DB.put('sketches', { id: key, src: o.plans[n].src, name: o.plans[n].name }); plans.push({ key, name: o.plans[n].name }); keep.add(key); }
       orders.push({ ...o, plans });
     }
-    await DB.put('sketches', { id: 'orders:active', made: d.made, orders });
+    await DB.put('sketches', { id: 'orders:active', made: d.single && old ? old.made : d.made, orders });
     // floor plans of orders no longer on the list stay only if an inspection uses them
     const inUse = new Set(); ((await DB.all('inspections')) || []).forEach(i => (((i.data || {}).property || {}).order || { plans: [] }).plans.forEach(pl => inUse.add(pl.key)));
     if (old) for (const o of old.orders || []) for (const pl of o.plans || []) if (!keep.has(pl.key) && !inUse.has(pl.key)) await DB.del('sketches', pl.key);
-    toast(orders.length + ' active order' + (orders.length === 1 ? '' : 's') + ' on this iPad'); renderHome();
+    toast(d.single ? 'Added ' + (String((incoming[0] || {}).address || '').split(',')[0] || 'the order') + ' – ' + orders.length + ' active order' + (orders.length === 1 ? '' : 's') + ' on this iPad' : orders.length + ' active order' + (orders.length === 1 ? '' : 's') + ' on this iPad'); renderHome();
   } catch (e) { console.error(e); toast(e.message || 'Could not read that file'); }
 }
 async function startFromOrder(id) {

@@ -253,9 +253,10 @@ function renderSubject() {
 
 /* ---------- the "Active Orders" file for the iPad ---------- */
 const DONE_STAGES = ['Delivered', 'Paid', 'Cancelled'];
-async function activeOrdersFile() {
-  const list = letters.filter(o => !DONE_STAGES.includes(o.stage || 'New'));
-  if (!list.length) { toast('No active orders to send'); return; }
+async function activeOrdersFile(onlyId) {   // onlyId: just this order (the iPad adds it to its list instead of replacing the list)
+  if (onlyId) saveLetter(true, true);
+  const list = onlyId ? letters.filter(o => o.id === onlyId) : letters.filter(o => !DONE_STAGES.includes(o.stage || 'New'));
+  if (!list.length) { toast(onlyId ? 'Save the order first' : 'No active orders to send'); return; }
   const out = [];
   for (const o of list) {
     const plans = [];
@@ -269,9 +270,10 @@ async function activeOrdersFile() {
       listings: (o.listings || []).map(x => ({ mls: x.mls, status: x.status, listPrice: x.listPrice, origList: x.origList, listDate: x.listDate, contractDate: x.contractDate, saleDate: x.saleDate, salePrice: x.salePrice, dom: x.dom, cdom: x.cdom })),
       docs: (o.docs || []).map(d => ({ name: d.name, type: DOC_LABEL[d.type] || d.type })), plans });
   }
-  const data = { app: 'appraisal-assistant', kind: 'active-orders', made: new Date().toISOString(), build: BUILD, orders: out };
-  download(new TextEncoder().encode(JSON.stringify(data)), 'Active Orders.json', 'application/json');
-  toast(`Saved Active Orders.json (${out.length} order${out.length > 1 ? 's' : ''}) to Downloads`);
+  const data = { app: 'appraisal-assistant', kind: 'active-orders', single: !!onlyId, made: new Date().toISOString(), build: BUILD, orders: out };
+  const name = onlyId ? G.safeName('Order ' + ([list[0].fileNo, street(list[0])].filter(Boolean).join(' ') || 'for the iPad')) + '.json' : 'Active Orders.json';
+  download(new TextEncoder().encode(JSON.stringify(data)), name, 'application/json');
+  toast(onlyId ? `Saved “${name}” to Downloads – move it to OneDrive, then on the iPad tap Get orders and pick it` : `Saved Active Orders.json (${out.length} order${out.length > 1 ? 's' : ''}) to Downloads`, 7000);
 }
 function effectiveDate(o) { const T = TYPES[o.type] || {}; return o.effDate || (T.retro ? o.dod : o.inspDate) || ''; }
 

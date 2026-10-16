@@ -351,7 +351,7 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
   </div>
   <div class="previewCol">
     <div class="bar"><span class="fname"><span class="savedAt" data-saved></span><span id="fileName"></span></span>
-      <a class="btn ghost" id="genieLink" href="../comp-genie/" target="aa-genie">Comp genie</a><button type="button" class="btn ghost" id="btnNew">New order</button><button type="button" class="btn" id="btnSave">Save order</button><button type="button" class="btn primary" id="btnDocx">Download Word letter</button><button type="button" class="btn" id="btnPdf">Save as PDF</button></div>
+      <a class="btn ghost" id="genieLink" href="../comp-genie/" target="aa-genie">Comp genie</a><button type="button" class="btn ghost" id="btnNew">New order</button><button type="button" class="btn ghost" id="btnIpadOne" title="Saves a file with just this order – put it in OneDrive, then open it in the inspection app on the iPad">Send this order to the iPad</button><button type="button" class="btn" id="btnSave">Save order</button><button type="button" class="btn primary" id="btnDocx">Download Word letter</button><button type="button" class="btn" id="btnPdf">Save as PDF</button></div>
     <fieldset id="docsSet"><legend>Documents – upload everything here <span class="opt" id="docCount"></span></legend>
       <div class="drop big" id="dropZone">
         <div><span class="eyebrow">Drop the files here, or click Choose files</span>
@@ -474,6 +474,7 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
     <details><summary>iPad: send orders, start an inspection, floor plan</summary><ol>
       <li>On the computer: <b>Orders → Send active orders to the iPad</b>. "Active Orders.json" saves to Downloads. Move it into your OneDrive folder.</li>
       <li>On the iPad: open the inspection app from its Home Screen icon, tap <b>Get orders</b>, pick Files → OneDrive → Active Orders.json.</li>
+      <li>Just one order: on the order page click <b>Send this order to the iPad</b>. A file named after the order (for example “Order Brkl5464-1 5464 Berkeley Rd.json”) saves to Downloads; move it to OneDrive and on the iPad tap <b>Get orders</b> and pick it. The iPad adds or updates that order and keeps the others on its list (iPad version 6j or newer).</li>
       <li>Tap <b>Start inspection</b> on the order. Address, county, year built, flood zone, permits, inspection date, access contact and your to-dos are filled in. Beds, baths and square feet are not.</li>
       <li>Floor plan: in the sketch, <b>More → Floor plan underlay</b> → "From the order".</li></ol></details>
     <details><summary>Documents for a new order (step 2)</summary><ol>
@@ -528,7 +529,7 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
 </div>
 <div id="toast" role="status" hidden></div>
 <script>
-const BUILD='o1-1016-2256';
+const BUILD='o1-1016-2258';
 const G = (() => {
 /* ---------------- small helpers ---------------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -1881,9 +1882,10 @@ function renderSubject() {
 
 /* ---------- the "Active Orders" file for the iPad ---------- */
 const DONE_STAGES = ['Delivered', 'Paid', 'Cancelled'];
-async function activeOrdersFile() {
-  const list = letters.filter(o => !DONE_STAGES.includes(o.stage || 'New'));
-  if (!list.length) { toast('No active orders to send'); return; }
+async function activeOrdersFile(onlyId) {   // onlyId: just this order (the iPad adds it to its list instead of replacing the list)
+  if (onlyId) saveLetter(true, true);
+  const list = onlyId ? letters.filter(o => o.id === onlyId) : letters.filter(o => !DONE_STAGES.includes(o.stage || 'New'));
+  if (!list.length) { toast(onlyId ? 'Save the order first' : 'No active orders to send'); return; }
   const out = [];
   for (const o of list) {
     const plans = [];
@@ -1897,9 +1899,10 @@ async function activeOrdersFile() {
       listings: (o.listings || []).map(x => ({ mls: x.mls, status: x.status, listPrice: x.listPrice, origList: x.origList, listDate: x.listDate, contractDate: x.contractDate, saleDate: x.saleDate, salePrice: x.salePrice, dom: x.dom, cdom: x.cdom })),
       docs: (o.docs || []).map(d => ({ name: d.name, type: DOC_LABEL[d.type] || d.type })), plans });
   }
-  const data = { app: 'appraisal-assistant', kind: 'active-orders', made: new Date().toISOString(), build: BUILD, orders: out };
-  download(new TextEncoder().encode(JSON.stringify(data)), 'Active Orders.json', 'application/json');
-  toast(`Saved Active Orders.json (${out.length} order${out.length > 1 ? 's' : ''}) to Downloads`);
+  const data = { app: 'appraisal-assistant', kind: 'active-orders', single: !!onlyId, made: new Date().toISOString(), build: BUILD, orders: out };
+  const name = onlyId ? G.safeName('Order ' + ([list[0].fileNo, street(list[0])].filter(Boolean).join(' ') || 'for the iPad')) + '.json' : 'Active Orders.json';
+  download(new TextEncoder().encode(JSON.stringify(data)), name, 'application/json');
+  toast(onlyId ? `Saved “${name}” to Downloads – move it to OneDrive, then on the iPad tap Get orders and pick it` : `Saved Active Orders.json (${out.length} order${out.length > 1 ? 's' : ''}) to Downloads`, 7000);
 }
 function effectiveDate(o) { const T = TYPES[o.type] || {}; return o.effDate || (T.retro ? o.dod : o.inspDate) || ''; }
 
@@ -3473,7 +3476,7 @@ async function start() {
   $('#f_payWhen').addEventListener('change', () => { const w = $('#f_payWhen').value; $('#f_deliveryFrom').value = w === 'report' ? 'inspection' : 'either'; syncVisibility(); update(); }); $('#f_premise').addEventListener('change', syncVisibility); ['#f_rent', '#f_testimony'].forEach(id => $(id).addEventListener('change', syncVisibility));
   ['tRate', 'tDecl', 'tRetainer', 'tCancel'].forEach(k => $('#f_' + k).addEventListener('change', () => { const r = store.get('rates', {}); r[k] = $('#f_' + k).value; store.set('rates', r); }));
   $('#addClient').onclick = () => { const f = readForm(); clientCount++; f.clients.push({}); renderClients(f.clients); update(); };
-  $('#btnDocx').onclick = downloadDocx; $('#btnSave').onclick = () => saveLetter(false); $('#btnSave2').onclick = () => saveLetter(false); const pdf = () => { saveLetter(true); const t = document.title; document.title = fileName(readForm()).replace(/\.docx$/, ''); toast('In the print window choose Destination: Save as PDF, then Save', 5000); setTimeout(() => { window.print(); document.title = t; }, 150); }; $('#btnPdf').onclick = pdf; $('#btnPdf2').onclick = pdf; $('#btnWrite2').onclick = () => { saveLetter(true); downloadDocx(); };
+  $('#btnDocx').onclick = downloadDocx; $('#btnSave').onclick = () => saveLetter(false); $('#btnSave2').onclick = () => saveLetter(false); $('#btnIpadOne').onclick = () => cur && activeOrdersFile(cur.id); const pdf = () => { saveLetter(true); const t = document.title; document.title = fileName(readForm()).replace(/\.docx$/, ''); toast('In the print window choose Destination: Save as PDF, then Save', 5000); setTimeout(() => { window.print(); document.title = t; }, 150); }; $('#btnPdf').onclick = pdf; $('#btnPdf2').onclick = pdf; $('#btnWrite2').onclick = () => { saveLetter(true); downloadDocx(); };
   $('#f_accessRelPick').addEventListener('change', () => { const o = $('#f_accessRelPick').value === 'Other'; $('#f_accessRel').hidden = !o; if (o) $('#f_accessRel').focus(); update(); }); $('#f_accessRel').addEventListener('input', update);
   $('#sheet').addEventListener('click', () => { const n = $('#c0_name'); if (n && !n.value.trim()) { n.scrollIntoView({ block: 'center' }); n.focus(); toast('Type the client here – the letter fills in as you type'); } else toast('Type in the fields below the letter – it changes as you type'); }); $('#btnNew').onclick = newLetter;
   $('#letterSearch').oninput = renderLetters; $('#contactSearch').oninput = renderContacts;

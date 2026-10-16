@@ -351,7 +351,7 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
   </div>
   <div class="previewCol">
     <div class="bar"><span class="fname"><span class="savedAt" data-saved></span><span id="fileName"></span></span>
-      <a class="btn ghost" id="genieLink" href="../comp-genie/" target="aa-genie">Comp genie</a><button type="button" class="btn ghost" id="btnNew">New order</button><button type="button" class="btn" id="btnSave">Save order</button><button type="button" class="btn primary" id="btnDocx">Download Word letter</button><button type="button" class="btn" id="btnPdf">Save as PDF</button></div>
+      <a class="btn ghost" id="genieLink" href="../comp-genie/" target="aa-genie">Comp genie</a><button type="button" class="btn ghost" id="btnNew">New order</button><button type="button" class="btn ghost" id="btnIpadOne" title="Saves a file with just this order – put it in OneDrive, then open it in the inspection app on the iPad">Send this order to the iPad</button><button type="button" class="btn" id="btnSave">Save order</button><button type="button" class="btn primary" id="btnDocx">Download Word letter</button><button type="button" class="btn" id="btnPdf">Save as PDF</button></div>
     <fieldset id="docsSet"><legend>Documents – upload everything here <span class="opt" id="docCount"></span></legend>
       <div class="drop big" id="dropZone">
         <div><span class="eyebrow">Drop the files here, or click Choose files</span>
@@ -474,6 +474,7 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
     <details><summary>iPad: send orders, start an inspection, floor plan</summary><ol>
       <li>On the computer: <b>Orders → Send active orders to the iPad</b>. "Active Orders.json" saves to Downloads. Move it into your OneDrive folder.</li>
       <li>On the iPad: open the inspection app from its Home Screen icon, tap <b>Get orders</b>, pick Files → OneDrive → Active Orders.json.</li>
+      <li>Just one order: on the order page click <b>Send this order to the iPad</b>. A file named after the order (for example “Order Brkl5464-1 5464 Berkeley Rd.json”) saves to Downloads; move it to OneDrive and on the iPad tap <b>Get orders</b> and pick it. The iPad adds or updates that order and keeps the others on its list (iPad version 6j or newer).</li>
       <li>Tap <b>Start inspection</b> on the order. Address, county, year built, flood zone, permits, inspection date, access contact and your to-dos are filled in. Beds, baths and square feet are not.</li>
       <li>Floor plan: in the sketch, <b>More → Floor plan underlay</b> → "From the order".</li></ol></details>
     <details><summary>Documents for a new order (step 2)</summary><ol>
