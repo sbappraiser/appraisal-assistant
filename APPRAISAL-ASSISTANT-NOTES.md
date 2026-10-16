@@ -169,6 +169,7 @@ Orange accent like her inspection app (#b85300 text/buttons, #ffe8d1 soft); gree
 First letter of the street name + following consonants to 4 letters (if fewer than 4 consonants, first 4 letters: Bath, Hill, Oak), capitalized; directions (W., East) skipped; then house number, "-unit" lowercased, then "-N". N = 1 + highest prior report for the same code among hub orders; old ACI-style numbers (code + letter a/b/c…, d was 1004D, crashed clones took the next letter) count by letter position. Filled in New order step 1 until she types her own. ACI archive not yet checked for prior reports.
 
 ## Report form per order (Oct 16 2026)
+UAD 3.6 is also called "Traditional" (her word); a client letter whose product says Traditional sets UAD 3.6. Label: "UAD 3.6 – new URAR (Traditional)".
 Lending groups listed first ("Lender or AMC order", then "Private lending"); a new order starts as Lender / AMC – Purchase, My letter "Not needed – client's letter", report form UAD 3.6. Order field reportForm: uad36 | uad26 (legacy 1004/1073/1025) | gpar | other; goes to the iPad (shown in the order card and order box). UAD 2.6: GSEs require UAD 3.6 for reports submitted to UCDP on or after Nov 2, 2026 (Freddie Mac FAQ); portfolio lenders may still order legacy forms. One inspection app for all forms (it collects the 3.6 superset); a 2.6 worksheet/export is a later item.
 
 ## Assignment types for lender/AMC orders (Oct 15 2026)
