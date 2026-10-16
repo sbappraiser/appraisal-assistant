@@ -188,13 +188,11 @@ function mkCommentDraft(R) {
       + `, ${R.activeN} active listing${R.activeN === 1 ? '' : 's'}` + (R.activeN ? ` (median list price ${$m(R.activeMed)}, median ${Math.round(R.activeDom)} days on market)` : '') + ` and ${R.pendingN} pending sale${R.pendingN === 1 ? '' : 's'}.`;
     parts.push([1, s]);
     { const Q = MI().rows.length ? mkCompute(M()) : null; if (Q && Q.salesN) { const ppsf = Q.S.filter(r => r.salePrice && r.gla).map(r => r.salePrice / r.gla); const stl = Q.S.filter(r => r.salePrice && r.listPrice).map(r => r.salePrice / r.listPrice);
-      parts.push([1, `All residential sales within the market area boundary (${Q.salesN} sale${Q.salesN === 1 ? '' : 's'} (${$m(Q.saleLow)} to ${$m(Q.saleHigh)}, median ${$m(Q.saleMed)}${ppsf.length ? ', median ' + $m(median(ppsf)) + ' per square foot' : ''}${stl.length ? ', median sale-to-list ' + Math.round(median(stl) * 1000) / 10 + '%' : ''}${Q.saleDom != null ? ', median ' + Math.round(Q.saleDom) + ' days on market' : ''}) were considered as context.`]); } }
+      parts.push([1, `All residential sales within the market area boundary (${Q.salesN} sale${Q.salesN === 1 ? '' : 's'}, ${$m(Q.saleLow)} to ${$m(Q.saleHigh)}, median ${$m(Q.saleMed)}${stl.length ? ', median sale-to-list ' + Math.round(median(stl) * 1000) / 10 + '%' : ''}${Q.saleDom != null ? ', median ' + Math.round(Q.saleDom) + ' days on market' : ''}) were considered as context.`]); } }
     if (R.supply != null) parts.push([1, `At the rate of about ${(Math.round(R.perMonth * 10) / 10)} sale${Math.round(R.perMonth * 10) === 10 ? '' : 's'} per month, current inventory represents approximately ${(Math.round(R.supply * 10) / 10)} months of supply` + (R.saleDom != null ? `, and the median marketing time of the sales was ${Math.round(R.saleDom)} days.` : '.')]);
     else parts.push([1, `There were no closed sales in the lookback period, so an absorption rate could not be measured; the available listings and pending sales were considered.`]);
-    if (R.trend.ok) parts.push([2, Math.abs(R.trend.annual) < 3 || R.trend.r2 < 0.15
-      ? `Sale prices per square foot plotted over the lookback period do not show a consistent upward or downward trend (${R.trend.n} sales).`
-      : `Sale prices per square foot plotted over the lookback period indicate a ${R.trend.annual > 0 ? 'rising' : 'declining'} trend of roughly ${Math.abs(Math.round(R.trend.annual))}% per year (${R.trend.n} sales); the indication is considered together with the paired and adjusted sales analysis.`]);
-    else if (R.salesN) parts.push([2, `The small number of sales (${R.salesN}) does not support a reliable measure of a price trend within the segment alone.`]);
+    if (R.salesN < MK_MIN_SALES) parts.push([1, `The ${R.salesN} competing sale${R.salesN === 1 ? '' : 's'} within the defined market area ${R.salesN === 1 ? 'is' : 'are'} not sufficient to measure a reliable price trend, and price per square foot is not a reliable measure because it does not account for differences in lot utility, quality, condition, bathrooms, features, pools and spas, outbuildings, accessory dwelling units and view. The broader market was therefore considered.`]);
+    else parts.push([1, `Changes in market conditions were considered within the competing sales and in the broader market.`]);
   }
   if (S && S.ytd && S.ytd.sold) { const y = S.ytd, f = (k, w) => y[k] ? `${w} ${y[k].v1 >= y[k].v0 ? 'up' : 'down'} about ${Math.abs(Math.round((y[k].v1 / y[k].v0 - 1) * 1000) / 10)}%` : '';
     const bits = [f('sold', 'closed sales'), f('escrow', 'properties entering escrow'), y.medSale ? `${f('medSale', 'the median sales price')} (${$m(y.medSale.v1)} vs. ${$m(y.medSale.v0)})` : '', f('active', 'active listings')].filter(Boolean);
@@ -203,14 +201,18 @@ function mkCommentDraft(R) {
   const H = mkHistory(seg).filter(x => x.ym <= R.eff.slice(0, 7)).slice(-12).filter(x => x.median);
   if (H.length >= 6) { const lo = H.reduce((a, b) => b.median < a.median ? b : a), hi = H.reduce((a, b) => b.median > a.median ? b : a), last = H[H.length - 1];
     parts.push([4, `Over the prior 12 months, monthly median sale prices ranged from about ${$m(lo.median)} (${monthName(lo.ym)}) to ${$m(hi.median)} (${monthName(hi.ym)}), with ${monthName(last.ym)} at ${$m(last.median)}${last.sales ? ' on ' + last.sales + ' sales' : ''}, without a consistent month-to-month direction.`]); }
-  const city = mkCity(); const z = city && MK.zillow[city];
-  if (z && z.value) parts.push([5, `Zillow reports a typical home value for ${city} of ${$m(z.value)}${z.asOf ? ' as of ' + shortDate(z.asOf) : ''}${z.change != null && z.change !== '' ? ', ' + (z.change >= 0 ? 'up' : 'down') + ' ' + Math.abs(z.change) + '% over one year' : ''}${z.dtp ? ', with a median of ' + z.dtp + ' days to pending' : ''}.`]);
-  parts.push([1, `Aggregate statistics reflect changes in the mix, location and price range of the properties sold and are considered as market context; the market-condition conclusion and any date-of-sale/market-condition adjustment are based on evidence within the subject's competitive market segment. No forecast of future market conditions or value is intended.`]);
+  const zk = mkZKey(); const z = zk && MK.zillow[zk]; const zWhere = zk && zk.startsWith('zip:') ? `ZIP code ${zk.slice(4)} (ZIP-code level data, used as supporting context; the defined market area is not the same as the ZIP code)` : mkCity();
+  if (z && z.value) parts.push([5, `Zillow reports a typical home value for ${zWhere} of ${$m(z.value)}${z.asOf ? ' as of ' + shortDate(z.asOf) : ''}${z.change != null && z.change !== '' ? ', ' + (z.change >= 0 ? 'up' : 'down') + ' ' + Math.abs(z.change) + '% over one year' : ''}${z.dtp ? ', with a median of ' + z.dtp + ' days to pending' : ''}.`]);
+  const TC = { increasing: 'increasing', stable: 'stable', declining: 'declining' }[M().trendConcl];
+  if (TC) parts.push([1, `Based on the competing sales and the broader market data, market values are considered ${TC} as of the effective date.`]);
+  parts.push([1, `Aggregate statistics reflect changes in the mix, location and price range of the properties sold and are considered as market context; the market-condition conclusion and any date-of-sale/market-condition adjustment are based on ${R.salesN < MK_MIN_SALES ? 'the broader market data together with the competing sales' : 'evidence within the subject\'s competitive market segment'}. No forecast of future market conditions or value is intended.`]);
   // keep within 2,500 characters: drop the least important parts first
   let keep = parts.slice(); const len = () => keep.map(p => p[1]).join(' ').length;
   for (const pr of [5, 4, 2, 3]) { if (len() <= 2500) break; keep = keep.filter(p => p[0] !== pr); }
   return keep.map(p => p[1]).join(' ').slice(0, 2500);
 }
+const MK_MIN_SALES = 12;   // fewer competing sales than this: the default “not sufficient” comment and the broader market
+function mkZKey() { const f = cur ? readForm() : {}; const zip = String(f.zip || '').match(/\d{5}/); const by = M().zillowBy || (zip ? 'zip' : 'city'); return by === 'zip' && zip ? 'zip:' + zip[0] : mkCity(); }
 function mkCity() { const a = String((cur && cur.address) || '').split(',').map(x => x.trim()); return a[1] || ''; }
 
 /* ---------- 4. graphs (PNG for the report: white page, one hue) ---------- */
@@ -299,12 +301,12 @@ function mkRender(redraft) {
       pendingN: R.pendingN, salesN: R.salesN, saleLow: R.saleLow, saleMed: R.saleMed, saleHigh: R.saleHigh, supply: pick('supply'), mktime: pick('mktime'), distress: pick('distress'), sources: m.sources || ['SBMLS'] };
     if (R.rows.length && JSON.stringify(U) !== JSON.stringify(m.uad)) { m.uad = U; mkChanged(); } }
   const typesAll = [...new Set((m.rows || []).map(r => r.typ).filter(Boolean))];
-  const st = mkStatsFor(R.eff); const city = mkCity(); const z = MK.zillow[city] || {};
+  const st = mkStatsFor(R.eff); const city = mkCity(); const zKey = mkZKey(); const z = MK.zillow[zKey] || {}; const zipNow = (String(readForm().zip || '').match(/\d{5}/) || [''])[0];
   const sources = m.sources || ['SBMLS'].concat(z.value ? ['Zillow'] : []);
   const cnt = (id, max) => `<span class="cnt" data-cnt="${id}" data-max="${max}"></span>`;
   box.innerHTML = `
   <div class="mkgrid">
-  <section class="mkcard"><h3>1 · Market Area Boundary (17.003) – everything inside your boundaries <small>background for the Market Commentary and price trend</small></h3>
+  <section class="mkcard"><h3>1 · Market Area Boundary (17.003) – everything inside your boundaries <small>the broader market: background for the Market Commentary and Price Trend Analysis</small></h3>
     <div class="grid3"><label>Effective date<input value="${h(shortDate(R.eff))}" disabled></label>
       <label>Look back<select data-mk="lookback">${[3, 6, 12, 18, 24, 36].map(n => `<option value="${n}"${+m.lookback === n ? ' selected' : ''}>${n} months</option>`).join('')}</select></label>
       <label>Property types${typesAll.length ? `<span class="types">${typesAll.map(t => `<label class="check"><input type="checkbox" data-mktype="${h(t)}" ${!m.types || m.types.includes(t) ? 'checked' : ''}>${h(t)}</label>`).join('')}</span>` : '<input disabled value="from the search">'}</label></div>
@@ -319,9 +321,9 @@ function mkRender(redraft) {
       <label class="btn" for="mkFile2">Choose CSV<input type="file" id="mkFile2" accept=".csv,text/csv"></label></div>
     ${MI().rows.length ? (() => { const Q = R; const ppsf = Q.S.filter(r => r.salePrice && r.gla).map(r => r.salePrice / r.gla), stl = Q.S.filter(r => r.salePrice && r.listPrice).map(r => r.salePrice / r.listPrice);
       return `<table class="facts uad mkmini"><tr><th>Sales in the look-back</th><td>${Q.salesN}${Q.salesN ? ` · ${$m(Q.saleLow)} / ${$m(Q.saleMed)} / ${$m(Q.saleHigh)} (low / median / high)` : ''}</td></tr>
-        <tr><th>Median price per sq ft</th><td>${ppsf.length ? $m(median(ppsf)) : '—'}</td></tr><tr><th>Median sale-to-list</th><td>${stl.length ? Math.round(median(stl) * 1000) / 10 + '%' : '—'}</td></tr>
+<tr><th>Median sale-to-list</th><td>${stl.length ? Math.round(median(stl) * 1000) / 10 + '%' : '—'}</td></tr>
         <tr><th>Median days on market (sales)</th><td>${Q.saleDom != null ? Math.round(Q.saleDom) : '—'}</td></tr><tr><th>Active / pending now</th><td>${Q.activeN} / ${Q.pendingN}</td></tr>
-        <tr><th>Price trend</th><td>${Q.trend.ok ? (Math.abs(Q.trend.annual) < 3 || Q.trend.r2 < 0.15 ? 'no consistent trend' : (Q.trend.annual > 0 ? 'rising ' : 'declining ') + Math.abs(Math.round(Q.trend.annual)) + '% a year') + ' (' + Q.trend.n + ' sales)' : 'too few sales to measure'}</td></tr></table>` + mkTable(Q, MI(), 'micro'); })() : ''}
+        <tr><th>Price trend</th><td>${Q.salesN < MK_MIN_SALES ? 'not enough competing sales to measure (' + Q.salesN + ') – the comment uses the broader market' : Q.salesN + ' competing sales'}</td></tr></table>` + mkTable(Q, MI(), 'micro'); })() : ''}
   </section>
   <section class="mkcard"><h3>3 · UAD 3.6 Market section</h3><p class="help">${MI().rows.length ? 'Search Result Metrics from the Search Criteria search (box 2).' : '<b class="warnTxt">Box 2 is empty</b> – these metrics use the Market Area Boundary search (box 1) for now.'}</p>
     <table class="facts uad"><tr><th>17.003 Market Area Boundary</th><td><textarea data-mk="boundary" rows="3" maxlength="1250" placeholder="e.g. Samarkand neighborhood: bounded by De la Vina St, State St, Las Positas Rd and Highway 101">${h(m.boundary || '')}</textarea>${cnt('boundary', 1250)}
@@ -338,6 +340,7 @@ function mkRender(redraft) {
     <tr><th>17.021 Demand/Supply</th><td>${sel('supply', SUPPLY, R.suggest.supply)}<small class="muted"> ${R.supply != null ? `${(Math.round(R.supply * 10) / 10)} months of supply (${R.activeN} actives ÷ ${(Math.round(R.perMonth * 100) / 100)} sales a month). Guide: under 4 shortage, 4–6 in balance, over 6 oversupply.` : 'No sales in the look-back period, so no months of supply.'}</small></td></tr>
     <tr><th>17.022 Marketing Time</th><td>${sel('mktime', MKTIME, R.suggest.mktime)}<small class="muted"> ${R.saleDom != null ? `median ${Math.round(R.saleDom)} days on market (cumulative) for the sales` : ''}</small></td></tr>
     <tr><th>17.018 Price Trend Source <small>one per line, 33 characters each</small></th><td><textarea data-mk="sources" rows="2">${h(sources.join('\n'))}</textarea></td></tr>
+    <tr><th>Your price-trend conclusion</th><td><select data-mk="trendConcl"><option value="">—</option><option value="increasing"${m.trendConcl === 'increasing' ? ' selected' : ''}>Increasing</option><option value="stable"${m.trendConcl === 'stable' ? ' selected' : ''}>Stable</option><option value="declining"${m.trendConcl === 'declining' ? ' selected' : ''}>Declining</option></select> <small class="muted">added as the last sentence of the draft</small></td></tr>
     <tr><th>17.019 Price Trend Analysis Commentary</th><td><textarea data-mk="comment" rows="10" maxlength="2500">${h(m.comment || '')}</textarea>${cnt('comment', 2500)}
       <div class="row"><button type="button" class="btn ghost small" data-redraft="comment">Draft again</button><button type="button" class="btn ghost small" data-copy="comment">Copy</button></div>
       <p class="help">Drafted from the numbers on this page in your wording. Edit freely; your edits are kept until you press Draft again.</p></td></tr></table>
@@ -352,7 +355,7 @@ function mkRender(redraft) {
     <div class="drop" id="mkStatsDrop"><div><span class="eyebrow">Monthly MLS Statistics PDF</span><p class="help">Load each month's PDF once; every order uses it. ${Object.keys(MK.stats).length ? 'Loaded: ' + Object.keys(MK.stats).sort().map(monthName).join(', ') + '.' : 'None loaded yet.'}${st ? ' This order uses <b>' + monthName(st.ym) + '</b>.' : ''}</p></div>
       <label class="btn" for="mkStatsFile">Choose PDF<input type="file" id="mkStatsFile" accept=".pdf,application/pdf"></label></div>
     ${st ? mkStatsTable(st[mkSeg()], st.ym) : ''}${st && st.warn && st.warn.length ? `<p class="help warnTxt">${st.warn.map(h).join(' ')} This month's own totals from its Summary of Stats page were used instead.</p>` : ''}
-    <h4>Zillow – ${h(city || 'the subject’s city')}</h4><p class="help">Type the figures from Zillow's city page (Key Takeaways and Market Overview). They are kept for this city and used for every order there.</p>
+    <h4>Zillow – ${h(zKey.startsWith('zip:') ? 'ZIP ' + zKey.slice(4) : (city || 'the subject’s city'))}</h4><div class="row"><label class="check"><input type="radio" name="zby" value="zip" ${zKey.startsWith('zip:') ? 'checked' : ''} ${zipNow ? '' : 'disabled'}>Subject's ZIP code${zipNow ? ' (' + zipNow + ')' : ''}</label><label class="check"><input type="radio" name="zby" value="city" ${zKey.startsWith('zip:') ? '' : 'checked'}>City${city ? ' (' + h(city) + ')' : ''}</label></div><p class="help">Type the figures from Zillow's page for this ZIP code or city. They are kept for it and used for every order there. In the comment, ZIP-code data is described as supporting context.</p>
     <div class="grid3 zil"><label>As of<input type="date" data-z="asOf" value="${h(z.asOf || '')}"></label><label>Typical home value ($)<input data-z="value" inputmode="numeric" value="${h(z.value || '')}"></label><label>1-year change (%)<input data-z="change" inputmode="decimal" value="${h(z.change ?? '')}"></label>
       <label>Median sale price ($)<input data-z="medSale" inputmode="numeric" value="${h(z.medSale || '')}"></label><label>Sale-to-list ratio<input data-z="stl" inputmode="decimal" value="${h(z.stl || '')}"></label><label>Median days to pending<input data-z="dtp" inputmode="numeric" value="${h(z.dtp || '')}"></label></div>
   </section></div>`;
@@ -370,7 +373,7 @@ function mkRender(redraft) {
   const fd = $('#mkFromDocs'); if (fd) fd.onclick = async () => { const d = cur.docs.find(d => d.type === 'marketSearch' && /\.csv$/i.test(d.name)); const f = await docFile(d.id); if (f) mkAddSearch(f); };
   box.querySelectorAll('[data-mkinc]').forEach(cb => cb.onchange = () => { m.exclude = m.exclude || {}; if (cb.checked) delete m.exclude[cb.dataset.mkinc]; else m.exclude[cb.dataset.mkinc] = true; mkChanged(); mkRender(true); });
   box.querySelectorAll('[data-mktype]').forEach(cb => cb.onchange = () => { m.types = [...box.querySelectorAll('[data-mktype]:checked')].map(x => x.dataset.mktype); mkChanged(); mkRender(true); });
-  box.querySelectorAll('select[data-mk]').forEach(s => s.onchange = () => { const k = s.dataset.mk; if (k === 'lookback') { m.lookback = +s.value; mkChanged(); mkRender(true); return; } m[k] = s.value; mkChanged(); mkRender(); });
+  box.querySelectorAll('select[data-mk]').forEach(s => s.onchange = () => { const k = s.dataset.mk; if (k === 'lookback') { m.lookback = +s.value; mkChanged(); mkRender(true); return; } m[k] = s.value; mkChanged(); mkRender(k === 'trendConcl' && !m.commentEdited); });
   box.querySelectorAll('textarea[data-mk]').forEach(t => t.oninput = () => { const k = t.dataset.mk; if (k === 'sources') m.sources = t.value.split('\n').map(x => x.trim().slice(0, 33)).filter(Boolean); else { m[k] = t.value; if (k === 'comment') m.commentEdited = true; if (k === 'criteria') m.criteriaEdited = true; } if (m.uad && ['boundary', 'criteria', 'comment'].includes(k)) m.uad[k] = t.value; mkCounts(); mkChanged(); });
   box.querySelectorAll('[data-redraft]').forEach(b => b.onclick = () => { const k = b.dataset.redraft; m[k] = k === 'comment' ? mkCommentDraft(R) : mkCriteriaDraft(R); m[k + 'Edited'] = false; mkChanged(); mkRender(); toast('Drafted again from the current numbers'); });
   box.querySelectorAll('[data-copy]').forEach(b => b.onclick = async () => { try { await navigator.clipboard.writeText(m[b.dataset.copy] || ''); toast('Copied – paste it into SFREP'); } catch (e) { toast('Select the text and press Ctrl+C'); } });
@@ -378,7 +381,8 @@ function mkRender(redraft) {
   $('#mkPsf').onchange = e => { m.perSf = e.target.checked; mkChanged(); drawPriceTrend($('#mkG1'), R, m.perSf); };
   $('#mkBndPick').onchange = e => { const b = MK.boundaries[e.target.value]; if (b) { m.boundary = b.text; mkChanged(); mkRender(); } };
   $('#mkBndSave').onclick = () => { const t = (m.boundary || '').trim(); if (!t) { toast('Type the boundary first'); return; } const name = prompt('Name for this market area (for example "Samarkand")'); if (!name) return; const i = MK.boundaries.findIndex(b => b.name === name); if (i >= 0) MK.boundaries[i].text = t; else MK.boundaries.push({ name, text: t }); MK.boundaries.sort((a, b) => a.name.localeCompare(b.name)); mkSave('boundaries'); mkRender(); toast('Saved “' + name + '” for later orders'); };
-  box.querySelectorAll('[data-z]').forEach(i => i.onchange = () => { if (!city) { toast('Fill in the property address first'); return; } const zz = MK.zillow[city] = MK.zillow[city] || {}; const k = i.dataset.z; zz[k] = k === 'asOf' ? i.value : i.value === '' ? '' : Number(String(i.value).replace(/[$,%\s]/g, '')); mkSave('zillow'); if (!m.commentEdited) { m.comment = mkCommentDraft(mkCompute()); const t = box.querySelector('textarea[data-mk=comment]'); if (t) t.value = m.comment; mkCounts(); mkChanged(); } });
+  box.querySelectorAll('input[name=zby]').forEach(r => r.onchange = () => { m.zillowBy = r.value; mkChanged(); mkRender(!m.commentEdited); });
+  box.querySelectorAll('[data-z]').forEach(i => i.onchange = () => { if (!zKey) { toast('Fill in the property address first'); return; } const zz = MK.zillow[zKey] = MK.zillow[zKey] || {}; const k = i.dataset.z; zz[k] = k === 'asOf' ? i.value : i.value === '' ? '' : Number(String(i.value).replace(/[$,%\s]/g, '')); mkSave('zillow'); if (!m.commentEdited) { m.comment = mkCommentDraft(mkLast || mkCompute()); const t = box.querySelector('textarea[data-mk=comment]'); if (t) t.value = m.comment; mkCounts(); mkChanged(); } });
   mkCounts();
 }
 function mkCounts() { document.querySelectorAll('[data-cnt]').forEach(s => { const t = document.querySelector(`textarea[data-mk="${s.dataset.cnt}"]`); const n = t ? t.value.length : 0, max = +s.dataset.max; s.textContent = `${n.toLocaleString()} of ${max.toLocaleString()} characters`; s.className = 'cnt' + (n > max ? ' over' : n > max * 0.92 ? ' near' : ''); }); }
