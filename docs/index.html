@@ -172,7 +172,9 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
 #kindPop button { all: unset; cursor: pointer; padding: 3px 6px; border-radius: 5px; line-height: 1.3; } #kindPop button:hover { background: var(--accent-soft); } #kindPop button.on { background: var(--accent-fill); color: #000; font-weight: 600; }
 @media (max-width: 560px) { #kindPop { grid-template-columns: 1fr 1fr; } }
 .mkrows th.sortable { cursor: pointer; white-space: nowrap; user-select: none; } .mkrows th.sortable:hover { color: #000; text-decoration: underline; } .mkrows th.on { color: #000; } .mkmini { margin-bottom: 10px; }
-.zby { display: flex; flex-wrap: wrap; gap: 6px 24px; margin: 4px 0 6px; } .zby label.check { display: inline-flex; align-items: center; gap: 8px; width: auto; }
+.zby { display: flex; flex-wrap: wrap; gap: 6px 24px; margin: 4px 0 6px; } .zby label.check { display: inline-flex !important; grid-template-columns: none !important; align-items: center; gap: 8px; width: auto !important; margin: 0; } .zby label.check input { margin: 0; width: auto; }
+.toTop { position: fixed; right: 22px; bottom: 22px; z-index: 50; background: var(--accent-fill); color: #000; border: 1.5px solid #000; border-radius: 999px; padding: 10px 16px; font: 600 15px var(--ui); cursor: pointer; box-shadow: 0 4px 14px rgba(0,0,0,.18); } .toTop:hover { filter: brightness(.95); }
+@media print { .toTop { display: none !important; } }
 .formEnd { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 6px 0 20px; } .sheetHint { margin: 0; }
 .btn.danger.armed { background: var(--warn); color: #fff; border-color: var(--warn); }
 </style>
@@ -524,7 +526,7 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
 </div>
 <div id="toast" role="status" hidden></div>
 <script>
-const BUILD='o1-1016-2245';
+const BUILD='o1-1016-2248';
 const G = (() => {
 /* ---------------- small helpers ---------------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -2363,7 +2365,8 @@ function mkRender(redraft) {
       <label class="btn" for="mkZilFile">Choose file<input type="file" id="mkZilFile" accept=".pdf,image/*"></label></div>
     <div class="grid3 zil"><label>As of<input type="date" data-z="asOf" value="${h(z.asOf || '')}"></label><label>Typical home value ($)<input data-z="value" inputmode="numeric" value="${h(z.value ? Number(z.value).toLocaleString() : '')}"></label><label>1-year change (%)<input data-z="change" inputmode="decimal" value="${h(z.change ?? '')}"></label>
       <label>Median sale price ($)<input data-z="medSale" inputmode="numeric" value="${h(z.medSale ? Number(z.medSale).toLocaleString() : '')}"></label><label>Sale-to-list ratio<input data-z="stl" inputmode="decimal" value="${h(z.stl || '')}"></label><label>Median days to pending<input data-z="dtp" inputmode="numeric" value="${h(z.dtp || '')}"></label></div>
-  </section></div>`;
+  </section></div>
+  <div class="formEnd"><button type="button" class="btn" id="mkSaveBtn">Save</button><a class="btn primary" id="mkGenie" href="${h(genieURL(cur))}" target="aa-genie">Save and open the Comp genie →</a><button type="button" class="btn ghost" id="mkOrderBtn">Back to the order</button><span class="savedAt" data-saved></span></div>`;
   // graphs
   drawPriceTrend($('#mkG1'), R, !!m.perSf); drawAbsorption($('#mkG2'), R); drawMacro($('#mkG3'), mkSeg());
   // wiring
@@ -2383,6 +2386,7 @@ function mkRender(redraft) {
   box.querySelectorAll('[data-redraft]').forEach(b => b.onclick = () => { const k = b.dataset.redraft; m[k] = k === 'comment' ? mkCommentDraft(R) : mkCriteriaDraft(R); m[k + 'Edited'] = false; mkChanged(); mkRender(); toast('Drafted again from the current numbers'); });
   box.querySelectorAll('[data-copy]').forEach(b => b.onclick = async () => { try { await navigator.clipboard.writeText(m[b.dataset.copy] || ''); toast('Copied – paste it into SFREP'); } catch (e) { toast('Select the text and press Ctrl+C'); } });
   box.querySelectorAll('[data-png]').forEach(b => b.onclick = () => savePng($('#' + b.dataset.png), G.safeName(`${cur.fileNo || street(cur) || 'Market'} ${{ mkG1: 'Price Trend', mkG2: 'Absorption Rate', mkG3: 'SBMLS South Coast Median' }[b.dataset.png]}`) + '.png'));
+  $('#mkSaveBtn').onclick = () => saveLetter(false); $('#mkGenie').onclick = () => saveLetter(true); $('#mkOrderBtn').onclick = () => { saveLetter(true); showTab('letter'); window.scrollTo(0, 0); };
   $('#mkPsf').onchange = e => { m.perSf = e.target.checked; mkChanged(); drawPriceTrend($('#mkG1'), R, m.perSf); };
   $('#mkBndPick').onchange = e => { const b = MK.boundaries[e.target.value]; if (b) { m.boundary = b.text; mkChanged(); mkRender(); } };
   $('#mkBndSave').onclick = () => { const t = (m.boundary || '').trim(); if (!t) { toast('Type the boundary first'); return; } const name = prompt('Name for this market area (for example "Samarkand")'); if (!name) return; const i = MK.boundaries.findIndex(b => b.name === name); if (i >= 0) MK.boundaries[i].text = t; else MK.boundaries.push({ name, text: t }); MK.boundaries.sort((a, b) => a.name.localeCompare(b.name)); mkSave('boundaries'); mkRender(); toast('Saved “' + name + '” for later orders'); };
@@ -3544,6 +3548,10 @@ function armDelete(b, run) {
   setTimeout(() => { if (b.isConnected) { delete b.dataset.armed; b.textContent = was; b.classList.remove('armed'); } }, 3000);
 }
 
+/* Back to top: shows once the page is scrolled down */
+window.addEventListener('DOMContentLoaded', () => { const b = document.getElementById('toTop'); if (!b) return; const f = () => { b.hidden = window.scrollY < 700; }; window.addEventListener('scroll', f, { passive: true }); f(); b.onclick = () => window.scrollTo({ top: 0, behavior: 'smooth' }); });
+
 </script>
+<button type="button" id="toTop" class="toTop" hidden aria-label="Back to top">↑ Back to top</button>
 </body>
 </html>

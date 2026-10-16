@@ -384,7 +384,8 @@ function mkRender(redraft) {
       <label class="btn" for="mkZilFile">Choose file<input type="file" id="mkZilFile" accept=".pdf,image/*"></label></div>
     <div class="grid3 zil"><label>As of<input type="date" data-z="asOf" value="${h(z.asOf || '')}"></label><label>Typical home value ($)<input data-z="value" inputmode="numeric" value="${h(z.value ? Number(z.value).toLocaleString() : '')}"></label><label>1-year change (%)<input data-z="change" inputmode="decimal" value="${h(z.change ?? '')}"></label>
       <label>Median sale price ($)<input data-z="medSale" inputmode="numeric" value="${h(z.medSale ? Number(z.medSale).toLocaleString() : '')}"></label><label>Sale-to-list ratio<input data-z="stl" inputmode="decimal" value="${h(z.stl || '')}"></label><label>Median days to pending<input data-z="dtp" inputmode="numeric" value="${h(z.dtp || '')}"></label></div>
-  </section></div>`;
+  </section></div>
+  <div class="formEnd"><button type="button" class="btn" id="mkSaveBtn">Save</button><a class="btn primary" id="mkGenie" href="${h(genieURL(cur))}" target="aa-genie">Save and open the Comp genie →</a><button type="button" class="btn ghost" id="mkOrderBtn">Back to the order</button><span class="savedAt" data-saved></span></div>`;
   // graphs
   drawPriceTrend($('#mkG1'), R, !!m.perSf); drawAbsorption($('#mkG2'), R); drawMacro($('#mkG3'), mkSeg());
   // wiring
@@ -404,6 +405,7 @@ function mkRender(redraft) {
   box.querySelectorAll('[data-redraft]').forEach(b => b.onclick = () => { const k = b.dataset.redraft; m[k] = k === 'comment' ? mkCommentDraft(R) : mkCriteriaDraft(R); m[k + 'Edited'] = false; mkChanged(); mkRender(); toast('Drafted again from the current numbers'); });
   box.querySelectorAll('[data-copy]').forEach(b => b.onclick = async () => { try { await navigator.clipboard.writeText(m[b.dataset.copy] || ''); toast('Copied – paste it into SFREP'); } catch (e) { toast('Select the text and press Ctrl+C'); } });
   box.querySelectorAll('[data-png]').forEach(b => b.onclick = () => savePng($('#' + b.dataset.png), G.safeName(`${cur.fileNo || street(cur) || 'Market'} ${{ mkG1: 'Price Trend', mkG2: 'Absorption Rate', mkG3: 'SBMLS South Coast Median' }[b.dataset.png]}`) + '.png'));
+  $('#mkSaveBtn').onclick = () => saveLetter(false); $('#mkGenie').onclick = () => saveLetter(true); $('#mkOrderBtn').onclick = () => { saveLetter(true); showTab('letter'); window.scrollTo(0, 0); };
   $('#mkPsf').onchange = e => { m.perSf = e.target.checked; mkChanged(); drawPriceTrend($('#mkG1'), R, m.perSf); };
   $('#mkBndPick').onchange = e => { const b = MK.boundaries[e.target.value]; if (b) { m.boundary = b.text; mkChanged(); mkRender(); } };
   $('#mkBndSave').onclick = () => { const t = (m.boundary || '').trim(); if (!t) { toast('Type the boundary first'); return; } const name = prompt('Name for this market area (for example "Samarkand")'); if (!name) return; const i = MK.boundaries.findIndex(b => b.name === name); if (i >= 0) MK.boundaries[i].text = t; else MK.boundaries.push({ name, text: t }); MK.boundaries.sort((a, b) => a.name.localeCompare(b.name)); mkSave('boundaries'); mkRender(); toast('Saved “' + name + '” for later orders'); };

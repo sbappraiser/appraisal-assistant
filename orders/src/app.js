@@ -511,3 +511,6 @@ function armDelete(b, run) {
   const was = b.textContent; b.dataset.armed = '1'; b.textContent = 'Click again to delete'; b.classList.add('armed');
   setTimeout(() => { if (b.isConnected) { delete b.dataset.armed; b.textContent = was; b.classList.remove('armed'); } }, 3000);
 }
+
+/* Back to top: shows once the page is scrolled down */
+window.addEventListener('DOMContentLoaded', () => { const b = document.getElementById('toTop'); if (!b) return; const f = () => { b.hidden = window.scrollY < 700; }; window.addEventListener('scroll', f, { passive: true }); f(); b.onclick = () => window.scrollTo({ top: 0, behavior: 'smooth' }); });
