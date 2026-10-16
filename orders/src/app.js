@@ -255,10 +255,10 @@ function renderLetters() {
   $('#letterList').innerHTML = rows.length ? rows.map(f => `<tr>
       <td class="num">${hesc(f.fileNo || '—')}</td><td><button class="lnk" data-open="${f.id}">${hesc(street(f) || '(no address yet)')}</button></td><td>${hesc((f.clients[0] || {}).name || (f.clients[0] || {}).company || '—')}</td><td>${hesc((TYPES[f.type] || {}).label || '')}</td>
       <td><select data-stage="${f.id}" aria-label="Order status">${STAGES.map(s => `<option${(f.stage || 'New') === s ? ' selected' : ''}>${s}</option>`).join('')}</select></td>
-      <td class="num">${hesc(f.dueDate ? longDate(f.dueDate) : '')}</td><td class="num">${hesc(f.inspDate ? longDate(f.inspDate) + (f.inspTime ? ' ' + f.inspTime : '') : '')}</td>
+      <td class="num">${hesc(f.dueDate ? shortDate(f.dueDate) : '')}</td><td class="num">${hesc(f.inspDate ? shortDate(f.inspDate) : '')}${f.inspTime ? '<small>' + hesc(f.inspTime) + '</small>' : ''}</td>
       <td>${f.aiUse ? `<span class="pill ${f.aiUse === 'No' ? 'no' : 'yes'}">${{ Yes: 'Yes', Redacted: 'Redacted', No: 'No AI' }[f.aiUse]}</span>` : '<span class="pill">?</span>'}</td>
       <td>${hesc(f.status || '')}</td><td class="num">${(f.docs || []).length || ''}</td>
-      <td class="acts"><button class="btn small" data-open="${f.id}">Open</button><a class="btn ghost small" href="${genieURL(f)}" target="aa-genie">Comp genie</a><button class="btn ghost small" data-copy="${f.id}">Copy as new</button><button class="btn ghost small danger" data-del="${f.id}">Delete</button></td></tr>`).join('')
+      <td class="acts"><div class="acts2"><button class="btn small" data-open="${f.id}">Open</button><a class="btn ghost small" href="${genieURL(f)}" target="aa-genie">Comp genie</a><button class="btn ghost small" data-copy="${f.id}">Copy as new</button><button class="btn ghost small danger" data-del="${f.id}">Delete</button></div></td></tr>`).join('')
     : `<tr><td colspan="11" class="empty">${letters.length ? 'No order matches.' : 'No orders yet. Press New order to start one.'}</td></tr>`;
   $('#letterList').querySelectorAll('[data-open]').forEach(b => b.onclick = () => openLetter(b.dataset.open));
   $('#letterList').querySelectorAll('[data-copy]').forEach(b => b.onclick = () => openLetter(b.dataset.copy, true));
