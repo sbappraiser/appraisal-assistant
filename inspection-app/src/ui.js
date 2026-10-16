@@ -463,7 +463,7 @@ async function ordersBlock(all) {
       ${o.todos && o.todos.length ? `<div class="meta">${o.todos.length} to-do${o.todos.length > 1 ? 's' : ''} from the order</div>` : ''}
       <div class="row">${ins ? `<button class="btn primary" data-open="${ins.id}">Open inspection</button>` : `<button class="btn primary" data-ostart="${esc(o.id)}">Start inspection</button>`}</div></div>`; };
   return `<section class="orders-home"><div class="row" style="align-items:center;justify-content:space-between"><h2>Active orders${rec ? ` <small>from ${esc(new Date(rec.made).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }))}</small>` : ''}</h2>
-    <span class="row"><label class="btn" style="position:relative;overflow:hidden">${rec ? 'Get the newer orders file' : 'Get orders (Active Orders file)'}<input id="ordersFile" type="file" accept=".json,application/json" style="position:absolute;inset:0;opacity:0"></label>${rec ? '<button class="btn" data-oclear>Clear</button>' : ''}</span></div>
+    <span class="row"><label class="btn" style="position:relative;overflow:hidden">${rec ? 'Get the newer orders file' : 'Get orders (Active Orders file)'}<input id="ordersFile" type="file" style="position:absolute;inset:0;opacity:0"></label>${rec ? '<button class="btn" data-oclear>Clear</button>' : ''}</span></div>
     ${list.length ? `<div class="cards">${list.map(card).join('')}</div>` : `<p class="help">On the computer, press <b>Send active orders to the iPad</b> in the Appraisal Assistant and save the file to OneDrive or iCloud Drive. Then tap <b>Get orders</b> here and pick “Active Orders.json” in Files.</p>`}</section>`;
 }
 async function clearOrders() {
@@ -473,7 +473,8 @@ async function clearOrders() {
 async function loadOrdersFile(file) {
   if (!file) return; toast('Reading the orders file…');
   try {
-    const d = JSON.parse(await file.text()); if (d.app !== 'appraisal-assistant' || d.kind !== 'active-orders') throw new Error('That is not an Active Orders file from the Appraisal Assistant.');
+    let d; try { d = JSON.parse(await file.text()); } catch (e) { throw new Error('“' + file.name + '” is not an orders file. Pick “Active Orders.json” or an “Order … .json” file from the Appraisal Assistant.'); }
+    if (d.app !== 'appraisal-assistant' || d.kind !== 'active-orders') throw new Error('That is not an Active Orders file from the Appraisal Assistant.');
     const old = await DB.get('sketches', 'orders:active');
     const keep = new Set(); const orders = [];
     const incoming = d.orders || [];
