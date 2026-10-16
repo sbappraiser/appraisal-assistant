@@ -137,6 +137,16 @@ table.mkrows td small { display: block; color: var(--muted); font-size: 12px; } 
 ul.hits2 { margin: 0; padding-left: 18px; } ul.hits2 li { margin: 4px 0; } ul.hits2 small { display: block; color: var(--muted); }
 #clientView { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; display: grid; gap: 10px; } #clientView h3 { margin: 0; font: 600 17px var(--ui); }
 .clpages { display: grid; gap: 12px; max-height: 75vh; overflow: auto; padding: 4px; } .clpages canvas { width: 100%; height: auto; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,.15); }
+.homegrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; padding-top: 8px; }
+.homecard { text-align: left; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 20px; display: grid; gap: 10px; align-content: start; font: inherit; color: var(--ink); cursor: pointer; min-height: 160px; }
+div.homecard { cursor: default; } .homecard b { font: 600 22px var(--display, var(--ui)); } .homecard span { color: var(--muted); } .homecard.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); } .homecard.primary span { color: var(--accent-ink); opacity: .9; }
+button.homecard:hover { border-color: var(--accent); } .hmrow { display: grid; grid-template-columns: 90px 1fr auto; gap: 8px; text-align: left; border: 0; border-bottom: 1px solid var(--line); background: none; padding: 7px 2px; font: inherit; color: var(--ink); cursor: pointer; } .hmrow:hover { background: var(--accent-soft); } .hmrow small { color: var(--muted); }
+.wzsteps { display: flex; gap: 8px; list-style: none; padding: 0; margin: 0 0 12px; flex-wrap: wrap; } .wzsteps li { padding: 6px 12px; border-radius: 99px; background: var(--panel); border: 1px solid var(--line); color: var(--muted); font: 600 13px var(--ui); } .wzsteps li.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); } .wzsteps li.done { color: var(--ok); }
+.wzq { display: grid; gap: 6px; padding: 8px 0; } .wzq > span { font: 600 14px var(--ui); }
+.slots { display: grid; gap: 10px; } .slot { display: flex; gap: 12px; align-items: flex-start; justify-content: space-between; border: 1.5px dashed var(--line); border-radius: 10px; padding: 12px 14px; background: var(--field); } .slot.over { border-color: var(--accent); background: var(--accent-soft); }
+.slot > div { display: grid; gap: 2px; min-width: 0; } .slot small { color: var(--muted); } .slot ul { margin: 6px 0 0; padding-left: 18px; font-size: 13.5px; } .slot label.btn input { display: none; }
+.alert { border-radius: 10px; padding: 10px 14px; margin: 8px 0; border: 1px solid var(--line); } .alert p { margin: 4px 0 0; } .alert.stop { background: #fde8e8; border-color: #e7a3a3; color: #6b1515; } .alert.look { background: var(--warn-bg); border-color: var(--warn); } .alert.clear { background: var(--ok-bg); border-color: var(--ok); }
+#orderSummary { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; display: grid; gap: 10px; } #orderSummary h3 { margin: 0; font: 600 17px var(--ui); } ul.toread { margin: 0; padding-left: 18px; } ul.toread li { margin: 6px 0; }
 a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fatal { background: #fde8e8; color: #8a1c1c; padding: 14px; margin: 0; font-weight: 600; }
 </style>
 </head>
@@ -144,8 +154,9 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
 <header class="top">
   <div class="brand"><h1>Appraisal Assistant</h1><small>Jennifer Heath, LLC · orders, documents and engagement letters</small></div>
   <nav class="tabs" aria-label="Sections">
-    <button type="button" data-tab="saved" aria-selected="false">Orders</button>
-    <button type="button" data-tab="letter" aria-selected="true">Order &amp; letter</button>
+    <button type="button" data-tab="home" aria-selected="true">Home</button>
+    <button type="button" data-tab="saved" aria-selected="false">All files</button>
+    <button type="button" data-tab="letter" aria-selected="false">Order</button>
     <button type="button" data-tab="market" aria-selected="false">Market</button>
     <button type="button" data-tab="contacts" aria-selected="false">Clients</button>
     <button type="button" data-tab="wording" aria-selected="false">Standard wording</button>
@@ -154,7 +165,9 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
   <div class="toolrow"><a class="btn ghost" href="../comp-genie/" target="aa-genie">Comp genie</a><button type="button" class="btn ghost" id="btnBackup">Back up</button><label class="btn ghost" for="restoreFile">Restore<input type="file" id="restoreFile" accept=".json,application/json"></label></div>
 </header>
 <main>
-<section class="panel" id="panel-letter">
+<section class="panel" id="panel-home" hidden><div id="homeBody"></div></section>
+<section class="panel" id="panel-new" hidden><div class="listHead"><div><h2>New order</h2></div></div><div id="newBody"></div></section>
+<section class="panel" id="panel-letter" hidden>
  <div class="desk">
   <form id="letterForm" autocomplete="off">
     <fieldset id="docsSet"><legend>Documents – upload everything here <span class="opt" id="docCount"></span></legend>
@@ -172,7 +185,10 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
     </fieldset>
     <fieldset><legend>Order</legend>
       <div class="grid3">
-        <label>File number<input id="f_fileNo" placeholder="26-101"></label>
+        <label>File number<input id="f_fileNo" placeholder="your file number"></label>
+        <label style="grid-column:span 2">Property address<input id="f_address" placeholder="1450 East Valley Road, Santa Barbara, CA 93108"></label>
+      </div>
+      <div class="grid3">
         <label>Order received<input id="f_orderDate" type="date"></label>
         <label>Report due<input id="f_dueDate" type="date"></label>
       </div>
@@ -211,15 +227,12 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
       <p class="help" id="usersNote" hidden></p>
       <label>Intended user, in your own words <span class="opt">optional · replaces the standard sentence</span><textarea id="f_userText" placeholder="The Client is the sole intended user. This report is not intended for use by any other party…"></textarea></label>
     </fieldset>
-    <fieldset><legend>Lender and AMC</legend>
-      <label>Borrower / owner <span class="opt">optional</span><input id="f_borrower"></label>
+    <fieldset><legend>Loan and AMC</legend>
+      <p class="help">When a lender orders, the lender is the client (Client section above). Fill in the AMC only if one is involved.</p>
+      <div class="grid2"><label>Borrower / owner <span class="opt">optional</span><input id="f_borrower"></label><label>Loan number<input id="f_loanNo"></label></div>
       <div class="grid2" id="gseBox"><label>Government loan (UAD 2.008) <select id="f_govAgency"><option value="">None – conventional</option><option value="FHA">FHA</option><option value="VA">VA</option><option value="USDA">USDA</option></select></label>
         <label>Investor special ID (UAD 2.009) <span class="opt">only if the lender gives one</span><input id="f_investorId"></label></div>
-      <label class="check"><input type="checkbox" id="f_lenderDiff">The lender is different from the client</label>
-      <div class="grid2" id="lenderBox">
-        <label>Lender<input id="f_lenderCo"></label><label>Loan number<input id="f_loanNo"></label>
-        <label>Street address<input id="f_lenderAddr1"></label><label>City, state, ZIP<input id="f_lenderAddr2"></label>
-      </div>
+      <div hidden><input type="checkbox" id="f_lenderDiff"><div id="lenderBox"><input id="f_lenderCo"><input id="f_lenderAddr1"><input id="f_lenderAddr2"></div></div>
       <label class="check"><input type="checkbox" id="f_amcUsed">Ordered through an appraisal management company (AMC)</label>
       <div class="grid2" id="amcBox">
         <label>AMC<input id="f_amcCo"></label><label>AMC order / reference ID<input id="f_amcRef"></label>
@@ -231,7 +244,6 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
     </fieldset>
     <fieldset><legend>Property</legend>
       <div class="grid2">
-        <label style="grid-column:1/-1">Property address<input id="f_address" placeholder="1450 East Valley Road, Santa Barbara, CA 93108"></label>
         <label>APN<input id="f_apn" placeholder="009-123-456"></label>
         <label>County<input id="f_county" placeholder="Santa Barbara"></label>
         <label>Owner of record<input id="f_owner"></label>
@@ -316,6 +328,7 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
     <p class="missing" id="missing"></p>
     <div class="paperWrap" id="paperWrap"><article id="sheet" aria-label="Letter preview"></article></div>
     <div id="clientView" hidden></div>
+    <div id="orderSummary" hidden></div>
   </div>
  </div>
 </section>
@@ -335,11 +348,12 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
     <p class="help">Step-by-step directions for each part of the Appraisal Assistant. Type a word to find the right section.</p>
     <input id="helpSearch" type="search" placeholder="for example: sticky, blur, iPad, backup, market">
     <details><summary>Start a new order</summary><ol>
-      <li>Click <b>Orders</b>, then <b>New order</b>.</li><li>Type the file number. Pick the assignment type. Lender and AMC orders are in the group <b>Lender or AMC order – UAD 3.6</b> (purchase, refinance, HELOC, construction loan, other lending decision); for those, My letter is set to “Not needed – client’s letter”, and you can mark an FHA, VA or USDA loan under Lender and AMC.</li>
-      <li>Drop the CRS report into <b>Documents</b>. The address, APN, owner, county, location and public-record facts fill in. Beds, baths and square feet are never filled in for the subject.</li>
-      <li>Fill in the client (or <b>Pick a saved client</b>), lender or AMC if any, inspection date and time, access contact, fee.</li>
-      <li>Choose <b>AI use on this job</b>: Yes, Yes with confidential information removed, or No AI.</li>
-      <li>The order saves by itself while you type. <b>Save order</b> also adds a new client to your client list.</li></ol></details>
+      <li>On <b>Home</b>, click <b>New order</b>.</li>
+      <li><b>1 · Order:</b> type your file number and the property address (or leave the address for the CRS report to fill). Answer three questions: did the client send an engagement letter or will you write one, is it a purchase, and is the property listed now or in the last 12 months. Click <b>Next</b>.</li>
+      <li><b>2 · Documents:</b> drop each file in its box – client’s engagement letter, CRS report, legal description, MLS listing with history, purchase contract with counters and addenda (as many PDFs as you have), preliminary title report, and anything else under <b>Other documents</b>. Each file is read as you add it, and checked against the property address: a file for another property is marked ⚠ and nothing is filled in from it.</li>
+      <li><b>3 · Check:</b> see what was filled in. The client’s letter sets the client, loan number, borrower, due date, fee, report form, rent schedule, and <b>AI use</b>: a ban (for example “no AI without prior authorization”) sets No AI; confidentiality wording sets Yes – only with confidential information removed; nothing sets Yes. You can change any of it on the order.</li>
+      <li>Click <b>Read</b> next to the prelim or contract to summarize it, then <b>Open the order</b> – or, if you are writing the letter, <b>Next: write my engagement letter</b>.</li>
+      <li>The order saves by itself. To find it again: <b>Home → Open an order</b>, or <b>All files</b>.</li></ol></details>
     <details><summary>Documents: upload once, kinds, search, sticky notes</summary><ol>
       <li>Drop every file for the order into the <b>Documents</b> box, or click <b>Choose files</b>. Each one is sorted by kind; change the kind with its drop-down if it guessed wrong.</li>
       <li>Click a file name to open it. Click <b>Read</b> to open the reader (next section). <b>Remove</b> takes it out of the order.</li>
@@ -429,7 +443,7 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
 </div>
 <div id="toast" role="status" hidden></div>
 <script>
-const BUILD='o1-1016-0009';
+const BUILD='o1-1016-0029';
 const G = (() => {
 /* ---------------- small helpers ---------------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -1546,13 +1560,13 @@ async function detectDocType(file) {
 
 /* ---------- add, retype, open, remove ---------- */
 let docBusy = false;
-async function addDocs(fileList) {
+async function addDocs(fileList, forcedType) {
   const files = [...fileList]; if (!files.length) return;
   if (docBusy) { toast('Still reading the last files…'); return; }
   docBusy = true; const said = [];
   try {
     const typed = [];
-    for (const file of files) { $('#docStatus').textContent = 'Sorting ' + file.name + '…'; typed.push([file, await detectDocType(file)]); }
+    for (const file of files) { $('#docStatus').textContent = 'Sorting ' + file.name + '…'; typed.push([file, forcedType || await detectDocType(file)]); }
     const FIRST = ['crs', 'mls', 'clientLetter']; const rank = t => { const i = FIRST.indexOf(t); return i < 0 ? 9 : i; };
     typed.sort((a, b) => rank(a[1]) - rank(b[1])); // the CRS first, so later files can be checked against the subject's APN
     for (const [file, type] of typed) {
@@ -1565,14 +1579,14 @@ async function addDocs(fileList) {
     }
   } finally { docBusy = false; }
   $('#docStatus').textContent = said.length === 1 ? said[0] : said.length + ' files added – see each one below.';
-  renderDocs(); renderSubject(); syncVisibility(); update(); saveLetter(true);
+  renderDocs(); renderSubject(); syncVisibility(); update(); saveLetter(true); if (typeof wzRefresh === 'function') wzRefresh();
 }
 async function readDoc(meta, file) { // turns the readable kinds into facts; notes what happened
-  meta.note = '';
+  meta.note = ''; meta.warn = '';
   try {
     if (meta.type === 'crs') {
       const c = G.parseCRS(await G.pdfLines(file)); if (!c.addr && !c.apn) { meta.note = 'no CRS facts found – check the type'; return; }
-      c.file = file.name; applyCRS(c); meta.note = 'subject facts filled';
+      c.file = file.name; applyCRS(c); meta.note = meta.warn ? 'not used – different property' : 'subject facts filled';
     } else if (meta.type === 'mls') {
       const rows = /\.csv$/i.test(file.name) ? G.parseMlsCsv(await G.readText(file)) : isPdf(file) ? G.parseMlsPdf(await G.pdfLines(file)) : [];
       const n = applyListings(rows, file.name); meta.note = n ? n + ' subject listing' + (n > 1 ? 's' : '') + ' found' : rows.length ? 'none of its ' + rows.length + ' listings is the subject' : 'no listings found';
@@ -1583,12 +1597,14 @@ async function readDoc(meta, file) { // turns the readable kinds into facts; not
       cur = readForm(); cur.permits = P; meta.note = (G.permitItems ? G.permitItems(P).length : P.accela.length) + ' permits/cases listed';
       if (P.parcel && !$('#f_apn').value) $('#f_apn').value = P.parcel;
     } else if (meta.type === 'clientLetter') {
-      if (isPdf(file) || /\.(docx|txt)$/i.test(file.name)) { await scanFile(file); meta.note = cur.orderDoc ? 'checked for AI wording' : ''; }
+      if (isPdf(file) || /\.(docx|txt)$/i.test(file.name)) { await scanFile(file); meta.note = cur.orderDoc ? 'checked for AI wording' : '';
+        try { const F = await readClientLetter(file); const did = applyClientLetter(F); cur = readForm(); cur.letterFill = did; cur.letterFields = F; if (did.length) meta.note += ' · ' + did.length + ' items filled in'; } catch (e) { console.warn('letter fill', e); } }
       if ($('#f_status').value === 'Drafted' && !cur.letterMade) { $('#f_status').value = 'Client letter'; toast('The client’s letter now shows on the right instead of yours. To write your own, set My letter back to Drafted.', 6000); }
     } else if (meta.type === 'floorplan') {
       const prev = await planPreview(file, meta.page || 1); if (prev) { const rec = await ODB.get('docs', meta.id); rec.preview = prev.src; rec.pages = prev.pages; await ODB.put('docs', rec); meta.pages = prev.pages; meta.note = 'ready for the iPad'; }
     }
   } catch (e) { console.error(e); meta.note = 'could not be read: ' + (e.message || e); }
+  try { await checkDocAddress(meta, file); } catch (e) {}
 }
 async function docFile(id) { const r = await ODB.get('docs', id); return r ? new File([r.blob], r.name, { type: r.mime || r.blob.type }) : null; }
 async function retypeDoc(id, type) {
@@ -1606,7 +1622,7 @@ function renderDocs() {
   const list = (cur && cur.docs) || []; const box = $('#docList');
   const opts = sel => DOC_TYPES.map(([g, ks]) => `<optgroup label="${h(g)}">${ks.map(([k, l]) => `<option value="${k}"${k === sel ? ' selected' : ''}>${h(l)}</option>`).join('')}</optgroup>`).join('');
   box.innerHTML = list.length ? `<table class="docs"><tbody>${list.map(d => `<tr>
-      <td><button type="button" class="lnk" data-dopen="${d.id}" title="Open">${h(d.name)}</button><small>${Math.max(1, Math.round(d.size / 1024)).toLocaleString()} KB${d.note ? ' · ' + h(d.note) : READS[d.type] ? '' : ''}</small></td>
+      <td><button type="button" class="lnk" data-dopen="${d.id}" title="Open">${h(d.name)}</button><small>${Math.max(1, Math.round(d.size / 1024)).toLocaleString()} KB${d.note ? ' · ' + h(d.note) : READS[d.type] ? '' : ''}</small>${d.warn ? `<small class="warnTxt">⚠ ${h(d.warn)}</small>` : ''}</td>
       <td><select data-dtype="${d.id}" aria-label="Kind of document">${opts(d.type)}</select>${d.type === 'floorplan' && d.pages > 1 ? ` <label class="pg">page <input data-dpage="${d.id}" inputmode="numeric" value="${d.page || 1}" size="2"> of ${d.pages}</label>` : ''}</td>
       <td class="acts"><button type="button" class="btn small" data-dread="${d.id}">Read</button><button type="button" class="btn ghost small danger" data-ddel="${d.id}">Remove</button></td></tr>`).join('')}</tbody></table>`
     : '<p class="help">No documents yet.</p>';
@@ -1642,6 +1658,8 @@ async function planPreview(file, page) {
 const NO_SUBJECT_COUNTS = ['beds', 'bedsMls', 'baths', 'bathsMls', 'sqft', 'sqftAssessor', 'sqftMls', 'rooms', 'roomsMls'];
 function crsForSubject(c) { const o = { ...(c || {}) }; NO_SUBJECT_COUNTS.forEach(k => delete o[k]); return o; }
 function applyCRS(c) {
+  { const a0 = ($('#f_address').value || '').split(',')[0].trim(); if (a0 && c.addr && !sameStreet(c.addr, a0) && !(c.apn && G.apnKey(c.apn) === G.apnKey($('#f_apn').value))) {
+    toast('This CRS report is for ' + G.titleCase(c.addr) + ', not ' + a0 + ' – nothing was filled in from it.', 7000); const m = (cur.docs || []).find(d => d.name === c.file); if (m) m.warn = 'This CRS report is for ' + G.titleCase(c.addr) + ', not ' + a0 + '. Nothing was filled in from it.'; return; } }
   cur = readForm(); cur.crs = c;
   const set = (id, v) => { if (v) $('#f_' + id).value = v; };
   set('apn', c.apn); set('owner', c.owner); set('legal', c.legal); set('lat', c.lat); set('lon', c.lng);
@@ -1649,7 +1667,7 @@ function applyCRS(c) {
   const line = [G.titleCase(c.addr), [G.titleCase(c.city), [c.state, c.zip].filter(Boolean).join(' ')].filter(Boolean).join(', ')].filter(Boolean).join(', ');
   const a = $('#f_address');
   if (!a.value.trim()) a.value = line;
-  else if (c.addr && G.addrKey(c.addr) !== G.addrKey(a.value.split(',')[0])) toast('Note: this CRS report is for ' + G.titleCase(c.addr) + ', not ' + a.value.split(',')[0]);
+  else if (c.addr && G.addrKey(c.addr) !== G.addrKey(a.value.split(',')[0])) { toast('Note: this CRS report is for ' + G.titleCase(c.addr) + ', not ' + a.value.split(',')[0], 6000); const m = (cur.docs || []).find(d => d.name === c.file); if (m) m.warn = 'This CRS report is for ' + G.titleCase(c.addr) + ', not ' + a.value.split(',')[0] + '.'; }
   if (/condo/i.test(c.landUse || '') && $('#f_propType').value === 'sfr') { $('#f_propType').value = 'condo'; applyPropDefaults(); }
 }
 function isSubjectRow(r) {
@@ -1711,6 +1729,72 @@ async function activeOrdersFile() {
   toast(`Saved Active Orders.json (${out.length} order${out.length > 1 ? 's' : ''}) to Downloads`);
 }
 function effectiveDate(o) { const T = TYPES[o.type] || {}; return o.effDate || (T.retro ? o.dod : o.inspDate) || ''; }
+
+/* ---------- the client's engagement letter / order: label → value, then into the order ---------- */
+async function letterPairs(file) { // [{label, value}] from "Label: value" cells, including values printed on the lines above/below a label
+  if (!isPdf(file)) { const t = /\.docx$/i.test(file.name) ? (await docxParagraphs(file)).join('\n') : await G.readText(file); return { text: t, pairs: t.split('\n').map(l => l.match(/^\s*([A-Za-z][A-Za-z /#'&().-]{1,40}?)\s*:\s*(.+)$/)).filter(Boolean).map(m => ({ label: m[1].trim(), value: m[2].trim() })) }; }
+  const L = await G.pdfLines(file); const rows = L.rows; const pairs = [];
+  const isLab = c => /:\s*$/.test(c.s) && c.s.length < 45;
+  rows.forEach((cells, r) => cells.forEach((c, k) => { if (!isLab(c)) return;
+    const next = cells.slice(k + 1).find(isLab); const x1 = next ? next.x : c.x + 330; const lab = c.s.replace(/\s*:\s*$/, '').trim();
+    const same = cells.slice(k + 1).filter(v => !isLab(v) && v.x < x1).map(v => v.s);
+    if (same.length) { pairs.push({ label: lab, value: same.join(' ') }); return; }
+    const near = [r - 1, r + 1].filter(i => rows[i] && !rows[i].some(v => isLab(v) && v.x < c.x + 40)).flatMap(i => rows[i].filter(v => !isLab(v) && v.x > c.x && v.x < x1).map(v => v.s));
+    if (near.length) pairs.push({ label: lab, value: near.join(' ') }); }));
+  return { text: L.join('\n'), pairs };
+}
+const CL_MAP = [['client', /^(client|client name|lender\/client)$/i], ['lender', /^(lender|lender name)$/i], ['loanNo', /^loan\s*(number|#|no\.?)$/i], ['borrower', /^borrower( name)?s?$/i],
+  ['due', /^(due date|due|report due|due from service provider|due to client)$/i], ['orderDate', /^(order date|date ordered|assigned date)$/i], ['propAddr', /^(property address|subject address|subject property address|property)$/i],
+  ['purpose', /^(loan purpose|transaction type|purpose|loan type|assignment type)$/i], ['price', /^(sales? price|contract price|purchase price)$/i], ['form', /^(service|product|form|form type|report type|appraisal type|product type)$/i],
+  ['fee', /^(service provider fee|fee|appraisal fee|vendor fee|appraiser fee|total fee)$/i], ['ref', /^(document id|order id|order number|order #|reference( number)?|client file( number)?|file number)$/i], ['occupancy', /^occupancy$/i], ['ptype', /^property type$/i]];
+async function readClientLetter(file) {
+  let { text, pairs } = await letterPairs(file); const F = {}; const fix = x => String(x).replace(/\s?Ɵ\s?/g, 'ti').replace(/\s?ﬁ\s?/g, 'fi').replace(/\s?ﬂ\s?/g, 'fl').replace(/\s?ﬀ\s?/g, 'ff'); text = fix(text); pairs = pairs.map(p => ({ label: fix(p.label), value: fix(p.value) }));
+  pairs.forEach(({ label, value }) => { const m = CL_MAP.find(([, re]) => re.test(label)); if (m && !F[m[0]] && value && !/^n\/?a$/i.test(value)) F[m[0]] = value.replace(/\s+/g, ' ').trim(); });
+  const T = text.replace(/\s+/g, ' ');
+  const line = re => { const m = text.split('\n').map(l => l.replace(/\s*\|\s*/g, ' ').trim()).map(l => l.match(re)).find(Boolean); return m ? m[1].trim().replace(/\s{2,}/g, ' ').replace(/\.$/, (x, i, str) => /N\.A$|Inc$|Co$/.test(str.slice(0, -1)) ? '.' : '') : ''; };
+  let m; F.clientAs = line(/Client to be [\w ]{0,14}?as:?\s*(.+)$/i);
+  F.users = line(/Intended Users? (?:to be [\w ]{0,14}?as|are|is)?\s*:\s*(.+)$/i); F.use = line(/Intended Use (?:to be [\w ]{0,14}?as|is)?\s*:\s*(.+)$/i);
+  if (!F.clientAs) delete F.clientAs; if (!F.users) delete F.users; if (!F.use) delete F.use;
+  if (/\b1007\b|rent schedule|comparable rent schedule|operating income statement|\b216\b/i.test(T)) F.rent = true;
+  if (/requires? 1004MC:?\s*yes|1004MC (is )?required/i.test(T)) F.mc = true;
+  if (/exterior[- ]only|\b2055\b|drive[- ]by|exterior inspection only/i.test(T)) F.exterior = true;
+  if (/cost approach (is |will be )?(required|must)/i.test(T)) F.cost = true;
+  if (/\bPURCHASE appraisal\b/i.test(T) && !F.purpose) F.purpose = 'Purchase';
+  return F;
+}
+function applyClientLetter(F) { // fills only empty boxes (type, form, client always follow the letter); returns what was filled
+  const did = []; const set = (id, v, label, always) => { const el = $('#f_' + id); if (!el || v == null || v === '') return; if (el.type === 'checkbox') { if (el.checked !== !!v) { el.checked = !!v; did.push([label, v ? 'Yes' : 'No']); } return; } if (!always && el.value.trim()) return; el.value = v; did.push([label, v]); };
+  const p = (F.purpose || '').toLowerCase(); const type = /purch/.test(p) ? 'uadPurchase' : /refi|cash.?out|rate|term/.test(p) ? 'uadRefi' : /equity|heloc|2nd|second/.test(p) ? 'uadHeloc' : /constr/.test(p) ? 'uadConstruction' : p ? 'uadOther' : '';
+  if (type) { $('#f_type').value = type; applyTypeDefaults(); did.push(['Assignment type', TYPES[type].label]); }
+  if (F.form) { const v = /3\.6|new urar|redesign/i.test(F.form) ? 'uad36' : /1004|1073|1025|2055|1075|urar/i.test(F.form) ? 'uad26' : ''; if (v) { $('#f_reportForm').value = v; did.push(['Report form', F.form]); } }
+  const client = F.clientAs || F.client; if (client) { const c0 = $('#c0_company'); if (!c0.value.trim() || c0.value.trim() === (F.client || '')) { c0.value = client; did.push(['Client', client]); } }
+  const amc = [F.client, F.lender].find(x => x && /appraisal management|\bAMC\b|valuation (services|management)|lender services|appraisal (nation|link|port)|solidifi|class valuation|clear capital|servicelink|corelogic|reggora|nationwide appraisal/i.test(x));
+  if (amc) { set('amcUsed', true, 'Ordered through an AMC'); set('amcCo', amc, 'AMC'); }
+  set('loanNo', F.loanNo, 'Loan number'); set('borrower', F.borrower, 'Borrower');
+  const d = x => G.isoDate(String(x || '').match(/\d{1,2}\/\d{1,2}\/\d{2,4}|\d{4}-\d{2}-\d{2}/)?.[0] || ''); set('dueDate', d(F.due), 'Report due'); set('orderDate', d(F.orderDate), 'Order received', true);
+  set('fee', F.fee ? Number(String(F.fee).replace(/[^\d.]/g, '')).toLocaleString() : '', 'Fee'); set('amcRef', F.ref, 'Client / AMC reference');
+  set('otherUsers', F.users && client && F.users.toLowerCase().includes(client.toLowerCase().slice(0, 12)) ? '' : F.users, 'Other intended users');
+  if (F.rent) set('rent', true, 'Rent schedule (1007) requested'); if (F.cost) set('apCost', true, 'Cost approach required'); if (F.exterior) { $('#f_inspection').value = 'exterior'; did.push(['Inspection', 'Exterior only']); }
+  if (F.propAddr) { const a = $('#f_address'); if (!a.value.trim()) { a.value = G.titleCase(F.propAddr).replace(/\b(Ca)\b/, 'CA'); did.push(['Property address', a.value]); } else if (!sameStreet(F.propAddr, a.value)) did.push(['⚠ Address in the letter', F.propAddr + ' – not the same as the order']); }
+  const notes = [F.use && 'Intended use per client: ' + F.use, F.users && 'Intended user per client: ' + F.users, F.price && 'Sales price per order: $' + Number(String(F.price).replace(/[^\d.]/g, '')).toLocaleString(), F.mc && '1004MC required', F.occupancy && 'Occupancy: ' + F.occupancy].filter(Boolean);
+  if (notes.length) { const n = $('#f_notes'); const add = notes.filter(x => !n.value.includes(x)); if (add.length) { n.value = (n.value ? n.value + '\n' : '') + add.join('\n'); did.push(['Notes', add.join('; ')]); } }
+  return did;
+}
+
+async function checkDocAddress(meta, file) { // is this document for the order's property? (street number and street name on its first pages)
+  const street = ($('#f_address').value || '').split(',')[0].trim(); if (!street || !isPdf(file) || ['photo', 'floorplan', 'marketSearch', 'mls', 'crs'].includes(meta.type)) return;
+  const sp = G.splitAddr(street); const word = (sp.street.split(/\s+/).find(w => w.length > 2 && !/^(north|south|east|west|n|s|e|w)$/i.test(w)) || '').toLowerCase(); if (!sp.no || !word) return;
+  const pdfjs = await loadPdfJs(); const doc = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()), isEvalSupported: false, wasmUrl: './wasm/', standardFontDataUrl: './standard_fonts/' }).promise;
+  let t = ''; for (let n = 1; n <= Math.min(4, doc.numPages); n++) t += ' ' + (await (await doc.getPage(n)).getTextContent()).items.map(i => i.str).join(' ');
+  if (t.replace(/\s/g, '').length < 300) return; // a scan: cannot tell
+  const T = t.toLowerCase(); if (!(T.includes(sp.no.toLowerCase()) && T.includes(word))) meta.warn = 'The property address was not found on its first pages – check that this is for ' + street + '.';
+}
+
+function sameStreet(a, b) { // "526 CROCKER SPERRY DR Montecito, CA" vs "526 Crocker Sperry Dr" → true
+  const A = String(a || '').toLowerCase(), sp = G.splitAddr(String(b || '').split(',')[0]); if (!sp.no) return true;
+  const w = (sp.street.split(/\s+/).find(x => x.length > 2 && !/^(north|south|east|west|n|s|e|w)$/i.test(x)) || '').toLowerCase();
+  return new RegExp('\\b' + sp.no.toLowerCase().replace(/[^\w-]/g, '') + '\\b').test(A) && (!w || A.includes(w));
+}
 
 /* =====================================================================
    Market conditions (UAD 3.6 section 17, Fannie Mae Appendix A-1)
@@ -2553,6 +2637,106 @@ function cleanPrelimValue(v) { // any prelim entry → her short label; anything
     .replace(/,?\s*of\s+(Official\s+Records|Deeds)/gi, '').replace(/\s{2,}/g, ' ').replace(/\s+([,.;])/g, '$1').replace(/[,;]\s*$/, '').trim();
 }
 
+/* =====================================================================
+   Start page and the New order steps (her workflow, Oct 16 2026)
+   Home: New order · Open an order · All files.
+   New order: 1) file number, address, who writes the letter, purchase?, listed?
+              2) upload by slot (client's letter, CRS, legal, MLS with history, contract packet, prelim, other)
+              3) what was read and filled in, alerts (AI use, wrong address), then the letter or the order.
+   ===================================================================== */
+const WZ = { step: 1 };
+function renderHome() {
+  const box = $('#homeBody'); if (!box) return;
+  const act = letters.filter(o => !DONE_STAGES.includes(o.stage || 'New')).sort((a, b) => String(b.saved || b.created || '').localeCompare(String(a.saved || a.created || ''))).slice(0, 8);
+  box.innerHTML = `<div class="homegrid">
+    <button type="button" class="homecard primary" id="hmNew"><b>New order</b><span>Start an order: upload its documents once and let the assistant fill in what it can.</span></button>
+    <div class="homecard"><b>Open an order</b><input id="hmSearch" type="search" placeholder="File number, street, client…"><div id="hmList">${act.map(o => `<button type="button" class="hmrow" data-hopen="${o.id}"><span>${h(o.fileNo || '—')}</span><span>${h(street(o) || '(no address)')}</span><small>${h(o.stage || 'New')}</small></button>`).join('') || '<p class="help">No active orders yet.</p>'}</div></div>
+    <button type="button" class="homecard" id="hmFiles"><b>All files</b><span>The file list: every order, with search and status.</span></button>
+  </div>`;
+  $('#hmNew').onclick = () => startNewOrder();
+  $('#hmFiles').onclick = () => showTab('saved');
+  box.querySelectorAll('[data-hopen]').forEach(b => b.onclick = () => openLetter(b.dataset.hopen));
+  $('#hmSearch').oninput = e => { const q = e.target.value.toLowerCase().trim(); const hits = letters.filter(o => !q || [o.fileNo, o.address, o.apn, ((o.clients || [])[0] || {}).name, ((o.clients || [])[0] || {}).company, o.borrower].join(' ').toLowerCase().includes(q)).slice(0, 12);
+    $('#hmList').innerHTML = hits.map(o => `<button type="button" class="hmrow" data-hopen="${o.id}"><span>${h(o.fileNo || '—')}</span><span>${h(street(o) || '(no address)')}</span><small>${h(o.stage || 'New')}</small></button>`).join('') || '<p class="help">No order matches.</p>';
+    $('#hmList').querySelectorAll('[data-hopen]').forEach(b => b.onclick = () => openLetter(b.dataset.hopen)); };
+}
+function startNewOrder() {
+  if (cur && hasContent(readForm())) saveLetter(true);
+  cur = blankLetter(); cur.wizard = { letter: '', purchase: '', listed: '' }; writeForm(cur); render(); WZ.step = 1; showTab('new'); renderWizard(); setTimeout(() => $('#wzFile') && $('#wzFile').focus(), 50);
+}
+const SLOTS = [
+  ['clientLetter', 'Client’s engagement letter or order', 'Read for the client, loan, due date, fee, form and AI wording.', w => w.letter === 'client'],
+  ['crs', 'CRS Data property report', 'Fills the APN, owner, location and public-record facts (never beds, baths or square feet).', () => true],
+  ['legal', 'Legal description', 'Only if it is a separate file – the prelim usually has it.', () => true],
+  ['mls', 'MLS listing with its history', 'The subject’s listing and listing history (CSV export or printout).', w => w.listed === 'yes'],
+  ['contract', 'Purchase contract, counter offers and addenda', 'Add every file – packets often come in several PDFs.', w => w.purchase === 'yes'],
+  ['prelim', 'Preliminary title report', 'Easements, CC&R’s and the legal description are read from it.', () => true],
+  ['other', 'Other documents', 'Plans, permits, HOA documents, disclosures, leaseback, plat map … each is sorted by kind.', () => true],
+];
+function renderWizard() {
+  const box = $('#newBody'); if (!box || !cur) return; const w = cur.wizard = cur.wizard || {}; const f = readForm();
+  const steps = ['Order', 'Documents', 'Check'];
+  const head = `<ol class="wzsteps">${steps.map((s, i) => `<li class="${WZ.step === i + 1 ? 'on' : WZ.step > i + 1 ? 'done' : ''}">${i + 1} · ${s}</li>`).join('')}</ol>`;
+  if (WZ.step === 1) {
+    box.innerHTML = head + `<section class="mkcard"><div class="grid3"><label>File number<input id="wzFile" value="${h(f.fileNo)}" placeholder="your file number"></label>
+      <label style="grid-column:span 2">Property address<input id="wzAddr" value="${h(f.address)}" placeholder="1136 Hill Road, Santa Barbara, CA 93108"></label></div>
+      <p class="help">The address is used to check that every document you upload is for this property. If you are not sure of it, leave it blank: the CRS report fills it in.</p>
+      ${q('letter', 'Engagement letter', [['client', 'The client sent one (lender / AMC order)'], ['mine', 'I will write one']])}
+      ${q('purchase', 'Is this a purchase?', [['yes', 'Yes'], ['no', 'No']])}
+      ${q('listed', 'Is the property listed now, or was it in the last 12 months?', [['yes', 'Yes'], ['no', 'No'], ['unsure', 'Not sure']])}
+      <div class="row"><button type="button" class="btn primary" id="wzNext1">Next: documents →</button><button type="button" class="btn ghost" id="wzCancel">Cancel</button></div></section>`;
+    const sync = () => { $('#f_fileNo').value = $('#wzFile').value; $('#f_address').value = $('#wzAddr').value; update(); };
+    $('#wzFile').oninput = sync; $('#wzAddr').oninput = sync;
+    box.querySelectorAll('[data-wq]').forEach(b => b.onclick = () => { w[b.dataset.wq] = b.dataset.v; renderWizard(); });
+    $('#wzCancel').onclick = () => { showTab('home'); renderHome(); };
+    $('#wzNext1').onclick = () => { if (!w.letter) { toast('Choose who writes the engagement letter'); return; }
+      if (w.letter === 'client') { $('#f_status').value = 'Client letter'; } else { $('#f_status').value = 'Drafted'; cur.letterMode = 'mine'; }
+      if (w.purchase === 'no' && $('#f_type').value === 'uadPurchase') { $('#f_type').value = 'uadOther'; applyTypeDefaults(); }
+      if (w.listed === 'yes' && $('#f_listing').value === 'omit') $('#f_listing').value = 'listed';
+      update(); saveLetter(true, true); WZ.step = 2; renderWizard(); };
+    return;
+  }
+  if (WZ.step === 2) {
+    const docs = f.docs || [];
+    box.innerHTML = head + `<section class="mkcard"><h3>${h([f.fileNo, street(f)].filter(Boolean).join(' – ') || 'New order')}</h3>
+      <p class="help">Drop each file in its box (or click the box). You can add several files to any box. Everything is kept in this browser on this computer.</p>
+      <div class="slots">${SLOTS.filter(([, , , show]) => show(w)).map(([k, title, help]) => { const mine = docs.filter(d => k === 'other' ? !SLOTS.slice(0, 6).some(s => s[0] === d.type) : d.type === k);
+        return `<div class="slot" data-slot="${k}"><div><b>${h(title)}</b><small>${h(help)}</small>${mine.length ? `<ul>${mine.map(d => `<li>${h(d.name)}${d.note ? ' – ' + h(d.note) : ''}${d.warn ? ` <span class="warnTxt">⚠ ${h(d.warn)}</span>` : ''}</li>`).join('')}</ul>` : ''}</div>
+          <label class="btn small">${mine.length ? 'Add more' : 'Choose files'}<input type="file" multiple data-slotfile="${k}" hidden></label></div>`; }).join('')}</div>
+      <p class="help pre" id="wzStatus"></p>
+      <div class="row"><button type="button" class="btn ghost" id="wzBack2">← Back</button><button type="button" class="btn primary" id="wzNext2">Next: check what was filled in →</button></div></section>`;
+    box.querySelectorAll('[data-slot]').forEach(el => { const k = el.dataset.slot;
+      el.addEventListener('dragover', e => { e.preventDefault(); el.classList.add('over'); }); el.addEventListener('dragleave', () => el.classList.remove('over'));
+      el.addEventListener('drop', e => { e.preventDefault(); el.classList.remove('over'); wzAdd(k, e.dataTransfer.files); }); });
+    box.querySelectorAll('[data-slotfile]').forEach(i => i.onchange = () => { const fs = [...i.files]; i.value = ''; wzAdd(i.dataset.slotfile, fs); });
+    $('#wzBack2').onclick = () => { WZ.step = 1; renderWizard(); };
+    $('#wzNext2').onclick = () => { WZ.step = 3; saveLetter(true); renderWizard(); };
+    return;
+  }
+  // step 3: what was found
+  const fill = f.letterFill || []; const al = [];
+  const V = { stop: ['No AI on this job', 'The client’s letter restricts AI (for example “no AI without prior authorization”), so this order is set to <b>No AI</b>. Nothing will be sent anywhere.'], look: ['AI only with confidential information removed', 'The letter limits sharing confidential or personal information but does not ban AI, so this order is set to <b>Yes – only with confidential information removed</b>.'], clear: ['AI allowed', 'Nothing in the letter limits AI or sharing of information, so this order is set to <b>Yes – no restriction</b>.'] };
+  if (f.orderDoc && f.orderDoc.verdict) { const v = V[f.orderDoc.verdict]; al.push(`<div class="alert ${f.orderDoc.verdict}"><b>${v[0]}</b><p>${v[1]} Check the marked paragraphs on the order page; you can change the setting there.</p></div>`); }
+  (f.docs || []).filter(d => d.warn).forEach(d => al.push(`<div class="alert stop"><b>Check the property</b><p>${h(d.name)}: ${h(d.warn)}</p></div>`));
+  const facts = [['File number', f.fileNo], ['Property', f.address], ['APN', f.apn], ['Owner of record', f.owner], ['Client', ((f.clients || [])[0] || {}).company || ((f.clients || [])[0] || {}).name], ['Assignment type', (TYPES[f.type] || {}).label], ['Report due', f.dueDate && longDate(f.dueDate)], ['Fee', f.fee && '$' + f.fee], ['Loan number', f.loanNo], ['Borrower', f.borrower]].filter(r => r[1]);
+  const need = []; if (!f.address) need.push('the property address'); if (w.letter === 'client' && !(f.docs || []).some(d => d.type === 'clientLetter')) need.push('the client’s engagement letter');
+  if (!(f.docs || []).some(d => d.type === 'crs')) need.push('the CRS report'); if (w.purchase === 'yes' && !(f.docs || []).some(d => d.type === 'contract')) need.push('the purchase contract'); if (w.listed === 'yes' && !(f.docs || []).some(d => d.type === 'mls')) need.push('the MLS listing with history');
+  if (!f.inspDate) need.push('the inspection date'); if (!f.aiUse) need.push('AI use on this job');
+  const toRead = (f.docs || []).filter(d => ['contract', 'prelim', 'counter', 'addendum', 'leaseback', 'permitsPdf', 'condoQ', 'ccrs', 'hoaBudget', 'disclosures', 'budget'].includes(d.type));
+  box.innerHTML = head + `<section class="mkcard"><h3>${h([f.fileNo, street(f)].filter(Boolean).join(' – ') || 'New order')}</h3>${al.join('')}
+    <h4>Filled in</h4><table class="facts">${facts.map(r => `<tr><th>${h(r[0])}</th><td>${h(r[1])}</td></tr>`).join('')}${fill.filter(x => !facts.some(r => r[0] === x[0])).map(x => `<tr><th>${h(x[0])}</th><td>${h(String(x[1]))}</td></tr>`).join('')}</table>
+    ${need.length ? `<p class="help"><b>Still needed:</b> ${h(need.join(', '))}.</p>` : ''}
+    ${toRead.length ? `<h4>Documents to read and summarize</h4><ul class="toread">${toRead.map(d => `<li>${h(DOC_LABEL[d.type] || d.type)}: ${h(d.name)} <button type="button" class="btn small" data-wzread="${d.id}">Read</button></li>`).join('')}</ul><p class="help">Prelims are summarized from their text; purchase contracts need you or Claude (C.A.R. forms cannot be read as text).</p>` : ''}
+    <div class="row"><button type="button" class="btn ghost" id="wzBack3">← Back to documents</button>${w.letter === 'mine' ? '<button type="button" class="btn primary" id="wzLetter">Next: write my engagement letter →</button>' : ''}<button type="button" class="btn ${w.letter === 'mine' ? 'ghost' : 'primary'}" id="wzDone">Open the order</button></div></section>`;
+  $('#wzBack3').onclick = () => { WZ.step = 2; renderWizard(); };
+  $('#wzDone').onclick = () => { saveLetter(true); showTab('letter'); window.scrollTo(0, 0); };
+  const wl = $('#wzLetter'); if (wl) wl.onclick = () => { cur.letterMode = 'mine'; saveLetter(true); showTab('letter'); update(); setTimeout(() => { const c = document.querySelector('#clients'); if (c) c.scrollIntoView({ behavior: 'smooth' }); }, 80); };
+  box.querySelectorAll('[data-wzread]').forEach(b => b.onclick = () => openReader(b.dataset.wzread));
+}
+function q(key, label, opts) { const v = (cur.wizard || {})[key]; return `<div class="wzq"><span>${h(label)}</span><div class="seg2">${opts.map(([k, l]) => `<button type="button" data-wq="${key}" data-v="${k}" aria-pressed="${v === k}">${h(l)}</button>`).join('')}</div></div>`; }
+async function wzAdd(slot, files) { files = [...files]; if (!files.length) return; const st = $('#wzStatus'); if (st) st.textContent = 'Reading ' + files.length + ' file' + (files.length > 1 ? 's' : '') + '…'; await addDocs(files, slot === 'other' ? undefined : slot); }
+function wzRefresh() { if (!$('#panel-new').hidden && WZ.step === 2) renderWizard(); }
+
 /* Appraisal Assistant – orders: intake form, documents, engagement letter, clients, hand-off to the other modules.
    Forked from the Engagement Letter Writer; the letter wording still comes from engagement-letter-writer/src. */
 const $ = s => document.querySelector(s);
@@ -2675,8 +2859,9 @@ function update() { clearTimeout(tmr); tmr = setTimeout(render, 60); }
 function render() {
   const f = readForm(); cur = f;
   const theirs = f.status === 'Client letter';
-  $('#paperWrap').hidden = theirs; $('#btnDocx').hidden = theirs; $('#missing').hidden = theirs; $('#clientView').hidden = !theirs;
-  if (theirs) renderClientView(f);
+  const mine = !theirs && (f.letterMode === 'mine' || f.letterMade || ['Sent', 'Signed'].includes(f.status) || (!f.wizard && String(f.created || '') < '2026-10-16'));
+  $('#paperWrap').hidden = !mine; $('#btnDocx').hidden = !mine; $('#missing').hidden = !mine; $('#clientView').hidden = !theirs; $('#orderSummary').hidden = theirs || mine;
+  if (theirs) renderClientView(f); else if (!mine) renderOrderSummary(f);
   $('#sheet').innerHTML = previewHTML(buildLetter(f));
   $('#fileName').textContent = fileName(f);
   const missing = [];
@@ -2827,7 +3012,7 @@ function renderContacts() {
 const SCAN_AI = /\b(artificial[\s-]+intelligence|A\.?I\.?(?=[\s,;:)\-]|$)|machine[\s-]+learning|generative|large[\s-]+language|chat\s?gpt|automated (valuation|tools?|systems?|decision)|algorithm\w*)\b/g;
 const SCAN_CONF = /\b(confidential\w*|non-?public|personal(ly)? identif\w*|NPI|PII|Gramm|GLBA|third[\s-]+part(y|ies)|vendor\w*|subcontract\w*|disclos\w*|data (security|privacy|protection)|cloud|offshore|outside the United States)\b/gi;
 const COND = /\b(redact\w*|anonymi[sz]\w*|de-?identif\w*|remov\w* (all )?(personal|identif|borrower|client)|encrypt\w*|secure\w*|approved (vendor|tool|provider)s?|provided that|so long as|as long as|only if|confidential\w*|non-?public|NPI|PII|personal(ly)? identif\w*|safeguard\w*)\b/i;
-const BAN = /\b(prohibit\w*|shall not|may not|must not|will not|not (be )?(permitted|allowed|authorized)|without (the )?(prior )?(express )?written (consent|approval|authorization)|strictly)\b/i;
+const BAN = /\b(prohibit\w*|shall not|may not|must not|will not|not (be )?(permitted|allowed|authorized)|without (the )?(prior )?(express )?(written )?(consent|approval|authorization|permission)|prior (written )?(consent|approval|authorization)|strictly)\b/i;
 async function inflateRaw(u8) { return new Uint8Array(await new Response(new Blob([u8]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).arrayBuffer()); }
 async function docxParagraphs(file) {
   const buf = new Uint8Array(await file.arrayBuffer()); const dv = new DataView(buf.buffer);
@@ -2874,6 +3059,9 @@ async function scanFile(file) {
     // three answers: not allowed | OK if confidential information is removed | no restriction found
     const verdict = hits.some(h => h.ban) ? 'stop' : (hits.some(h => h.ai) || hits.some(h => h.strict || h.cond)) ? 'look' : 'clear';
     cur = readForm(); cur.orderDoc = { name: file.name, read: new Date().toISOString(), paragraphs: paras.length, hits, verdict };
+    // set AI use from the letter (she can change it): ban → No AI; confidentiality only → redacted; nothing → Yes
+    if (!cur.aiUse || cur.aiAuto) { const pick = { stop: 'No', look: 'Redacted', clear: 'Yes' }[verdict]; document.querySelectorAll('input[name=aiUse]').forEach(r => { r.checked = r.value === pick; }); cur.aiUse = pick; cur.aiAuto = { verdict, file: file.name, at: new Date().toISOString() }; }
+    cur.letterText = paras.join('\n');
     renderScan(cur.orderDoc); syncVisibility(); update(); saveLetter(true);
   } catch (e) { $('#docName').textContent = e.message || 'Could not read that file.'; }
 }
@@ -2891,9 +3079,18 @@ function renderScan(d) {
   box.hidden = false;
   $('#scanClear').onclick = () => { cur = readForm(); cur.orderDoc = null; renderScan(null); update(); };
 }
+function renderOrderSummary(f) {
+  const box = $('#orderSummary'); const docs = f.docs || [];
+  box.innerHTML = `<h3>No engagement letter yet</h3><p class="help">Your letter shows here once you choose to write one; the client’s letter shows here once it is uploaded.</p>
+    <div class="row"><button type="button" class="btn primary" id="osMine">Write my engagement letter</button><button type="button" class="btn ghost" id="osTheirs">The client sent one</button></div>
+    ${docs.length ? `<h3>Documents</h3><ul class="toread">${docs.map(d => `<li><b>${hesc(DOC_LABEL[d.type] || d.type)}</b>: ${hesc(d.name)}${d.note ? ' – ' + hesc(d.note) : ''}${d.warn ? ` <span class="warnTxt">⚠ ${hesc(d.warn)}</span>` : ''}</li>`).join('')}</ul>` : ''}`;
+  $('#osMine').onclick = () => { cur = readForm(); cur.letterMode = 'mine'; $('#f_status').value = 'Drafted'; update(); };
+  $('#osTheirs').onclick = () => { $('#f_status').value = 'Client letter'; update(); document.getElementById('docsSet').scrollIntoView({ behavior: 'smooth' }); };
+}
 function showTab(t) {
   document.querySelectorAll('[data-tab]').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === t));
   document.querySelectorAll('.panel').forEach(p => { p.hidden = p.id !== 'panel-' + t; });
+  if (t === 'home') renderHome();
   if (t === 'market') { $('#mkTitle').textContent = 'Market conditions' + (cur && (cur.fileNo || street(cur)) ? ' – ' + [cur.fileNo, street(cur)].filter(Boolean).join(' ') : ''); mkRender(); }
 }
 
@@ -2960,7 +3157,7 @@ async function start() {
   dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('over'); addDocs(e.dataTransfer.files); });
   window.addEventListener('dragover', e => e.preventDefault()); window.addEventListener('drop', e => e.preventDefault()); // a file dropped beside the box is not opened by Chrome
   document.querySelectorAll('[data-filter]').forEach(b => b.onclick = () => { listFilter = b.dataset.filter; renderLetters(); });
-  $('#btnNew2').onclick = () => { saveLetter(true); newLetter(); };
+  $('#btnNew2').onclick = () => startNewOrder(); $('#btnNew').onclick = () => startNewOrder();
   $('#btnIpad').onclick = () => { saveLetter(true); activeOrdersFile(); };
   $('#genieLink').addEventListener('click', () => saveLetter(true));
   ['#f_lenderDiff', '#f_amcUsed', '#f_inspDate', '#f_effDate', '#f_dod'].forEach(id => $(id).addEventListener('change', syncVisibility));
@@ -2976,7 +3173,7 @@ async function start() {
   const draft = store.get('draft', null); // an unsaved letter left in the old letter writer
   cur = pick ? { ...NEW_FIELDS, ...JSON.parse(JSON.stringify(pick)) } : (!letters.length && draft && draft.id) ? { ...blankLetter(), ...draft } : blankLetter();
   writeForm(cur); render(); renderLetters(); renderContacts();
-  showTab(q && pick ? 'letter' : letters.length ? 'saved' : 'letter');
+  showTab(q && pick ? 'letter' : 'home');
   $('#build').textContent = 'Version ' + BUILD; $('#rdBuild').textContent = BUILD;
   $('#helpSearch').addEventListener('input', e => { const q = e.target.value.trim().toLowerCase(); document.querySelectorAll('.help-page details').forEach(d => { const hit = !q || d.textContent.toLowerCase().includes(q); d.hidden = !hit; d.open = !!q && hit; }); });
   $('#rdClose').onclick = closeReader; $('#rdPrev').onclick = () => { RD.page--; rdPage(); }; $('#rdNext').onclick = () => { RD.page++; rdPage(); }; $('#rdOpen').onclick = () => openDoc(RD.id);

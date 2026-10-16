@@ -137,6 +137,16 @@ table.mkrows td small { display: block; color: var(--muted); font-size: 12px; } 
 ul.hits2 { margin: 0; padding-left: 18px; } ul.hits2 li { margin: 4px 0; } ul.hits2 small { display: block; color: var(--muted); }
 #clientView { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; display: grid; gap: 10px; } #clientView h3 { margin: 0; font: 600 17px var(--ui); }
 .clpages { display: grid; gap: 12px; max-height: 75vh; overflow: auto; padding: 4px; } .clpages canvas { width: 100%; height: auto; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,.15); }
+.homegrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; padding-top: 8px; }
+.homecard { text-align: left; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 20px; display: grid; gap: 10px; align-content: start; font: inherit; color: var(--ink); cursor: pointer; min-height: 160px; }
+div.homecard { cursor: default; } .homecard b { font: 600 22px var(--display, var(--ui)); } .homecard span { color: var(--muted); } .homecard.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); } .homecard.primary span { color: var(--accent-ink); opacity: .9; }
+button.homecard:hover { border-color: var(--accent); } .hmrow { display: grid; grid-template-columns: 90px 1fr auto; gap: 8px; text-align: left; border: 0; border-bottom: 1px solid var(--line); background: none; padding: 7px 2px; font: inherit; color: var(--ink); cursor: pointer; } .hmrow:hover { background: var(--accent-soft); } .hmrow small { color: var(--muted); }
+.wzsteps { display: flex; gap: 8px; list-style: none; padding: 0; margin: 0 0 12px; flex-wrap: wrap; } .wzsteps li { padding: 6px 12px; border-radius: 99px; background: var(--panel); border: 1px solid var(--line); color: var(--muted); font: 600 13px var(--ui); } .wzsteps li.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); } .wzsteps li.done { color: var(--ok); }
+.wzq { display: grid; gap: 6px; padding: 8px 0; } .wzq > span { font: 600 14px var(--ui); }
+.slots { display: grid; gap: 10px; } .slot { display: flex; gap: 12px; align-items: flex-start; justify-content: space-between; border: 1.5px dashed var(--line); border-radius: 10px; padding: 12px 14px; background: var(--field); } .slot.over { border-color: var(--accent); background: var(--accent-soft); }
+.slot > div { display: grid; gap: 2px; min-width: 0; } .slot small { color: var(--muted); } .slot ul { margin: 6px 0 0; padding-left: 18px; font-size: 13.5px; } .slot label.btn input { display: none; }
+.alert { border-radius: 10px; padding: 10px 14px; margin: 8px 0; border: 1px solid var(--line); } .alert p { margin: 4px 0 0; } .alert.stop { background: #fde8e8; border-color: #e7a3a3; color: #6b1515; } .alert.look { background: var(--warn-bg); border-color: var(--warn); } .alert.clear { background: var(--ok-bg); border-color: var(--ok); }
+#orderSummary { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; display: grid; gap: 10px; } #orderSummary h3 { margin: 0; font: 600 17px var(--ui); } ul.toread { margin: 0; padding-left: 18px; } ul.toread li { margin: 6px 0; }
 a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fatal { background: #fde8e8; color: #8a1c1c; padding: 14px; margin: 0; font-weight: 600; }
 </style>
 </head>
@@ -144,8 +154,9 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
 <header class="top">
   <div class="brand"><h1>Appraisal Assistant</h1><small>Jennifer Heath, LLC · orders, documents and engagement letters</small></div>
   <nav class="tabs" aria-label="Sections">
-    <button type="button" data-tab="saved" aria-selected="false">Orders</button>
-    <button type="button" data-tab="letter" aria-selected="true">Order &amp; letter</button>
+    <button type="button" data-tab="home" aria-selected="true">Home</button>
+    <button type="button" data-tab="saved" aria-selected="false">All files</button>
+    <button type="button" data-tab="letter" aria-selected="false">Order</button>
     <button type="button" data-tab="market" aria-selected="false">Market</button>
     <button type="button" data-tab="contacts" aria-selected="false">Clients</button>
     <button type="button" data-tab="wording" aria-selected="false">Standard wording</button>
@@ -154,7 +165,9 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
   <div class="toolrow"><a class="btn ghost" href="../comp-genie/" target="aa-genie">Comp genie</a><button type="button" class="btn ghost" id="btnBackup">Back up</button><label class="btn ghost" for="restoreFile">Restore<input type="file" id="restoreFile" accept=".json,application/json"></label></div>
 </header>
 <main>
-<section class="panel" id="panel-letter">
+<section class="panel" id="panel-home" hidden><div id="homeBody"></div></section>
+<section class="panel" id="panel-new" hidden><div class="listHead"><div><h2>New order</h2></div></div><div id="newBody"></div></section>
+<section class="panel" id="panel-letter" hidden>
  <div class="desk">
   <form id="letterForm" autocomplete="off">
     <fieldset id="docsSet"><legend>Documents – upload everything here <span class="opt" id="docCount"></span></legend>
@@ -172,7 +185,10 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
     </fieldset>
     <fieldset><legend>Order</legend>
       <div class="grid3">
-        <label>File number<input id="f_fileNo" placeholder="26-101"></label>
+        <label>File number<input id="f_fileNo" placeholder="your file number"></label>
+        <label style="grid-column:span 2">Property address<input id="f_address" placeholder="1450 East Valley Road, Santa Barbara, CA 93108"></label>
+      </div>
+      <div class="grid3">
         <label>Order received<input id="f_orderDate" type="date"></label>
         <label>Report due<input id="f_dueDate" type="date"></label>
       </div>
@@ -211,15 +227,12 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
       <p class="help" id="usersNote" hidden></p>
       <label>Intended user, in your own words <span class="opt">optional · replaces the standard sentence</span><textarea id="f_userText" placeholder="The Client is the sole intended user. This report is not intended for use by any other party…"></textarea></label>
     </fieldset>
-    <fieldset><legend>Lender and AMC</legend>
-      <label>Borrower / owner <span class="opt">optional</span><input id="f_borrower"></label>
+    <fieldset><legend>Loan and AMC</legend>
+      <p class="help">When a lender orders, the lender is the client (Client section above). Fill in the AMC only if one is involved.</p>
+      <div class="grid2"><label>Borrower / owner <span class="opt">optional</span><input id="f_borrower"></label><label>Loan number<input id="f_loanNo"></label></div>
       <div class="grid2" id="gseBox"><label>Government loan (UAD 2.008) <select id="f_govAgency"><option value="">None – conventional</option><option value="FHA">FHA</option><option value="VA">VA</option><option value="USDA">USDA</option></select></label>
         <label>Investor special ID (UAD 2.009) <span class="opt">only if the lender gives one</span><input id="f_investorId"></label></div>
-      <label class="check"><input type="checkbox" id="f_lenderDiff">The lender is different from the client</label>
-      <div class="grid2" id="lenderBox">
-        <label>Lender<input id="f_lenderCo"></label><label>Loan number<input id="f_loanNo"></label>
-        <label>Street address<input id="f_lenderAddr1"></label><label>City, state, ZIP<input id="f_lenderAddr2"></label>
-      </div>
+      <div hidden><input type="checkbox" id="f_lenderDiff"><div id="lenderBox"><input id="f_lenderCo"><input id="f_lenderAddr1"><input id="f_lenderAddr2"></div></div>
       <label class="check"><input type="checkbox" id="f_amcUsed">Ordered through an appraisal management company (AMC)</label>
       <div class="grid2" id="amcBox">
         <label>AMC<input id="f_amcCo"></label><label>AMC order / reference ID<input id="f_amcRef"></label>
@@ -231,7 +244,6 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
     </fieldset>
     <fieldset><legend>Property</legend>
       <div class="grid2">
-        <label style="grid-column:1/-1">Property address<input id="f_address" placeholder="1450 East Valley Road, Santa Barbara, CA 93108"></label>
         <label>APN<input id="f_apn" placeholder="009-123-456"></label>
         <label>County<input id="f_county" placeholder="Santa Barbara"></label>
         <label>Owner of record<input id="f_owner"></label>
@@ -316,6 +328,7 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
     <p class="missing" id="missing"></p>
     <div class="paperWrap" id="paperWrap"><article id="sheet" aria-label="Letter preview"></article></div>
     <div id="clientView" hidden></div>
+    <div id="orderSummary" hidden></div>
   </div>
  </div>
 </section>
@@ -335,11 +348,12 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
     <p class="help">Step-by-step directions for each part of the Appraisal Assistant. Type a word to find the right section.</p>
     <input id="helpSearch" type="search" placeholder="for example: sticky, blur, iPad, backup, market">
     <details><summary>Start a new order</summary><ol>
-      <li>Click <b>Orders</b>, then <b>New order</b>.</li><li>Type the file number. Pick the assignment type. Lender and AMC orders are in the group <b>Lender or AMC order – UAD 3.6</b> (purchase, refinance, HELOC, construction loan, other lending decision); for those, My letter is set to “Not needed – client’s letter”, and you can mark an FHA, VA or USDA loan under Lender and AMC.</li>
-      <li>Drop the CRS report into <b>Documents</b>. The address, APN, owner, county, location and public-record facts fill in. Beds, baths and square feet are never filled in for the subject.</li>
-      <li>Fill in the client (or <b>Pick a saved client</b>), lender or AMC if any, inspection date and time, access contact, fee.</li>
-      <li>Choose <b>AI use on this job</b>: Yes, Yes with confidential information removed, or No AI.</li>
-      <li>The order saves by itself while you type. <b>Save order</b> also adds a new client to your client list.</li></ol></details>
+      <li>On <b>Home</b>, click <b>New order</b>.</li>
+      <li><b>1 · Order:</b> type your file number and the property address (or leave the address for the CRS report to fill). Answer three questions: did the client send an engagement letter or will you write one, is it a purchase, and is the property listed now or in the last 12 months. Click <b>Next</b>.</li>
+      <li><b>2 · Documents:</b> drop each file in its box – client’s engagement letter, CRS report, legal description, MLS listing with history, purchase contract with counters and addenda (as many PDFs as you have), preliminary title report, and anything else under <b>Other documents</b>. Each file is read as you add it, and checked against the property address: a file for another property is marked ⚠ and nothing is filled in from it.</li>
+      <li><b>3 · Check:</b> see what was filled in. The client’s letter sets the client, loan number, borrower, due date, fee, report form, rent schedule, and <b>AI use</b>: a ban (for example “no AI without prior authorization”) sets No AI; confidentiality wording sets Yes – only with confidential information removed; nothing sets Yes. You can change any of it on the order.</li>
+      <li>Click <b>Read</b> next to the prelim or contract to summarize it, then <b>Open the order</b> – or, if you are writing the letter, <b>Next: write my engagement letter</b>.</li>
+      <li>The order saves by itself. To find it again: <b>Home → Open an order</b>, or <b>All files</b>.</li></ol></details>
     <details><summary>Documents: upload once, kinds, search, sticky notes</summary><ol>
       <li>Drop every file for the order into the <b>Documents</b> box, or click <b>Choose files</b>. Each one is sorted by kind; change the kind with its drop-down if it guessed wrong.</li>
       <li>Click a file name to open it. Click <b>Read</b> to open the reader (next section). <b>Remove</b> takes it out of the order.</li>

@@ -71,13 +71,13 @@ async function detectDocType(file) {
 
 /* ---------- add, retype, open, remove ---------- */
 let docBusy = false;
-async function addDocs(fileList) {
+async function addDocs(fileList, forcedType) {
   const files = [...fileList]; if (!files.length) return;
   if (docBusy) { toast('Still reading the last files…'); return; }
   docBusy = true; const said = [];
   try {
     const typed = [];
-    for (const file of files) { $('#docStatus').textContent = 'Sorting ' + file.name + '…'; typed.push([file, await detectDocType(file)]); }
+    for (const file of files) { $('#docStatus').textContent = 'Sorting ' + file.name + '…'; typed.push([file, forcedType || await detectDocType(file)]); }
     const FIRST = ['crs', 'mls', 'clientLetter']; const rank = t => { const i = FIRST.indexOf(t); return i < 0 ? 9 : i; };
     typed.sort((a, b) => rank(a[1]) - rank(b[1])); // the CRS first, so later files can be checked against the subject's APN
     for (const [file, type] of typed) {
@@ -90,14 +90,14 @@ async function addDocs(fileList) {
     }
   } finally { docBusy = false; }
   $('#docStatus').textContent = said.length === 1 ? said[0] : said.length + ' files added – see each one below.';
-  renderDocs(); renderSubject(); syncVisibility(); update(); saveLetter(true);
+  renderDocs(); renderSubject(); syncVisibility(); update(); saveLetter(true); if (typeof wzRefresh === 'function') wzRefresh();
 }
 async function readDoc(meta, file) { // turns the readable kinds into facts; notes what happened
-  meta.note = '';
+  meta.note = ''; meta.warn = '';
   try {
     if (meta.type === 'crs') {
       const c = G.parseCRS(await G.pdfLines(file)); if (!c.addr && !c.apn) { meta.note = 'no CRS facts found – check the type'; return; }
-      c.file = file.name; applyCRS(c); meta.note = 'subject facts filled';
+      c.file = file.name; applyCRS(c); meta.note = meta.warn ? 'not used – different property' : 'subject facts filled';
     } else if (meta.type === 'mls') {
       const rows = /\.csv$/i.test(file.name) ? G.parseMlsCsv(await G.readText(file)) : isPdf(file) ? G.parseMlsPdf(await G.pdfLines(file)) : [];
       const n = applyListings(rows, file.name); meta.note = n ? n + ' subject listing' + (n > 1 ? 's' : '') + ' found' : rows.length ? 'none of its ' + rows.length + ' listings is the subject' : 'no listings found';
@@ -108,12 +108,14 @@ async function readDoc(meta, file) { // turns the readable kinds into facts; not
       cur = readForm(); cur.permits = P; meta.note = (G.permitItems ? G.permitItems(P).length : P.accela.length) + ' permits/cases listed';
       if (P.parcel && !$('#f_apn').value) $('#f_apn').value = P.parcel;
     } else if (meta.type === 'clientLetter') {
-      if (isPdf(file) || /\.(docx|txt)$/i.test(file.name)) { await scanFile(file); meta.note = cur.orderDoc ? 'checked for AI wording' : ''; }
+      if (isPdf(file) || /\.(docx|txt)$/i.test(file.name)) { await scanFile(file); meta.note = cur.orderDoc ? 'checked for AI wording' : '';
+        try { const F = await readClientLetter(file); const did = applyClientLetter(F); cur = readForm(); cur.letterFill = did; cur.letterFields = F; if (did.length) meta.note += ' · ' + did.length + ' items filled in'; } catch (e) { console.warn('letter fill', e); } }
       if ($('#f_status').value === 'Drafted' && !cur.letterMade) { $('#f_status').value = 'Client letter'; toast('The client’s letter now shows on the right instead of yours. To write your own, set My letter back to Drafted.', 6000); }
     } else if (meta.type === 'floorplan') {
       const prev = await planPreview(file, meta.page || 1); if (prev) { const rec = await ODB.get('docs', meta.id); rec.preview = prev.src; rec.pages = prev.pages; await ODB.put('docs', rec); meta.pages = prev.pages; meta.note = 'ready for the iPad'; }
     }
   } catch (e) { console.error(e); meta.note = 'could not be read: ' + (e.message || e); }
+  try { await checkDocAddress(meta, file); } catch (e) {}
 }
 async function docFile(id) { const r = await ODB.get('docs', id); return r ? new File([r.blob], r.name, { type: r.mime || r.blob.type }) : null; }
 async function retypeDoc(id, type) {
@@ -131,7 +133,7 @@ function renderDocs() {
   const list = (cur && cur.docs) || []; const box = $('#docList');
   const opts = sel => DOC_TYPES.map(([g, ks]) => `<optgroup label="${h(g)}">${ks.map(([k, l]) => `<option value="${k}"${k === sel ? ' selected' : ''}>${h(l)}</option>`).join('')}</optgroup>`).join('');
   box.innerHTML = list.length ? `<table class="docs"><tbody>${list.map(d => `<tr>
-      <td><button type="button" class="lnk" data-dopen="${d.id}" title="Open">${h(d.name)}</button><small>${Math.max(1, Math.round(d.size / 1024)).toLocaleString()} KB${d.note ? ' · ' + h(d.note) : READS[d.type] ? '' : ''}</small></td>
+      <td><button type="button" class="lnk" data-dopen="${d.id}" title="Open">${h(d.name)}</button><small>${Math.max(1, Math.round(d.size / 1024)).toLocaleString()} KB${d.note ? ' · ' + h(d.note) : READS[d.type] ? '' : ''}</small>${d.warn ? `<small class="warnTxt">⚠ ${h(d.warn)}</small>` : ''}</td>
       <td><select data-dtype="${d.id}" aria-label="Kind of document">${opts(d.type)}</select>${d.type === 'floorplan' && d.pages > 1 ? ` <label class="pg">page <input data-dpage="${d.id}" inputmode="numeric" value="${d.page || 1}" size="2"> of ${d.pages}</label>` : ''}</td>
       <td class="acts"><button type="button" class="btn small" data-dread="${d.id}">Read</button><button type="button" class="btn ghost small danger" data-ddel="${d.id}">Remove</button></td></tr>`).join('')}</tbody></table>`
     : '<p class="help">No documents yet.</p>';
@@ -167,6 +169,8 @@ async function planPreview(file, page) {
 const NO_SUBJECT_COUNTS = ['beds', 'bedsMls', 'baths', 'bathsMls', 'sqft', 'sqftAssessor', 'sqftMls', 'rooms', 'roomsMls'];
 function crsForSubject(c) { const o = { ...(c || {}) }; NO_SUBJECT_COUNTS.forEach(k => delete o[k]); return o; }
 function applyCRS(c) {
+  { const a0 = ($('#f_address').value || '').split(',')[0].trim(); if (a0 && c.addr && !sameStreet(c.addr, a0) && !(c.apn && G.apnKey(c.apn) === G.apnKey($('#f_apn').value))) {
+    toast('This CRS report is for ' + G.titleCase(c.addr) + ', not ' + a0 + ' – nothing was filled in from it.', 7000); const m = (cur.docs || []).find(d => d.name === c.file); if (m) m.warn = 'This CRS report is for ' + G.titleCase(c.addr) + ', not ' + a0 + '. Nothing was filled in from it.'; return; } }
   cur = readForm(); cur.crs = c;
   const set = (id, v) => { if (v) $('#f_' + id).value = v; };
   set('apn', c.apn); set('owner', c.owner); set('legal', c.legal); set('lat', c.lat); set('lon', c.lng);
@@ -174,7 +178,7 @@ function applyCRS(c) {
   const line = [G.titleCase(c.addr), [G.titleCase(c.city), [c.state, c.zip].filter(Boolean).join(' ')].filter(Boolean).join(', ')].filter(Boolean).join(', ');
   const a = $('#f_address');
   if (!a.value.trim()) a.value = line;
-  else if (c.addr && G.addrKey(c.addr) !== G.addrKey(a.value.split(',')[0])) toast('Note: this CRS report is for ' + G.titleCase(c.addr) + ', not ' + a.value.split(',')[0]);
+  else if (c.addr && G.addrKey(c.addr) !== G.addrKey(a.value.split(',')[0])) { toast('Note: this CRS report is for ' + G.titleCase(c.addr) + ', not ' + a.value.split(',')[0], 6000); const m = (cur.docs || []).find(d => d.name === c.file); if (m) m.warn = 'This CRS report is for ' + G.titleCase(c.addr) + ', not ' + a.value.split(',')[0] + '.'; }
   if (/condo/i.test(c.landUse || '') && $('#f_propType').value === 'sfr') { $('#f_propType').value = 'condo'; applyPropDefaults(); }
 }
 function isSubjectRow(r) {
@@ -236,3 +240,69 @@ async function activeOrdersFile() {
   toast(`Saved Active Orders.json (${out.length} order${out.length > 1 ? 's' : ''}) to Downloads`);
 }
 function effectiveDate(o) { const T = TYPES[o.type] || {}; return o.effDate || (T.retro ? o.dod : o.inspDate) || ''; }
+
+/* ---------- the client's engagement letter / order: label → value, then into the order ---------- */
+async function letterPairs(file) { // [{label, value}] from "Label: value" cells, including values printed on the lines above/below a label
+  if (!isPdf(file)) { const t = /\.docx$/i.test(file.name) ? (await docxParagraphs(file)).join('\n') : await G.readText(file); return { text: t, pairs: t.split('\n').map(l => l.match(/^\s*([A-Za-z][A-Za-z /#'&().-]{1,40}?)\s*:\s*(.+)$/)).filter(Boolean).map(m => ({ label: m[1].trim(), value: m[2].trim() })) }; }
+  const L = await G.pdfLines(file); const rows = L.rows; const pairs = [];
+  const isLab = c => /:\s*$/.test(c.s) && c.s.length < 45;
+  rows.forEach((cells, r) => cells.forEach((c, k) => { if (!isLab(c)) return;
+    const next = cells.slice(k + 1).find(isLab); const x1 = next ? next.x : c.x + 330; const lab = c.s.replace(/\s*:\s*$/, '').trim();
+    const same = cells.slice(k + 1).filter(v => !isLab(v) && v.x < x1).map(v => v.s);
+    if (same.length) { pairs.push({ label: lab, value: same.join(' ') }); return; }
+    const near = [r - 1, r + 1].filter(i => rows[i] && !rows[i].some(v => isLab(v) && v.x < c.x + 40)).flatMap(i => rows[i].filter(v => !isLab(v) && v.x > c.x && v.x < x1).map(v => v.s));
+    if (near.length) pairs.push({ label: lab, value: near.join(' ') }); }));
+  return { text: L.join('\n'), pairs };
+}
+const CL_MAP = [['client', /^(client|client name|lender\/client)$/i], ['lender', /^(lender|lender name)$/i], ['loanNo', /^loan\s*(number|#|no\.?)$/i], ['borrower', /^borrower( name)?s?$/i],
+  ['due', /^(due date|due|report due|due from service provider|due to client)$/i], ['orderDate', /^(order date|date ordered|assigned date)$/i], ['propAddr', /^(property address|subject address|subject property address|property)$/i],
+  ['purpose', /^(loan purpose|transaction type|purpose|loan type|assignment type)$/i], ['price', /^(sales? price|contract price|purchase price)$/i], ['form', /^(service|product|form|form type|report type|appraisal type|product type)$/i],
+  ['fee', /^(service provider fee|fee|appraisal fee|vendor fee|appraiser fee|total fee)$/i], ['ref', /^(document id|order id|order number|order #|reference( number)?|client file( number)?|file number)$/i], ['occupancy', /^occupancy$/i], ['ptype', /^property type$/i]];
+async function readClientLetter(file) {
+  let { text, pairs } = await letterPairs(file); const F = {}; const fix = x => String(x).replace(/\s?Ɵ\s?/g, 'ti').replace(/\s?ﬁ\s?/g, 'fi').replace(/\s?ﬂ\s?/g, 'fl').replace(/\s?ﬀ\s?/g, 'ff'); text = fix(text); pairs = pairs.map(p => ({ label: fix(p.label), value: fix(p.value) }));
+  pairs.forEach(({ label, value }) => { const m = CL_MAP.find(([, re]) => re.test(label)); if (m && !F[m[0]] && value && !/^n\/?a$/i.test(value)) F[m[0]] = value.replace(/\s+/g, ' ').trim(); });
+  const T = text.replace(/\s+/g, ' ');
+  const line = re => { const m = text.split('\n').map(l => l.replace(/\s*\|\s*/g, ' ').trim()).map(l => l.match(re)).find(Boolean); return m ? m[1].trim().replace(/\s{2,}/g, ' ').replace(/\.$/, (x, i, str) => /N\.A$|Inc$|Co$/.test(str.slice(0, -1)) ? '.' : '') : ''; };
+  let m; F.clientAs = line(/Client to be [\w ]{0,14}?as:?\s*(.+)$/i);
+  F.users = line(/Intended Users? (?:to be [\w ]{0,14}?as|are|is)?\s*:\s*(.+)$/i); F.use = line(/Intended Use (?:to be [\w ]{0,14}?as|is)?\s*:\s*(.+)$/i);
+  if (!F.clientAs) delete F.clientAs; if (!F.users) delete F.users; if (!F.use) delete F.use;
+  if (/\b1007\b|rent schedule|comparable rent schedule|operating income statement|\b216\b/i.test(T)) F.rent = true;
+  if (/requires? 1004MC:?\s*yes|1004MC (is )?required/i.test(T)) F.mc = true;
+  if (/exterior[- ]only|\b2055\b|drive[- ]by|exterior inspection only/i.test(T)) F.exterior = true;
+  if (/cost approach (is |will be )?(required|must)/i.test(T)) F.cost = true;
+  if (/\bPURCHASE appraisal\b/i.test(T) && !F.purpose) F.purpose = 'Purchase';
+  return F;
+}
+function applyClientLetter(F) { // fills only empty boxes (type, form, client always follow the letter); returns what was filled
+  const did = []; const set = (id, v, label, always) => { const el = $('#f_' + id); if (!el || v == null || v === '') return; if (el.type === 'checkbox') { if (el.checked !== !!v) { el.checked = !!v; did.push([label, v ? 'Yes' : 'No']); } return; } if (!always && el.value.trim()) return; el.value = v; did.push([label, v]); };
+  const p = (F.purpose || '').toLowerCase(); const type = /purch/.test(p) ? 'uadPurchase' : /refi|cash.?out|rate|term/.test(p) ? 'uadRefi' : /equity|heloc|2nd|second/.test(p) ? 'uadHeloc' : /constr/.test(p) ? 'uadConstruction' : p ? 'uadOther' : '';
+  if (type) { $('#f_type').value = type; applyTypeDefaults(); did.push(['Assignment type', TYPES[type].label]); }
+  if (F.form) { const v = /3\.6|new urar|redesign/i.test(F.form) ? 'uad36' : /1004|1073|1025|2055|1075|urar/i.test(F.form) ? 'uad26' : ''; if (v) { $('#f_reportForm').value = v; did.push(['Report form', F.form]); } }
+  const client = F.clientAs || F.client; if (client) { const c0 = $('#c0_company'); if (!c0.value.trim() || c0.value.trim() === (F.client || '')) { c0.value = client; did.push(['Client', client]); } }
+  const amc = [F.client, F.lender].find(x => x && /appraisal management|\bAMC\b|valuation (services|management)|lender services|appraisal (nation|link|port)|solidifi|class valuation|clear capital|servicelink|corelogic|reggora|nationwide appraisal/i.test(x));
+  if (amc) { set('amcUsed', true, 'Ordered through an AMC'); set('amcCo', amc, 'AMC'); }
+  set('loanNo', F.loanNo, 'Loan number'); set('borrower', F.borrower, 'Borrower');
+  const d = x => G.isoDate(String(x || '').match(/\d{1,2}\/\d{1,2}\/\d{2,4}|\d{4}-\d{2}-\d{2}/)?.[0] || ''); set('dueDate', d(F.due), 'Report due'); set('orderDate', d(F.orderDate), 'Order received', true);
+  set('fee', F.fee ? Number(String(F.fee).replace(/[^\d.]/g, '')).toLocaleString() : '', 'Fee'); set('amcRef', F.ref, 'Client / AMC reference');
+  set('otherUsers', F.users && client && F.users.toLowerCase().includes(client.toLowerCase().slice(0, 12)) ? '' : F.users, 'Other intended users');
+  if (F.rent) set('rent', true, 'Rent schedule (1007) requested'); if (F.cost) set('apCost', true, 'Cost approach required'); if (F.exterior) { $('#f_inspection').value = 'exterior'; did.push(['Inspection', 'Exterior only']); }
+  if (F.propAddr) { const a = $('#f_address'); if (!a.value.trim()) { a.value = G.titleCase(F.propAddr).replace(/\b(Ca)\b/, 'CA'); did.push(['Property address', a.value]); } else if (!sameStreet(F.propAddr, a.value)) did.push(['⚠ Address in the letter', F.propAddr + ' – not the same as the order']); }
+  const notes = [F.use && 'Intended use per client: ' + F.use, F.users && 'Intended user per client: ' + F.users, F.price && 'Sales price per order: $' + Number(String(F.price).replace(/[^\d.]/g, '')).toLocaleString(), F.mc && '1004MC required', F.occupancy && 'Occupancy: ' + F.occupancy].filter(Boolean);
+  if (notes.length) { const n = $('#f_notes'); const add = notes.filter(x => !n.value.includes(x)); if (add.length) { n.value = (n.value ? n.value + '\n' : '') + add.join('\n'); did.push(['Notes', add.join('; ')]); } }
+  return did;
+}
+
+async function checkDocAddress(meta, file) { // is this document for the order's property? (street number and street name on its first pages)
+  const street = ($('#f_address').value || '').split(',')[0].trim(); if (!street || !isPdf(file) || ['photo', 'floorplan', 'marketSearch', 'mls', 'crs'].includes(meta.type)) return;
+  const sp = G.splitAddr(street); const word = (sp.street.split(/\s+/).find(w => w.length > 2 && !/^(north|south|east|west|n|s|e|w)$/i.test(w)) || '').toLowerCase(); if (!sp.no || !word) return;
+  const pdfjs = await loadPdfJs(); const doc = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()), isEvalSupported: false, wasmUrl: './wasm/', standardFontDataUrl: './standard_fonts/' }).promise;
+  let t = ''; for (let n = 1; n <= Math.min(4, doc.numPages); n++) t += ' ' + (await (await doc.getPage(n)).getTextContent()).items.map(i => i.str).join(' ');
+  if (t.replace(/\s/g, '').length < 300) return; // a scan: cannot tell
+  const T = t.toLowerCase(); if (!(T.includes(sp.no.toLowerCase()) && T.includes(word))) meta.warn = 'The property address was not found on its first pages – check that this is for ' + street + '.';
+}
+
+function sameStreet(a, b) { // "526 CROCKER SPERRY DR Montecito, CA" vs "526 Crocker Sperry Dr" → true
+  const A = String(a || '').toLowerCase(), sp = G.splitAddr(String(b || '').split(',')[0]); if (!sp.no) return true;
+  const w = (sp.street.split(/\s+/).find(x => x.length > 2 && !/^(north|south|east|west|n|s|e|w)$/i.test(x)) || '').toLowerCase();
+  return new RegExp('\\b' + sp.no.toLowerCase().replace(/[^\w-]/g, '') + '\\b').test(A) && (!w || A.includes(w));
+}

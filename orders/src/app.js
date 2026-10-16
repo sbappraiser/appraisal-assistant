@@ -120,8 +120,9 @@ function update() { clearTimeout(tmr); tmr = setTimeout(render, 60); }
 function render() {
   const f = readForm(); cur = f;
   const theirs = f.status === 'Client letter';
-  $('#paperWrap').hidden = theirs; $('#btnDocx').hidden = theirs; $('#missing').hidden = theirs; $('#clientView').hidden = !theirs;
-  if (theirs) renderClientView(f);
+  const mine = !theirs && (f.letterMode === 'mine' || f.letterMade || ['Sent', 'Signed'].includes(f.status) || (!f.wizard && String(f.created || '') < '2026-10-16'));
+  $('#paperWrap').hidden = !mine; $('#btnDocx').hidden = !mine; $('#missing').hidden = !mine; $('#clientView').hidden = !theirs; $('#orderSummary').hidden = theirs || mine;
+  if (theirs) renderClientView(f); else if (!mine) renderOrderSummary(f);
   $('#sheet').innerHTML = previewHTML(buildLetter(f));
   $('#fileName').textContent = fileName(f);
   const missing = [];
@@ -272,7 +273,7 @@ function renderContacts() {
 const SCAN_AI = /\b(artificial[\s-]+intelligence|A\.?I\.?(?=[\s,;:)\-]|$)|machine[\s-]+learning|generative|large[\s-]+language|chat\s?gpt|automated (valuation|tools?|systems?|decision)|algorithm\w*)\b/g;
 const SCAN_CONF = /\b(confidential\w*|non-?public|personal(ly)? identif\w*|NPI|PII|Gramm|GLBA|third[\s-]+part(y|ies)|vendor\w*|subcontract\w*|disclos\w*|data (security|privacy|protection)|cloud|offshore|outside the United States)\b/gi;
 const COND = /\b(redact\w*|anonymi[sz]\w*|de-?identif\w*|remov\w* (all )?(personal|identif|borrower|client)|encrypt\w*|secure\w*|approved (vendor|tool|provider)s?|provided that|so long as|as long as|only if|confidential\w*|non-?public|NPI|PII|personal(ly)? identif\w*|safeguard\w*)\b/i;
-const BAN = /\b(prohibit\w*|shall not|may not|must not|will not|not (be )?(permitted|allowed|authorized)|without (the )?(prior )?(express )?written (consent|approval|authorization)|strictly)\b/i;
+const BAN = /\b(prohibit\w*|shall not|may not|must not|will not|not (be )?(permitted|allowed|authorized)|without (the )?(prior )?(express )?(written )?(consent|approval|authorization|permission)|prior (written )?(consent|approval|authorization)|strictly)\b/i;
 async function inflateRaw(u8) { return new Uint8Array(await new Response(new Blob([u8]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).arrayBuffer()); }
 async function docxParagraphs(file) {
   const buf = new Uint8Array(await file.arrayBuffer()); const dv = new DataView(buf.buffer);
@@ -319,6 +320,9 @@ async function scanFile(file) {
     // three answers: not allowed | OK if confidential information is removed | no restriction found
     const verdict = hits.some(h => h.ban) ? 'stop' : (hits.some(h => h.ai) || hits.some(h => h.strict || h.cond)) ? 'look' : 'clear';
     cur = readForm(); cur.orderDoc = { name: file.name, read: new Date().toISOString(), paragraphs: paras.length, hits, verdict };
+    // set AI use from the letter (she can change it): ban → No AI; confidentiality only → redacted; nothing → Yes
+    if (!cur.aiUse || cur.aiAuto) { const pick = { stop: 'No', look: 'Redacted', clear: 'Yes' }[verdict]; document.querySelectorAll('input[name=aiUse]').forEach(r => { r.checked = r.value === pick; }); cur.aiUse = pick; cur.aiAuto = { verdict, file: file.name, at: new Date().toISOString() }; }
+    cur.letterText = paras.join('\n');
     renderScan(cur.orderDoc); syncVisibility(); update(); saveLetter(true);
   } catch (e) { $('#docName').textContent = e.message || 'Could not read that file.'; }
 }
@@ -336,9 +340,18 @@ function renderScan(d) {
   box.hidden = false;
   $('#scanClear').onclick = () => { cur = readForm(); cur.orderDoc = null; renderScan(null); update(); };
 }
+function renderOrderSummary(f) {
+  const box = $('#orderSummary'); const docs = f.docs || [];
+  box.innerHTML = `<h3>No engagement letter yet</h3><p class="help">Your letter shows here once you choose to write one; the client’s letter shows here once it is uploaded.</p>
+    <div class="row"><button type="button" class="btn primary" id="osMine">Write my engagement letter</button><button type="button" class="btn ghost" id="osTheirs">The client sent one</button></div>
+    ${docs.length ? `<h3>Documents</h3><ul class="toread">${docs.map(d => `<li><b>${hesc(DOC_LABEL[d.type] || d.type)}</b>: ${hesc(d.name)}${d.note ? ' – ' + hesc(d.note) : ''}${d.warn ? ` <span class="warnTxt">⚠ ${hesc(d.warn)}</span>` : ''}</li>`).join('')}</ul>` : ''}`;
+  $('#osMine').onclick = () => { cur = readForm(); cur.letterMode = 'mine'; $('#f_status').value = 'Drafted'; update(); };
+  $('#osTheirs').onclick = () => { $('#f_status').value = 'Client letter'; update(); document.getElementById('docsSet').scrollIntoView({ behavior: 'smooth' }); };
+}
 function showTab(t) {
   document.querySelectorAll('[data-tab]').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === t));
   document.querySelectorAll('.panel').forEach(p => { p.hidden = p.id !== 'panel-' + t; });
+  if (t === 'home') renderHome();
   if (t === 'market') { $('#mkTitle').textContent = 'Market conditions' + (cur && (cur.fileNo || street(cur)) ? ' – ' + [cur.fileNo, street(cur)].filter(Boolean).join(' ') : ''); mkRender(); }
 }
 
@@ -405,7 +418,7 @@ async function start() {
   dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('over'); addDocs(e.dataTransfer.files); });
   window.addEventListener('dragover', e => e.preventDefault()); window.addEventListener('drop', e => e.preventDefault()); // a file dropped beside the box is not opened by Chrome
   document.querySelectorAll('[data-filter]').forEach(b => b.onclick = () => { listFilter = b.dataset.filter; renderLetters(); });
-  $('#btnNew2').onclick = () => { saveLetter(true); newLetter(); };
+  $('#btnNew2').onclick = () => startNewOrder(); $('#btnNew').onclick = () => startNewOrder();
   $('#btnIpad').onclick = () => { saveLetter(true); activeOrdersFile(); };
   $('#genieLink').addEventListener('click', () => saveLetter(true));
   ['#f_lenderDiff', '#f_amcUsed', '#f_inspDate', '#f_effDate', '#f_dod'].forEach(id => $(id).addEventListener('change', syncVisibility));
@@ -421,7 +434,7 @@ async function start() {
   const draft = store.get('draft', null); // an unsaved letter left in the old letter writer
   cur = pick ? { ...NEW_FIELDS, ...JSON.parse(JSON.stringify(pick)) } : (!letters.length && draft && draft.id) ? { ...blankLetter(), ...draft } : blankLetter();
   writeForm(cur); render(); renderLetters(); renderContacts();
-  showTab(q && pick ? 'letter' : letters.length ? 'saved' : 'letter');
+  showTab(q && pick ? 'letter' : 'home');
   $('#build').textContent = 'Version ' + BUILD; $('#rdBuild').textContent = BUILD;
   $('#helpSearch').addEventListener('input', e => { const q = e.target.value.trim().toLowerCase(); document.querySelectorAll('.help-page details').forEach(d => { const hit = !q || d.textContent.toLowerCase().includes(q); d.hidden = !hit; d.open = !!q && hit; }); });
   $('#rdClose').onclick = closeReader; $('#rdPrev').onclick = () => { RD.page--; rdPage(); }; $('#rdNext').onclick = () => { RD.page++; rdPage(); }; $('#rdOpen').onclick = () => openDoc(RD.id);
