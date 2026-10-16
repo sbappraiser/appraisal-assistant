@@ -236,7 +236,7 @@ function openLetter(id, copy) {
   const f = letters.find(x => x.id === id); if (!f) return;
   cur = copy ? { ...JSON.parse(JSON.stringify(f)), ...NEW_FIELDS, notes: '', todos: '', docs: [], crs: null, listings: [], permits: null, created: new Date().toISOString(), id: uid(), status: 'Drafted', agreeDate: todayISO(), orderDate: todayISO(), dueDate: '', fileNo: '', address: '', decedent: '', dod: '', aiUse: '', orderDoc: null, saved: null,
     lenderDiff: f.lenderDiff, lenderCo: f.lenderCo, lenderAddr1: f.lenderAddr1, lenderAddr2: f.lenderAddr2, amcUsed: f.amcUsed, amcCo: f.amcCo, amcAddr1: f.amcAddr1, amcAddr2: f.amcAddr2, amcLic: f.amcLic, amcState: f.amcState, amcExp: f.amcExp } : { ...NEW_FIELDS, ...JSON.parse(JSON.stringify(f)) };
-  if (!copy) dedupeDocs(cur).then(n => { if (n) { renderDocs(); saveLetter(true); toast(n + ' duplicate document' + (n > 1 ? 's' : '') + ' removed (the same file was uploaded twice)', 5000); } });
+  if (!copy) dedupeDocs(cur).then(n => { if (n) toast(n + ' duplicate document' + (n > 1 ? 's' : '') + ' removed (the same file was uploaded twice)', 5000); return recheckDocTypes(cur).then(() => { if (n) { renderDocs(); saveLetter(true); } }); });
   writeForm(cur); render(); showTab('letter'); window.scrollTo(0, 0); toast(copy ? 'Copied the client and terms – fill in the new job' : 'Opened ' + (f.fileNo || street(f) || 'the order'));
 }
 function newLetter() { cur = blankLetter(); writeForm(cur); render(); showTab('letter'); window.scrollTo(0, 0); $('#f_fileNo').focus(); }

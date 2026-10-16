@@ -52,6 +52,7 @@ function startNewOrder() {
 const SLOTS = [
   ['clientLetter', 'Client’s engagement letter or order', 'Read for the client, loan, due date, fee, form and AI wording.', w => w.letter === 'client'],
   ['crs', 'CRS Data property report', 'Fills the APN, owner, location and public-record facts (never beds, baths or square feet).', () => true],
+  ['permitsCounty', 'County permit history (by parcel)', 'The CrystalViewer “Permit History by Parcel” printout: permits, zoning and parcel facts are read from it.', () => true],
   ['legal', 'Legal description', 'Only if it is a separate file – the prelim usually has it.', () => true],
   ['mls', 'MLS listing with its history', 'The subject’s listing and listing history (CSV export or printout).', w => w.listed === 'yes'],
   ['contract', 'Purchase contract, counter offers and addenda', 'Add every file – packets often come in several PDFs.', w => w.purchase === 'yes'],
@@ -88,8 +89,8 @@ function renderWizard() {
   if (WZ.step === 2) {
     const docs = f.docs || [];
     box.innerHTML = head + `<section class="mkcard"><h3>${h([f.fileNo, street(f)].filter(Boolean).join(' – ') || 'New order')}</h3>
-      <p class="help">Drop each file in its box (or click the box). You can add several files to any box. Everything is kept in this browser on this computer.</p>
-      <div class="slots">${SLOTS.filter(([, , , show]) => show(w)).map(([k, title, help]) => { const mine = docs.filter(d => k === 'other' ? !SLOTS.slice(0, 6).some(s => s[0] === d.type) : d.type === k);
+      <div class="drop big wzAll" id="wzAll"><div><span class="eyebrow">Drop everything here</span><p class="help">You do not need a box for each file: drop them all at once and each one is sorted by what its first page says. The boxes below are your checklist – each shows what arrived. Everything is kept in this browser on this computer.</p></div><label class="btn primary">Choose files<input type="file" multiple id="wzAllFile" hidden></label></div>
+      <div class="slots">${SLOTS.filter(([, , , show]) => show(w)).map(([k, title, help]) => { const mine = docs.filter(d => k === 'other' ? !SLOTS.some(s => s[0] !== 'other' && s[0] === d.type) : d.type === k);
         return `<div class="slot" data-slot="${k}"><div><b>${h(title)}</b><small>${h(help)}</small>${mine.length ? `<ul>${mine.map(d => `<li>${h(d.name)}${d.note ? ' – ' + h(d.note) : ''}${d.warn ? ` <span class="warnTxt">⚠ ${h(d.warn)}</span>` : ''}</li>`).join('')}</ul>` : ''}</div>
           <label class="btn small">${mine.length ? 'Add more' : 'Choose files'}<input type="file" multiple data-slotfile="${k}" hidden></label></div>`; }).join('')}</div>
       <p class="help pre" id="wzStatus"></p>
@@ -97,6 +98,8 @@ function renderWizard() {
     box.querySelectorAll('[data-slot]').forEach(el => { const k = el.dataset.slot;
       el.addEventListener('dragover', e => { e.preventDefault(); el.classList.add('over'); }); el.addEventListener('dragleave', () => el.classList.remove('over'));
       el.addEventListener('drop', e => { e.preventDefault(); el.classList.remove('over'); wzAdd(k, e.dataTransfer.files); }); });
+    { const z = $('#wzAll'); ['dragover', 'dragleave', 'drop'].forEach(ev => z.addEventListener(ev, e => { e.preventDefault(); z.classList.toggle('over', ev === 'dragover'); if (ev === 'drop') wzAdd('other', e.dataTransfer.files); }));
+      $('#wzAllFile').onchange = e => { const fs = [...e.target.files]; e.target.value = ''; wzAdd('other', fs); }; }
     box.querySelectorAll('[data-slotfile]').forEach(i => i.onchange = () => { const fs = [...i.files]; i.value = ''; wzAdd(i.dataset.slotfile, fs); });
     $('#wzBack2').onclick = () => { WZ.step = 1; renderWizard(); };
     $('#wzNext2').onclick = () => { WZ.step = 3; saveLetter(true); renderWizard(); };

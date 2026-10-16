@@ -461,6 +461,11 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
       <li>On the iPad: open the inspection app from its Home Screen icon, tap <b>Get orders</b>, pick Files → OneDrive → Active Orders.json.</li>
       <li>Tap <b>Start inspection</b> on the order. Address, county, year built, flood zone, permits, inspection date, access contact and your to-dos are filled in. Beds, baths and square feet are not.</li>
       <li>Floor plan: in the sketch, <b>More → Floor plan underlay</b> → "From the order".</li></ol></details>
+    <details><summary>Documents for a new order (step 2)</summary><ol>
+      <li>Drop all the files at once in <b>Drop everything here</b>. Each file is sorted by what its first page says (CRS report, County permit history, prelim, contract, counters, MLS, plans …). The boxes below it are your checklist and show what arrived.</li>
+      <li>You can still drop a file in a box. If its first page plainly says it is something else (for example a County “Permit History by Parcel” dropped in the prelim box), it is filed as what it really is and the status line tells you.</li>
+      <li>Orders opened after this change are checked once, and a document filed under the wrong kind is corrected.</li>
+      <li>To change a document's kind yourself: on the order page, under Documents, pick the kind from its list; it is read again.</li></ol></details>
     <details><summary>Dictate your notes (iPad)</summary><ol>
       <li>In an inspection, tap the first tab, <b>🎤 Dictate</b>. Tap in the box, then the microphone on the iPad keyboard, and talk.</li>
       <li>Say the area or room first, then what you see: exterior, garage, view, topography, site, landscaping, interior, heating / cooling / water heater, then each room – entry, living room, kitchen, family room, powder room, primary bedroom, primary bath, bedroom 2, hall bath, laundry room.</li>
@@ -507,7 +512,7 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
 </div>
 <div id="toast" role="status" hidden></div>
 <script>
-const BUILD='o1-1016-2135';
+const BUILD='o1-1016-2143';
 const G = (() => {
 /* ---------------- small helpers ---------------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -1650,6 +1655,12 @@ const TEXT_RULES = [
   [/LEGAL DESCRIPTION|EXHIBIT ["“]?A/i, 'legal'],
   [/INVOICE/i, 'invoice'],
 ];
+const STRONG_TYPES = ['crs', 'permitsCounty', 'marketSearch', 'prelim', 'condoQ', 'ccrs', 'leaseback', 'counter', 'contract'];   // page 1 says so plainly
+// documents filed in the wrong box before Oct 16 2026: check them once when the order opens
+async function recheckDocTypes(o) { let n = 0;
+  for (const d of (o.docs || [])) { if (d.typeChecked || !['prelim', 'legal', 'other', 'permitsPdf', 'disclosures'].includes(d.type)) continue; d.typeChecked = true;
+    try { const f = await docFile(d.id); const said = f && await textDocType(f); if (said && said !== d.type && STRONG_TYPES.includes(said)) { await retypeDoc(d.id, said); n++; } } catch (e) {} }
+  if (n) toast(n + ' document' + (n > 1 ? 's were' : ' was') + ' in the wrong kind and ' + (n > 1 ? 'have' : 'has') + ' been corrected (see Documents)', 6000); }
 const NAME_RULES = [
   [/\bCRS\b|Property[_ ]Report/i, 'crs'], [/CrystalViewer|permit[_ ]?hist/i, 'permitsCounty'], [/flexmls|\bMLS\b|customexport/i, 'mls'],
   [/engagement|order[_ ]?form|appraisal[_ ]?order/i, 'clientLetter'], [/floor[_ ]?plan|floorplan/i, 'floorplan'], [/plans?\b|drawings|architect/i, 'plans'], [/spec/i, 'specs'],
@@ -1666,6 +1677,10 @@ async function firstText(file) {
     if (/\.(csv|txt)$/i.test(file.name)) return (await file.slice(0, 4000).text());
   } catch (e) { console.warn('could not read', file.name, e); }
   return '';
+}
+async function textDocType(file) { // what page 1 says it is (null when it does not say)
+  const t = await firstText(file); if (!t || /\.csv$/i.test(file.name)) return null;
+  for (const [re, k] of TEXT_RULES) if (re.test(t.slice(0, 3000))) return k; return null;
 }
 async function detectDocType(file) {
   const t = await firstText(file);
@@ -1684,17 +1699,19 @@ async function addDocs(fileList, forcedType) {
   docBusy = true; const said = [];
   try {
     const typed = []; const seen = new Map(); files.forEach(f => seen.set(f.name.toLowerCase(), f)); // the same file twice in one drop counts once
-    for (const file of seen.values()) { $('#docStatus').textContent = 'Sorting ' + file.name + '…'; typed.push([file, forcedType || await detectDocType(file)]); }
+    for (const file of seen.values()) { $('#docStatus').textContent = 'Sorting ' + file.name + '…'; let type = forcedType || await detectDocType(file);
+      if (forcedType) { const said = await textDocType(file); if (said && said !== forcedType && STRONG_TYPES.includes(said)) { type = said; file._moved = DOC_LABEL[forcedType]; } }   // a County permit history dropped in the prelim box is still a permit history
+      typed.push([file, type]); }
     const FIRST = ['crs', 'mls', 'clientLetter']; const rank = t => { const i = FIRST.indexOf(t); return i < 0 ? 9 : i; };
     typed.sort((a, b) => rank(a[1]) - rank(b[1])); // the CRS first, so later files can be checked against the subject's APN
     for (const [file, type] of typed) {
       $('#docStatus').textContent = 'Reading ' + file.name + '…';
       cur = readForm(); const old = (cur.docs || []).find(d => (d.name || '').toLowerCase() === file.name.toLowerCase()); // same file name again → replace it, keep its notes and accepted entries
-      const meta = old ? { ...old, type: forcedType || old.type || type, size: file.size, mime: file.type || '', added: new Date().toISOString(), note: '' } : { id: uid(), name: file.name, type, size: file.size, mime: file.type || '', added: new Date().toISOString(), note: '' };
+      const meta = old ? { ...old, type: file._moved ? type : forcedType || old.type || type, size: file.size, mime: file.type || '', added: new Date().toISOString(), note: '' } : { id: uid(), name: file.name, type, size: file.size, mime: file.type || '', added: new Date().toISOString(), note: '' };
       try { await ODB.put('docs', { ...meta, orderId: cur.id, blob: file }); }
       catch (e) { said.push(file.name + ': could not be stored (' + (e.message || e) + ')'); continue; }
       cur.docs = old ? cur.docs.map(d => d.id === old.id ? meta : d) : [...(cur.docs || []), meta];
-      await readDoc(meta, file); said.push(file.name + (old ? ' → replaced the earlier copy' : ' → ' + DOC_LABEL[meta.type]) + (meta.note ? ' · ' + meta.note : ''));
+      await readDoc(meta, file); said.push(file.name + (old ? ' → replaced the earlier copy' : ' → ' + DOC_LABEL[meta.type]) + (file._moved ? ' (dropped in the ' + file._moved + ' box, but page 1 says it is a ' + DOC_LABEL[meta.type] + ')' : '') + (meta.note ? ' · ' + meta.note : ''));
     }
   } finally { docBusy = false; }
   { const nr = said.filter(x => x.includes('replaced the earlier copy')).length; $('#docStatus').textContent = said.length === 1 ? said[0] : (said.length - nr ? (said.length - nr) + ' files added' : '') + (nr ? (said.length - nr ? ', ' : '') + nr + ' replaced (same file name as one already here)' : '') + ' – see each one below.'; }
@@ -2826,6 +2843,7 @@ function startNewOrder() {
 const SLOTS = [
   ['clientLetter', 'Client’s engagement letter or order', 'Read for the client, loan, due date, fee, form and AI wording.', w => w.letter === 'client'],
   ['crs', 'CRS Data property report', 'Fills the APN, owner, location and public-record facts (never beds, baths or square feet).', () => true],
+  ['permitsCounty', 'County permit history (by parcel)', 'The CrystalViewer “Permit History by Parcel” printout: permits, zoning and parcel facts are read from it.', () => true],
   ['legal', 'Legal description', 'Only if it is a separate file – the prelim usually has it.', () => true],
   ['mls', 'MLS listing with its history', 'The subject’s listing and listing history (CSV export or printout).', w => w.listed === 'yes'],
   ['contract', 'Purchase contract, counter offers and addenda', 'Add every file – packets often come in several PDFs.', w => w.purchase === 'yes'],
@@ -2862,8 +2880,8 @@ function renderWizard() {
   if (WZ.step === 2) {
     const docs = f.docs || [];
     box.innerHTML = head + `<section class="mkcard"><h3>${h([f.fileNo, street(f)].filter(Boolean).join(' – ') || 'New order')}</h3>
-      <p class="help">Drop each file in its box (or click the box). You can add several files to any box. Everything is kept in this browser on this computer.</p>
-      <div class="slots">${SLOTS.filter(([, , , show]) => show(w)).map(([k, title, help]) => { const mine = docs.filter(d => k === 'other' ? !SLOTS.slice(0, 6).some(s => s[0] === d.type) : d.type === k);
+      <div class="drop big wzAll" id="wzAll"><div><span class="eyebrow">Drop everything here</span><p class="help">You do not need a box for each file: drop them all at once and each one is sorted by what its first page says. The boxes below are your checklist – each shows what arrived. Everything is kept in this browser on this computer.</p></div><label class="btn primary">Choose files<input type="file" multiple id="wzAllFile" hidden></label></div>
+      <div class="slots">${SLOTS.filter(([, , , show]) => show(w)).map(([k, title, help]) => { const mine = docs.filter(d => k === 'other' ? !SLOTS.some(s => s[0] !== 'other' && s[0] === d.type) : d.type === k);
         return `<div class="slot" data-slot="${k}"><div><b>${h(title)}</b><small>${h(help)}</small>${mine.length ? `<ul>${mine.map(d => `<li>${h(d.name)}${d.note ? ' – ' + h(d.note) : ''}${d.warn ? ` <span class="warnTxt">⚠ ${h(d.warn)}</span>` : ''}</li>`).join('')}</ul>` : ''}</div>
           <label class="btn small">${mine.length ? 'Add more' : 'Choose files'}<input type="file" multiple data-slotfile="${k}" hidden></label></div>`; }).join('')}</div>
       <p class="help pre" id="wzStatus"></p>
@@ -2871,6 +2889,8 @@ function renderWizard() {
     box.querySelectorAll('[data-slot]').forEach(el => { const k = el.dataset.slot;
       el.addEventListener('dragover', e => { e.preventDefault(); el.classList.add('over'); }); el.addEventListener('dragleave', () => el.classList.remove('over'));
       el.addEventListener('drop', e => { e.preventDefault(); el.classList.remove('over'); wzAdd(k, e.dataTransfer.files); }); });
+    { const z = $('#wzAll'); ['dragover', 'dragleave', 'drop'].forEach(ev => z.addEventListener(ev, e => { e.preventDefault(); z.classList.toggle('over', ev === 'dragover'); if (ev === 'drop') wzAdd('other', e.dataTransfer.files); }));
+      $('#wzAllFile').onchange = e => { const fs = [...e.target.files]; e.target.value = ''; wzAdd('other', fs); }; }
     box.querySelectorAll('[data-slotfile]').forEach(i => i.onchange = () => { const fs = [...i.files]; i.value = ''; wzAdd(i.dataset.slotfile, fs); });
     $('#wzBack2').onclick = () => { WZ.step = 1; renderWizard(); };
     $('#wzNext2').onclick = () => { WZ.step = 3; saveLetter(true); renderWizard(); };
@@ -3158,7 +3178,7 @@ function openLetter(id, copy) {
   const f = letters.find(x => x.id === id); if (!f) return;
   cur = copy ? { ...JSON.parse(JSON.stringify(f)), ...NEW_FIELDS, notes: '', todos: '', docs: [], crs: null, listings: [], permits: null, created: new Date().toISOString(), id: uid(), status: 'Drafted', agreeDate: todayISO(), orderDate: todayISO(), dueDate: '', fileNo: '', address: '', decedent: '', dod: '', aiUse: '', orderDoc: null, saved: null,
     lenderDiff: f.lenderDiff, lenderCo: f.lenderCo, lenderAddr1: f.lenderAddr1, lenderAddr2: f.lenderAddr2, amcUsed: f.amcUsed, amcCo: f.amcCo, amcAddr1: f.amcAddr1, amcAddr2: f.amcAddr2, amcLic: f.amcLic, amcState: f.amcState, amcExp: f.amcExp } : { ...NEW_FIELDS, ...JSON.parse(JSON.stringify(f)) };
-  if (!copy) dedupeDocs(cur).then(n => { if (n) { renderDocs(); saveLetter(true); toast(n + ' duplicate document' + (n > 1 ? 's' : '') + ' removed (the same file was uploaded twice)', 5000); } });
+  if (!copy) dedupeDocs(cur).then(n => { if (n) toast(n + ' duplicate document' + (n > 1 ? 's' : '') + ' removed (the same file was uploaded twice)', 5000); return recheckDocTypes(cur).then(() => { if (n) { renderDocs(); saveLetter(true); } }); });
   writeForm(cur); render(); showTab('letter'); window.scrollTo(0, 0); toast(copy ? 'Copied the client and terms – fill in the new job' : 'Opened ' + (f.fileNo || street(f) || 'the order'));
 }
 function newLetter() { cur = blankLetter(); writeForm(cur); render(); showTab('letter'); window.scrollTo(0, 0); $('#f_fileNo').focus(); }

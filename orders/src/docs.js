@@ -43,6 +43,12 @@ const TEXT_RULES = [
   [/LEGAL DESCRIPTION|EXHIBIT ["“]?A/i, 'legal'],
   [/INVOICE/i, 'invoice'],
 ];
+const STRONG_TYPES = ['crs', 'permitsCounty', 'marketSearch', 'prelim', 'condoQ', 'ccrs', 'leaseback', 'counter', 'contract'];   // page 1 says so plainly
+// documents filed in the wrong box before Oct 16 2026: check them once when the order opens
+async function recheckDocTypes(o) { let n = 0;
+  for (const d of (o.docs || [])) { if (d.typeChecked || !['prelim', 'legal', 'other', 'permitsPdf', 'disclosures'].includes(d.type)) continue; d.typeChecked = true;
+    try { const f = await docFile(d.id); const said = f && await textDocType(f); if (said && said !== d.type && STRONG_TYPES.includes(said)) { await retypeDoc(d.id, said); n++; } } catch (e) {} }
+  if (n) toast(n + ' document' + (n > 1 ? 's were' : ' was') + ' in the wrong kind and ' + (n > 1 ? 'have' : 'has') + ' been corrected (see Documents)', 6000); }
 const NAME_RULES = [
   [/\bCRS\b|Property[_ ]Report/i, 'crs'], [/CrystalViewer|permit[_ ]?hist/i, 'permitsCounty'], [/flexmls|\bMLS\b|customexport/i, 'mls'],
   [/engagement|order[_ ]?form|appraisal[_ ]?order/i, 'clientLetter'], [/floor[_ ]?plan|floorplan/i, 'floorplan'], [/plans?\b|drawings|architect/i, 'plans'], [/spec/i, 'specs'],
@@ -59,6 +65,10 @@ async function firstText(file) {
     if (/\.(csv|txt)$/i.test(file.name)) return (await file.slice(0, 4000).text());
   } catch (e) { console.warn('could not read', file.name, e); }
   return '';
+}
+async function textDocType(file) { // what page 1 says it is (null when it does not say)
+  const t = await firstText(file); if (!t || /\.csv$/i.test(file.name)) return null;
+  for (const [re, k] of TEXT_RULES) if (re.test(t.slice(0, 3000))) return k; return null;
 }
 async function detectDocType(file) {
   const t = await firstText(file);
@@ -77,17 +87,19 @@ async function addDocs(fileList, forcedType) {
   docBusy = true; const said = [];
   try {
     const typed = []; const seen = new Map(); files.forEach(f => seen.set(f.name.toLowerCase(), f)); // the same file twice in one drop counts once
-    for (const file of seen.values()) { $('#docStatus').textContent = 'Sorting ' + file.name + '…'; typed.push([file, forcedType || await detectDocType(file)]); }
+    for (const file of seen.values()) { $('#docStatus').textContent = 'Sorting ' + file.name + '…'; let type = forcedType || await detectDocType(file);
+      if (forcedType) { const said = await textDocType(file); if (said && said !== forcedType && STRONG_TYPES.includes(said)) { type = said; file._moved = DOC_LABEL[forcedType]; } }   // a County permit history dropped in the prelim box is still a permit history
+      typed.push([file, type]); }
     const FIRST = ['crs', 'mls', 'clientLetter']; const rank = t => { const i = FIRST.indexOf(t); return i < 0 ? 9 : i; };
     typed.sort((a, b) => rank(a[1]) - rank(b[1])); // the CRS first, so later files can be checked against the subject's APN
     for (const [file, type] of typed) {
       $('#docStatus').textContent = 'Reading ' + file.name + '…';
       cur = readForm(); const old = (cur.docs || []).find(d => (d.name || '').toLowerCase() === file.name.toLowerCase()); // same file name again → replace it, keep its notes and accepted entries
-      const meta = old ? { ...old, type: forcedType || old.type || type, size: file.size, mime: file.type || '', added: new Date().toISOString(), note: '' } : { id: uid(), name: file.name, type, size: file.size, mime: file.type || '', added: new Date().toISOString(), note: '' };
+      const meta = old ? { ...old, type: file._moved ? type : forcedType || old.type || type, size: file.size, mime: file.type || '', added: new Date().toISOString(), note: '' } : { id: uid(), name: file.name, type, size: file.size, mime: file.type || '', added: new Date().toISOString(), note: '' };
       try { await ODB.put('docs', { ...meta, orderId: cur.id, blob: file }); }
       catch (e) { said.push(file.name + ': could not be stored (' + (e.message || e) + ')'); continue; }
       cur.docs = old ? cur.docs.map(d => d.id === old.id ? meta : d) : [...(cur.docs || []), meta];
-      await readDoc(meta, file); said.push(file.name + (old ? ' → replaced the earlier copy' : ' → ' + DOC_LABEL[meta.type]) + (meta.note ? ' · ' + meta.note : ''));
+      await readDoc(meta, file); said.push(file.name + (old ? ' → replaced the earlier copy' : ' → ' + DOC_LABEL[meta.type]) + (file._moved ? ' (dropped in the ' + file._moved + ' box, but page 1 says it is a ' + DOC_LABEL[meta.type] + ')' : '') + (meta.note ? ' · ' + meta.note : ''));
     }
   } finally { docBusy = false; }
   { const nr = said.filter(x => x.includes('replaced the earlier copy')).length; $('#docStatus').textContent = said.length === 1 ? said[0] : (said.length - nr ? (said.length - nr) + ' files added' : '') + (nr ? (said.length - nr ? ', ' : '') + nr + ' replaced (same file name as one already here)' : '') + ' – see each one below.'; }
