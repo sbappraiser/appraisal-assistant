@@ -162,6 +162,7 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
 @media (max-width: 700px) { .addrrow { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } .addrrow .a-street { grid-column: 1 / -1; } }
 .addrrow select + input { margin-top: 6px; }
 .leftCol { display: grid; gap: 14px; min-width: 0; } .previewCol { position: static; }
+.btn.danger.armed { background: var(--warn); color: #fff; border-color: var(--warn); }
 </style>
 </head>
 <body>
@@ -369,7 +370,8 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
       <li><b>2 · Documents:</b> drop each file in its box – client’s engagement letter, CRS report, legal description, MLS listing with history, purchase contract with counters and addenda (as many PDFs as you have), preliminary title report, and anything else under <b>Other documents</b>. Each file is read as you add it, and checked against the property address: a file for another property is marked ⚠ and nothing is filled in from it.</li>
       <li><b>3 · Check:</b> see what was filled in. The client’s letter sets the client, loan number, borrower, due date, fee, report form, rent schedule, and <b>AI use</b>: a ban (for example “no AI without prior authorization”) sets No AI; confidentiality wording sets Yes – only with confidential information removed; nothing sets Yes. You can change any of it on the order.</li>
       <li>Click <b>Read</b> next to the prelim or contract to summarize it, then <b>Open the order</b> – or, if you are writing the letter, <b>Next: write my engagement letter</b>.</li>
-      <li>The order saves by itself. To find it again, go to <b>Home</b>: <b>Open an order</b> lists your last 10 orders (click a row to open it); <b>All files</b> lets you search by file number, address and/or borrower – fill in any of the boxes and click <b>Search</b> (leave them empty to list every order).</li></ol></details>
+      <li>The order saves by itself. To find it again, go to <b>Home</b>: <b>Open an order</b> lists your last 10 orders (click a row to open it); <b>All files</b> lets you search by file number, address and/or borrower – fill in any of the boxes and click <b>Search</b> (leave them empty to list every order).</li>
+      <li>To delete an order from either list, click <b>Delete</b> at the end of its row, then click it again (it turns red and says <b>Click again to delete</b>) within 3 seconds. The order and all its uploaded documents are removed from this computer – make a <b>Back up</b> first if you might want it later.</li></ol></details>
     <details><summary>Report form format and form</summary><ol>
       <li><b>Report form format</b>: in <b>New order</b> step 1, click <b>UAD 3.6 (Traditional)</b>, <b>UAD 2.6 (Legacy)</b>, <b>GPAR</b> or <b>Other</b>. You can change it later in Scope and report on the order page.</li>
       <li><b>Form</b> (just below it on the order page): the assistant picks the usual one for the property type and inspection – e.g. UAD 2.6 condo → Form 1073, exterior-only → Form 2055. Click it to choose another (1004, 1073, 1025, 2055, 1075, 1004C, 2090, 2095, 1004 Desktop, 1004D; URAR kinds for 3.6; GPAR forms), or <b>Other – type it</b>. Once you choose, it stays. It is the "Format" line in your engagement letter.</li>
@@ -464,7 +466,7 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
 </div>
 <div id="toast" role="status" hidden></div>
 <script>
-const BUILD='o1-1016-0114';
+const BUILD='o1-1016-0121';
 const G = (() => {
 /* ---------------- small helpers ---------------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -1542,7 +1544,7 @@ function wireAddr(p, onChange) {
 }
 function readAddr(p) { const o = {}; ADDR_KEYS.forEach(k => { const el = document.getElementById(p + k); o[k] = el ? el.value.trim() : ''; }); return o; }
 function writeAddr(p, v) { ADDR_KEYS.forEach(k => { const el = document.getElementById(p + k); if (el && v[k] !== undefined) el.value = v[k]; }); syncPick(p, 'city', cityList()); syncPick(p, 'zip', Object.keys(AA_ZIPS)); }
-function joinAddr(v) { return [v.street, v.city, [v.state, v.zip ? v.zip + (v.zip4 ? '-' + v.zip4 : '') : ''].filter(Boolean).join(' ')].filter(Boolean).join(', '); }
+function joinAddr(v) { if (!(v.street || '').trim()) return ''; return [v.street, v.city, [v.state, v.zip ? v.zip + (v.zip4 ? '-' + v.zip4 : '') : ''].filter(Boolean).join(' ')].filter(Boolean).join(', '); }
 function splitAddr(line) { /* "1729 Bath St, Santa Barbara, CA 93101-1234" → parts */
   const parts = String(line || '').split(',').map(s => s.trim()).filter(Boolean); const o = { street: parts[0] || '', city: '', state: '', zip: '', zip4: '' };
   const last = parts.length > 1 ? parts[parts.length - 1] : ''; const m = last.match(/^([A-Za-z]{2})?\s*(\d{5})?(?:-(\d{4}))?$/);
@@ -2734,10 +2736,10 @@ function cleanPrelimValue(v) { // any prelim entry → her short label; anything
    ===================================================================== */
 const WZ = { step: 1 };
 let HOME_VIEW = 'recent';
-const realOrder = o => !!(o.fileNo || street(o) || (o.docs || []).length || ((o.clients || [])[0] || {}).company || ((o.clients || [])[0] || {}).name || o.borrower);
+const realOrder = o => !!(o.fileNo || (street(o) && !/^[A-Z]{2}$/.test(street(o))) || (o.docs || []).length || ((o.clients || [])[0] || {}).company || ((o.clients || [])[0] || {}).name || o.borrower);
 const clientOf = o => ((o.clients || [])[0] || {}).company || ((o.clients || [])[0] || {}).name || '';
 function homeRows(list, empty) {
-  return list.length ? `<div class="tableWrap"><table class="hmtable"><thead><tr><th>File #</th><th>Address</th><th>Borrower</th><th>Client</th><th>Status</th><th>Due</th></tr></thead><tbody>${list.map(o => `<tr data-hopen="${o.id}" tabindex="0"><td class="num"><b>${h(o.fileNo || '—')}</b></td><td>${h(street(o) || '(no address yet)')}</td><td>${h(o.borrower || '')}</td><td>${h(clientOf(o))}</td><td><span class="pill">${h(o.stage || 'New')}</span></td><td class="num">${h(o.dueDate ? longDate(o.dueDate) : '')}</td></tr>`).join('')}</tbody></table></div>`
+  return list.length ? `<div class="tableWrap"><table class="hmtable"><thead><tr><th>File #</th><th>Address</th><th>Borrower</th><th>Client</th><th>Status</th><th>Due</th><th></th></tr></thead><tbody>${list.map(o => `<tr data-hopen="${o.id}" tabindex="0"><td class="num"><b>${h(o.fileNo || '—')}</b></td><td>${h(street(o) || '(no address yet)')}</td><td>${h(o.borrower || '')}</td><td>${h(clientOf(o))}</td><td><span class="pill">${h(o.stage || 'New')}</span></td><td class="num">${h(o.dueDate ? longDate(o.dueDate) : '')}</td><td class="acts"><button type="button" class="btn ghost small danger" data-hdel="${o.id}" aria-label="Delete ${h(o.fileNo || street(o) || 'this order')}">Delete</button></td></tr>`).join('')}</tbody></table></div>`
     : `<p class="help">${empty}</p>`;
 }
 function renderHome() {
@@ -2753,7 +2755,8 @@ function renderHome() {
   $('#hmNew').onclick = () => startNewOrder();
   $('#hmOpen').onclick = () => { HOME_VIEW = 'recent'; renderHome(); };
   $('#hmFind').onclick = () => { HOME_VIEW = 'find'; renderHome(); setTimeout(() => $('#hfFile') && $('#hfFile').focus(), 30); };
-  const panel = $('#hmPanel'); const wire = () => panel.querySelectorAll('[data-hopen]').forEach(r => { r.onclick = () => openLetter(r.dataset.hopen); r.onkeydown = e => { if (e.key === 'Enter') openLetter(r.dataset.hopen); }; });
+  const panel = $('#hmPanel'); const wire = () => { panel.querySelectorAll('[data-hopen]').forEach(r => { r.onclick = () => openLetter(r.dataset.hopen); r.onkeydown = e => { if (e.key === 'Enter' && e.target === r) openLetter(r.dataset.hopen); }; });
+    panel.querySelectorAll('[data-hdel]').forEach(b => b.onclick = e => { e.stopPropagation(); armDelete(b, () => deleteOrder(b.dataset.hdel)); }); };
   if (HOME_VIEW === 'recent') {
     const recent = all.slice().sort((a, b) => String(b.saved || b.created || '').localeCompare(String(a.saved || a.created || ''))).slice(0, 10);
     panel.innerHTML = `<h3>Last 10 orders</h3><p class="help">Most recently worked on first. Click a row to open it.</p>${homeRows(recent, 'No orders yet. Click <b>New order</b> to start one.')}`;
@@ -3019,7 +3022,7 @@ function render() {
   renderLinks();
 }
 let autoT = null;
-const hasContent = f => !!(f.fileNo || (f.address || '').trim() || (f.docs || []).length || ((f.clients || [])[0] || {}).name || ((f.clients || [])[0] || {}).company || letters.some(x => x.id === f.id));
+const hasContent = f => !!(f.fileNo || ((f.address || '').trim() && !/^[A-Z]{2}$/.test((f.address || '').trim())) || (f.docs || []).length || ((f.clients || [])[0] || {}).name || ((f.clients || [])[0] || {}).company || letters.some(x => x.id === f.id));
 const street = f => (f.address || '').split(',')[0].trim();
 const safe = s => String(s).replace(/[\\/:*?"<>|]+/g, '-').replace(/\s+/g, ' ').trim();
 const fileName = f => safe(`${f.fileNo ? f.fileNo + ' ' : ''}${street(f) || 'No address yet'} - Engagement Letter`) + '.docx';
@@ -3125,10 +3128,7 @@ function renderLetters() {
   $('#letterList').querySelectorAll('[data-open]').forEach(b => b.onclick = () => openLetter(b.dataset.open));
   $('#letterList').querySelectorAll('[data-copy]').forEach(b => b.onclick = () => openLetter(b.dataset.copy, true));
   $('#letterList').querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
-    if (b.dataset.armed) { const id = b.dataset.del; const f = letters.find(x => x.id === id); letters = letters.filter(x => x.id !== id);
-      await ODB.del('orders', id).catch(() => {}); for (const d of (f && f.docs) || []) await ODB.del('docs', d.id).catch(() => {});
-      if (cur && cur.id === id) { cur = blankLetter(); writeForm(cur); render(); } renderLetters(); toast('Order and its documents deleted'); }
-    else { b.dataset.armed = '1'; b.textContent = 'Click again to delete'; setTimeout(() => { if (b.isConnected) { delete b.dataset.armed; b.textContent = 'Delete'; } }, 3000); } });
+    armDelete(b, () => deleteOrder(b.dataset.del)); });
   $('#letterList').querySelectorAll('[data-stage]').forEach(s => s.onchange = () => { const f = letters.find(x => x.id === s.dataset.stage); f.stage = s.value; ODB.put('orders', f); if (cur && cur.id === f.id) { $('#f_stage').value = s.value; cur.stage = s.value; } renderLetters(); });
 }
 const genieURL = f => '../comp-genie/?order=' + encodeURIComponent(f.id);
@@ -3356,6 +3356,19 @@ document.addEventListener('DOMContentLoaded', () => {});
   $('#f_format').addEventListener('input', () => { if (cur) cur.formNamePicked = true; });
   $('#f_reportForm').addEventListener('change', () => { if (cur) cur.formNamePicked = false; }, true);
   ['#f_reportForm', '#f_propType', '#f_inspection'].forEach(id => $(id).addEventListener('change', () => { syncFormSel(); update(); })); })();
+
+/* delete an order and its documents (All files list and the Home page) – first click arms the button, second click deletes */
+async function deleteOrder(id) {
+  const f = letters.find(x => x.id === id); letters = letters.filter(x => x.id !== id);
+  await ODB.del('orders', id).catch(() => {}); for (const d of (f && f.docs) || []) await ODB.del('docs', d.id).catch(() => {});
+  if (cur && cur.id === id) { cur = blankLetter(); writeForm(cur); render(); }
+  renderLetters(); if (typeof renderHome === 'function') renderHome(); toast((f && (f.fileNo || street(f)) ? (f.fileNo || street(f)) + ': ' : '') + 'order and its documents deleted');
+}
+function armDelete(b, run) {
+  if (b.dataset.armed) { run(); return; }
+  const was = b.textContent; b.dataset.armed = '1'; b.textContent = 'Click again to delete'; b.classList.add('armed');
+  setTimeout(() => { if (b.isConnected) { delete b.dataset.armed; b.textContent = was; b.classList.remove('armed'); } }, 3000);
+}
 
 </script>
 </body>

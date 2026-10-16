@@ -32,7 +32,7 @@ function wireAddr(p, onChange) {
 }
 function readAddr(p) { const o = {}; ADDR_KEYS.forEach(k => { const el = document.getElementById(p + k); o[k] = el ? el.value.trim() : ''; }); return o; }
 function writeAddr(p, v) { ADDR_KEYS.forEach(k => { const el = document.getElementById(p + k); if (el && v[k] !== undefined) el.value = v[k]; }); syncPick(p, 'city', cityList()); syncPick(p, 'zip', Object.keys(AA_ZIPS)); }
-function joinAddr(v) { return [v.street, v.city, [v.state, v.zip ? v.zip + (v.zip4 ? '-' + v.zip4 : '') : ''].filter(Boolean).join(' ')].filter(Boolean).join(', '); }
+function joinAddr(v) { if (!(v.street || '').trim()) return ''; return [v.street, v.city, [v.state, v.zip ? v.zip + (v.zip4 ? '-' + v.zip4 : '') : ''].filter(Boolean).join(' ')].filter(Boolean).join(', '); }
 function splitAddr(line) { /* "1729 Bath St, Santa Barbara, CA 93101-1234" → parts */
   const parts = String(line || '').split(',').map(s => s.trim()).filter(Boolean); const o = { street: parts[0] || '', city: '', state: '', zip: '', zip4: '' };
   const last = parts.length > 1 ? parts[parts.length - 1] : ''; const m = last.match(/^([A-Za-z]{2})?\s*(\d{5})?(?:-(\d{4}))?$/);

@@ -145,7 +145,7 @@ function render() {
   renderLinks();
 }
 let autoT = null;
-const hasContent = f => !!(f.fileNo || (f.address || '').trim() || (f.docs || []).length || ((f.clients || [])[0] || {}).name || ((f.clients || [])[0] || {}).company || letters.some(x => x.id === f.id));
+const hasContent = f => !!(f.fileNo || ((f.address || '').trim() && !/^[A-Z]{2}$/.test((f.address || '').trim())) || (f.docs || []).length || ((f.clients || [])[0] || {}).name || ((f.clients || [])[0] || {}).company || letters.some(x => x.id === f.id));
 const street = f => (f.address || '').split(',')[0].trim();
 const safe = s => String(s).replace(/[\\/:*?"<>|]+/g, '-').replace(/\s+/g, ' ').trim();
 const fileName = f => safe(`${f.fileNo ? f.fileNo + ' ' : ''}${street(f) || 'No address yet'} - Engagement Letter`) + '.docx';
@@ -251,10 +251,7 @@ function renderLetters() {
   $('#letterList').querySelectorAll('[data-open]').forEach(b => b.onclick = () => openLetter(b.dataset.open));
   $('#letterList').querySelectorAll('[data-copy]').forEach(b => b.onclick = () => openLetter(b.dataset.copy, true));
   $('#letterList').querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
-    if (b.dataset.armed) { const id = b.dataset.del; const f = letters.find(x => x.id === id); letters = letters.filter(x => x.id !== id);
-      await ODB.del('orders', id).catch(() => {}); for (const d of (f && f.docs) || []) await ODB.del('docs', d.id).catch(() => {});
-      if (cur && cur.id === id) { cur = blankLetter(); writeForm(cur); render(); } renderLetters(); toast('Order and its documents deleted'); }
-    else { b.dataset.armed = '1'; b.textContent = 'Click again to delete'; setTimeout(() => { if (b.isConnected) { delete b.dataset.armed; b.textContent = 'Delete'; } }, 3000); } });
+    armDelete(b, () => deleteOrder(b.dataset.del)); });
   $('#letterList').querySelectorAll('[data-stage]').forEach(s => s.onchange = () => { const f = letters.find(x => x.id === s.dataset.stage); f.stage = s.value; ODB.put('orders', f); if (cur && cur.id === f.id) { $('#f_stage').value = s.value; cur.stage = s.value; } renderLetters(); });
 }
 const genieURL = f => '../comp-genie/?order=' + encodeURIComponent(f.id);
@@ -482,3 +479,16 @@ document.addEventListener('DOMContentLoaded', () => {});
   $('#f_format').addEventListener('input', () => { if (cur) cur.formNamePicked = true; });
   $('#f_reportForm').addEventListener('change', () => { if (cur) cur.formNamePicked = false; }, true);
   ['#f_reportForm', '#f_propType', '#f_inspection'].forEach(id => $(id).addEventListener('change', () => { syncFormSel(); update(); })); })();
+
+/* delete an order and its documents (All files list and the Home page) – first click arms the button, second click deletes */
+async function deleteOrder(id) {
+  const f = letters.find(x => x.id === id); letters = letters.filter(x => x.id !== id);
+  await ODB.del('orders', id).catch(() => {}); for (const d of (f && f.docs) || []) await ODB.del('docs', d.id).catch(() => {});
+  if (cur && cur.id === id) { cur = blankLetter(); writeForm(cur); render(); }
+  renderLetters(); if (typeof renderHome === 'function') renderHome(); toast((f && (f.fileNo || street(f)) ? (f.fileNo || street(f)) + ': ' : '') + 'order and its documents deleted');
+}
+function armDelete(b, run) {
+  if (b.dataset.armed) { run(); return; }
+  const was = b.textContent; b.dataset.armed = '1'; b.textContent = 'Click again to delete'; b.classList.add('armed');
+  setTimeout(() => { if (b.isConnected) { delete b.dataset.armed; b.textContent = was; b.classList.remove('armed'); } }, 3000);
+}

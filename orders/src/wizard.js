@@ -7,10 +7,10 @@
    ===================================================================== */
 const WZ = { step: 1 };
 let HOME_VIEW = 'recent';
-const realOrder = o => !!(o.fileNo || street(o) || (o.docs || []).length || ((o.clients || [])[0] || {}).company || ((o.clients || [])[0] || {}).name || o.borrower);
+const realOrder = o => !!(o.fileNo || (street(o) && !/^[A-Z]{2}$/.test(street(o))) || (o.docs || []).length || ((o.clients || [])[0] || {}).company || ((o.clients || [])[0] || {}).name || o.borrower);
 const clientOf = o => ((o.clients || [])[0] || {}).company || ((o.clients || [])[0] || {}).name || '';
 function homeRows(list, empty) {
-  return list.length ? `<div class="tableWrap"><table class="hmtable"><thead><tr><th>File #</th><th>Address</th><th>Borrower</th><th>Client</th><th>Status</th><th>Due</th></tr></thead><tbody>${list.map(o => `<tr data-hopen="${o.id}" tabindex="0"><td class="num"><b>${h(o.fileNo || '—')}</b></td><td>${h(street(o) || '(no address yet)')}</td><td>${h(o.borrower || '')}</td><td>${h(clientOf(o))}</td><td><span class="pill">${h(o.stage || 'New')}</span></td><td class="num">${h(o.dueDate ? longDate(o.dueDate) : '')}</td></tr>`).join('')}</tbody></table></div>`
+  return list.length ? `<div class="tableWrap"><table class="hmtable"><thead><tr><th>File #</th><th>Address</th><th>Borrower</th><th>Client</th><th>Status</th><th>Due</th><th></th></tr></thead><tbody>${list.map(o => `<tr data-hopen="${o.id}" tabindex="0"><td class="num"><b>${h(o.fileNo || '—')}</b></td><td>${h(street(o) || '(no address yet)')}</td><td>${h(o.borrower || '')}</td><td>${h(clientOf(o))}</td><td><span class="pill">${h(o.stage || 'New')}</span></td><td class="num">${h(o.dueDate ? longDate(o.dueDate) : '')}</td><td class="acts"><button type="button" class="btn ghost small danger" data-hdel="${o.id}" aria-label="Delete ${h(o.fileNo || street(o) || 'this order')}">Delete</button></td></tr>`).join('')}</tbody></table></div>`
     : `<p class="help">${empty}</p>`;
 }
 function renderHome() {
@@ -26,7 +26,8 @@ function renderHome() {
   $('#hmNew').onclick = () => startNewOrder();
   $('#hmOpen').onclick = () => { HOME_VIEW = 'recent'; renderHome(); };
   $('#hmFind').onclick = () => { HOME_VIEW = 'find'; renderHome(); setTimeout(() => $('#hfFile') && $('#hfFile').focus(), 30); };
-  const panel = $('#hmPanel'); const wire = () => panel.querySelectorAll('[data-hopen]').forEach(r => { r.onclick = () => openLetter(r.dataset.hopen); r.onkeydown = e => { if (e.key === 'Enter') openLetter(r.dataset.hopen); }; });
+  const panel = $('#hmPanel'); const wire = () => { panel.querySelectorAll('[data-hopen]').forEach(r => { r.onclick = () => openLetter(r.dataset.hopen); r.onkeydown = e => { if (e.key === 'Enter' && e.target === r) openLetter(r.dataset.hopen); }; });
+    panel.querySelectorAll('[data-hdel]').forEach(b => b.onclick = e => { e.stopPropagation(); armDelete(b, () => deleteOrder(b.dataset.hdel)); }); };
   if (HOME_VIEW === 'recent') {
     const recent = all.slice().sort((a, b) => String(b.saved || b.created || '').localeCompare(String(a.saved || a.created || ''))).slice(0, 10);
     panel.innerHTML = `<h3>Last 10 orders</h3><p class="help">Most recently worked on first. Click a row to open it.</p>${homeRows(recent, 'No orders yet. Click <b>New order</b> to start one.')}`;
