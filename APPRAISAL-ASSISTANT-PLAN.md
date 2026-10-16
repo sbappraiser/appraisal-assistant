@@ -174,12 +174,12 @@ DOM row; concessions incl. seller-paid buyer-broker %. **Usable lot area has no 
 assistant field shown under Site Size; exported into Site Characteristics comment ("Usable approx
 1.1 ac of 2.04 ac; sloping"); custom grid row if SFREP allows.
 **Her SFREP placement (Oct 15 2026 screenshot):** Site section → "Add Other" row at the end of Site (after
-View) labeled exactly "Lot Utility/ Usable lot area"; subject value "0.16 ac", comp value "0.25" (acres), adjustment in the
+View) labeled exactly "Usable Lot Area/Utility"; subject value "0.16 ac", comp value "0.25" (acres), adjustment in the
 comp's adjustment column (e.g. $(90,000)). Export usable acres + the site adjustment to this row; test whether the MISMO
 import can create an "Other" site row with that label, else she adds the row in SFREP and the assistant gives her the values.
 **Found in Fannie's D-1 sample (SF1_Appraisal_v1.4.xml):** an "Add Other" grid row = COMPARABLE_ADJUSTMENT with
 ComparableAdjustmentType SalesComparableAdditionalAdjustableComparisonItem, AdditionalComparisonLineItemIdentifier = row label
-(e.g. "Below Grade Exterior Access" → ours "Lot Utility/ Usable lot area"), AdditionalComparisonLineItemDescription = value
+(e.g. "Below Grade Exterior Access" → ours "Usable Lot Area/Utility"), AdditionalComparisonLineItemDescription = value
 ("Walk Out" → "0.16 ac"), ComparableAdjustmentAmount on comps (subject has no amount). Other adjustment types in the sample:
 SaleDate, ContractDate, SalesConcessions, SiteSize, SiteInfluence, Topography, NeighborhoodName, YearBuilt, OverallConditionRating,
 LivingUnitBedroomCount/BathroomCount, LivingUnitStandardFinishedAreaAboveGrade/BelowGrade, LivingUnitUnfinishedAreaBelowGrade,
