@@ -213,7 +213,7 @@ function mkCommentDraft(R) {
 }
 const MK_MIN_SALES = 12;   // fewer competing sales than this: the default “not sufficient” comment and the broader market
 function mkZKey() { const f = cur ? readForm() : {}; const zip = String(f.zip || '').match(/\d{5}/); const by = M().zillowBy || (zip || /Unincorporated/.test(f.jurisdiction || '') ? 'zip' : 'city'); return by === 'zip' && zip ? 'zip:' + zip[0] : mkCity(); }
-function mkCity() { const a = String((cur && cur.address) || '').split(',').map(x => x.trim()); return a[1] || ''; }
+function mkCity() { const f = cur ? readForm() : {}; if (f.city) return f.city; const a = String((cur && cur.address) || '').split(',').map(x => x.trim()); return a[1] && !/^[A-Z]{2}(\s+\d{5})?/.test(a[1]) ? a[1] : ''; }
 
 /* ---------- 4. graphs (PNG for the report: white page, one hue) ---------- */
 const GC = { ink: '#1c2631', muted: '#5b6876', grid: '#e4e9ee', dot: '#8db8d2', line: '#1f4f6e', bar: '#2c5a78' };
@@ -293,8 +293,24 @@ async function mkAddStats(file) {
     if (/zillow/i.test(file.name)) { await mkAddZillow(file); return; }
     toast((e.message || 'Could not read that PDF') + ' This box is for the monthly statistics report from SBAOR. A Zillow page goes under Zillow below.', 7000); }
 }
-async function mkAddZillow(file) {   // kept with the order's documents (workfile / market exhibit); she types the figures
-  await addDocs([file], 'zillow'); mkRender(); toast('Zillow page kept with this order’s documents. Type its figures in the boxes under Zillow.', 6000);
+async function mkAddZillow(file) {   // kept with the order's documents; a PDF saved from Chrome (Print › Save as PDF) has text, so its figures fill in
+  await addDocs([file], 'zillow'); let got = {};
+  try { if (/\.pdf$/i.test(file.name)) got = parseZillowText((await G.pdfLines(file)).map(l => typeof l === 'string' ? l : (l.text || l.s || (l.items || []).map(t => t.s).join(' '))).join(' ')); } catch (e) { console.warn('zillow text', e); }
+  const zk = mkZKey(); const n = Object.keys(got).length;
+  if (n && zk) { const zz = MK.zillow[zk] = MK.zillow[zk] || {}; Object.entries(got).forEach(([k, v]) => { zz[k] = v; }); await mkSave('zillow'); const m = M(); if (!m.commentEdited) m.comment = mkCommentDraft(mkLast || mkCompute()); mkChanged(); }
+  mkRender(); toast(n ? `Zillow page kept, and ${n} figure${n > 1 ? 's' : ''} filled in from it – check them.` : 'Zillow page kept with this order. It has no readable text (a screenshot), so type its figures – or save the page from Chrome with Print › Save as PDF and drop that.', 8000);
+}
+function parseZillowText(t) {   // Zillow "Housing Market Overview" wording
+  t = String(t || '').replace(/\s+/g, ' '); const out = {}; const money = x => Number(String(x).replace(/[$,]/g, ''));
+  const date = re => { const m = t.match(re); if (!m) return ''; const d = new Date(m[1]); return isNaN(d) ? '' : d.toISOString().slice(0, 10); };
+  let m;
+  if ((m = t.match(/(?:average|typical)[^$]{0,60}?home value[^$]{0,40}\$\s?([\d,]{5,})/i)) || (m = t.match(/home value[^$]{0,40}\$\s?([\d,]{5,})/i))) out.value = money(m[1]);
+  if ((m = t.match(/([+-]?\d+(?:\.\d+)?)\s?%\s*(?:1-year change|1-yr|over the (?:past|last) year)/i)) || (m = t.match(/(up|down)\s+(\d+(?:\.\d+)?)%\s+over the (?:past|last) year/i))) out.change = m.length > 2 && /down/i.test(m[1]) ? -Number(m[2]) : Number(m[m.length > 2 && m[2] ? 2 : 1]);
+  if ((m = t.match(/Median Sale Price:?\s*\$\s?([\d,]+)/i))) out.medSale = money(m[1]);
+  if ((m = t.match(/Median Sale to List Ratio:?\s*([01]?\.\d+)/i))) out.stl = Number(m[1]);
+  if ((m = t.match(/Median Days to Pending:?\s*(\d+)/i))) out.dtp = Number(m[1]);
+  const asOf = date(/Median Sale Price:?\s*\$[\d,]+\s*\(([A-Z][a-z]+ \d{1,2}, \d{4})\)/) || date(/\(([A-Z][a-z]+ \d{1,2}, \d{4})\)/); if (asOf && Object.keys(out).length) out.asOf = asOf;
+  return out;
 }
 function mkRender(redraft) {
   const box = $('#mkBody'); if (!box || !cur) return; const m = M(); const RA = mkCompute(); const R = MI().rows.length ? mkCompute(MI()) : RA; mkLast = R;
@@ -361,7 +377,7 @@ function mkRender(redraft) {
       <label class="btn" for="mkStatsFile">Choose PDF<input type="file" id="mkStatsFile" accept=".pdf,application/pdf"></label></div>
     ${st ? mkStatsTable(st[mkSeg()], st.ym) : ''}${(() => { const segW = mkSeg() === 'condo' ? /condo/i : /^(?!.*condo)/i; const w = st && st.warn ? st.warn.filter(x => segW.test(x)) : []; return w.length ? `<p class="help warnTxt">${w.map(h).join(' ')} This month's own totals from its Summary of Stats page were used instead.</p>` : ''; })()}
     <h4>Zillow – ${h(zKey.startsWith('zip:') ? 'ZIP ' + zKey.slice(4) : (city || 'the subject’s city'))}</h4><div class="zby"><label class="check"><input type="radio" name="zby" value="zip" ${zKey.startsWith('zip:') ? 'checked' : ''} ${zipNow ? '' : 'disabled'}>Subject's ZIP code${zipNow ? ' (' + zipNow + ')' : ''} – best for unincorporated areas</label><label class="check"><input type="radio" name="zby" value="city" ${zKey.startsWith('zip:') ? '' : 'checked'}>Zillow's city page for the mailing city${city ? ' (' + h(city) + ')' : ''}</label></div>${/Unincorporated/.test(readForm().jurisdiction || '') ? '<p class="help">This property is in ' + h(readForm().jurisdiction) + ' (from the County permit history), so the mailing city is not its city – use the ZIP code.</p>' : ''}<p class="help">Type the figures from Zillow's page for this ZIP code or city. They are kept for it and used for every order there. In the comment, ZIP-code data is described as supporting context.</p>
-    <div class="drop" id="mkZilDrop"><div><span class="eyebrow">Zillow page (PDF or picture)</span><p class="help">Keep the Zillow page with this order (workfile, or a market exhibit). On zillow.com search the ZIP code (for example 93111), choose Single family and 5-yr, then save the page. A screenshot PDF has no readable text, so type its figures above.${(cur.docs || []).filter(d => d.type === 'zillow').map(d => `<br>Kept: <button type="button" class="lnk" data-zopen="${d.id}">${h(d.name)}</button>`).join('')}</p></div>
+    <div class="drop" id="mkZilDrop"><div><span class="eyebrow">Zillow page (PDF or picture)</span><p class="help">Keep the Zillow page with this order (workfile, or a market exhibit). On zillow.com search the ZIP code (for example 93111), choose Single family and 5-yr, then save the page. To have the figures fill in, save the page from Chrome with <b>Print › Save as PDF</b> (a Snagit or screenshot PDF is only a picture, so type its figures instead).${(cur.docs || []).filter(d => d.type === 'zillow').map(d => `<br>Kept: <button type="button" class="lnk" data-zopen="${d.id}">${h(d.name)}</button>`).join('')}</p></div>
       <label class="btn" for="mkZilFile">Choose file<input type="file" id="mkZilFile" accept=".pdf,image/*"></label></div>
     <div class="grid3 zil"><label>As of<input type="date" data-z="asOf" value="${h(z.asOf || '')}"></label><label>Typical home value ($)<input data-z="value" inputmode="numeric" value="${h(z.value || '')}"></label><label>1-year change (%)<input data-z="change" inputmode="decimal" value="${h(z.change ?? '')}"></label>
       <label>Median sale price ($)<input data-z="medSale" inputmode="numeric" value="${h(z.medSale || '')}"></label><label>Sale-to-list ratio<input data-z="stl" inputmode="decimal" value="${h(z.stl || '')}"></label><label>Median days to pending<input data-z="dtp" inputmode="numeric" value="${h(z.dtp || '')}"></label></div>
