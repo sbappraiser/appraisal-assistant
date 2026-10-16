@@ -27,6 +27,7 @@
 
 ## 2026-10-13 – Jennifer's corrections (Montecito)
 - Oct 15 2026: she test-imported an inspection-app export into SFREP – everything landed in the right fields, photos included. The grid (adjustments) is not built/tested yet.
+- SFREP template (her idea, Oct 15 2026): "Appraisal Assistant SFR" with the Add Other row(s) already in it, e.g. "Lot Utility/ Usable lot area". Export must use her exact row names. Test: does import fill the template's row or add a second one (try "Overwrite populated fields" off and on).
 - SFREP: usable area goes in the Site section "Add Other" row "Lot Utility/ Usable lot area" (subject ac, comp ac, adjustment) – see PLAN §8.
 - She adjusts land on USABLE acres only (~$1.5M per usable acre in Montecito), never on total site.
 - View scale (her definition): Adverse (freeway, gas station – could devalue) | Neutral (garden setting, wooded, residential –
