@@ -32,7 +32,7 @@ header.top { border-top: 5px solid var(--accent-fill);  display: flex; flex-wrap
 .brand { display: grid; gap: 0; margin-right: auto; }
 .brand h1 { font: 600 26px/1.1 var(--display); margin: 0; letter-spacing: -.01em; text-wrap: balance; }
 .brand small { color: var(--muted); font-size: 13px; }
-nav.tabs { display: flex; gap: 4px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 4px; }
+nav.tabs { max-width: 100%; overflow-x: auto; display: flex; gap: 4px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 4px; }
 nav.tabs button { border: 0; background: transparent; color: var(--muted); font: 600 14px var(--ui); padding: 8px 14px; border-radius: 7px; cursor: pointer; }
 nav.tabs button[aria-selected="true"] { background: var(--accent-soft); color: var(--ink); }
 .toolrow { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -149,7 +149,15 @@ button.homecard:hover { border-color: var(--accent); } .hmrow { display: grid; g
 #orderSummary { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; display: grid; gap: 10px; } #orderSummary h3 { margin: 0; font: 600 17px var(--ui); } ul.toread { margin: 0; padding-left: 18px; } ul.toread li { margin: 6px 0; }
 a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fatal { background: var(--warn-bg); color: var(--warn); padding: 14px; margin: 0; font-weight: 600; }
 .ck { display: inline-grid; place-items: center; width: 1.25em; height: 1.25em; border-radius: 50%; background: var(--go); color: #fff; font-weight: 900; font-size: .9em; line-height: 1; vertical-align: -.15em; } .facts tr.warnTxt th { color: var(--warn); } .missing.ok::before, .pill.yes::before { content: '✓'; display: inline-grid; place-items: center; width: 1.2em; height: 1.2em; margin-right: 4px; border-radius: 50%; background: var(--go); color: #fff; font-weight: 900; font-size: .85em; }
-.waiver { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; } .waiver label.check { display: flex; gap: 6px; align-items: center; font-weight: 600; } #wvUntilL { display: flex; gap: 6px; align-items: center; } #wvUntilL input { width: auto; }
+.hmtiles { display: flex; flex-wrap: wrap; gap: 12px; margin: 6px 0 18px; }
+.hmtile { display: flex; align-items: center; gap: 12px; width: 250px; max-width: 100%; text-align: left; background: var(--panel); border: 1.5px solid var(--line); border-radius: 12px; padding: 12px 14px; font: inherit; color: var(--ink); cursor: pointer; }
+.hmtile b { display: block; font: 700 16px var(--ui); } .hmtile small { display: block; color: var(--muted); font-size: 13px; }
+.hmtile .hmicon { flex: none; width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; font: 700 20px/1 var(--ui); background: var(--accent-soft); color: var(--accent); }
+.hmtile:hover { border-color: #000; } .hmtile.on { border-color: #000; box-shadow: inset 0 -4px 0 var(--accent-fill); }
+.hmtile.primary { background: var(--accent-fill); border-color: #000; color: #000; } .hmtile.primary small { color: #000; opacity: .8; } .hmtile.primary .hmicon { background: #000; color: var(--accent-fill); }
+.hmpanel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; } .hmpanel h3 { margin: 0; font: 600 18px var(--display); }
+.hmtable tbody tr { cursor: pointer; } .hmtable tbody tr:hover, .hmtable tbody tr:focus { background: var(--accent-soft); outline: none; }
+.hmfind { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) auto; gap: 10px; align-items: end; margin-top: 10px; } @media (max-width: 760px) { .hmfind { grid-template-columns: minmax(0, 1fr); } }
 </style>
 </head>
 <body>
@@ -275,7 +283,6 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
         <div class="checks"><label class="check"><input type="checkbox" id="f_apSales">Sales Comparison</label><label class="check"><input type="checkbox" id="f_apCost">Cost (as applicable)</label><label class="check"><input type="checkbox" id="f_apIncome">Income (as applicable)</label></div></div>
       <label>Report form<select id="f_reportForm"><option value="uad36">UAD 3.6 – new URAR (Traditional)</option><option value="uad26">UAD 2.6 – Form 1004 / 1073 / 1025 (legacy)</option><option value="gpar">GPAR (non-lender)</option><option value="other">Other / narrative</option></select></label>
       <p class="help" id="formNote"></p>
-      <div class="waiver" id="waiverBox"><label class="check"><input type="checkbox" id="wvOn"> <span id="wvLabel">This client has a UAD 3.6 waiver (still uses UAD 2.6)</span></label><label id="wvUntilL">until<input type="date" id="wvUntil"></label></div>
       <label>Report format <span class="opt">blank = the form for this property type</span><input id="f_format"></label>
       <div class="grid2">
         <label>Listing / contract status<select id="f_listing"><option value="omit">Leave this section out</option><option value="notListed">Not listed for sale</option><option value="listed">Currently listed</option><option value="contract">Under contract</option></select></label>
@@ -338,7 +345,7 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
 <section class="panel" id="panel-saved" hidden>
   <div class="listHead"><div><h2>Orders</h2><p class="help" id="letterCount"></p></div>
     <div class="toolrow"><button type="button" class="btn primary" id="btnNew2">New order</button><button type="button" class="btn ghost" id="btnIpad" title="Saves Active Orders.json – put it in OneDrive or iCloud Drive, then open it in the inspection app on the iPad">Send active orders to the iPad</button></div></div>
-  <div class="listHead"><div class="seg2"><button type="button" data-filter="active">Active</button><button type="button" data-filter="done">Delivered and closed</button><button type="button" data-filter="all">All</button></div><input id="letterSearch" type="search" placeholder="Search file #, street, client, APN, owner, notes"></div>
+  <div class="listHead"><div class="seg2"><button type="button" data-filter="active">Active</button><button type="button" data-filter="done">Delivered and closed</button><button type="button" data-filter="all">All</button></div><input id="letterSearch" type="search" placeholder="Search file #, street, borrower, client, APN, owner, notes"></div>
   <div class="tableWrap"><table><thead><tr><th>File #</th><th>Property</th><th>Client</th><th>Type</th><th>Order status</th><th>Due</th><th>Inspection</th><th>AI</th><th>My letter</th><th>Files</th><th></th></tr></thead><tbody id="letterList"></tbody></table></div>
 </section>
 <section class="panel" id="panel-market" hidden>
@@ -356,12 +363,10 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
       <li><b>2 · Documents:</b> drop each file in its box – client’s engagement letter, CRS report, legal description, MLS listing with history, purchase contract with counters and addenda (as many PDFs as you have), preliminary title report, and anything else under <b>Other documents</b>. Each file is read as you add it, and checked against the property address: a file for another property is marked ⚠ and nothing is filled in from it.</li>
       <li><b>3 · Check:</b> see what was filled in. The client’s letter sets the client, loan number, borrower, due date, fee, report form, rent schedule, and <b>AI use</b>: a ban (for example “no AI without prior authorization”) sets No AI; confidentiality wording sets Yes – only with confidential information removed; nothing sets Yes. You can change any of it on the order.</li>
       <li>Click <b>Read</b> next to the prelim or contract to summarize it, then <b>Open the order</b> – or, if you are writing the letter, <b>Next: write my engagement letter</b>.</li>
-      <li>The order saves by itself. To find it again: <b>Home → Open an order</b>, or <b>All files</b>.</li></ol></details>
-    <details><summary>Report form, and clients with a UAD 3.6 waiver</summary><ol>
-      <li>Each order has a <b>Report form</b> (in Scope and report): UAD 3.6 – new URAR (Traditional), UAD 2.6 legacy, GPAR or Other. Lender and AMC orders start as UAD 3.6; a client letter that names a 1004 / 1073 / 1025 sets UAD 2.6.</li>
-      <li>If a client has a waiver to keep using UAD 2.6: open one of their orders, tick <b>[client] has a UAD 3.6 waiver</b> under Report form, and type the <b>until</b> date. It is saved on the client, so every new order for that client (or that AMC) starts as UAD 2.6.</li>
-      <li>When an order's due date is after the waiver date, the order goes back to UAD 3.6 and a red note says the waiver ended. If the client extends it, change the until date.</li>
-      <li>The <b>Clients</b> tab shows each waiver and its date. Untick the box to remove it.</li></ol></details>
+      <li>The order saves by itself. To find it again, go to <b>Home</b>: <b>Open an order</b> lists your last 10 orders (click a row to open it); <b>All files</b> lets you search by file number, address and/or borrower – fill in any of the boxes and click <b>Search</b> (leave them empty to list every order).</li></ol></details>
+    <details><summary>Report form</summary><ol>
+      <li>You choose the form: in <b>New order</b> step 1, click <b>UAD 3.6 (Traditional)</b>, <b>UAD 2.6</b>, <b>GPAR</b> or <b>Other</b>. You can change it later under <b>Report form</b> in Scope and report on the order page.</li>
+      <li>Your choice is kept – the assistant does not change it, even if the client's letter names a different form. If you have not chosen, a letter that names a 1004 / 1073 / 1025 sets UAD 2.6, and "Traditional" or "UAD 3.6" sets UAD 3.6.</li></ol></details>
     <details><summary>Documents: upload once, kinds, search, sticky notes</summary><ol>
       <li>Drop every file for the order into the <b>Documents</b> box, or click <b>Choose files</b>. Each one is sorted by kind; change the kind with its drop-down if it guessed wrong.</li>
       <li>Click a file name to open it. Click <b>Read</b> to open the reader (next section). <b>Remove</b> takes it out of the order.</li>
@@ -427,7 +432,7 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
 </section>
 <section class="panel" id="panel-contacts" hidden>
   <div class="listHead"><div><h2>Clients</h2><p class="help" id="contactCount"></p></div><input id="contactSearch" type="search" placeholder="Search name, firm, email"></div>
-  <div class="tableWrap"><table><thead><tr><th>Name</th><th>Firm</th><th>Address</th><th>Phone</th><th>Email</th><th>Letters</th><th>Last letter</th><th>UAD 3.6 waiver</th><th></th></tr></thead><tbody id="contactList"></tbody></table></div>
+  <div class="tableWrap"><table><thead><tr><th>Name</th><th>Firm</th><th>Address</th><th>Phone</th><th>Email</th><th>Letters</th><th>Last letter</th><th></th></tr></thead><tbody id="contactList"></tbody></table></div>
 </section>
 <section class="panel" id="panel-wording" hidden>
   <div class="wording">
@@ -451,7 +456,7 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
 </div>
 <div id="toast" role="status" hidden></div>
 <script>
-const BUILD='o1-1016-0047';
+const BUILD='o1-1016-0059';
 const G = (() => {
 /* ---------------- small helpers ---------------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -1774,7 +1779,7 @@ function applyClientLetter(F) { // fills only empty boxes (type, form, client al
   const did = []; const set = (id, v, label, always) => { const el = $('#f_' + id); if (!el || v == null || v === '') return; if (el.type === 'checkbox') { if (el.checked !== !!v) { el.checked = !!v; did.push([label, v ? 'Yes' : 'No']); } return; } if (!always && el.value.trim()) return; el.value = v; did.push([label, v]); };
   const p = (F.purpose || '').toLowerCase(); const type = /purch/.test(p) ? 'uadPurchase' : /refi|cash.?out|rate|term/.test(p) ? 'uadRefi' : /equity|heloc|2nd|second/.test(p) ? 'uadHeloc' : /constr/.test(p) ? 'uadConstruction' : p ? 'uadOther' : '';
   if (type) { $('#f_type').value = type; applyTypeDefaults(); did.push(['Assignment type', TYPES[type].label]); }
-  if (F.form) { const v = /3\.6|new urar|redesign/i.test(F.form) ? 'uad36' : /1004|1073|1025|2055|1075|urar/i.test(F.form) ? 'uad26' : /traditional/i.test(F.form) ? 'uad36' : ''; if (v) { $('#f_reportForm').value = v; if (cur) cur.formPicked = true; did.push(['Report form', F.form]); } }
+  if (F.form) { const v = /3\.6|new urar|redesign/i.test(F.form) ? 'uad36' : /1004|1073|1025|2055|1075|urar/i.test(F.form) ? 'uad26' : /traditional/i.test(F.form) ? 'uad36' : ''; if (v && !(cur && cur.formPicked)) { $('#f_reportForm').value = v; did.push(['Report form', F.form]); } }
   const client = F.clientAs || F.client; if (client) { const c0 = $('#c0_company'); if (!c0.value.trim() || c0.value.trim() === (F.client || '')) { c0.value = client; did.push(['Client', client]); } }
   const amc = [F.client, F.lender].find(x => x && /appraisal management|\bAMC\b|valuation (services|management)|lender services|appraisal (nation|link|port)|solidifi|class valuation|clear capital|servicelink|corelogic|reggora|nationwide appraisal/i.test(x));
   if (amc) { set('amcUsed', true, 'Ordered through an AMC'); set('amcCo', amc, 'AMC'); }
@@ -2653,20 +2658,43 @@ function cleanPrelimValue(v) { // any prelim entry → her short label; anything
               3) what was read and filled in, alerts (AI use, wrong address), then the letter or the order.
    ===================================================================== */
 const WZ = { step: 1 };
+let HOME_VIEW = 'recent';
+const realOrder = o => !!(o.fileNo || street(o) || (o.docs || []).length || ((o.clients || [])[0] || {}).company || ((o.clients || [])[0] || {}).name || o.borrower);
+const clientOf = o => ((o.clients || [])[0] || {}).company || ((o.clients || [])[0] || {}).name || '';
+function homeRows(list, empty) {
+  return list.length ? `<div class="tableWrap"><table class="hmtable"><thead><tr><th>File #</th><th>Address</th><th>Borrower</th><th>Client</th><th>Status</th><th>Due</th></tr></thead><tbody>${list.map(o => `<tr data-hopen="${o.id}" tabindex="0"><td class="num"><b>${h(o.fileNo || '—')}</b></td><td>${h(street(o) || '(no address yet)')}</td><td>${h(o.borrower || '')}</td><td>${h(clientOf(o))}</td><td><span class="pill">${h(o.stage || 'New')}</span></td><td class="num">${h(o.dueDate ? longDate(o.dueDate) : '')}</td></tr>`).join('')}</tbody></table></div>`
+    : `<p class="help">${empty}</p>`;
+}
 function renderHome() {
   const box = $('#homeBody'); if (!box) return;
-  const act = letters.filter(o => !DONE_STAGES.includes(o.stage || 'New')).sort((a, b) => String(b.saved || b.created || '').localeCompare(String(a.saved || a.created || ''))).slice(0, 8);
-  box.innerHTML = `<div class="homegrid">
-    <button type="button" class="homecard primary" id="hmNew"><b>New order</b><span>Start an order: upload its documents once and let the assistant fill in what it can.</span></button>
-    <div class="homecard"><b>Open an order</b><input id="hmSearch" type="search" placeholder="File number, street, client…"><div id="hmList">${act.map(o => `<button type="button" class="hmrow" data-hopen="${o.id}"><span>${h(o.fileNo || '—')}</span><span>${h(street(o) || '(no address)')}</span><small>${h(o.stage || 'New')}</small></button>`).join('') || '<p class="help">No active orders yet.</p>'}</div></div>
-    <button type="button" class="homecard" id="hmFiles"><b>All files</b><span>The file list: every order, with search and status.</span></button>
-  </div>`;
+  const all = letters.filter(realOrder);
+  const tile = (id, icon, title, sub, on) => `<button type="button" class="hmtile${id === 'hmNew' ? ' primary' : ''}${on ? ' on' : ''}" id="${id}"><span class="hmicon" aria-hidden="true">${icon}</span><span><b>${title}</b><small>${sub}</small></span></button>`;
+  box.innerHTML = `<div class="hmtiles">
+      ${tile('hmNew', '+', 'New order', 'Upload documents, fill in', false)}
+      ${tile('hmOpen', '↻', 'Open an order', 'Your last 10 orders', HOME_VIEW === 'recent')}
+      ${tile('hmFind', '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 21 21"/></svg>', 'All files', 'Search every order', HOME_VIEW === 'find')}
+    </div>
+    <div class="hmpanel" id="hmPanel"></div>`;
   $('#hmNew').onclick = () => startNewOrder();
-  $('#hmFiles').onclick = () => showTab('saved');
-  box.querySelectorAll('[data-hopen]').forEach(b => b.onclick = () => openLetter(b.dataset.hopen));
-  $('#hmSearch').oninput = e => { const q = e.target.value.toLowerCase().trim(); const hits = letters.filter(o => !q || [o.fileNo, o.address, o.apn, ((o.clients || [])[0] || {}).name, ((o.clients || [])[0] || {}).company, o.borrower].join(' ').toLowerCase().includes(q)).slice(0, 12);
-    $('#hmList').innerHTML = hits.map(o => `<button type="button" class="hmrow" data-hopen="${o.id}"><span>${h(o.fileNo || '—')}</span><span>${h(street(o) || '(no address)')}</span><small>${h(o.stage || 'New')}</small></button>`).join('') || '<p class="help">No order matches.</p>';
-    $('#hmList').querySelectorAll('[data-hopen]').forEach(b => b.onclick = () => openLetter(b.dataset.hopen)); };
+  $('#hmOpen').onclick = () => { HOME_VIEW = 'recent'; renderHome(); };
+  $('#hmFind').onclick = () => { HOME_VIEW = 'find'; renderHome(); setTimeout(() => $('#hfFile') && $('#hfFile').focus(), 30); };
+  const panel = $('#hmPanel'); const wire = () => panel.querySelectorAll('[data-hopen]').forEach(r => { r.onclick = () => openLetter(r.dataset.hopen); r.onkeydown = e => { if (e.key === 'Enter') openLetter(r.dataset.hopen); }; });
+  if (HOME_VIEW === 'recent') {
+    const recent = all.slice().sort((a, b) => String(b.saved || b.created || '').localeCompare(String(a.saved || a.created || ''))).slice(0, 10);
+    panel.innerHTML = `<h3>Last 10 orders</h3><p class="help">Most recently worked on first. Click a row to open it.</p>${homeRows(recent, 'No orders yet. Click <b>New order</b> to start one.')}`;
+  } else {
+    panel.innerHTML = `<h3>Search all files</h3>
+      <form class="hmfind" id="hmFindForm"><label>File number<input id="hfFile" type="search" placeholder="e.g. Bath1729"></label><label>Address<input id="hfAddr" type="search" placeholder="e.g. 1729 Bath"></label><label>Borrower<input id="hfBorr" type="search" placeholder="last name"></label><button type="submit" class="btn primary">Search</button></form>
+      <p class="help">Fill in one, two or all three boxes – an order has to match every box you fill. Leave them all empty and click Search to list every order. Delivered and closed orders are included.</p><div id="hfOut"></div>`;
+    const go = e => { if (e) e.preventDefault();
+      const norm = v => String(v || '').toLowerCase().replace(/[.,#]/g, ' ').replace(/\s+/g, ' ').trim();
+      const qf = norm($('#hfFile').value), qa = norm($('#hfAddr').value), qb = norm($('#hfBorr').value);
+      const hits = all.filter(o => (!qf || norm(o.fileNo).replace(/\s/g, '').includes(qf.replace(/\s/g, ''))) && (!qa || norm(o.address).includes(qa)) && (!qb || norm(o.borrower).includes(qb)))
+        .sort((a, b) => String(b.orderDate || b.created || '').localeCompare(String(a.orderDate || a.created || '')));
+      $('#hfOut').innerHTML = `<p class="help"><b>${hits.length}</b> order${hits.length === 1 ? '' : 's'} found.</p>` + homeRows(hits, 'No order matches. Check the spelling, or fill in fewer boxes.'); wire(); };
+    $('#hmFindForm').onsubmit = go;
+  }
+  wire();
 }
 function startNewOrder() {
   if (cur && hasContent(readForm())) saveLetter(true);
@@ -2691,13 +2719,14 @@ function renderWizard() {
       <p class="help" id="wzFileNote"></p>
       <p class="help">The address is used to check that every document you upload is for this property. If you are not sure of it, leave it blank: the CRS report fills it in.</p>
       ${q('letter', 'Engagement letter', [['client', 'The client sent one (lender / AMC order)'], ['mine', 'I will write one']])}
+      ${q('form', 'Report form', [['uad36', 'UAD 3.6 (Traditional)'], ['uad26', 'UAD 2.6'], ['gpar', 'GPAR'], ['other', 'Other']])}
       ${q('purchase', 'Is this a purchase?', [['yes', 'Yes'], ['no', 'No']])}
       ${q('listed', 'Is the property listed now, or was it in the last 12 months?', [['yes', 'Yes'], ['no', 'No'], ['unsure', 'Not sure']])}
       <div class="row"><button type="button" class="btn primary" id="wzNext1">Next: documents →</button><button type="button" class="btn ghost" id="wzCancel">Cancel</button></div></section>`;
     const sync = () => { $('#f_fileNo').value = $('#wzFile').value; $('#f_address').value = $('#wzAddr').value; update(); };
     $('#wzFile').oninput = () => { w.fileTyped = true; sync(); };
     $('#wzAddr').oninput = () => { if (!w.fileTyped || !$('#wzFile').value.trim()) { const sug = suggestFileNo($('#wzAddr').value); $('#wzFile').value = sug; $('#wzFileNote').textContent = sug ? 'Made from your rule: street letters + house number' + (/-[2-9]\d*$/.test(sug) ? ' – you have appraised this property before in the assistant, so this is report ' + sug.split('-').pop() : '') + '. Change it if needed.' : ''; } sync(); };
-    box.querySelectorAll('[data-wq]').forEach(b => b.onclick = () => { w[b.dataset.wq] = b.dataset.v; renderWizard(); });
+    box.querySelectorAll('[data-wq]').forEach(b => b.onclick = () => { w[b.dataset.wq] = b.dataset.v; if (b.dataset.wq === 'form') { $('#f_reportForm').value = b.dataset.v; cur.formPicked = true; syncVisibility(); } renderWizard(); });
     $('#wzCancel').onclick = () => { showTab('home'); renderHome(); };
     $('#wzNext1').onclick = () => { if (!w.letter) { toast('Choose who writes the engagement letter'); return; }
       if (w.letter === 'client') { $('#f_status').value = 'Client letter'; } else { $('#f_status').value = 'Drafted'; cur.letterMode = 'mine'; }
@@ -2863,16 +2892,8 @@ function syncVisibility() {
   const ai = (document.querySelector('input[name=aiUse]:checked') || {}).value;
   $('#aiNote').textContent = ai === 'Yes' ? 'AI may be used. The AI-use paragraph is in the letter.' : ai === 'Redacted' ? 'AI only on documents with names and personal information removed. The AI-use paragraph is in the letter.' : ai === 'No' ? 'No AI on this job. The AI-use paragraph is left out of the letter.' : 'Not chosen yet. The letter includes the AI-use paragraph until you choose No AI.';
   if (!$('#f_reportForm').value) $('#f_reportForm').value = defaultForm($('#f_type').value, $('#f_propType').value);
-  const wv = waiverFor(); const wvOk = wv && waiverActive(wv);
-  if (wv && !(cur && cur.formPicked)) { if (wvOk && $('#f_reportForm').value === 'uad36') $('#f_reportForm').value = 'uad26'; else if (!wvOk && $('#f_reportForm').value === 'uad26') $('#f_reportForm').value = 'uad36'; }
-  const who = (wv && (wv.company || wv.name)) || clientNames()[0] || 'this client';
-  $('#waiverBox').hidden = !t.uad && $('#f_reportForm').value !== 'uad26'; $('#wvLabel').textContent = (clientNames()[0] ? who : 'This client') + ' has a UAD 3.6 waiver (still uses UAD 2.6)';
-  $('#wvOn').checked = !!wv; $('#wvUntil').value = (wv && wv.formUntil) || ''; $('#wvUntilL').hidden = !wv;
   const rf = $('#f_reportForm').value;
-  $('#formNote').textContent = wv && !wvOk ? '⚠ ' + who + "'s UAD 3.6 waiver ended " + longDate(wv.formUntil) + ' – use UAD 3.6 unless they have extended it.'
-    : rf === 'uad26' ? (wvOk ? who + ' has a UAD 3.6 waiver' + (wv.formUntil ? ' until ' + longDate(wv.formUntil) : '') + ', so this order uses UAD 2.6.' : 'Legacy UAD 2.6 forms: Fannie Mae and Freddie Mac require UAD 3.6 for reports submitted on or after November 2, 2026, unless the client has a waiver – tick the waiver box below to remember it for this client.')
-    : rf === 'uad36' ? 'UAD 3.6 (new URAR): the inspection app and SFREP export are built for this.' : '';
-  $('#formNote').classList.toggle('warnTxt', !!(wv && !wvOk));
+  $('#formNote').textContent = rf === 'uad26' ? 'UAD 2.6 (legacy 1004 / 1073 / 1025) – for clients that still order it.' : rf === 'uad36' ? 'UAD 3.6 (new URAR): the inspection app and SFREP export are built for this.' : '';
   $('#gseBox').hidden = !t.uad; $('#lenderBox').hidden = !$('#f_lenderDiff').checked; $('#amcBox').hidden = !$('#f_amcUsed').checked;
   const eff = $('#f_effDate').value || (t.retro ? $('#f_dod').value : $('#f_inspDate').value);
   $('#effNote').textContent = eff ? 'Effective date: ' + longDate(eff) + ($('#f_effDate').value ? ' (typed in)' : t.retro ? ' (the ' + (t.dateLabels ? t.dateLabels[1].toLowerCase() : 'date of death') + ')' : ' (the inspection date)') : t.retro ? 'Effective date: fill in the ' + (t.dateLabels ? t.dateLabels[1].toLowerCase() : 'date of death') + ' below.' : 'Effective date: the inspection date, once it is set.';
@@ -3039,9 +3060,8 @@ function renderContacts() {
   $('#contactCount').textContent = contacts.length ? `${contacts.length} clients · added automatically from each saved letter` : '';
   $('#contactList').innerHTML = list.length ? list.map(([c, j]) => `<tr><td>${hesc(c.name || '')}</td><td>${hesc(c.company || '')}</td><td>${hesc([c.addr1, c.addr2].filter(Boolean).join(', '))}</td><td class="num">${hesc(c.phone || '')}</td><td>${hesc(c.email || '')}</td>
     <td class="num" title="${hesc((c.jobs || []).join(', '))}">${(c.jobs || []).length || ''}</td><td class="num">${hesc(longDate(c.lastLetter || ''))}</td>
-    <td class="num">${c.form === 'uad26' ? 'UAD 2.6' + (c.formUntil ? ' until ' + hesc(longDate(c.formUntil)) : '') : ''}</td>
     <td class="acts"><button class="btn small" data-use="${j}">Use in a new letter</button><button class="btn ghost small danger" data-cdel="${j}">Delete</button></td></tr>`).join('')
-    : `<tr><td colspan="9" class="empty">${contacts.length ? 'No client matches that search.' : 'No clients yet. Each client is added here the first time you save or download a letter for them.'}</td></tr>`;
+    : `<tr><td colspan="8" class="empty">${contacts.length ? 'No client matches that search.' : 'No clients yet. Each client is added here the first time you save or download a letter for them.'}</td></tr>`;
   $('#contactList').querySelectorAll('[data-use]').forEach(b => b.onclick = () => { const x = contacts[b.dataset.use]; newLetter(); CLIENT_KEYS.forEach(k => { $('#c0_' + k).value = x[k] || ''; }); update(); });
   $('#contactList').querySelectorAll('[data-cdel]').forEach(b => b.onclick = () => {
     if (b.dataset.armed) { contacts.splice(+b.dataset.cdel, 1); store.set('contacts', contacts); renderContacts(); renderClients(readForm().clients); toast('Client deleted'); }
@@ -3184,10 +3204,7 @@ async function start() {
   $('#letterForm').addEventListener('input', update); ['#f_otherUsers', '#f_userText'].forEach(id => $(id).addEventListener('input', syncVisibility)); $('#letterForm').addEventListener('change', update);
   $('#letterForm').addEventListener('submit', e => e.preventDefault());
   $('#f_reportForm').addEventListener('change', () => { if (cur) cur.formPicked = true; syncVisibility(); });
-  $('#wvOn').addEventListener('change', e => { setWaiver(e.target.checked ? { form: 'uad26', formUntil: $('#wvUntil').value } : null); if (cur) cur.formPicked = false; $('#f_reportForm').value = e.target.checked ? 'uad26' : defaultForm($('#f_type').value, $('#f_propType').value); syncVisibility(); update(); });
-  $('#letterForm').addEventListener('input', e => { if (/^(c0_company|c0_name|f_amcCo|f_dueDate)$/.test(e.target.id)) syncVisibility(); });
-  $('#wvUntil').addEventListener('change', e => { setWaiver({ form: 'uad26', formUntil: e.target.value }); syncVisibility(); });
-  $('#f_type').addEventListener('change', () => { applyTypeDefaults(); if (cur) cur.formPicked = false; $('#f_reportForm').value = defaultForm($('#f_type').value, $('#f_propType').value); const T = TYPES[$('#f_type').value] || {}; if (T.uad && $('#f_status').value === 'Drafted') { $('#f_status').value = 'Client letter'; toast('Lender and AMC orders usually come with their own engagement letter – My letter is set to “Not needed”. Change it if you write one.', 6000); } syncVisibility(); update(); });
+  $('#f_type').addEventListener('change', () => { applyTypeDefaults(); if (!(cur && cur.formPicked)) $('#f_reportForm').value = defaultForm($('#f_type').value, $('#f_propType').value); const T = TYPES[$('#f_type').value] || {}; if (T.uad && $('#f_status').value === 'Drafted') { $('#f_status').value = 'Client letter'; toast('Lender and AMC orders usually come with their own engagement letter – My letter is set to “Not needed”. Change it if you write one.', 6000); } syncVisibility(); update(); });
   $('#f_propType').addEventListener('change', () => { applyPropDefaults(); syncVisibility(); update(); });
   $('#f_listing').addEventListener('change', syncVisibility);
   $('#f_payWhen').addEventListener('change', () => { const w = $('#f_payWhen').value; $('#f_deliveryFrom').value = w === 'report' ? 'inspection' : 'either'; syncVisibility(); update(); }); $('#f_premise').addEventListener('change', syncVisibility); ['#f_rent', '#f_testimony'].forEach(id => $(id).addEventListener('change', syncVisibility));
@@ -3233,20 +3250,6 @@ function defaultForm(type, propType) { // which report form an order starts with
   return 'gpar';
 }
 
-/* UAD 3.6 waivers: some clients may keep using UAD 2.6 until a date. Saved on the client (contacts), matched by client or AMC name. */
-function clientNames() { return [($('#c0_company') || {}).value, ($('#c0_name') || {}).value, $('#f_amcUsed') && $('#f_amcUsed').checked ? ($('#f_amcCo') || {}).value : ''].map(v => (v || '').trim()).filter(Boolean); }
-const nmKey = v => String(v || '').toLowerCase().replace(/[.,]/g, '').replace(/\s+/g, ' ').trim();
-function waiverFor() { const ns = clientNames().map(nmKey); if (!ns.length) return null;
-  return contacts.find(c => c.form === 'uad26' && ns.some(n => n && (n === nmKey(c.company) || n === nmKey(c.name)))) || null; }
-function waiverActive(w) { if (!w.formUntil) return true; const d = ($('#f_dueDate') && $('#f_dueDate').value) || todayISO(); return d <= w.formUntil; }
-function setWaiver(w) {
-  const name = clientNames()[0]; if (!name) { toast('Type the client first, then tick the waiver box.'); $('#wvOn').checked = false; return; }
-  let c = waiverFor() || contacts.find(x => nmKey(x.company) === nmKey(name) || nmKey(x.name) === nmKey(name));
-  if (!c) { c = { company: ($('#c0_company').value || '').trim(), name: ($('#c0_company').value ? '' : name), added: todayISO(), jobs: [] }; contacts.push(c); }
-  if (w) { c.form = w.form; c.formUntil = w.formUntil || ''; } else { delete c.form; delete c.formUntil; }
-  contacts.sort((a, b) => (a.name || a.company || '').localeCompare(b.name || b.company || ''));
-  store.set('contacts', contacts); renderContacts(); toast(w ? (c.company || c.name) + ': UAD 3.6 waiver saved' : 'Waiver removed');
-}
 
 </script>
 </body>

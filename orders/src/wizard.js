@@ -6,20 +6,43 @@
               3) what was read and filled in, alerts (AI use, wrong address), then the letter or the order.
    ===================================================================== */
 const WZ = { step: 1 };
+let HOME_VIEW = 'recent';
+const realOrder = o => !!(o.fileNo || street(o) || (o.docs || []).length || ((o.clients || [])[0] || {}).company || ((o.clients || [])[0] || {}).name || o.borrower);
+const clientOf = o => ((o.clients || [])[0] || {}).company || ((o.clients || [])[0] || {}).name || '';
+function homeRows(list, empty) {
+  return list.length ? `<div class="tableWrap"><table class="hmtable"><thead><tr><th>File #</th><th>Address</th><th>Borrower</th><th>Client</th><th>Status</th><th>Due</th></tr></thead><tbody>${list.map(o => `<tr data-hopen="${o.id}" tabindex="0"><td class="num"><b>${h(o.fileNo || '—')}</b></td><td>${h(street(o) || '(no address yet)')}</td><td>${h(o.borrower || '')}</td><td>${h(clientOf(o))}</td><td><span class="pill">${h(o.stage || 'New')}</span></td><td class="num">${h(o.dueDate ? longDate(o.dueDate) : '')}</td></tr>`).join('')}</tbody></table></div>`
+    : `<p class="help">${empty}</p>`;
+}
 function renderHome() {
   const box = $('#homeBody'); if (!box) return;
-  const act = letters.filter(o => !DONE_STAGES.includes(o.stage || 'New')).sort((a, b) => String(b.saved || b.created || '').localeCompare(String(a.saved || a.created || ''))).slice(0, 8);
-  box.innerHTML = `<div class="homegrid">
-    <button type="button" class="homecard primary" id="hmNew"><b>New order</b><span>Start an order: upload its documents once and let the assistant fill in what it can.</span></button>
-    <div class="homecard"><b>Open an order</b><input id="hmSearch" type="search" placeholder="File number, street, client…"><div id="hmList">${act.map(o => `<button type="button" class="hmrow" data-hopen="${o.id}"><span>${h(o.fileNo || '—')}</span><span>${h(street(o) || '(no address)')}</span><small>${h(o.stage || 'New')}</small></button>`).join('') || '<p class="help">No active orders yet.</p>'}</div></div>
-    <button type="button" class="homecard" id="hmFiles"><b>All files</b><span>The file list: every order, with search and status.</span></button>
-  </div>`;
+  const all = letters.filter(realOrder);
+  const tile = (id, icon, title, sub, on) => `<button type="button" class="hmtile${id === 'hmNew' ? ' primary' : ''}${on ? ' on' : ''}" id="${id}"><span class="hmicon" aria-hidden="true">${icon}</span><span><b>${title}</b><small>${sub}</small></span></button>`;
+  box.innerHTML = `<div class="hmtiles">
+      ${tile('hmNew', '+', 'New order', 'Upload documents, fill in', false)}
+      ${tile('hmOpen', '↻', 'Open an order', 'Your last 10 orders', HOME_VIEW === 'recent')}
+      ${tile('hmFind', '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 21 21"/></svg>', 'All files', 'Search every order', HOME_VIEW === 'find')}
+    </div>
+    <div class="hmpanel" id="hmPanel"></div>`;
   $('#hmNew').onclick = () => startNewOrder();
-  $('#hmFiles').onclick = () => showTab('saved');
-  box.querySelectorAll('[data-hopen]').forEach(b => b.onclick = () => openLetter(b.dataset.hopen));
-  $('#hmSearch').oninput = e => { const q = e.target.value.toLowerCase().trim(); const hits = letters.filter(o => !q || [o.fileNo, o.address, o.apn, ((o.clients || [])[0] || {}).name, ((o.clients || [])[0] || {}).company, o.borrower].join(' ').toLowerCase().includes(q)).slice(0, 12);
-    $('#hmList').innerHTML = hits.map(o => `<button type="button" class="hmrow" data-hopen="${o.id}"><span>${h(o.fileNo || '—')}</span><span>${h(street(o) || '(no address)')}</span><small>${h(o.stage || 'New')}</small></button>`).join('') || '<p class="help">No order matches.</p>';
-    $('#hmList').querySelectorAll('[data-hopen]').forEach(b => b.onclick = () => openLetter(b.dataset.hopen)); };
+  $('#hmOpen').onclick = () => { HOME_VIEW = 'recent'; renderHome(); };
+  $('#hmFind').onclick = () => { HOME_VIEW = 'find'; renderHome(); setTimeout(() => $('#hfFile') && $('#hfFile').focus(), 30); };
+  const panel = $('#hmPanel'); const wire = () => panel.querySelectorAll('[data-hopen]').forEach(r => { r.onclick = () => openLetter(r.dataset.hopen); r.onkeydown = e => { if (e.key === 'Enter') openLetter(r.dataset.hopen); }; });
+  if (HOME_VIEW === 'recent') {
+    const recent = all.slice().sort((a, b) => String(b.saved || b.created || '').localeCompare(String(a.saved || a.created || ''))).slice(0, 10);
+    panel.innerHTML = `<h3>Last 10 orders</h3><p class="help">Most recently worked on first. Click a row to open it.</p>${homeRows(recent, 'No orders yet. Click <b>New order</b> to start one.')}`;
+  } else {
+    panel.innerHTML = `<h3>Search all files</h3>
+      <form class="hmfind" id="hmFindForm"><label>File number<input id="hfFile" type="search" placeholder="e.g. Bath1729"></label><label>Address<input id="hfAddr" type="search" placeholder="e.g. 1729 Bath"></label><label>Borrower<input id="hfBorr" type="search" placeholder="last name"></label><button type="submit" class="btn primary">Search</button></form>
+      <p class="help">Fill in one, two or all three boxes – an order has to match every box you fill. Leave them all empty and click Search to list every order. Delivered and closed orders are included.</p><div id="hfOut"></div>`;
+    const go = e => { if (e) e.preventDefault();
+      const norm = v => String(v || '').toLowerCase().replace(/[.,#]/g, ' ').replace(/\s+/g, ' ').trim();
+      const qf = norm($('#hfFile').value), qa = norm($('#hfAddr').value), qb = norm($('#hfBorr').value);
+      const hits = all.filter(o => (!qf || norm(o.fileNo).replace(/\s/g, '').includes(qf.replace(/\s/g, ''))) && (!qa || norm(o.address).includes(qa)) && (!qb || norm(o.borrower).includes(qb)))
+        .sort((a, b) => String(b.orderDate || b.created || '').localeCompare(String(a.orderDate || a.created || '')));
+      $('#hfOut').innerHTML = `<p class="help"><b>${hits.length}</b> order${hits.length === 1 ? '' : 's'} found.</p>` + homeRows(hits, 'No order matches. Check the spelling, or fill in fewer boxes.'); wire(); };
+    $('#hmFindForm').onsubmit = go;
+  }
+  wire();
 }
 function startNewOrder() {
   if (cur && hasContent(readForm())) saveLetter(true);
@@ -44,13 +67,14 @@ function renderWizard() {
       <p class="help" id="wzFileNote"></p>
       <p class="help">The address is used to check that every document you upload is for this property. If you are not sure of it, leave it blank: the CRS report fills it in.</p>
       ${q('letter', 'Engagement letter', [['client', 'The client sent one (lender / AMC order)'], ['mine', 'I will write one']])}
+      ${q('form', 'Report form', [['uad36', 'UAD 3.6 (Traditional)'], ['uad26', 'UAD 2.6'], ['gpar', 'GPAR'], ['other', 'Other']])}
       ${q('purchase', 'Is this a purchase?', [['yes', 'Yes'], ['no', 'No']])}
       ${q('listed', 'Is the property listed now, or was it in the last 12 months?', [['yes', 'Yes'], ['no', 'No'], ['unsure', 'Not sure']])}
       <div class="row"><button type="button" class="btn primary" id="wzNext1">Next: documents →</button><button type="button" class="btn ghost" id="wzCancel">Cancel</button></div></section>`;
     const sync = () => { $('#f_fileNo').value = $('#wzFile').value; $('#f_address').value = $('#wzAddr').value; update(); };
     $('#wzFile').oninput = () => { w.fileTyped = true; sync(); };
     $('#wzAddr').oninput = () => { if (!w.fileTyped || !$('#wzFile').value.trim()) { const sug = suggestFileNo($('#wzAddr').value); $('#wzFile').value = sug; $('#wzFileNote').textContent = sug ? 'Made from your rule: street letters + house number' + (/-[2-9]\d*$/.test(sug) ? ' – you have appraised this property before in the assistant, so this is report ' + sug.split('-').pop() : '') + '. Change it if needed.' : ''; } sync(); };
-    box.querySelectorAll('[data-wq]').forEach(b => b.onclick = () => { w[b.dataset.wq] = b.dataset.v; renderWizard(); });
+    box.querySelectorAll('[data-wq]').forEach(b => b.onclick = () => { w[b.dataset.wq] = b.dataset.v; if (b.dataset.wq === 'form') { $('#f_reportForm').value = b.dataset.v; cur.formPicked = true; syncVisibility(); } renderWizard(); });
     $('#wzCancel').onclick = () => { showTab('home'); renderHome(); };
     $('#wzNext1').onclick = () => { if (!w.letter) { toast('Choose who writes the engagement letter'); return; }
       if (w.letter === 'client') { $('#f_status').value = 'Client letter'; } else { $('#f_status').value = 'Drafted'; cur.letterMode = 'mine'; }
