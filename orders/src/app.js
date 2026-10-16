@@ -31,6 +31,7 @@ function readForm() {
   FIELDS.forEach(k => { const el = $('#f_' + k); if (!el) return; f[k] = el.type === 'checkbox' ? el.checked : el.value; });
   f.clients = [];
   for (let i = 0; i < clientCount; i++) { const c = {}; CLIENT_KEYS.forEach(k => { c[k] = $(`#c${i}_${k}`).value; }); f.clients.push(c); }
+  { const pk = $('#f_accessRelPick'); if (pk) f.accessRel = pk.value === 'Other' ? $('#f_accessRel').value : pk.value.toLowerCase(); }
   const r = document.querySelector('input[name=aiUse]:checked'); f.aiUse = r ? r.value : '';
   f.ai = f.aiUse !== 'No';
   f.aiText = aiText || AI_DEFAULT;
@@ -41,6 +42,7 @@ function writeForm(f) {
   if (!f.deliveryN) { const dp = deliveryParts(f, TYPES[f.type] || TYPES.dod); f.deliveryN = dp.n; f.deliveryUnit = dp.unit; f.deliveryFrom = f.deliveryFrom || 'either'; }
   loadOrderAddr(f);
   FIELDS.forEach(k => { if (ADDR_KEYS.includes(k) || k === 'address') return; const el = $('#f_' + k); if (!el) return; if (el.type === 'checkbox') el.checked = f[k] !== false && !!f[k]; else el.value = f[k] ?? ''; });
+  { const pk = $('#f_accessRelPick'), rel = String(f.accessRel || '').trim(); const std = ['owner', 'agent', 'tenant']; if (pk) { pk.value = !rel ? '' : std.includes(rel.toLowerCase()) ? rel[0].toUpperCase() + rel.slice(1).toLowerCase() : 'Other'; $('#f_accessRel').hidden = pk.value !== 'Other'; } }
   clientCount = Math.max(1, Math.min(3, (f.clients || []).length || 1));
   renderClients(f.clients || [{}]);
   document.querySelectorAll('input[name=aiUse]').forEach(r => { r.checked = r.value === f.aiUse; });
@@ -58,10 +60,10 @@ function renderClients(list) {
       <div class="client-actions"><select id="c${i}_pick" aria-label="Pick a saved client"><option value="">Pick a saved client…</option>${contacts.map((x, j) => `<option value="${j}">${hesc(x.name || x.company || 'Unnamed')}</option>`).join('')}</select>
 ${i > 0 ? `<button type="button" class="btn ghost small" id="c${i}_rm">Remove</button>` : ''}</div></div>
       <div class="grid2">
-        <label>Name<input id="c${i}_name" autocomplete="off" placeholder="Margaret A. Ellison, Successor Trustee"></label>
-        <label>Company or firm <span class="opt">optional</span><input id="c${i}_company" autocomplete="off"></label>
+        <label>Name<input id="c${i}_name" autocomplete="off" list="clientNames" placeholder="start typing – saved clients pop up"></label>
+        <label>Company or firm <span class="opt">optional</span><input id="c${i}_company" autocomplete="off" list="clientCos"></label>
         <label>Street address<input id="c${i}_addr1" autocomplete="off"></label>
-        <label>City, state, ZIP<input id="c${i}_addr2" autocomplete="off" placeholder="Santa Barbara, CA 93108"></label>
+        <label>City, state, ZIP<input id="c${i}_addr2" autocomplete="off"></label>
         <label>Phone<input id="c${i}_phone" autocomplete="off"></label>
         <label>Email<input id="c${i}_email" type="email" autocomplete="off"></label>
       </div>`;
@@ -71,6 +73,15 @@ ${i > 0 ? `<button type="button" class="btn ghost small" id="c${i}_rm">Remove</b
     if (i > 0) $(`#c${i}_rm`).onclick = () => { const f = readForm(); f.clients.splice(i, 1); clientCount--; renderClients(f.clients); update(); };
   }
   $('#addClient').hidden = clientCount >= 3;
+  // type-ahead: a saved client fills the rest when the name (or firm) matches exactly
+  let dl = document.getElementById('clientNames'); if (!dl) { dl = document.createElement('datalist'); dl.id = 'clientNames'; document.body.appendChild(dl); const d2 = document.createElement('datalist'); d2.id = 'clientCos'; document.body.appendChild(d2); }
+  dl.innerHTML = contacts.filter(x => x.name).map(x => `<option value="${hesc(x.name)}">${hesc([x.company, x.addr2].filter(Boolean).join(' · '))}</option>`).join('');
+  document.getElementById('clientCos').innerHTML = [...new Set(contacts.map(x => x.company).filter(Boolean))].map(c => `<option value="${hesc(c)}"></option>`).join('');
+  for (let i = 0; i < clientCount; i++) ['name', 'company'].forEach(k => { const el = $(`#c${i}_${k}`); const fill = () => { const v = el.value.trim().toLowerCase(); if (!v) return;
+      const x = contacts.find(o => (o[k] || '').trim().toLowerCase() === v); if (!x) return;
+      const others = CLIENT_KEYS.filter(q => q !== k); if (others.some(q => $(`#c${i}_${q}`).value.trim() && $(`#c${i}_${q}`).value.trim() !== (x[q] || ''))) return;   // never overwrite what she typed
+      others.forEach(q => { $(`#c${i}_${q}`).value = x[q] || ''; }); update(); toast('Filled in from your saved clients'); };
+    el.addEventListener('change', fill); el.addEventListener('input', () => { if (contacts.some(o => (o[k] || '').trim().toLowerCase() === el.value.trim().toLowerCase())) fill(); }); });
   box.querySelectorAll('input').forEach(el => el.addEventListener('input', update));
 }
 
@@ -124,10 +135,10 @@ function render() {
   const f = readForm(); cur = f;
   const theirs = f.status === 'Client letter';
   const mine = !theirs && (f.letterMode === 'mine' || f.letterMade || ['Sent', 'Signed'].includes(f.status) || (!f.wizard && String(f.created || '') < '2026-10-16'));
-  $('#paperWrap').hidden = !mine; $('#btnDocx').hidden = !mine; $('#missing').hidden = !mine; $('#clientView').hidden = !theirs; $('#orderSummary').hidden = theirs || mine;
+  $('#paperWrap').hidden = !mine; $('#sheetHint').hidden = !mine; $('#btnDocx').hidden = !mine; $('#btnPdf').hidden = !mine; $('#btnPdf2').hidden = !mine; $('#btnWrite2').hidden = !mine; $('#writeHelp').hidden = !mine; $('#missing').hidden = !mine; $('#clientView').hidden = !theirs; $('#orderSummary').hidden = theirs || mine;
   if (theirs) renderClientView(f); else if (!mine) renderOrderSummary(f);
   $('#sheet').innerHTML = previewHTML(buildLetter(f));
-  $('#fileName').textContent = fileName(f);
+  $('#fileName').textContent = mine ? 'Your letter downloads as: ' + fileName(f) : '';
   const missing = [];
   if (!f.aiUse) missing.push('AI use');
   if (!(f.clients[0].name || '').trim()) missing.push('client name');
@@ -174,7 +185,8 @@ function saveLetter(quiet, auto) { // auto = the quiet save while typing (client
   clearTimeout(autoT);
   const f = readForm(); f.saved = new Date().toISOString(); f.effective = effectiveDate(f); const added = auto ? 0 : upsertClients(f); cur = f;
   const i = letters.findIndex(x => x.id === f.id); if (i >= 0) letters[i] = f; else letters.unshift(f);
-  ODB.put('orders', f).then(() => { if (!quiet) toast('Order saved' + (added ? ' · ' + added + ' new client' + (added > 1 ? 's' : '') + ' added' : '')); })
+  ODB.put('orders', f).then(() => { const t = new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }); document.querySelectorAll('[data-saved]').forEach(el => el.textContent = '✓ Order saved ' + t);
+    if (!quiet) toast('Order saved' + (added ? ' · ' + added + ' new client' + (added > 1 ? 's' : '') + ' added' : '')); })
     .catch(e => toast('Could not save in this browser (' + (e.message || e) + ') – use Back up to keep a copy'));
   renderLetters();
 }
@@ -412,7 +424,9 @@ async function start() {
   $('#f_payWhen').addEventListener('change', () => { const w = $('#f_payWhen').value; $('#f_deliveryFrom').value = w === 'report' ? 'inspection' : 'either'; syncVisibility(); update(); }); $('#f_premise').addEventListener('change', syncVisibility); ['#f_rent', '#f_testimony'].forEach(id => $(id).addEventListener('change', syncVisibility));
   ['tRate', 'tDecl', 'tRetainer', 'tCancel'].forEach(k => $('#f_' + k).addEventListener('change', () => { const r = store.get('rates', {}); r[k] = $('#f_' + k).value; store.set('rates', r); }));
   $('#addClient').onclick = () => { const f = readForm(); clientCount++; f.clients.push({}); renderClients(f.clients); update(); };
-  $('#btnDocx').onclick = downloadDocx; $('#btnSave').onclick = () => saveLetter(false); $('#btnNew').onclick = newLetter;
+  $('#btnDocx').onclick = downloadDocx; $('#btnSave').onclick = () => saveLetter(false); $('#btnSave2').onclick = () => saveLetter(false); const pdf = () => { saveLetter(true); const t = document.title; document.title = fileName(readForm()).replace(/\.docx$/, ''); toast('In the print window choose Destination: Save as PDF, then Save', 5000); setTimeout(() => { window.print(); document.title = t; }, 150); }; $('#btnPdf').onclick = pdf; $('#btnPdf2').onclick = pdf; $('#btnWrite2').onclick = () => { saveLetter(true); downloadDocx(); };
+  $('#f_accessRelPick').addEventListener('change', () => { const o = $('#f_accessRelPick').value === 'Other'; $('#f_accessRel').hidden = !o; if (o) $('#f_accessRel').focus(); update(); }); $('#f_accessRel').addEventListener('input', update);
+  $('#sheet').addEventListener('click', () => { const n = $('#c0_name'); if (n && !n.value.trim()) { n.scrollIntoView({ block: 'center' }); n.focus(); toast('Type the client here – the letter fills in as you type'); } else toast('Type in the fields below the letter – it changes as you type'); }); $('#btnNew').onclick = newLetter;
   $('#letterSearch').oninput = renderLetters; $('#contactSearch').oninput = renderContacts;
   $('#docFile').onchange = e => { const fs = [...e.target.files]; e.target.value = ''; addDocs(fs); };
   const dz = $('#dropZone'); dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('over'); }); dz.addEventListener('dragleave', () => dz.classList.remove('over'));

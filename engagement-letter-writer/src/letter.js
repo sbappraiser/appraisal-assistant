@@ -81,7 +81,7 @@ function buildLetter(f) {
   if (PR || ['proposed', 'renovation'].includes(f.propType)) sec('PLANS, SPECIFICATIONS AND DOCUMENTS TO BE PROVIDED', DOCS_TO_PROVIDE);
   if (f.listing && f.listing !== 'omit') sec('PROPERTY LISTING AND CONTRACT STATUS', LISTING_TEXT[f.listing]);
   const dl = deliveryParts(f, T);
-  const FROM = { either: 'the inspection or receipt of payment, whichever is more recent', inspection: 'the inspection', payment: 'receipt of payment' };
+  const FROM = { either: 'the inspection or receipt of payment, whichever is more recent', inspection: 'the inspection', payment: 'receipt of payment', receipt: 'receipt of this signed Agreement' };
   sec('DELIVERY', 'Delivery Timeline: Within ' + (dl.n || BLANK) + ' ' + dl.unit + ' after ' + FROM[f.deliveryFrom || (f.payWhen === 'report' ? 'inspection' : 'either')] + ', unless otherwise agreed in writing.');
   sec('NUMBER OF COPIES', STD.copies);
   H('FEES');

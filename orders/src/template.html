@@ -162,6 +162,11 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
 @media (max-width: 700px) { .addrrow { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } .addrrow .a-street { grid-column: 1 / -1; } }
 .addrrow select + input { margin-top: 6px; }
 .leftCol { display: grid; gap: 14px; min-width: 0; } .previewCol { position: static; }
+::placeholder { color: #9aa5b1; font-style: italic; opacity: 1; }
+.savedAt { display: block; font-weight: 600; color: var(--go); } .savedAt:empty { display: none; } .bar .fname { display: flex; flex-direction: column; gap: 2px; }
+@media print { @page { size: letter; margin: 0.75in; } body { background: #fff !important; } body * { visibility: hidden !important; } #sheet, #sheet * { visibility: visible !important; }
+  #sheet { position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 0; box-shadow: none; border: 0; } .paperWrap { overflow: visible !important; max-height: none !important; box-shadow: none !important; } }
+.formEnd { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 6px 0 20px; } .sheetHint { margin: 0; }
 .btn.danger.armed { background: var(--warn); color: #fff; border-color: var(--warn); }
 </style>
 </head>
@@ -186,6 +191,7 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
  <div class="desk">
   <div class="leftCol">
     <p class="missing" id="missing"></p>
+    <p class="help sheetHint" id="sheetHint">This is a preview of your letter. Type in the fields below it – the letter changes as you type.</p>
     <div class="paperWrap" id="paperWrap"><article id="sheet" aria-label="Letter preview"></article></div>
     <div id="clientView" hidden></div>
     <div id="orderSummary" hidden></div>
@@ -230,9 +236,9 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
       <div id="clients"></div>
       <div><button type="button" class="btn ghost small" id="addClient">+ Add another client (co-trustee, sibling)</button></div>
       <label class="check" id="jointBox"><input type="checkbox" id="f_joint">Both spouses are the clients, jointly (adds the authorization clause when only one spouse signs)</label>
-      <label>Other intended users <span class="opt">names only · leave blank when the Client is the only one</span><input id="f_otherUsers" placeholder="the Client’s attorney, Smith &amp; Lee LLP"></label>
+      <label>Other intended users <span class="opt">names only · leave blank when the Client is the only one</span><input id="f_otherUsers"></label>
       <p class="help" id="usersNote" hidden></p>
-      <label>Intended user, in your own words <span class="opt">optional · replaces the standard sentence</span><textarea id="f_userText" placeholder="The Client is the sole intended user. This report is not intended for use by any other party…"></textarea></label>
+      <label>Intended user, in your own words <span class="opt">optional · replaces the standard sentence</span><textarea id="f_userText"></textarea></label>
     </fieldset>
     <fieldset><legend>Loan and AMC</legend>
       <p class="help">When a lender orders, the lender is the client (Client section above). Fill in the AMC only if one is involved.</p>
@@ -251,8 +257,8 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
     </fieldset>
     <fieldset><legend>Property</legend>
       <div class="grid2">
-        <label>APN<input id="f_apn" placeholder="009-123-456"></label>
-        <label>County<input id="f_county" placeholder="Santa Barbara"></label>
+        <label>APN<input id="f_apn"></label>
+        <label>County<input id="f_county"></label>
         <label>Owner of record<input id="f_owner"></label>
         <label>Unit <span class="opt">condo</span><input id="f_unit"></label>
         <label>Latitude<input id="f_lat" inputmode="decimal"></label>
@@ -269,11 +275,11 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
       <div id="subjectFacts" class="facts-box"></div>
     </fieldset>
     <fieldset><legend>Scope and report</legend>
-      <div id="purposeBox"><label>Purpose, in your words <span class="opt">finishes “to assist the Client in …”</span><input id="f_purpose" placeholder="establishing the cost basis of the property as of the date it was acquired"></label></div>
+      <div id="purposeBox"><label>Purpose, in your words <span class="opt">finishes “to assist the Client in …”</span><input id="f_purpose"></label></div>
       <div id="premiseBox" class="grid2">
         <label>Value premise<select id="f_premise"><option value="asis">As is</option><option value="complHC">As completed, as of today (hypothetical condition)</option><option value="prospective">Prospective as completed (future date)</option><option value="both">Both as is and prospective as completed</option></select></label>
         <label id="completionBox">Estimated completion date<input id="f_completion" type="date"></label>
-        <label id="plansBox" style="grid-column:1/-1">Documents the client will provide<input id="f_plans" placeholder="plans, specifications, and detailed cost budget"></label>
+        <label id="plansBox" style="grid-column:1/-1">Documents the client will provide<input id="f_plans"></label>
       </div>
       <label>Inspection<select id="f_inspection"><option value="interior">Interior and exterior</option><option value="exterior">Exterior only, from the street</option><option value="none">No inspection</option></select></label>
       <div><span class="eyebrow">Valuation approaches</span>
@@ -289,28 +295,28 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
       <label>Hypothetical conditions <span class="opt">blank = standard wording</span><textarea id="f_hc"></textarea></label>
       <div class="grid3">
         <label>Access contact <span class="opt">blank = Client</span><input id="f_accessName"></label>
-        <label>Relationship<input id="f_accessRel" placeholder="tenant, agent"></label>
+        <label>Relationship<select id="f_accessRelPick"><option value=""></option><option>Owner</option><option>Agent</option><option>Tenant</option><option>Other</option></select><input id="f_accessRel" placeholder="type the relationship" hidden></label>
         <label>Phone<input id="f_accessPhone"></label>
       </div>
     </fieldset>
     <fieldset><legend>Fee and delivery</legend>
       <div class="grid2">
-        <label>Total fee ($)<input id="f_fee" inputmode="decimal" placeholder="2,500"></label>
+        <label>Total fee ($)<input id="f_fee" inputmode="decimal"></label>
         <label>Retainer ($) <span class="opt">optional</span><input id="f_retainer" inputmode="decimal"></label>
       </div>
       <label>Payment due<select id="f_payWhen"><option value="inspection">At or before the inspection</option><option value="report">Upon delivery of the report (invoice due on receipt)</option><option value="signing">Upon signing this Agreement</option><option value="other">Other (type it)</option></select></label>
-      <label id="payOtherBox">Payment terms, in your words<input id="f_payDue" placeholder="Half on signing, the balance on delivery of the report"></label>
+      <label id="payOtherBox">Payment terms, in your words<input id="f_payDue"></label>
       <div class="grid3">
-        <label>Report delivered within<input id="f_deliveryN" inputmode="numeric" placeholder="10"></label>
+        <label>Report delivered within<input id="f_deliveryN" inputmode="numeric"></label>
         <label>&nbsp;<select id="f_deliveryUnit"><option>days</option><option>business days</option><option>weeks</option></select></label>
-        <label>Counted from<select id="f_deliveryFrom"><option value="either">Inspection or payment, whichever is later</option><option value="inspection">The inspection</option><option value="payment">Receipt of payment</option></select></label>
+        <label>Counted from<select id="f_deliveryFrom"><option value="either">Inspection or payment, whichever is later</option><option value="inspection">The inspection</option><option value="payment">Receipt of payment</option><option value="receipt">Upon receipt of the signed agreement</option></select></label>
       </div>
       <p class="help" id="deliveryNote"></p>
     </fieldset>
     <fieldset><legend>Rent survey and court testimony</legend>
       <div class="grid2">
         <label class="check"><input type="checkbox" id="f_rent">Add a current market rent survey</label>
-        <label id="rentFeeBox">Rent survey fee ($)<input id="f_rentFee" inputmode="decimal" placeholder="500"></label>
+        <label id="rentFeeBox">Rent survey fee ($)<input id="f_rentFee" inputmode="decimal"></label>
       </div>
       <label class="check"><input type="checkbox" id="f_testimony">Include court testimony and expert witness terms</label>
       <div class="grid2" id="testimonyBox">
@@ -326,13 +332,14 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
     </fieldset>
     <fieldset><legend>Notes and inspection to-dos</legend>
       <label>Notes <span class="opt">for you; not in the letter</span><textarea id="f_notes"></textarea></label>
-      <label>To-dos at the inspection <span class="opt">one per line · they show on the iPad</span><textarea id="f_todos" placeholder="Photo of smoke detector in every bedroom&#10;House number at the curb"></textarea></label>
+      <label>To-dos at the inspection <span class="opt">one per line · they show on the iPad</span><textarea id="f_todos"></textarea></label>
     </fieldset>
+      <div class="formEnd"><button type="button" class="btn" id="btnSave2">Save</button><button type="button" class="btn primary" id="btnWrite2">Write engagement letter (Word)</button><button type="button" class="btn" id="btnPdf2">Save as PDF</button><span class="savedAt" data-saved></span><span class="help" id="writeHelp">Saves the order, then downloads your letter as a Word file (the same as Download Word letter at the top).</span></div>
   </form>
   </div>
   <div class="previewCol">
-    <div class="bar"><span class="fname" id="fileName"></span>
-      <a class="btn ghost" id="genieLink" href="../comp-genie/" target="aa-genie">Comp genie</a><button type="button" class="btn ghost" id="btnNew">New order</button><button type="button" class="btn" id="btnSave">Save order</button><button type="button" class="btn primary" id="btnDocx">Download Word letter</button></div>
+    <div class="bar"><span class="fname"><span class="savedAt" data-saved></span><span id="fileName"></span></span>
+      <a class="btn ghost" id="genieLink" href="../comp-genie/" target="aa-genie">Comp genie</a><button type="button" class="btn ghost" id="btnNew">New order</button><button type="button" class="btn" id="btnSave">Save order</button><button type="button" class="btn primary" id="btnDocx">Download Word letter</button><button type="button" class="btn" id="btnPdf">Save as PDF</button></div>
     <fieldset id="docsSet"><legend>Documents – upload everything here <span class="opt" id="docCount"></span></legend>
       <div class="drop big" id="dropZone">
         <div><span class="eyebrow">Drop the files here, or click Choose files</span>
@@ -415,7 +422,13 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
       <li>Each send is recorded on the order (date, document, pages, redacted or not). On a <b>Yes</b> order you may also use <b>Send without redacting</b>.</li></ol></details>
     <details><summary>Engagement letter</summary><ol>
       <li>On <b>Order &amp; letter</b>, the letter preview on the left fills in from the order. Fill the scope, fee and delivery sections.</li>
-      <li>Click <b>Download Word letter</b>; it saves to Downloads, named by file number and street. Send it as you do now.</li>
+      <li>The letter on the left is a preview. Type in the fields below it; the letter changes as you type. Clicking the preview takes you to the client fields.</li>
+      <li>Client: start typing the name (or firm) – your saved clients pop up; pick one and the address, phone and email fill in. A new client is added to your list when you save.</li>
+      <li>Access contact: type the name and pick Owner, Agent, Tenant or Other (Other lets you type it). Leave it blank and the letter says the Client is the contact.</li>
+      <li>Delivery “Counted from” has Upon receipt of the signed agreement.</li>
+      <li><b>Save as PDF</b> (top right, and at the bottom of the fields): the print window opens; choose Destination <b>Save as PDF</b> and click Save. Untick “Headers and footers” under More settings the first time.</li>
+      <li><b>Download Word letter</b> (or <b>Write engagement letter (Word)</b> at the bottom) saves a Word file to Downloads, named by file number and street. Word opens downloaded files in Protected View; click <b>Enable Editing</b> in the yellow bar before you change or save it.</li>
+      <li>The order saves itself while you type; “✓ Order saved” and the time show at the top and at the bottom.</li>
       <li>When the client sends their own engagement letter, drop it in Documents. It is checked for AI and confidentiality wording, and it shows on the left instead of your letter (My letter is set to “Not needed – client’s letter”). Click <b>Read and list requirements</b> to note the form, addenda, photo rules, due date, fee and inspection to-dos. <b>Write my own letter instead</b> switches back.</li>
       <li>Change the AI paragraph on <b>Standard wording</b>.</li></ol></details>
     <details><summary>Market conditions</summary><ol>
