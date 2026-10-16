@@ -284,9 +284,9 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
       <label>Inspection<select id="f_inspection"><option value="interior">Interior and exterior</option><option value="exterior">Exterior only, from the street</option><option value="none">No inspection</option></select></label>
       <div><span class="eyebrow">Valuation approaches</span>
         <div class="checks"><label class="check"><input type="checkbox" id="f_apSales">Sales Comparison</label><label class="check"><input type="checkbox" id="f_apCost">Cost (as applicable)</label><label class="check"><input type="checkbox" id="f_apIncome">Income (as applicable)</label></div></div>
-      <label>Report form<select id="f_reportForm"><option value="uad36">UAD 3.6 – new URAR (Traditional)</option><option value="uad26">UAD 2.6 – Form 1004 / 1073 / 1025 (legacy)</option><option value="gpar">GPAR (non-lender)</option><option value="other">Other / narrative</option></select></label>
+      <label>Report form format<select id="f_reportForm"><option value="uad36">UAD 3.6 – new URAR (Traditional)</option><option value="uad26">UAD 2.6 (Legacy)</option><option value="gpar">GPAR (non-lender)</option><option value="other">Other / narrative</option></select></label>
       <p class="help" id="formNote"></p>
-      <label>Report format <span class="opt">blank = the form for this property type</span><input id="f_format"></label>
+      <label>Form<select id="f_formSel"></select><input id="f_format" placeholder="type the form" hidden></label>
       <div class="grid2">
         <label>Listing / contract status<select id="f_listing"><option value="omit">Leave this section out</option><option value="notListed">Not listed for sale</option><option value="listed">Currently listed</option><option value="contract">Under contract</option></select></label>
         <label id="listingDetailBox">Details <span class="opt">MLS #, list price, contract date</span><input id="f_listingDetail"></label>
@@ -367,9 +367,10 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
       <li><b>3 · Check:</b> see what was filled in. The client’s letter sets the client, loan number, borrower, due date, fee, report form, rent schedule, and <b>AI use</b>: a ban (for example “no AI without prior authorization”) sets No AI; confidentiality wording sets Yes – only with confidential information removed; nothing sets Yes. You can change any of it on the order.</li>
       <li>Click <b>Read</b> next to the prelim or contract to summarize it, then <b>Open the order</b> – or, if you are writing the letter, <b>Next: write my engagement letter</b>.</li>
       <li>The order saves by itself. To find it again, go to <b>Home</b>: <b>Open an order</b> lists your last 10 orders (click a row to open it); <b>All files</b> lets you search by file number, address and/or borrower – fill in any of the boxes and click <b>Search</b> (leave them empty to list every order).</li></ol></details>
-    <details><summary>Report form</summary><ol>
-      <li>You choose the form: in <b>New order</b> step 1, click <b>UAD 3.6 (Traditional)</b>, <b>UAD 2.6</b>, <b>GPAR</b> or <b>Other</b>. You can change it later under <b>Report form</b> in Scope and report on the order page.</li>
-      <li>Your choice is kept – the assistant does not change it, even if the client's letter names a different form. If you have not chosen, a letter that names a 1004 / 1073 / 1025 sets UAD 2.6, and "Traditional" or "UAD 3.6" sets UAD 3.6.</li></ol></details>
+    <details><summary>Report form format and form</summary><ol>
+      <li><b>Report form format</b>: in <b>New order</b> step 1, click <b>UAD 3.6 (Traditional)</b>, <b>UAD 2.6 (Legacy)</b>, <b>GPAR</b> or <b>Other</b>. You can change it later in Scope and report on the order page.</li>
+      <li><b>Form</b> (just below it on the order page): the assistant picks the usual one for the property type and inspection – e.g. UAD 2.6 condo → Form 1073, exterior-only → Form 2055. Click it to choose another (1004, 1073, 1025, 2055, 1075, 1004C, 2090, 2095, 1004 Desktop, 1004D; URAR kinds for 3.6; GPAR forms), or <b>Other – type it</b>. Once you choose, it stays. It is the "Format" line in your engagement letter.</li>
+      <li>Your choices are kept – the assistant does not change them, even if the client's letter names a different form. If you have not chosen, a letter that names a 1004 / 1073 / 1025 sets UAD 2.6 and that form.</li></ol></details>
     <details><summary>Documents: upload once, kinds, search, sticky notes</summary><ol>
       <li>Drop every file for the order into the <b>Documents</b> box, or click <b>Choose files</b>. Each one is sorted by kind; change the kind with its drop-down if it guessed wrong.</li>
       <li>Click a file name to open it. Click <b>Read</b> to open the reader (next section). <b>Remove</b> takes it out of the order.</li>
@@ -459,7 +460,7 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
 </div>
 <div id="toast" role="status" hidden></div>
 <script>
-const BUILD='o1-1016-0106';
+const BUILD='o1-1016-0108';
 const G = (() => {
 /* ---------------- small helpers ---------------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -1787,7 +1788,7 @@ async function activeOrdersFile() {
     for (const d of (o.docs || []).filter(d => d.type === 'floorplan')) { const r = await ODB.get('docs', d.id); if (r && r.preview) plans.push({ name: d.name + (d.page > 1 ? ' (page ' + d.page + ')' : ''), src: r.preview }); }
     const T = TYPES[o.type] || {}; const c0 = (o.clients || [])[0] || {};
     out.push({ id: o.id, fileNo: o.fileNo, address: o.address, unit: o.unit || '', apn: o.apn, county: o.county, lat: o.lat, lon: o.lon, owner: o.owner, legal: o.legal,
-      stage: o.stage || 'New', reportForm: ({ uad36: 'UAD 3.6 – new URAR (Traditional)', uad26: 'UAD 2.6 – Form 1004 (legacy)', gpar: 'GPAR', other: 'Other / narrative' })[o.reportForm] || '', inspDate: o.inspDate, inspTime: o.inspTime, effDate: effectiveDate(o), dueDate: o.dueDate, type: T.label || o.type, retro: !!T.retro, propType: o.propType,
+      stage: o.stage || 'New', reportForm: ({ uad36: 'UAD 3.6 – new URAR (Traditional)', uad26: 'UAD 2.6 (Legacy)', gpar: 'GPAR', other: 'Other / narrative' })[o.reportForm] || '', formName: o.format || '', inspDate: o.inspDate, inspTime: o.inspTime, effDate: effectiveDate(o), dueDate: o.dueDate, type: T.label || o.type, retro: !!T.retro, propType: o.propType,
       inspection: o.inspection, client: [c0.name, c0.company].filter(Boolean).join(', '), access: { name: o.accessName, rel: o.accessRel, phone: o.accessPhone },
       notes: o.notes || '', todos: String(o.todos || '').split('\n').map(s => s.trim()).filter(Boolean), aiUse: o.aiUse,
       crs: o.crs ? crsForSubject(o.crs) : null, permits: o.permits || null,
@@ -1836,7 +1837,7 @@ function applyClientLetter(F) { // fills only empty boxes (type, form, client al
   const did = []; const set = (id, v, label, always) => { const el = $('#f_' + id); if (!el || v == null || v === '') return; if (el.type === 'checkbox') { if (el.checked !== !!v) { el.checked = !!v; did.push([label, v ? 'Yes' : 'No']); } return; } if (!always && el.value.trim()) return; el.value = v; did.push([label, v]); };
   const p = (F.purpose || '').toLowerCase(); const type = /purch/.test(p) ? 'uadPurchase' : /refi|cash.?out|rate|term/.test(p) ? 'uadRefi' : /equity|heloc|2nd|second/.test(p) ? 'uadHeloc' : /constr/.test(p) ? 'uadConstruction' : p ? 'uadOther' : '';
   if (type) { $('#f_type').value = type; applyTypeDefaults(); did.push(['Assignment type', TYPES[type].label]); }
-  if (F.form) { const v = /3\.6|new urar|redesign/i.test(F.form) ? 'uad36' : /1004|1073|1025|2055|1075|urar/i.test(F.form) ? 'uad26' : /traditional/i.test(F.form) ? 'uad36' : ''; if (v && !(cur && cur.formPicked)) { $('#f_reportForm').value = v; did.push(['Report form', F.form]); } }
+  if (F.form) { const v = /3\.6|new urar|redesign/i.test(F.form) ? 'uad36' : /1004|1073|1025|2055|1075|urar/i.test(F.form) ? 'uad26' : /traditional/i.test(F.form) ? 'uad36' : ''; if (v && !(cur && cur.formPicked)) { $('#f_reportForm').value = v; const num = (F.form.match(/\b(1004[CD]?|1073|1075|1025|2055|2090|2095)\b/) || [])[1]; if (num && v === 'uad26' && cur) { const hit = FORM_LIST.uad26.find(x => x.startsWith('Form ' + num + ' ')); if (hit) { $('#f_format').value = hit; cur.formNamePicked = true; } } syncFormSel(); did.push(['Report form', F.form]); } }
   const client = F.clientAs || F.client; if (client) { const c0 = $('#c0_company'); if (!c0.value.trim() || c0.value.trim() === (F.client || '')) { c0.value = client; did.push(['Client', client]); } }
   const amc = [F.client, F.lender].find(x => x && /appraisal management|\bAMC\b|valuation (services|management)|lender services|appraisal (nation|link|port)|solidifi|class valuation|clear capital|servicelink|corelogic|reggora|nationwide appraisal/i.test(x));
   if (amc) { set('amcUsed', true, 'Ordered through an AMC'); set('amcCo', amc, 'AMC'); }
@@ -2776,7 +2777,7 @@ function renderWizard() {
       <p class="help" id="wzFileNote"></p>
       <p class="help">Type the street address (with the unit, e.g. #3). City and ZIP: pick them, or leave them for the CRS report to fill in the USPS form with the ZIP+4. The address is used to check that every document you upload is for this property.</p>
       ${q('letter', 'Engagement letter', [['client', 'The client sent one (lender / AMC order)'], ['mine', 'I will write one']])}
-      ${q('form', 'Report form', [['uad36', 'UAD 3.6 (Traditional)'], ['uad26', 'UAD 2.6'], ['gpar', 'GPAR'], ['other', 'Other']])}
+      ${q('form', 'Report form format', [['uad36', 'UAD 3.6 (Traditional)'], ['uad26', 'UAD 2.6 (Legacy)'], ['gpar', 'GPAR'], ['other', 'Other']])}
       ${q('purchase', 'Is this a purchase?', [['yes', 'Yes'], ['no', 'No']])}
       ${q('listed', 'Is the property listed now, or was it in the last 12 months?', [['yes', 'Yes'], ['no', 'No'], ['unsure', 'Not sure']])}
       <div class="row"><button type="button" class="btn primary" id="wzNext1">Next: documents →</button><button type="button" class="btn ghost" id="wzCancel">Cancel</button></div></section>`;
@@ -2784,7 +2785,7 @@ function renderWizard() {
     $('#wzFile').oninput = () => { w.fileTyped = true; sync(); };
     const addrIn = () => { if (!w.fileTyped || !$('#wzFile').value.trim()) { const sug = suggestFileNo($('#wz_street').value); $('#wzFile').value = sug; $('#wzFileNote').textContent = sug ? 'Made from your rule: street letters + house number' + (/-[2-9]\d*$/.test(sug) ? ' – you have appraised this property before in the assistant, so this is report ' + sug.split('-').pop() : '') + '. Change it if needed.' : ''; } sync(); };
     wireAddr('wz_', () => { addrIn(); });
-    box.querySelectorAll('[data-wq]').forEach(b => b.onclick = () => { w[b.dataset.wq] = b.dataset.v; if (b.dataset.wq === 'form') { $('#f_reportForm').value = b.dataset.v; cur.formPicked = true; syncVisibility(); } renderWizard(); });
+    box.querySelectorAll('[data-wq]').forEach(b => b.onclick = () => { w[b.dataset.wq] = b.dataset.v; if (b.dataset.wq === 'form') { $('#f_reportForm').value = b.dataset.v; cur.formPicked = true; cur.formNamePicked = false; syncVisibility(); } renderWizard(); });
     $('#wzCancel').onclick = () => { showTab('home'); renderHome(); };
     $('#wzNext1').onclick = () => { if (!w.letter) { toast('Choose who writes the engagement letter'); return; }
       if (w.letter === 'client') { $('#f_status').value = 'Client letter'; } else { $('#f_status').value = 'Drafted'; cur.letterMode = 'mine'; }
@@ -2952,6 +2953,7 @@ function syncVisibility() {
   $('#aiNote').textContent = ai === 'Yes' ? 'AI may be used. The AI-use paragraph is in the letter.' : ai === 'Redacted' ? 'AI only on documents with names and personal information removed. The AI-use paragraph is in the letter.' : ai === 'No' ? 'No AI on this job. The AI-use paragraph is left out of the letter.' : 'Not chosen yet. The letter includes the AI-use paragraph until you choose No AI.';
   if (!$('#f_reportForm').value) $('#f_reportForm').value = defaultForm($('#f_type').value, $('#f_propType').value);
   const rf = $('#f_reportForm').value;
+  syncFormSel();
   $('#formNote').textContent = rf === 'uad26' ? 'UAD 2.6 (legacy 1004 / 1073 / 1025) – for clients that still order it.' : rf === 'uad36' ? 'UAD 3.6 (new URAR): the inspection app and SFREP export are built for this.' : '';
   $('#gseBox').hidden = !t.uad; $('#lenderBox').hidden = !$('#f_lenderDiff').checked; $('#amcBox').hidden = !$('#f_amcUsed').checked;
   const eff = $('#f_effDate').value || (t.retro ? $('#f_dod').value : $('#f_inspDate').value);
@@ -3309,6 +3311,33 @@ function defaultForm(type, propType) { // which report form an order starts with
   return 'gpar';
 }
 
+
+/* the form within the report form format (her request): UAD 2.6 forms by number, UAD 3.6 URAR kinds, GPAR forms; "Other – type it" for anything else */
+const FORM_LIST = {
+  uad36: ['Uniform Residential Appraisal Report (URAR)', 'URAR – Exterior-only inspection', 'URAR – Desktop', 'URAR – Hybrid', 'Appraisal Update and/or Completion Report (Form 1004D)'],
+  uad26: ['Form 1004 – Uniform Residential Appraisal Report', 'Form 1073 – Individual Condominium Unit Appraisal Report', 'Form 1025 – Small Residential Income Property Appraisal Report', 'Form 2055 – Exterior-Only Inspection Residential Appraisal Report',
+    'Form 1075 – Exterior-Only Inspection Individual Condominium Unit Appraisal Report', 'Form 1004C – Manufactured Home Appraisal Report', 'Form 2090 – Individual Cooperative Interest Appraisal Report', 'Form 2095 – Exterior-Only Individual Cooperative Interest Appraisal Report',
+    'Form 1004 Desktop – Desktop Appraisal', 'Form 1004D – Appraisal Update and/or Completion Report'],
+  gpar: ['GPAR form report', 'GPAR Condominium form report', 'GPAR Small Residential Income form report', 'GPAR Land form report'],
+  other: [] };
+function suggestFormName(rf, pt, insp) {
+  const L = FORM_LIST[rf] || []; if (!L.length) return '';
+  if (rf === 'uad26') { const ext = insp === 'exterior'; return pt === 'condo' ? L[ext ? 4 : 1] : pt === 'multi' ? L[2] : pt === 'coop' ? L[ext ? 7 : 6] : ext ? L[3] : L[0]; }
+  if (rf === 'uad36') return insp === 'exterior' ? L[1] : L[0];
+  return pt === 'condo' ? L[1] : pt === 'multi' ? L[2] : pt === 'land' ? L[3] : L[0];
+}
+function syncFormSel() {
+  const sel = $('#f_formSel'), inp = $('#f_format'); if (!sel) return; const rf = $('#f_reportForm').value; const L = FORM_LIST[rf] || [];
+  if (!(cur && cur.formNamePicked)) { const s = suggestFormName(rf, $('#f_propType').value, $('#f_inspection').value); if (s) inp.value = s; else if (!L.length && L.indexOf(inp.value) < 0 && Object.values(FORM_LIST).flat().includes(inp.value)) inp.value = ''; }
+  sel.innerHTML = `<option value="">—</option>${L.map(x => `<option>${hesc(x)}</option>`).join('')}<option value="__other">Other – type it</option>`;
+  const v = inp.value.trim(); if (!v) { sel.value = L.length ? '' : '__other'; inp.hidden = !!L.length; } else if (L.includes(v)) { sel.value = v; inp.hidden = true; } else { sel.value = '__other'; inp.hidden = false; }
+}
+document.addEventListener('DOMContentLoaded', () => {});
+(function wireFormSel() { const sel = document.getElementById('f_formSel'); if (!sel) return setTimeout(wireFormSel, 50);
+  sel.addEventListener('change', () => { const inp = $('#f_format'); if (cur) cur.formNamePicked = true; if (sel.value === '__other') { inp.hidden = false; inp.value = ''; inp.focus(); } else { inp.value = sel.value; inp.hidden = true; } update(); });
+  $('#f_format').addEventListener('input', () => { if (cur) cur.formNamePicked = true; });
+  $('#f_reportForm').addEventListener('change', () => { if (cur) cur.formNamePicked = false; }, true);
+  ['#f_reportForm', '#f_propType', '#f_inspection'].forEach(id => $(id).addEventListener('change', () => { syncFormSel(); update(); })); })();
 
 </script>
 </body>

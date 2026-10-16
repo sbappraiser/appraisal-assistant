@@ -96,6 +96,7 @@ function syncVisibility() {
   $('#aiNote').textContent = ai === 'Yes' ? 'AI may be used. The AI-use paragraph is in the letter.' : ai === 'Redacted' ? 'AI only on documents with names and personal information removed. The AI-use paragraph is in the letter.' : ai === 'No' ? 'No AI on this job. The AI-use paragraph is left out of the letter.' : 'Not chosen yet. The letter includes the AI-use paragraph until you choose No AI.';
   if (!$('#f_reportForm').value) $('#f_reportForm').value = defaultForm($('#f_type').value, $('#f_propType').value);
   const rf = $('#f_reportForm').value;
+  syncFormSel();
   $('#formNote').textContent = rf === 'uad26' ? 'UAD 2.6 (legacy 1004 / 1073 / 1025) – for clients that still order it.' : rf === 'uad36' ? 'UAD 3.6 (new URAR): the inspection app and SFREP export are built for this.' : '';
   $('#gseBox').hidden = !t.uad; $('#lenderBox').hidden = !$('#f_lenderDiff').checked; $('#amcBox').hidden = !$('#f_amcUsed').checked;
   const eff = $('#f_effDate').value || (t.retro ? $('#f_dod').value : $('#f_inspDate').value);
@@ -453,3 +454,30 @@ function defaultForm(type, propType) { // which report form an order starts with
   return 'gpar';
 }
 
+
+/* the form within the report form format (her request): UAD 2.6 forms by number, UAD 3.6 URAR kinds, GPAR forms; "Other – type it" for anything else */
+const FORM_LIST = {
+  uad36: ['Uniform Residential Appraisal Report (URAR)', 'URAR – Exterior-only inspection', 'URAR – Desktop', 'URAR – Hybrid', 'Appraisal Update and/or Completion Report (Form 1004D)'],
+  uad26: ['Form 1004 – Uniform Residential Appraisal Report', 'Form 1073 – Individual Condominium Unit Appraisal Report', 'Form 1025 – Small Residential Income Property Appraisal Report', 'Form 2055 – Exterior-Only Inspection Residential Appraisal Report',
+    'Form 1075 – Exterior-Only Inspection Individual Condominium Unit Appraisal Report', 'Form 1004C – Manufactured Home Appraisal Report', 'Form 2090 – Individual Cooperative Interest Appraisal Report', 'Form 2095 – Exterior-Only Individual Cooperative Interest Appraisal Report',
+    'Form 1004 Desktop – Desktop Appraisal', 'Form 1004D – Appraisal Update and/or Completion Report'],
+  gpar: ['GPAR form report', 'GPAR Condominium form report', 'GPAR Small Residential Income form report', 'GPAR Land form report'],
+  other: [] };
+function suggestFormName(rf, pt, insp) {
+  const L = FORM_LIST[rf] || []; if (!L.length) return '';
+  if (rf === 'uad26') { const ext = insp === 'exterior'; return pt === 'condo' ? L[ext ? 4 : 1] : pt === 'multi' ? L[2] : pt === 'coop' ? L[ext ? 7 : 6] : ext ? L[3] : L[0]; }
+  if (rf === 'uad36') return insp === 'exterior' ? L[1] : L[0];
+  return pt === 'condo' ? L[1] : pt === 'multi' ? L[2] : pt === 'land' ? L[3] : L[0];
+}
+function syncFormSel() {
+  const sel = $('#f_formSel'), inp = $('#f_format'); if (!sel) return; const rf = $('#f_reportForm').value; const L = FORM_LIST[rf] || [];
+  if (!(cur && cur.formNamePicked)) { const s = suggestFormName(rf, $('#f_propType').value, $('#f_inspection').value); if (s) inp.value = s; else if (!L.length && L.indexOf(inp.value) < 0 && Object.values(FORM_LIST).flat().includes(inp.value)) inp.value = ''; }
+  sel.innerHTML = `<option value="">—</option>${L.map(x => `<option>${hesc(x)}</option>`).join('')}<option value="__other">Other – type it</option>`;
+  const v = inp.value.trim(); if (!v) { sel.value = L.length ? '' : '__other'; inp.hidden = !!L.length; } else if (L.includes(v)) { sel.value = v; inp.hidden = true; } else { sel.value = '__other'; inp.hidden = false; }
+}
+document.addEventListener('DOMContentLoaded', () => {});
+(function wireFormSel() { const sel = document.getElementById('f_formSel'); if (!sel) return setTimeout(wireFormSel, 50);
+  sel.addEventListener('change', () => { const inp = $('#f_format'); if (cur) cur.formNamePicked = true; if (sel.value === '__other') { inp.hidden = false; inp.value = ''; inp.focus(); } else { inp.value = sel.value; inp.hidden = true; } update(); });
+  $('#f_format').addEventListener('input', () => { if (cur) cur.formNamePicked = true; });
+  $('#f_reportForm').addEventListener('change', () => { if (cur) cur.formNamePicked = false; }, true);
+  ['#f_reportForm', '#f_propType', '#f_inspection'].forEach(id => $(id).addEventListener('change', () => { syncFormSel(); update(); })); })();

@@ -284,9 +284,9 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
       <label>Inspection<select id="f_inspection"><option value="interior">Interior and exterior</option><option value="exterior">Exterior only, from the street</option><option value="none">No inspection</option></select></label>
       <div><span class="eyebrow">Valuation approaches</span>
         <div class="checks"><label class="check"><input type="checkbox" id="f_apSales">Sales Comparison</label><label class="check"><input type="checkbox" id="f_apCost">Cost (as applicable)</label><label class="check"><input type="checkbox" id="f_apIncome">Income (as applicable)</label></div></div>
-      <label>Report form<select id="f_reportForm"><option value="uad36">UAD 3.6 – new URAR (Traditional)</option><option value="uad26">UAD 2.6 – Form 1004 / 1073 / 1025 (legacy)</option><option value="gpar">GPAR (non-lender)</option><option value="other">Other / narrative</option></select></label>
+      <label>Report form format<select id="f_reportForm"><option value="uad36">UAD 3.6 – new URAR (Traditional)</option><option value="uad26">UAD 2.6 (Legacy)</option><option value="gpar">GPAR (non-lender)</option><option value="other">Other / narrative</option></select></label>
       <p class="help" id="formNote"></p>
-      <label>Report format <span class="opt">blank = the form for this property type</span><input id="f_format"></label>
+      <label>Form<select id="f_formSel"></select><input id="f_format" placeholder="type the form" hidden></label>
       <div class="grid2">
         <label>Listing / contract status<select id="f_listing"><option value="omit">Leave this section out</option><option value="notListed">Not listed for sale</option><option value="listed">Currently listed</option><option value="contract">Under contract</option></select></label>
         <label id="listingDetailBox">Details <span class="opt">MLS #, list price, contract date</span><input id="f_listingDetail"></label>
@@ -367,9 +367,10 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
       <li><b>3 · Check:</b> see what was filled in. The client’s letter sets the client, loan number, borrower, due date, fee, report form, rent schedule, and <b>AI use</b>: a ban (for example “no AI without prior authorization”) sets No AI; confidentiality wording sets Yes – only with confidential information removed; nothing sets Yes. You can change any of it on the order.</li>
       <li>Click <b>Read</b> next to the prelim or contract to summarize it, then <b>Open the order</b> – or, if you are writing the letter, <b>Next: write my engagement letter</b>.</li>
       <li>The order saves by itself. To find it again, go to <b>Home</b>: <b>Open an order</b> lists your last 10 orders (click a row to open it); <b>All files</b> lets you search by file number, address and/or borrower – fill in any of the boxes and click <b>Search</b> (leave them empty to list every order).</li></ol></details>
-    <details><summary>Report form</summary><ol>
-      <li>You choose the form: in <b>New order</b> step 1, click <b>UAD 3.6 (Traditional)</b>, <b>UAD 2.6</b>, <b>GPAR</b> or <b>Other</b>. You can change it later under <b>Report form</b> in Scope and report on the order page.</li>
-      <li>Your choice is kept – the assistant does not change it, even if the client's letter names a different form. If you have not chosen, a letter that names a 1004 / 1073 / 1025 sets UAD 2.6, and "Traditional" or "UAD 3.6" sets UAD 3.6.</li></ol></details>
+    <details><summary>Report form format and form</summary><ol>
+      <li><b>Report form format</b>: in <b>New order</b> step 1, click <b>UAD 3.6 (Traditional)</b>, <b>UAD 2.6 (Legacy)</b>, <b>GPAR</b> or <b>Other</b>. You can change it later in Scope and report on the order page.</li>
+      <li><b>Form</b> (just below it on the order page): the assistant picks the usual one for the property type and inspection – e.g. UAD 2.6 condo → Form 1073, exterior-only → Form 2055. Click it to choose another (1004, 1073, 1025, 2055, 1075, 1004C, 2090, 2095, 1004 Desktop, 1004D; URAR kinds for 3.6; GPAR forms), or <b>Other – type it</b>. Once you choose, it stays. It is the "Format" line in your engagement letter.</li>
+      <li>Your choices are kept – the assistant does not change them, even if the client's letter names a different form. If you have not chosen, a letter that names a 1004 / 1073 / 1025 sets UAD 2.6 and that form.</li></ol></details>
     <details><summary>Documents: upload once, kinds, search, sticky notes</summary><ol>
       <li>Drop every file for the order into the <b>Documents</b> box, or click <b>Choose files</b>. Each one is sorted by kind; change the kind with its drop-down if it guessed wrong.</li>
       <li>Click a file name to open it. Click <b>Read</b> to open the reader (next section). <b>Remove</b> takes it out of the order.</li>
