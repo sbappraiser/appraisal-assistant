@@ -361,12 +361,7 @@ function dictParse(text, ins) {
   const out = items.map(m => dictItem(m, sentText));
   if ([...changes.values()].some(c => c.key === 'amenities.fenceMat')) put('amenities.hardscape', 'Fencing');
   // the rooms as they are in the inspection now
-  if (ins) rooms.forEach(r => { const L = ins.lists[r.list] || [];
-    let ex = null;
-    if (r.list === 'kitchens') ex = r.style ? L.find(k => k.style === r.style) : L[0];
-    else if (r.list === 'wetbars') ex = L[0];
-    else if (r.list === 'rooms') ex = L.find(x => x.type === r.type);
-    else if (r.label) ex = L.find(x => String(x.label || '').toLowerCase() === r.label.toLowerCase()) || (r.list === 'bedrooms' && r.label === 'Bedroom 1' ? L[0] : null) || (r.list === 'baths' && r.label === 'Bath 1' ? L.find(b => b.kind === 'FullBathroom') : null);
+  if (ins) rooms.forEach(r => { const L = ins.lists[r.list] || []; const ex = dkExisting(ins, r);
     if (ex) { r.existingId = ex.id; r.name = LISTS[r.list].name(ex, L.indexOf(ex), L); } });
   // leftovers: a sentence with words that were not used goes, as she said it, into the notes of the room or area she was in – nothing is lost
   const stAt = j => { let st = { room: null, tabs: [] }; for (const o of marks) { if (o.i > j) break; if (o.st) st = o.st; } return st; };
@@ -375,6 +370,11 @@ function dictParse(text, ins) {
   T.forEach((t, j) => { if (t.br || t.rep || t.item) return; const mk = marks.find(m => j >= m.i && j < m.i + m.len); if (mk && !mk.unused) return; if (!sub(t)) return;
     left.push(t.w); const k = sentOf[j]; if (noted.has(k)) return; noted.add(k); const st = stAt(j);
     if (mk && mk.negSec) put(NOTE_KEY[mk.negSec], sentText(k)); else if (st.room !== null && LISTS[rooms[st.room].list].fields.some(f => f.k === 'note')) put('L:' + rooms[st.room].list + '.note', sentText(k), st.room); else put(NOTE_KEY[st.tabs[0]] || 'front.note', sentText(k)); });
+  // her rule (Oct 2026): if she does not say a defect there is no defect → the defect questions are answered No (she can change them in the list)
+  const DEFECT_RX = /\b(?:defects?|damaged?|cracks?|cracked|cracking|leaks?|leaking|rot|rotted|rotting|termites?|broken|peeling|deferred maintenance|needs? (?:repair|replacing|replacement)|water stains?|mold|mildew|missing|inoperable|not working)\b/;
+  const defectSaid = sentW.some((ws, k) => { if (report.has(k)) return false; const w = ws.map(t => t.w).join(' ').replace(/\bno (?:visible |apparent |observed |known )?(?:defects?|damage)\b/g, ''); return DEFECT_RX.test(w); });
+  if (!defectSaid) [['site', 'siteDefects'], ['exterior', 'extDefects'], ['interior', 'intDefects'], ['amenities', 'amenDefects'], ['garage', 'vsDefects']].forEach(([sec, k]) => {
+    if (ins && ins.data[sec] && ins.data[sec][k] !== undefined) return; put(sec + '.' + k, false); const c = changes.get(sec + '.' + k); if (c) c.auto = 'You did not mention a defect'; });
   // a field she filled implies the yes/no above it (garage features → has a garage); then drop anything the tab would not show
   const has = re => [...changes.values()].some(c => c.room === undefined && re.test(c.key));
   if (has(/^garage\.(garAttach|garFinish|garFeat|garSpaces|garConverted)$/)) put('garage.hasGarage', true);
@@ -385,9 +385,74 @@ function dictParse(text, ins) {
   [...changes.entries()].forEach(([id, c]) => { if (c.room !== undefined || !c.sec || !c.f.show || DK[c.f.k]) return;
     const d = { ...((ins && ins.data[c.sec.id]) || {}) }; changes.forEach(c2 => { if (c2.room === undefined && c2.sec === c.sec) d[c2.f.k] = c2.f.t === 'multi' ? c2.vals : c2.vals[0]; });
     let ok = true; try { ok = !!c.f.show(d, fakeIns); } catch (e) { ok = true; } if (!ok) changes.delete(id); });
-  const order = c => c.f.t === 'note' ? 1 : 0;   // notes after the choices
-  return { changes: [...changes.values()].sort((a, b) => order(a) - order(b)), rooms, items: out, unclear: [...new Set(unclear)], left: [...new Set(left)] };
+  const order = c => c.f.t === 'note' ? 2 : c.auto ? 1 : 0;   // notes after the choices
+  out.forEach(it => { if (it.list === 'outbuildings' && !defectSaid && it.defects === undefined) it.defects = false; });
+  return { defectSaid, changes: [...changes.values()].sort((a, b) => order(a) - order(b)), rooms, items: out, unclear: [...new Set(unclear)], left: [...new Set(left)] };
 }
+function dkExisting(ins, r) {   // the room already in the inspection that she means
+  const L = ins.lists[r.list] || []; const same = x => String(x.label || '').toLowerCase() === String(r.label || '').toLowerCase();
+  if (r.list === 'kitchens') return r.style ? L.find(k => k.style === r.style) : L[0] || null;
+  if (r.list === 'wetbars') return L[0] || null;
+  if (r.list === 'rooms') return L.find(x => r.label ? same(x) : x.type === r.type) || L.find(x => x.type === r.type) || null;
+  if (r.label) return L.find(same) || (r.list === 'bedrooms' && r.label === 'Bedroom 1' && L[0] && !L[0].label ? L[0] : null) || (r.list === 'baths' && r.label === 'Bath 1' ? L.find(b => b.kind === 'FullBathroom' && !b.label) : null) || null;
+  return null;
+}
+
+/* ---- photos while dictating (6o): the photo goes to the last room or area she named ---- */
+const PHOTO_WORDS = [ // [what she says, tab, photo field (first of its set), only at the start of a sentence?]
+  ['street', 'street', 'photoStreet', 1], ['road', 'street', 'photoStreet', 1], ['street scene', 'street', 'photoStreet'], ['driveway', 'driveway', 'photoDrive'],
+  ['front', 'front', 'photoFront', 1], ['exterior', 'front', 'photoFront', 1], ['dwelling', 'front', 'photoFront', 1], ['residence', 'front', 'photoFront', 1], ['front of house', 'front', 'photoFront'], ['front elevation', 'front', 'photoFront'], ['front yard', 'amenities', 'photoLand'],
+  ['rear', 'exterior', 'photoRear', 1], ['back', 'exterior', 'photoRear', 1], ['rear yard', 'exterior', 'photoRear'], ['backyard', 'exterior', 'photoRear'], ['back yard', 'exterior', 'photoRear'], ['rear elevation', 'exterior', 'photoRear'],
+  ['side', 'exterior', 'photoSide', 1], ['side yard', 'exterior', 'photoSide'],
+  ['garage', 'garage', 'photoGarage'], ['garage interior', 'garage', 'photoGarageInt'], ['inside the garage', 'garage', 'photoGarageInt'],
+  ['site', 'site', 'photoSite', 1], ['view', 'site', 'photoView'], ['views', 'site', 'photoView'], ['landscaping', 'amenities', 'photoLand'], ['landscape', 'amenities', 'photoLand'], ['yard', 'amenities', 'photoLand', 1],
+  ['water heater', 'systems', 'photoWH'], ['smoke detector', 'interior', 'photoSmoke'], ['carbon monoxide', 'interior', 'photoCO'], ['co detector', 'interior', 'photoCO'], ['attic', 'interior', 'photoAttic'], ['solar', 'systems', 'photoSolar'],
+  ['tennis', 'amenities', 'photoRec'], ['sport court', 'amenities', 'photoRec'], ['pickleball', 'amenities', 'photoRec'], ['putting green', 'amenities', 'photoRec'],
+  ['adu', 'adu'], ['accessory dwelling', 'adu'], ['guest house', 'adu'], ['granny unit', 'adu'], ['casita', 'adu']];
+function dkPhotoTarget(text) {   // the last room or area named in the text up to where she is
+  const T = dictTokens(text); const IX = dictIndex(); const PW = PHOTO_WORDS.map(([w, sec, f, st]) => ({ ph: phraseOf(w), sec, f, st }));
+  const at = (i, ph) => ph.every((x, j) => T[i + j] && !T[i + j].br && T[i + j].s === x);
+  const best = (i, list) => list.filter(e => at(i, e.ph)).sort((a, b) => b.ph.length - a.ph.length)[0];
+  let last = null;
+  for (let i = 0; i < T.length; i++) { if (T[i].br) continue; const start = i === 0 || T[i - 1].br;
+    const r = best(i, IX.rooms.filter(x => !x.c || start)), it = best(i, IX.items), w = best(i, PW.filter(x => !x.st || start));
+    const len = x => x ? x.ph.length : 0; const L = Math.max(len(r), len(it), len(w)); if (!L) continue;
+    if (len(r) === L) { const tg = { kind: 'room', list: r.a, props: { ...r.b } }; let nx = T[i + L], ex = 0; if (nx && !nx.br && nx.s === 'number') { ex = 1; nx = T[i + L + 1]; }
+      if (nx && !nx.br && /^\d$/.test(nx.s)) { tg.num = nx.s; i += 1 + ex; } else if (['bedrooms', 'baths'].includes(r.a) && /s$/.test(T[i + L - 1].w)) { i += L - 1; continue; }
+      if (r.a === 'rooms' && T[i + L] && T[i + L].sl) { const r2 = best(i + L, IX.rooms.filter(x => x.a === 'rooms')); if (r2) { const cap = x => x[0].toUpperCase() + x.slice(1); tg.props.label = cap(T[i].w) + '/' + cap(T[i + L].w); i += r2.ph.length; } }
+      last = tg; }
+    else if (len(it) === L) last = { kind: 'item', list: it.a, type: it.b, tuff: T.slice(i, i + L).some(t => t.s === 'tuff') };
+    else last = w.sec === 'adu' ? { kind: 'adu' } : { kind: 'field', sec: w.sec, base: w.f };
+    i += L - 1; }
+  return last;
+}
+function dkRoomOf(tg) { const r = { list: tg.list, ...tg.props }; if (tg.num) { r.num = tg.num; r.label = (tg.list === 'bedrooms' ? 'Bedroom ' : tg.list === 'baths' ? (r.kind === 'HalfBathroom' ? 'Half Bath ' : 'Bath ') : (r.label || r.type || '') + ' ') + tg.num; } return r; }
+// the photo slot for that place; make=true adds the room / pool / shed to the inspection if it is not there yet (Save fills it in later)
+function dkPhotoSlot(ins, tg, make) {
+  if (!tg) return null;
+  if (tg.kind === 'field') { const sec = SECTIONS.find(x => x.id === tg.sec); const fs = []; sec.groups.forEach(g => g.fields.forEach(f => { if (f.t === 'photo' && (f.k === tg.base || (f.k.startsWith(tg.base) && /^\d+$/.test(f.k.slice(tg.base.length))))) fs.push(f); }));
+    if (!fs.length) return null; const d = ins.data[tg.sec] || {}; const f = fs.find(x => !photosInSlot(ins, { sec: tg.sec, field: x.k }).length) || fs[fs.length - 1];
+    if (make) { if (tg.sec === 'garage' && d.hasGarage === undefined) d.hasGarage = true; if (tg.sec === 'driveway' && d.hasDrive === undefined) d.hasDrive = true; if (f.k === 'photoAttic' && d.attic === undefined) d.attic = true; }
+    let req = false; try { req = typeof f.req === 'function' ? !!f.req(d, ins) : !!f.req; } catch (e) {}
+    return { sec: tg.sec, field: f.k, label: f.l, cat: f.cat, required: req }; }
+  let key, it;
+  if (tg.kind === 'room') { const r = dkRoomOf(tg); key = r.list; it = dkExisting(ins, r); if (!it) { if (!make) return { label: roomName(r), pending: true }; it = dictNewItem(ins, r); } }
+  else if (tg.kind === 'adu') { key = 'adus'; it = (ins.lists.adus || [])[0]; if (!it) { if (!make) return { label: 'ADU Exterior', pending: true }; it = { id: uid(), dkPhoto: true }; ins.lists.adus.push(it); } }
+  else { key = tg.list; const L = ins.lists[key]; const type = tg.type === 'pool' ? 'IngroundPool' : tg.type === 'spa' ? 'IngroundSpa' : tg.type;
+    it = L.find(x => x.type === type || (tg.type === 'pool' && /Pool/.test(x.type || '')) || (tg.type === 'spa' && /Spa/.test(x.type || '')));
+    if (!it) { const lab = tg.tuff ? 'Tuff Shed' : labelOf(LISTS[key].fields[0].o, type) || type; if (!make) return { label: lab, pending: true }; it = { id: uid(), type, dkPhoto: true }; if (tg.tuff) it.label = 'Tuff Shed'; L.push(it); } }
+  const L = ins.lists[key]; const slots = typeof itemPhotoSlots === 'function' ? itemPhotoSlots(key, it, L.indexOf(it), ins) : [];
+  return slots[0] || { list: key, item: it.id, slot: 'main', label: LISTS[key].name(it, L.indexOf(it), L), cat: 'SupplementalExhibit' };
+}
+function dkPhotoChoices(ins) {   // for "somewhere else": every photo spot on the shown tabs and the rooms already there
+  const out = [];
+  SECTIONS.forEach(sec => { if (typeof tabShown === 'function' && !tabShown(sec, ins)) return; sec.groups.forEach(g => g.fields.forEach(f => { if (f.t !== 'photo' || f.k === 'sketchImg') return; if (typeof isShown === 'function' && !isShown(f, ins.data[sec.id], ins)) return;
+    out.push({ g: sec.title, label: f.l, slot: { sec: sec.id, field: f.k, label: f.l, cat: f.cat, required: false } }); })); });
+  Object.keys(LISTS).forEach(key => (ins.lists[key] || []).forEach((it, i) => { if (typeof itemPhotoSlots !== 'function') return; itemPhotoSlots(key, it, i, ins).forEach(s => out.push({ g: LISTS[key].title || key, label: s.label, slot: s })); }));
+  SECTIONS.forEach(sec => { if (typeof tabShown === 'function' && !tabShown(sec, ins)) return; out.push({ g: 'Extra workfile photos', label: sec.title + ' – workfile', slot: { sec: sec.id, extra: true, label: sec.title + ' – workfile', cat: 'SupplementalExhibit' } }); });
+  return out;
+}
+
 let DK_KNOWN = null;
 function dictItem(m, sentText) {
   const S = phraseOf((m.words || []).join(' ')).join(' '); const has = w => (' ' + S + ' ').includes(' ' + phraseOf(w).join(' ') + ' ');
@@ -439,9 +504,10 @@ function dictApply(ins, res, pick) {
   if (res.changes.some((c, i) => pick.c[i] && c.key === 'interior.fpType') && !(ins.data.interior.fireplaces > 0)) ins.data.interior.fireplaces = 1;
   res.items.forEach((it, i) => { if (!pick.i[i]) return; const L = ins.lists[it.list]; const o = { id: uid(), type: it.type };
     if (it.list === 'waterFeatures') { if (it.mat) o.mat = it.mat; if (it.feat.length) o.feat = it.feat; if (it.note) o.note = it.note; }
-    else if (it.list === 'outbuildings') { if (it.label) o.label = it.label; if (it.permitted) o.permitted = it.permitted; if (it.note) o.note = it.note; }
+    else if (it.list === 'outbuildings') { if (it.label) o.label = it.label; if (it.permitted) o.permitted = it.permitted; if (it.note) o.note = it.note; if (it.defects === false) o.defects = false; }
     else { if (it.material) o.material = it.material; if (it.feat.length) o.feat = it.feat; if (it.note) o.note = it.note; }
-    L.push(o); });
+    const made = L.find(x => x.dkPhoto && (x.type === o.type || (/Pool/.test(x.type || '') && /Pool/.test(o.type)) || (/Spa/.test(x.type || '') && /Spa/.test(o.type))));   // the one she photographed while dictating
+    if (made) { Object.assign(made, { ...o, id: made.id }); delete made.dkPhoto; } else L.push(o); });
 }
 
 function dkSummary(R, ins) {
@@ -476,7 +542,7 @@ function renderDictate() {
     const what = c.f.t === 'note' || c.f.t === 'text' ? '<i>“' + esc(c.vals.join(' ')) + '”</i>' : c.vals.map(v => '<b>' + esc(dkLabel(c.key, v)) + '</b>').join(', ');
     const note = c.f.t === 'note' ? (curL ? 'added to what is there' : '') : c.f.t !== 'multi' && curL && curL !== dkLabel(c.key, c.vals[0]) ? 'replaces ' + curL : c.f.t === 'multi' && curL ? 'added to ' + curL : '';
     const two = c.f.t === 'one' && c.vals.length > 1;
-    return row(P.c[i] !== false, `data-dkc="${i}"`, where, editor(c, i), two ? 'I heard more than one – pick the right one' : note, cls); };
+    return row(P.c[i] !== false, `data-dkc="${i}"`, where, editor(c, i), two ? 'I heard more than one – pick the right one' : c.auto ? c.auto + ' – change it if there is one' : note, cls); };
   const secRows = R ? R.changes.map((c, i) => c.room === undefined ? changeRow(c, i, (c.sec ? c.sec.title : '') + ' › ' + c.f.l, ins.data[c.sec.id]) : '').join('') : '';
   const roomRows = R ? R.rooms.map((r, ri) => { const L = ins.lists[r.list]; const ex = r.existingId ? L.find(x => x.id === r.existingId) : null;
     const head = row(P.r[ri] !== false, `data-dkr="${ri}"`, ex ? 'Update' : 'New ' + ROOM_TITLE[r.list].toLowerCase(), '<b>' + esc(ex ? r.name : roomName(r)) + '</b>' + (r.level ? ' · ' + esc(labelOf(LEVELS_ALL, r.level)) : ''), '', 'dk-room');
@@ -490,22 +556,50 @@ function renderDictate() {
   return `<section class="group open"><div class="ghead static"><span class="gtitle">Dictate your notes</span></div><div class="exp">
     <p class="help">Say the area or room first, then what you see, the way you walk it. For example: <i>“Exterior 2 story Spanish stucco clay tile roof copper gutters wood clad dual pane windows slab foundation. Exterior quality Q4 condition C3. 2 car attached garage. View residential full neutral. Topography level lot. Interior 9 foot ceilings recessed lighting. Forced air gas heating, central air, tankless water heater. Living room hardwood floors vaulted ceiling gas fireplace. Kitchen remodeled 5 to 10 years ago granite counters shaker cabinets Wolf range Sub-Zero refrigerator island with seating. Upstairs primary bedroom carpet walk-in closet. Primary bath double sink freestanding tub separate shower frameless glass. Bedroom 2 carpet. Hall bath tub shower combo tile surround. Interior quality Q3 condition C2. Overall quality Q4 condition C3.”</i></p>
     <p class="help">Tap in the box, then the <b>microphone on the iPad keyboard</b>, and talk.${DICT_SR ? ' Or use Listen.' : ''} You can dictate a little at a time: check it, save it to the appraisal file, then dictate the next part. Say “upstairs” or “level 2” before the rooms on that floor. When you finish, tap <b>1. Sort my notes</b> to see where each thing will go, then <b>2. Save to appraisal file</b>. Nothing is saved into the tabs until you tap Save.</p>
+    <p class="help"><b>Photos:</b> say the room or area, then tap <b>Take photo</b> – it is labeled for the last room or area you named (shown next to the button; pick another place if it is wrong). <b>If you do not mention a defect, the defect questions are answered No</b>; if you do not mention a pool, spa, court, ADU or outbuilding, none is added.</p>
     <textarea class="txt dk-box" id="dkText" rows="7" spellcheck="true" autocorrect="on" autocapitalize="sentences" placeholder="Tap here, then the microphone on the keyboard">${esc((app.dict && app.dict.text) || ins.dictDraft || '')}</textarea>
     <p class="help dk-saved">What you dictate is kept with this inspection until you tap Save to appraisal file or Clear, even if you close the app.</p>
     <div class="row">${DICT_SR ? `<button class="btn" id="dkListen">${app.dict && app.dict.listening ? '■ Stop' : '🎤 Listen'}</button>` : ''}<button class="btn primary" id="dkRead">1. Sort my notes</button><button class="btn" id="dkCopy">Copy text</button><button class="btn" id="dkMail">Email it</button><button class="btn ghost" id="dkClear">Clear</button></div>
+    <div class="dk-cam" id="dkCamBar">${dkCamBar()}</div>
     ${R ? `<h3 class="dk-h">What I heard</h3>
       ${any ? '' : '<p class="help">Nothing I recognize yet.</p>'}
       ${secRows}${roomRows ? `<h4 class="dk-h4">Rooms</h4>${roomRows}` : ''}${itemRows ? `<h4 class="dk-h4">Outdoor</h4>${itemRows}` : ''}
+      ${R.defectSaid ? '<p class="dk-warn">You mentioned a defect or damage, so I did not answer the “defects present?” questions. Answer them on the Defects tab.</p>' : ''}
       ${any ? '<p class="dk-left">Anything I could not put in a box is kept, in your own words, in the notes of the room or area you were in (the rows in quotes). Untick a row to leave it out.</p>' : ''}
       ${any ? `<div class="row"><button class="btn primary" id="dkApply">2. Save to appraisal file</button><span class="help"> – saves the ticked items into the tabs</span></div>` : ''}` : ''}
     ${log.length ? `<details class="dk-log"><summary>Dictation log (${log.length}) – workfile only, not sent to SFREP</summary>${log.slice().reverse().map(x => `<p><small>${esc(new Date(x.t).toLocaleString())}</small><br>${esc(x.text)}</p>`).join('')}</details>` : ''}
   </div></section>`;
+}
+function dkCamBar() {
+  const ins = app.ins; const text = (app.dict && app.dict.text) || ins.dictDraft || ''; const upto = app.dict && app.dict.cur != null ? text.slice(0, app.dict.cur) : text;
+  const man = app.dict && app.dict.camSlot; const auto = dkPhotoSlot(ins, dkPhotoTarget(upto), false);
+  const to = man ? man.label : auto ? auto.label : 'Extra photos (say the room or area first)';
+  const recent = ins.photos.slice().sort((a, b) => b.ts - a.ts).slice(0, 6);
+  const ch = dkPhotoChoices(ins); const groups = [...new Set(ch.map(c => c.g))];
+  return `<div class="dk-camrow"><label class="cam">${CAM_SVG}Take photo<input type="file" accept="image/*" capture="environment" id="dkCam"></label><label class="cam lib">${LIB_SVG}From library<input type="file" accept="image/*" multiple id="dkCamLib"></label>
+    <div class="dk-camto">Photo goes to: <b id="dkCamTo">${esc(to)}</b>${man ? ' <small>(you picked it)</small>' : ''}<br><select class="txt dk-sel" id="dkCamPick"><option value="">${man ? '← back to where I last said' : 'Somewhere else? Pick it…'}</option>${groups.map(g => `<optgroup label="${esc(g)}">${ch.map((c, i) => c.g === g ? `<option value="${i}">${esc(c.label)}</option>` : '').join('')}</optgroup>`).join('')}</select></div></div>
+    ${recent.length ? `<div class="dk-strip">${recent.map(p => `<button class="thumb ${p.required ? 'req' : ''}" data-view="${p.id}"><img data-pid="${p.id}" alt=""><span>${esc(p.label)}</span></button>`).join('')}</div>` : ''}`;
 }
 function bindDictate(root) {
   const box = root.querySelector('#dkText'); if (!box) return; const blank = () => ({ text: '', pick: { c: {}, i: {}, v: {}, r: {}, mx: {}, ma: {} } }); app.dict = app.dict || blank();
   if (!app.dict.text && app.ins.dictDraft) app.dict.text = app.ins.dictDraft;
   const keep = () => { if ((app.ins.dictDraft || '') !== app.dict.text) { app.ins.dictDraft = app.dict.text; save(); } };
   box.oninput = () => { app.dict.text = box.value; clearTimeout(app.dict.kt); app.dict.kt = setTimeout(keep, 1200); }; box.onblur = () => { app.dict.text = box.value; keep(); };
+  // camera: the photo is labeled for the last room or area named before the cursor
+  const camRefresh = () => { const bar = root.querySelector('#dkCamBar'); if (!bar) return; bar.innerHTML = dkCamBar(); bindCam(); fillThumbs(bar); };
+  const where = () => { app.dict.text = box.value; app.dict.cur = box.selectionEnd != null ? box.selectionEnd : box.value.length; const el = root.querySelector('#dkCamTo'); if (el && !app.dict.camSlot) { const a = dkPhotoSlot(app.ins, dkPhotoTarget(box.value.slice(0, app.dict.cur)), false); el.textContent = a ? a.label : 'Extra photos (say the room or area first)'; } };
+  ['keyup', 'click', 'select'].forEach(ev => box.addEventListener(ev, where)); box.addEventListener('input', () => { clearTimeout(app.dict.wt); app.dict.wt = setTimeout(where, 300); });
+  const bindCam = () => {
+    const pick = root.querySelector('#dkCamPick'); if (pick) pick.onchange = () => { const ch = dkPhotoChoices(app.ins); app.dict.camSlot = pick.value === '' ? null : ch[+pick.value].slot; camRefresh(); };
+    root.querySelectorAll('#dkCamBar [data-view]').forEach(b => b.onclick = () => openViewer(b.dataset.view));
+    ['#dkCam', '#dkCamLib'].forEach(sel => { const inp = root.querySelector(sel); if (!inp) return; inp.onchange = async () => { const files = [...inp.files]; if (!files.length) return;
+      app.dict.text = box.value; keep(); const upto = box.value.slice(0, app.dict.cur != null ? app.dict.cur : box.value.length);
+      const slot = app.dict.camSlot || dkPhotoSlot(app.ins, dkPhotoTarget(upto), true) || { sec: 'property', extra: true, label: 'Dictation photo', cat: 'SupplementalExhibit' };
+      toast(files.length > 1 ? `Adding ${files.length} photos…` : 'Adding photo…');
+      try { let last; for (const f of files) last = await addPhoto(app.ins, slot, f); await saveNow(); toast((files.length > 1 ? files.length + ' photos saved: ' : 'Photo saved: ') + last.label); }
+      catch (e) { toast('Could not save that photo. Try again.'); }
+      app.dict.camSlot = null; camRefresh(); }; }); };
+  bindCam();
   const bodyText = () => { const t = box.value.trim(); const R = app.dict.res; return t + (R ? '\n\n--- What the app heard ---\n' + dkSummary(R, app.ins) : ''); };
   root.querySelector('#dkCopy').onclick = async () => { const t = bodyText(); if (!t) return toast('Nothing to copy yet');
     try { await navigator.clipboard.writeText(t); toast('Copied – paste it into an email or a message'); } catch (e) { box.focus(); box.select(); toast('Tap Copy on the menu that appears'); } };
