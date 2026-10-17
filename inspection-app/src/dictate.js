@@ -4,7 +4,7 @@
    composition shingle roof vinyl clad windows casement windows crawlspace.
    site concrete walkways ... inground pool with an attached spa ..."
    The words are matched to the app's own choices (same fields, same SFREP
-   export). Nothing is filled until she has seen the list and tapped Fill in.
+   export). Nothing is filled until she has seen the list and tapped Save to appraisal file.
    Words it does not understand are shown, never guessed.
    ===================================================================== */
 
@@ -475,15 +475,15 @@ function renderDictate() {
   const any = R && (R.changes.length || R.items.length || R.rooms.length);
   return `<section class="group open"><div class="ghead static"><span class="gtitle">Dictate your notes</span></div><div class="exp">
     <p class="help">Say the area or room first, then what you see, the way you walk it. For example: <i>“Exterior 2 story Spanish stucco clay tile roof copper gutters wood clad dual pane windows slab foundation. Exterior quality Q4 condition C3. 2 car attached garage. View residential full neutral. Topography level lot. Interior 9 foot ceilings recessed lighting. Forced air gas heating, central air, tankless water heater. Living room hardwood floors vaulted ceiling gas fireplace. Kitchen remodeled 5 to 10 years ago granite counters shaker cabinets Wolf range Sub-Zero refrigerator island with seating. Upstairs primary bedroom carpet walk-in closet. Primary bath double sink freestanding tub separate shower frameless glass. Bedroom 2 carpet. Hall bath tub shower combo tile surround. Interior quality Q3 condition C2. Overall quality Q4 condition C3.”</i></p>
-    <p class="help">Tap in the box, then the <b>microphone on the iPad keyboard</b>, and talk.${DICT_SR ? ' Or use Listen.' : ''} You can dictate a little at a time: read it, fill it in, then dictate the next part. Say “upstairs” or “level 2” before the rooms on that floor. Nothing is filled until you check the list and tap <b>Fill in</b>.</p>
+    <p class="help">Tap in the box, then the <b>microphone on the iPad keyboard</b>, and talk.${DICT_SR ? ' Or use Listen.' : ''} You can dictate a little at a time: check it, save it to the appraisal file, then dictate the next part. Say “upstairs” or “level 2” before the rooms on that floor. When you finish, tap <b>1. Sort my notes</b> to see where each thing will go, then <b>2. Save to appraisal file</b>. Nothing is saved into the tabs until you tap Save.</p>
     <textarea class="txt dk-box" id="dkText" rows="7" spellcheck="true" autocorrect="on" autocapitalize="sentences" placeholder="Tap here, then the microphone on the keyboard">${esc((app.dict && app.dict.text) || ins.dictDraft || '')}</textarea>
-    <p class="help dk-saved">What you dictate is kept with this inspection until you tap Fill in or Clear, even if you close the app.</p>
-    <div class="row">${DICT_SR ? `<button class="btn" id="dkListen">${app.dict && app.dict.listening ? '■ Stop' : '🎤 Listen'}</button>` : ''}<button class="btn primary" id="dkRead">Read it</button><button class="btn" id="dkCopy">Copy text</button><button class="btn" id="dkMail">Email it</button><button class="btn ghost" id="dkClear">Clear</button></div>
+    <p class="help dk-saved">What you dictate is kept with this inspection until you tap Save to appraisal file or Clear, even if you close the app.</p>
+    <div class="row">${DICT_SR ? `<button class="btn" id="dkListen">${app.dict && app.dict.listening ? '■ Stop' : '🎤 Listen'}</button>` : ''}<button class="btn primary" id="dkRead">1. Sort my notes</button><button class="btn" id="dkCopy">Copy text</button><button class="btn" id="dkMail">Email it</button><button class="btn ghost" id="dkClear">Clear</button></div>
     ${R ? `<h3 class="dk-h">What I heard</h3>
       ${any ? '' : '<p class="help">Nothing I recognize yet.</p>'}
       ${secRows}${roomRows ? `<h4 class="dk-h4">Rooms</h4>${roomRows}` : ''}${itemRows ? `<h4 class="dk-h4">Outdoor</h4>${itemRows}` : ''}
       ${any ? '<p class="dk-left">Anything I could not put in a box is kept, in your own words, in the notes of the room or area you were in (the rows in quotes). Untick a row to leave it out.</p>' : ''}
-      ${any ? `<div class="row"><button class="btn primary" id="dkApply">Fill in the ticked items</button></div>` : ''}` : ''}
+      ${any ? `<div class="row"><button class="btn primary" id="dkApply">2. Save to appraisal file</button><span class="help"> – saves the ticked items into the tabs</span></div>` : ''}` : ''}
     ${log.length ? `<details class="dk-log"><summary>Dictation log (${log.length}) – workfile only, not sent to SFREP</summary>${log.slice().reverse().map(x => `<p><small>${esc(new Date(x.t).toLocaleString())}</small><br>${esc(x.text)}</p>`).join('')}</details>` : ''}
   </div></section>`;
 }
@@ -499,7 +499,7 @@ function bindDictate(root) {
     if (navigator.share) { try { await navigator.share({ title: subj, text: t }); return; } catch (e) { if (e && e.name === 'AbortError') return; } }
     location.href = 'mailto:?subject=' + encodeURIComponent(subj) + '&body=' + encodeURIComponent(t); };
   root.querySelector('#dkRead').onclick = () => { app.dict.text = box.value; keep(); app.dict.res = dictParse(box.value, app.ins); app.dict.pick = { c: {}, i: {}, v: {}, r: {} }; renderTab(); };
-  root.querySelector('#dkClear').onclick = () => { if (box.value.trim() && !confirm('Clear the dictation box? (Anything you already filled in stays, and it is in the dictation log.)')) return; app.dict = blank(); app.ins.dictDraft = ''; save(); renderTab(); };
+  root.querySelector('#dkClear').onclick = () => { if (box.value.trim() && !confirm('Clear the dictation box? (Anything you already saved stays, and it is in the dictation log.)')) return; app.dict = blank(); app.ins.dictDraft = ''; save(); renderTab(); };
   root.querySelectorAll('[data-dkc]').forEach(cb => cb.onchange = () => { app.dict.pick.c[cb.dataset.dkc] = cb.checked; });
   root.querySelectorAll('[data-dkr]').forEach(cb => cb.onchange = () => { app.dict.pick.r[cb.dataset.dkr] = cb.checked; const box2 = cb.closest('.dk-roomBox'); if (box2) box2.classList.toggle('off', !cb.checked); });
   root.querySelectorAll('[data-dkv]').forEach(r => r.onchange = () => { app.dict.pick.v[r.dataset.dkv] = r.value; });
@@ -508,7 +508,7 @@ function bindDictate(root) {
     R.changes.forEach((c, i) => pick.c[i] = P.c[i] !== false && (c.room === undefined || P.r[c.room] !== false)); R.items.forEach((x, i) => pick.i[i] = P.i[i] !== false); R.rooms.forEach((x, i) => pick.r[i] = P.r[i] !== false);
     dictApply(app.ins, R, pick); app.ins.dictLog = [...(app.ins.dictLog || []), { t: Date.now(), text: app.dict.text }];
     const n = Object.values(pick.c).filter(Boolean).length + Object.values(pick.i).filter(Boolean).length;
-    app.dict = blank(); app.ins.dictDraft = ''; save(); renderTab(); toast(n + ' item' + (n === 1 ? '' : 's') + ' filled in. Check each tab for anything still marked.'); };
+    app.dict = blank(); app.ins.dictDraft = ''; save(); renderTab(); toast(n + ' item' + (n === 1 ? '' : 's') + ' saved to the appraisal file. Check each tab for anything still marked.'); };
   const ls = root.querySelector('#dkListen'); if (ls && DICT_SR) ls.onclick = () => {
     if (app.dict.listening && app.dict.sr) { app.dict.sr.stop(); return; }
     const sr = new DICT_SR(); sr.lang = 'en-US'; sr.continuous = true; sr.interimResults = false; app.dict.sr = sr; app.dict.listening = true;

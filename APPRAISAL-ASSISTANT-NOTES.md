@@ -257,3 +257,4 @@ Her ask: dictate the whole inspection and have it land in each room, interior, e
 - The dictation box is saved with the inspection (ins.dictDraft) until Fill in or Clear.
 - Copy text and Email it buttons (Email uses the iPad share sheet; the text plus "What the app heard").
 - 6l (Oct 17): "Colin"/"colon" = a colon (she says "colon" after an area word); "trailer patio" = trellised covered patio. Notes saved from her sentences show the corrected words (Tuff Shed, Miele, Solatube, car, colon, rear and side yards).
+- 6m (Oct 17): Dictate buttons renamed at her request: "1. Sort my notes" (was Read it) and "2. Save to appraisal file" (was Fill in the ticked items).
