@@ -241,3 +241,18 @@ Her ask: dictate the whole inspection and have it land in each room, interior, e
 - RULE (her, Oct 16 2026): a County "Permit History by Parcel" exists only for unincorporated Santa Barbara County (the Cities of Goleta, Carpinteria and Santa Barbara have nothing similar). Order now has a Jurisdiction field (Property section; SB and Ventura cities / unincorporated County / Other); a County permit history sets it to "Unincorporated Santa Barbara County" if blank. Market tab: Zillow defaults to the ZIP and says the mailing city is not the property's city. Possible uses later: zoning code source note, permit wording, comp genie report details.
 - Comp genie (g1-1016-2252): opening an assignment from an order brings in the order's Search Criteria search (Market tab box 2) as the comps considered – the CSV is read from the order's documents in aa-orders (read-only), minus the listings she unticked on the Market tab. Shown under Add comps (✓ in / "Add your Search Criteria search" / "Bring it in again"). Needs her to upload the new Comp-Genie zip.
 - Oct 16 2026: "Send this order to the iPad" on the order page → "Order <file no> <street>.json" (kind active-orders, single: true). iPad 6j merges a single-order file into its Active orders list (adds or updates that order, keeps the rest); older iPad versions would replace the list with that one order.
+
+## iPad 6k – Dictate tuned to her first real inspection (Oct 17 2026)
+- Tested on her 5464 Berkeley Rd dictation (scratchpad sample3). Fixes:
+  - Mishearings: Mealie/Millie/MIELE5 → Miele; tough shed → Tuff Shed; Carr / "to car" → 2 car; solar tube / solitude → Solatube (interior feature, never solar); "to pay for" → paver; "windows or" → windows are; "rear inside yards" → rear and side yards; "Built-in for Micah desk" → built-in desk.
+  - House counts (bedrooms/baths in the house) only from real counts; "Bathroom one full bathroom", "Full bathroom number two", "addition of two bedrooms", "both bathrooms" no longer add rooms or change counts.
+  - Words that only count with the right word in the same sentence (DICT_NEED): baseboard heating needs heat/heating; wood/shed roof needs roof; glass/wood walls need wall/siding; doors need door; attic items need attic; garage items need garage (or the garage area); street/driveway/walks/fence/view likewise. Inside a room, outside fields (roof, walls, fence…) are not filled.
+  - "no …" (no solar) fills nothing; the sentence goes to that tab's notes.
+  - Fields the tab would not show are dropped (e.g. Conversion permitted when the garage is not converted).
+  - Her fine ratings: "low Q4", "high C3" → report gets Q4/C3, her words go in the notes.
+  - Owner-report sentences (from "owner reports…" through the update sentences after it) are not read as what she saw: they go to Interview › Anything else mentioned, plus kitchen/bath/roof remodel years, additions (Additions permitted? = Unknown), "replaced within 15 years" ticks, kitchen/bath update status and time frame, shed permitted.
+  - Sheds (shed, Tuff Shed, storage/garden shed, greenhouse) become Outbuildings; "the shed …" adds to the last one.
+  - Nothing is lost: any sentence with words that did not fit a box goes, in her words, into the notes of the room or area she was in (shown in quotes in the review, can be unticked). The "not sure" and "words not used" lists are gone.
+  - Den/office (said with a slash) is one room named Den/Office; single-word room names start a room only at the start of a sentence.
+- The dictation box is saved with the inspection (ins.dictDraft) until Fill in or Clear.
+- Copy text and Email it buttons (Email uses the iPad share sheet; the text plus "What the app heard").
