@@ -207,8 +207,17 @@ const CEIL_CODE = n => n === '2story' ? 'TwoOrMoreStories' : +n < 7 ? 'LessThanS
 const roomName = r => r.label || (r.list === 'rooms' ? r.type : r.list === 'kitchens' ? (r.style || 'Kitchen') : r.list === 'baths' ? (r.kind === 'HalfBathroom' ? 'Half bath' : 'Bath') : ROOM_TITLE[r.list]);
 
 /* ---- read what she said ---- */
-function dkSpoken(text) {   // spoken commands: "accept" ends a sentence, "scratch that" drops the sentence it is in
-  return String(text || '').replace(/[^.!?\n]*\bscratch that\b[.!,]?/gi, '').replace(/\s*\baccept\b[.,!]?/gi, '.').replace(/\.(\s*\.)+/g, '.');
+/* ---- words she has taught it (6q): "when the iPad writes X, I mean Y" – kept on this iPad for every inspection ---- */
+const DK_TEACH_KEY = 'uad-dk-teach';
+function dkTeachList() { try { const a = JSON.parse(localStorage.getItem(DK_TEACH_KEY) || '[]'); return Array.isArray(a) ? a.filter(x => x && x.heard) : []; } catch (e) { return []; } }
+function dkTeachSave(list) { try { localStorage.setItem(DK_TEACH_KEY, JSON.stringify(list)); return true; } catch (e) { return false; } }
+const dkRxEsc = x => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+function dkTeachApply(text) { let t = String(text || '');
+  dkTeachList().slice().sort((a, b) => b.heard.length - a.heard.length).forEach(({ heard, meant }) => { const h = heard.trim(); if (!h) return;
+    const rx = new RegExp((/^\w/.test(h) ? '\\b' : '') + dkRxEsc(h).replace(/\s+/g, '\\s+') + (/\w$/.test(h) ? '\\b' : ''), 'gi'); t = t.replace(rx, () => meant == null ? '' : meant); });
+  return t; }
+function dkSpoken(text) {   // her taught words first; then spoken commands: "accept" ends a sentence, "scratch that" drops the sentence it is in
+  return dkTeachApply(text).replace(/[^.!?\n]*\bscratch that\b[.!,]?/gi, '').replace(/\s*\baccept\b[.,!]?/gi, '.').replace(/\.(\s*\.)+/g, '.');
 }
 function dictParse(text, ins) {
   text = dkSpoken(text);
@@ -275,7 +284,7 @@ function dictParse(text, ins) {
     const ent = k => m.vals.find(v => v.key === k) || {};
     const okPref = k => { const pr = ent(k).pref; return !pr || (m.pref || []).some(p => pr.startsWith(p) || p.startsWith(pr)) || cueNear(m, [k]) === k; };
     let sk = keys.filter(k => !k.startsWith('L:') && okPref(k) && needOk(m, k, ent(k).v, ent(k).syn));
-    if (room !== null) sk = sk.filter(k => !OUTSIDE_TABS.has(k.split('.')[0]) || (k === 'front.windows' && cueNear(m, [k]) === k));   // in a room: no roof, wall, fence … words
+    if (room !== null) { const newSent = sentOf[rooms[room].at] !== sentOf[m.i]; sk = sk.filter(k => !OUTSIDE_TABS.has(k.split('.')[0]) || ((k === 'front.windows' || newSent) && cueNear(m, [k]) === k)); }   // "Fencing: wood" after the kitchen is the fence   // in a room: no roof, wall, fence … words
     else if (m.tabs.includes('interior')) sk = sk.filter(k => !OUTSIDE_TABS.has(k.split('.')[0]) || cueNear(m, [k]) === k);   // inside, an outside field needs its word ("roof", "fence" …)
     if (!sk.length) return null;
     const idx = marks.indexOf(m); const strict = marks.slice(Math.max(0, idx - 2), idx + 3).find(o => o !== m && o.kind === 'cue' && o.keys.some(x => STRICT_CUE.has(x)) && !T.slice(Math.min(o.i, m.i), Math.max(o.i, m.i)).some(t => t.br));
@@ -564,7 +573,8 @@ function renderDictate() {
     <p class="help"><b>Photos:</b> say the room or area, then tap <b>Take photo</b> – it is labeled for the last room or area you named (shown next to the button; pick another place if it is wrong). <b>If you do not mention a defect, the defect questions are answered No</b>; if you do not mention a pool, spa, court, ADU or outbuilding, none is added.</p>
     <p class="help"><b>Accept:</b> after each area or room, say <b>“accept”</b> or tap <b>✓ Accept</b> – that ends the sentence and shows what I heard. Say <b>“scratch that”</b> to drop the sentence you are on.</p></details>
     <textarea class="txt dk-box" id="dkText" rows="7" spellcheck="true" autocorrect="on" autocapitalize="sentences" placeholder="Tap here, then the microphone on the keyboard">${esc((app.dict && app.dict.text) || ins.dictDraft || '')}</textarea>
-    <div class="dk-bar"><button class="btn primary" id="dkAccept">✓ Accept</button><button class="btn" id="dkBkW">⌫ Word</button><button class="btn" id="dkBkS">⌫ Sentence</button></div>
+    <div class="dk-bar"><button class="btn primary" id="dkAccept">✓ Accept</button><button class="btn" id="dkBkW">⌫ Word</button><button class="btn" id="dkBkS">⌫ Sentence</button><button class="btn" id="dkTeach">🎓 Teach</button></div>
+    <div class="dk-teach" id="dkTeachBox" hidden>${dkTeachHtml()}</div>
     <div id="dkFeed">${dkFeedHtml()}</div>
     <p class="help dk-saved">What you dictate is kept with this inspection until you tap Save to appraisal file or Clear, even if you close the app.</p>
     <div class="row">${DICT_SR ? `<button class="btn" id="dkListen">${app.dict && app.dict.listening ? '■ Stop' : '🎤 Listen'}</button>` : ''}<button class="btn primary" id="dkRead">1. Sort my notes</button><button class="btn" id="dkCopy">Copy text</button><button class="btn" id="dkMail">Email it</button><button class="btn ghost" id="dkClear">Clear</button></div>
@@ -577,6 +587,12 @@ function renderDictate() {
       ${any ? `<div class="row"><button class="btn primary" id="dkApply">2. Save to appraisal file</button><span class="help"> – saves the ticked items into the tabs</span></div>` : ''}` : ''}
     ${log.length ? `<details class="dk-log"><summary>Dictation log (${log.length}) – workfile only, not sent to SFREP</summary>${log.slice().reverse().map(x => `<p><small>${esc(new Date(x.t).toLocaleString())}</small><br>${esc(x.text)}</p>`).join('')}</details>` : ''}
   </div></section>`;
+}
+function dkTeachHtml() {
+  const L = dkTeachList();
+  return `<p class="help">Select the wrong word in the box (or it uses the last word), then type what you meant. From now on it reads it your way, on every inspection on this iPad.</p>
+    <div class="dk-trow"><label>When the iPad writes<input class="txt" id="dkTh" autocapitalize="none" autocorrect="off"></label><label>I mean<input class="txt" id="dkTm" autocapitalize="none" autocorrect="off" placeholder="e.g. : or Tuff Shed"></label><button class="btn primary" id="dkTsave">Save</button></div>
+    ${L.length ? `<div class="dk-tlist"><b>Your words (${L.length})</b>${L.map((x, i) => `<div class="dk-titem"><span>“${esc(x.heard)}” → “${esc(x.meant)}”</span><button class="btn sm ghost" data-dktdel="${i}">✕</button></div>`).join('')}</div>` : ''}`;
 }
 function dkFeedHtml() {
   const F = (app.dict && app.dict.feed) || []; if (!F.length) return '';
@@ -616,6 +632,17 @@ function bindDictate(root) {
     const fd = root.querySelector('#dkFeed'); if (fd) fd.innerHTML = dkFeedHtml(); box.focus(); try { box.setSelectionRange(box.value.length, box.value.length); } catch (e) {} };
   root.querySelector('#dkBkW').onclick = () => { setText(box.value.replace(/\s*\S+\s*$/, '')); box.focus(); };
   root.querySelector('#dkBkS').onclick = () => { const v = box.value.replace(/\s+$/, ''); setText(v.slice(0, lastSentenceStart(v)).replace(/\s+$/, '') + (lastSentenceStart(v) ? ' ' : '')); box.focus(); };
+  // Teach: her own corrections
+  const teachBind = () => { const tb = root.querySelector('#dkTeachBox'); if (!tb) return;
+    const sv = tb.querySelector('#dkTsave'); if (sv) sv.onclick = () => { const h = tb.querySelector('#dkTh').value.trim(), m = tb.querySelector('#dkTm').value; if (!h) return toast('Type what the iPad writes');
+      if (h.length < 2) return toast('Use at least 2 letters'); const L = dkTeachList().filter(x => x.heard.toLowerCase() !== h.toLowerCase()); L.push({ heard: h, meant: m.trim(), t: Date.now() });
+      if (!dkTeachSave(L)) return toast('Could not save on this iPad'); const nv = dkTeachApply(box.value); if (nv !== box.value) setText(nv);
+      toast('Learned: “' + h + '” means “' + m.trim() + '”'); tb.innerHTML = dkTeachHtml(); teachBind(); };
+    tb.querySelectorAll('[data-dktdel]').forEach(b => b.onclick = () => { const L = dkTeachList(); const x = L[+b.dataset.dktdel]; if (!x || !confirm('Forget “' + x.heard + '” → “' + x.meant + '”?')) return; L.splice(+b.dataset.dktdel, 1); dkTeachSave(L); tb.innerHTML = dkTeachHtml(); teachBind(); }); };
+  root.querySelector('#dkTeach').onclick = () => { const tb = root.querySelector('#dkTeachBox'); const st = box.selectionStart, en = box.selectionEnd;
+    const sel = st != null && en > st ? box.value.slice(st, en).trim() : (box.value.replace(/[.,;:!?\s]+$/, '').match(/(\S+)$/) || [, ''])[1];
+    const open = tb.hidden || (!!sel && tb.querySelector('#dkTh').value !== sel.replace(/[.,;:!?]+$/, '')); tb.hidden = !open; if (!tb.hidden) { tb.querySelector('#dkTh').value = sel.replace(/[.,;:!?]+$/, ''); tb.querySelector('#dkTm').focus(); } };
+  teachBind();
   // camera: the photo is labeled for the last room or area named before the cursor
   const camRefresh = () => { const bar = root.querySelector('#dkCamBar'); if (!bar) return; bar.innerHTML = dkCamBar(); bindCam(); fillThumbs(bar); };
   const where = () => { app.dict.text = box.value; app.dict.cur = box.selectionEnd != null ? box.selectionEnd : box.value.length; const el = root.querySelector('#dkCamTo'); if (el && !app.dict.camSlot) { const a = dkPhotoSlot(app.ins, dkPhotoTarget(box.value.slice(0, app.dict.cur)), false); el.textContent = a ? a.label : 'Extra photos (say the room or area first)'; } };
@@ -631,7 +658,7 @@ function bindDictate(root) {
       catch (e) { toast('Could not save that photo. Try again.'); }
       app.dict.camSlot = null; camRefresh(); }; }); };
   bindCam();
-  const bodyText = () => { const t = box.value.trim(); const R = app.dict.res; return t + (R ? '\n\n--- What the app heard ---\n' + dkSummary(R, app.ins) : ''); };
+  const bodyText = () => { const t = box.value.trim(); const R = app.dict.res; const TL = dkTeachList(); return t + (R ? '\n\n--- What the app heard ---\n' + dkSummary(R, app.ins) : '') + (TL.length ? '\n\n--- Words I taught it ---\n' + TL.map(x => x.heard + ' => ' + x.meant).join('\n') : ''); };
   root.querySelector('#dkCopy').onclick = async () => { const t = bodyText(); if (!t) return toast('Nothing to copy yet');
     try { await navigator.clipboard.writeText(t); toast('Copied – paste it into an email or a message'); } catch (e) { box.focus(); box.select(); toast('Tap Copy on the menu that appears'); } };
   root.querySelector('#dkMail').onclick = async () => { const t = bodyText(); if (!t) return toast('Nothing to send yet'); const addr = ((app.ins.data.property || {}).addr || app.ins.name || '').trim(); const subj = 'Dictation' + (addr ? ' – ' + addr : '');
