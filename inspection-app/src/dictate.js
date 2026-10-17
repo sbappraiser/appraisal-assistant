@@ -13,6 +13,7 @@ const NUMW = { one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eig
 const ORDW = { first: '1st', second: '2nd', third: '3rd', fourth: '4th', fifth: '5th' };
 const tfOf = n => n < 1 ? 'tflt1' : n <= 5 ? 'tf1to5' : n <= 10 ? 'tf5to10' : 'tf10plus';
 const DICT_HEAR = [ // 6k: what the iPad heard → what she said (from her Oct 2026 inspection)
+  [/\s*\b(?:colin|colon)\b/g, ':'], [/\btrailer patio\b/g, 'trellis covered patio'], [/\btrellised\b/g, 'trellis'],
   [/\b(?:mealie|mealy|millie|milly|miley|meili)\b/g, 'miele'], [/\bmiele(\d)/g, 'miele $1'], [/\btough sheds?\b/g, 'tuff shed'], [/\btuff sheds\b/g, 'tuff shed'], [/\bcarr\b/g, 'car'], [/\b(?:attached|detached) (?:to|too) car\b/g, m => m.split(' ')[0] + ' 2 car'], [/\b(?:to|too) car\b/g, '2 car'],
   [/\b(?:solar tubes?|solitude|sola tubes?|solatubes|solar tubs?)\b/g, 'solatube'], [/\b(?:to|two|2) pay for\b/g, 'paver'], [/\b(rear|front)\s+inside\s+yards?\b/g, '$1 and side yards'],
   [/\bwindows or\b/g, 'windows are'], [/\bwindows are insulated\b/g, 'windows are dual pane'], [/\binsulated (?:glass|windows?)\b/g, 'dual pane windows'], [/\bfloor ?plans?\b/g, 'floorplan'], [/\bhook ?ups?\b/g, 'hookups'], [/\bstorage left\b/g, 'storage loft'],
@@ -212,7 +213,7 @@ function dictParse(text, ins) {
   const longest = (i, list) => { let best = null; list.forEach(e => { if ((!best || e.ph.length > best.ph.length) && at(i, e.ph)) best = e; }); return best; };
   // sentences: which one each word is in, its words, her own wording, and whether it is what the owner told her
   const sentOf = []; const sentW = [[]]; T.forEach((t, j) => { sentOf[j] = sentW.length - 1; if (t.br) sentW.push([]); else sentW[sentW.length - 1].push(t); });
-  const rawS = String(text || '').replace(/\b([qc])\.\s*(\d)/gi, '$1$2').replace(/(\d)\.5(?=\s+bath)/gi, '$1 5').split(/[.;!?]+/);
+  const rawS = String(text || '').replace(/\b([qc])\.\s*(\d)/gi, '$1$2').replace(/(\d)\.5(?=\s+bath)/gi, '$1 5').replace(/\s*\b(?:colin|colon)\b/gi, ':').replace(/\btrailer patio\b/gi, 'trellised covered patio').replace(/\btough shed/gi, 'Tuff Shed').replace(/\b(?:mealie|millie|miele)(\d?)\b/gi, (m, d) => 'Miele' + (d ? ' ' + d : '')).replace(/\bcarr\b/gi, 'car').replace(/\b(?:solitude|solar tube)\b/gi, 'Solatube').replace(/\b(rear|front)\s+inside\s+yards?\b/gi, '$1 and side yards').replace(/\bwindows or\b/gi, 'windows are').split(/[.;!?]+/);   // her notes read the way she meant them
   const sentText = k => dkSentence(rawS.length === sentW.length ? rawS[k] : sentW[k].map(t => t.w).join(' '));
   const sentStems = sentW.map(ws => new Set(ws.map(t => t.s)));
   const report = new Set(); let inRep = false;
