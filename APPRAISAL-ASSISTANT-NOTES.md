@@ -258,3 +258,4 @@ Her ask: dictate the whole inspection and have it land in each room, interior, e
 - Copy text and Email it buttons (Email uses the iPad share sheet; the text plus "What the app heard").
 - 6l (Oct 17): "Colin"/"colon" = a colon (she says "colon" after an area word); "trailer patio" = trellised covered patio. Notes saved from her sentences show the corrected words (Tuff Shed, Miele, Solatube, car, colon, rear and side yards).
 - 6m (Oct 17): Dictate buttons renamed at her request: "1. Sort my notes" (was Read it) and "2. Save to appraisal file" (was Fill in the ticked items).
+- 6n (Oct 17): every row in the Dictate review list can be changed before saving – numbers are boxes (e.g. bedrooms 2 → 4), single answers are drop-downs with all choices, multi answers are chips she can untick plus "+ add", notes are editable text. Changing a row ticks it. Asbestos is not offered (none in SB).

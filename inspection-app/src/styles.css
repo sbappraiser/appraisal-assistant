@@ -329,3 +329,9 @@ html.testcopy .bar { border-bottom-color: #7b2cbf; }
 .dk-room .dk-what{font-size:17px}
 .dk-sub{margin-left:30px}.dk-sub.dk-row{grid-template-columns:28px minmax(130px,32%) 1fr;padding:6px 4px}
 .dk-info{padding:6px 4px;font-size:15px;color:var(--muted,#5b6876)}
+.dk-chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.dk-chip{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--line,#cfd6dd);border-radius:16px;padding:4px 10px;font-weight:600;font-size:15px}
+.dk-chip input{width:18px;height:18px;accent-color:#0fa84a}
+.dk-sel{max-width:100%;font-size:16px;padding:5px 6px}.dk-add{width:auto;font-weight:400}
+.dk-num{width:5.5em;font-size:17px;padding:5px 6px}.dk-edit{width:100%;font-size:15px;font-style:italic}
+.dk-row .dk-where{cursor:pointer}

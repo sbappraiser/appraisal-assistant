@@ -428,9 +428,11 @@ function dictApply(ins, res, pick) {
     return it; });
   res.changes.forEach((c, i) => { if (!pick.c[i]) return;
     let d; if (c.room !== undefined) { d = target[c.room]; if (!d) return; } else d = ins.data[c.sec.id] || (ins.data[c.sec.id] = {});
-    if (c.f.t === 'note' || c.f.t === 'text') { const add = c.vals.join(' '); const cur = String(d[c.f.k] || ''); if (!cur.includes(add)) d[c.f.k] = cur ? cur + (c.f.t === 'note' ? '\n' : '; ') + add : add; return; }
+    const ed = pick.v && pick.v[i] !== undefined ? pick.v[i] : undefined;   // what she changed in the list
+    if (c.f.t === 'multi') { const mx = (pick.mx || {})[i] || [], ma = (pick.ma || {})[i] || []; c = { ...c, vals: [...c.vals.filter(v => !mx.includes(v)), ...ma] }; if (!c.vals.length) return; }
+    if (c.f.t === 'note' || c.f.t === 'text') { const add = ed !== undefined ? String(ed).trim() : c.vals.join(' '); if (!add) return; const cur = String(d[c.f.k] || ''); if (!cur.includes(add)) d[c.f.k] = cur ? cur + (c.f.t === 'note' ? '\n' : '; ') + add : add; return; }
     if (c.key === 'interior.dkBeds' || c.key === 'interior.dkBaths' || c.key === 'interior.dkHalf') { const L = c.key === 'interior.dkBeds' ? 'bedrooms' : 'baths'; const kind = c.key === 'interior.dkHalf' ? 'HalfBathroom' : 'FullBathroom';
-      const have = ins.lists[L].filter(x => L === 'bedrooms' || x.kind === kind).length; for (let k = have; k < c.vals[0]; k++) dictNewItem(ins, { list: L, kind }); return; }
+      const have = ins.lists[L].filter(x => L === 'bedrooms' || x.kind === kind).length; for (let k = have; k < (ed !== undefined ? ed : c.vals[0]); k++) dictNewItem(ins, { list: L, kind }); return; }
     if (c.f.t === 'multi') d[c.f.k] = [...new Set([...(Array.isArray(d[c.f.k]) ? d[c.f.k].filter(x => x !== 'None') : []), ...c.vals])];
     else d[c.f.k] = (pick.v && pick.v[i] !== undefined ? pick.v[i] : c.vals[0]); });
   if (res.changes.some((c, i) => pick.c[i] && c.key === 'driveway.driveMat')) ins.data.driveway.hasDrive = true;
@@ -455,14 +457,26 @@ function dkSummary(R, ins) {
 const DICT_SR = typeof window !== 'undefined' && (window.SpeechRecognition || window.webkitSpeechRecognition);
 function renderDictate() {
   const ins = app.ins; const log = ins.dictLog || []; const R = app.dict && app.dict.res; const P = app.dict ? app.dict.pick : { c: {}, i: {}, v: {}, r: {} };
-  const row = (on, attr, where, what, note, cls) => `<label class="dk-row ${cls || ''}"><input type="checkbox" ${attr} ${on ? 'checked' : ''}><span class="dk-where">${esc(where)}</span><span class="dk-what">${what}</span>${note ? `<small>${esc(note)}</small>` : ''}</label>`;
+  let rid = 0; const row = (on, attr, where, what, note, cls) => { const id = 'dkcb' + (rid++); return `<div class="dk-row ${cls || ''}"><input type="checkbox" id="${id}" ${attr} ${on ? 'checked' : ''}><label class="dk-where" for="${id}">${esc(where)}</label><span class="dk-what">${what}</span>${note ? `<small>${esc(note)}</small>` : ''}</div>`; };
+  const optsFor = c => { try { return optsOf(c.f, {}, null).filter(o => !/^(other|asbestos)$/i.test(o[0])); } catch (e) { return []; } };   // no asbestos in Santa Barbara
+  const editor = (c, i) => {   // she can change what was heard before saving (6n)
+    const t = c.f.t, ov = P.v[i];
+    if (t === 'note' || t === 'text') return `<textarea class="txt dk-edit" rows="${Math.min(6, Math.ceil(c.vals.join(' ').length / 60) + 1)}" data-dkt="${i}">${esc(ov !== undefined ? ov : c.vals.join(' '))}</textarea>`;
+    if (typeof c.vals[0] === 'number' || t === 'count' || t === 'num') return `<input type="number" inputmode="numeric" min="0" class="txt dk-num" data-dkn="${i}" value="${esc(ov !== undefined ? ov : c.vals[0])}">`;
+    if (typeof c.vals[0] === 'boolean' || t === 'yn') { const v = ov !== undefined ? ov : c.vals[0]; return `<select class="txt dk-sel" data-dkb="${i}"><option value="1" ${v ? 'selected' : ''}>Yes</option><option value="0" ${v ? '' : 'selected'}>No</option></select>`; }
+    const O = optsFor(c);
+    if (t === 'multi') { const mx = (P.mx || {})[i] || [], ma = (P.ma || {})[i] || []; const all = [...c.vals, ...ma];
+      return `<span class="dk-chips">${all.map(v => `<label class="dk-chip"><input type="checkbox" data-dkm="${i}" value="${esc(v)}" ${mx.includes(v) ? '' : 'checked'}>${esc(dkLabel(c.key, v))}</label>`).join('')}${O.length ? `<select class="txt dk-sel dk-add" data-dka="${i}"><option value="">+ add</option>${O.filter(o => !all.includes(o[0])).map(o => `<option value="${esc(o[0])}">${esc(o[1])}</option>`).join('')}</select>` : ''}</span>`; }
+    if (O.length) { const v = ov !== undefined ? ov : c.vals[0]; const heard = new Set(c.vals);
+      return `<select class="txt dk-sel" data-dkv="${i}">${O.slice().sort((a, b) => (heard.has(b[0]) ? 1 : 0) - (heard.has(a[0]) ? 1 : 0)).map(o => `<option value="${esc(o[0])}" ${o[0] === v ? 'selected' : ''}>${esc(o[1])}${heard.has(o[0]) && c.vals.length > 1 ? ' (heard)' : ''}</option>`).join('')}</select>`; }
+    return c.vals.map(v => '<b>' + esc(dkLabel(c.key, v)) + '</b>').join(', '); };
   const HIDE = /\.(hasFeat|hasGarage|hasDrive|attic)$/;
   const changeRow = (c, i, where, curObj, cls) => { if (HIDE.test(c.key)) return '';
     const cur = curObj ? curObj[c.f.k] : undefined; const curL = Array.isArray(cur) ? cur.map(v => dkLabel(c.key, v)).join(', ') : cur != null && cur !== '' && typeof cur !== 'object' ? dkLabel(c.key, cur) : '';
     const what = c.f.t === 'note' || c.f.t === 'text' ? '<i>“' + esc(c.vals.join(' ')) + '”</i>' : c.vals.map(v => '<b>' + esc(dkLabel(c.key, v)) + '</b>').join(', ');
     const note = c.f.t === 'note' ? (curL ? 'added to what is there' : '') : c.f.t !== 'multi' && curL && curL !== dkLabel(c.key, c.vals[0]) ? 'replaces ' + curL : c.f.t === 'multi' && curL ? 'added to ' + curL : '';
-    const choose = c.f.t === 'one' && c.vals.length > 1 ? `<span class="dk-pick">${c.vals.map(v => `<label><input type="radio" name="dkv${i}" data-dkv="${i}" value="${esc(v)}" ${(P.v[i] ?? c.vals[0]) === v ? 'checked' : ''}>${esc(dkLabel(c.key, v))}</label>`).join('')}</span>` : null;
-    return row(P.c[i] !== false, `data-dkc="${i}"`, where, choose || what, choose ? 'one answer – pick it' : note, cls); };
+    const two = c.f.t === 'one' && c.vals.length > 1;
+    return row(P.c[i] !== false, `data-dkc="${i}"`, where, editor(c, i), two ? 'I heard more than one – pick the right one' : note, cls); };
   const secRows = R ? R.changes.map((c, i) => c.room === undefined ? changeRow(c, i, (c.sec ? c.sec.title : '') + ' › ' + c.f.l, ins.data[c.sec.id]) : '').join('') : '';
   const roomRows = R ? R.rooms.map((r, ri) => { const L = ins.lists[r.list]; const ex = r.existingId ? L.find(x => x.id === r.existingId) : null;
     const head = row(P.r[ri] !== false, `data-dkr="${ri}"`, ex ? 'Update' : 'New ' + ROOM_TITLE[r.list].toLowerCase(), '<b>' + esc(ex ? r.name : roomName(r)) + '</b>' + (r.level ? ' · ' + esc(labelOf(LEVELS_ALL, r.level)) : ''), '', 'dk-room');
@@ -488,7 +502,7 @@ function renderDictate() {
   </div></section>`;
 }
 function bindDictate(root) {
-  const box = root.querySelector('#dkText'); if (!box) return; const blank = () => ({ text: '', pick: { c: {}, i: {}, v: {}, r: {} } }); app.dict = app.dict || blank();
+  const box = root.querySelector('#dkText'); if (!box) return; const blank = () => ({ text: '', pick: { c: {}, i: {}, v: {}, r: {}, mx: {}, ma: {} } }); app.dict = app.dict || blank();
   if (!app.dict.text && app.ins.dictDraft) app.dict.text = app.ins.dictDraft;
   const keep = () => { if ((app.ins.dictDraft || '') !== app.dict.text) { app.ins.dictDraft = app.dict.text; save(); } };
   box.oninput = () => { app.dict.text = box.value; clearTimeout(app.dict.kt); app.dict.kt = setTimeout(keep, 1200); }; box.onblur = () => { app.dict.text = box.value; keep(); };
@@ -498,13 +512,22 @@ function bindDictate(root) {
   root.querySelector('#dkMail').onclick = async () => { const t = bodyText(); if (!t) return toast('Nothing to send yet'); const addr = ((app.ins.data.property || {}).addr || app.ins.name || '').trim(); const subj = 'Dictation' + (addr ? ' – ' + addr : '');
     if (navigator.share) { try { await navigator.share({ title: subj, text: t }); return; } catch (e) { if (e && e.name === 'AbortError') return; } }
     location.href = 'mailto:?subject=' + encodeURIComponent(subj) + '&body=' + encodeURIComponent(t); };
-  root.querySelector('#dkRead').onclick = () => { app.dict.text = box.value; keep(); app.dict.res = dictParse(box.value, app.ins); app.dict.pick = { c: {}, i: {}, v: {}, r: {} }; renderTab(); };
+  root.querySelector('#dkRead').onclick = () => { app.dict.text = box.value; keep(); app.dict.res = dictParse(box.value, app.ins); app.dict.pick = { c: {}, i: {}, v: {}, r: {}, mx: {}, ma: {} }; renderTab(); };
   root.querySelector('#dkClear').onclick = () => { if (box.value.trim() && !confirm('Clear the dictation box? (Anything you already saved stays, and it is in the dictation log.)')) return; app.dict = blank(); app.ins.dictDraft = ''; save(); renderTab(); };
   root.querySelectorAll('[data-dkc]').forEach(cb => cb.onchange = () => { app.dict.pick.c[cb.dataset.dkc] = cb.checked; });
   root.querySelectorAll('[data-dkr]').forEach(cb => cb.onchange = () => { app.dict.pick.r[cb.dataset.dkr] = cb.checked; const box2 = cb.closest('.dk-roomBox'); if (box2) box2.classList.toggle('off', !cb.checked); });
-  root.querySelectorAll('[data-dkv]').forEach(r => r.onchange = () => { app.dict.pick.v[r.dataset.dkv] = r.value; });
+  const PK = () => { const p = app.dict.pick; p.v = p.v || {}; p.mx = p.mx || {}; p.ma = p.ma || {}; return p; };
+  const tick = el => { const cb = el.closest('.dk-row') && el.closest('.dk-row').querySelector('[data-dkc]'); if (cb && !cb.checked) { cb.checked = true; PK().c[cb.dataset.dkc] = true; } };   // changing a row means she wants it
+  root.querySelectorAll('[data-dkv]').forEach(r => r.onchange = () => { PK().v[r.dataset.dkv] = r.value; tick(r); });
+  root.querySelectorAll('[data-dkt]').forEach(r => r.oninput = () => { PK().v[r.dataset.dkt] = r.value; });
+  root.querySelectorAll('[data-dkn]').forEach(r => r.oninput = () => { const n = parseInt(r.value, 10); if (!isNaN(n)) { PK().v[r.dataset.dkn] = n; tick(r); } });
+  root.querySelectorAll('[data-dkb]').forEach(r => r.onchange = () => { PK().v[r.dataset.dkb] = r.value === '1'; tick(r); });
+  const bindChip = cb => cb.onchange = () => { const i = cb.dataset.dkm, mx = PK().mx[i] = (PK().mx[i] || []).filter(v => v !== cb.value); if (!cb.checked) mx.push(cb.value); };
+  root.querySelectorAll('[data-dkm]').forEach(bindChip);
+  root.querySelectorAll('[data-dka]').forEach(sel => sel.onchange = () => { const v = sel.value; if (!v) return; const i = sel.dataset.dka; PK().ma[i] = [...(PK().ma[i] || []), v];
+    const lab = document.createElement('label'); lab.className = 'dk-chip'; lab.innerHTML = `<input type="checkbox" data-dkm="${i}" value="${esc(v)}" checked>${esc(sel.options[sel.selectedIndex].text)}`; sel.before(lab); bindChip(lab.querySelector('input')); sel.options[sel.selectedIndex].remove(); sel.value = ''; tick(sel); });
   root.querySelectorAll('[data-dki]').forEach(cb => cb.onchange = () => { app.dict.pick.i[cb.dataset.dki] = cb.checked; });
-  const ap = root.querySelector('#dkApply'); if (ap) ap.onclick = () => { const R = app.dict.res; const P = app.dict.pick; const pick = { c: {}, i: {}, v: P.v || {}, r: {} };
+  const ap = root.querySelector('#dkApply'); if (ap) ap.onclick = () => { const R = app.dict.res; const P = app.dict.pick; const pick = { c: {}, i: {}, v: P.v || {}, r: {}, mx: P.mx || {}, ma: P.ma || {} };
     R.changes.forEach((c, i) => pick.c[i] = P.c[i] !== false && (c.room === undefined || P.r[c.room] !== false)); R.items.forEach((x, i) => pick.i[i] = P.i[i] !== false); R.rooms.forEach((x, i) => pick.r[i] = P.r[i] !== false);
     dictApply(app.ins, R, pick); app.ins.dictLog = [...(app.ins.dictLog || []), { t: Date.now(), text: app.dict.text }];
     const n = Object.values(pick.c).filter(Boolean).length + Object.values(pick.i).filter(Boolean).length;
