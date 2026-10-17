@@ -339,3 +339,7 @@ html.testcopy .bar { border-bottom-color: #7b2cbf; }
 .dk-camrow{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
 .dk-camto{flex:1 1 260px;font-size:15px}.dk-camto b{font-size:17px}.dk-camto select{margin-top:6px;width:100%}
 .dk-strip{display:flex;gap:8px;overflow-x:auto;margin-top:10px}.dk-strip .thumb{flex:0 0 auto;width:96px}.dk-strip .thumb img{width:96px;height:72px;object-fit:cover}
+.dk-how{margin:4px 0 10px}.dk-how summary{font-weight:700;cursor:pointer;padding:6px 0}
+.dk-bar{display:flex;gap:10px;margin:8px 0}.dk-bar .btn{flex:1;font-size:19px;padding:14px 8px}
+.dk-feed{margin:6px 0 4px}.dk-fd{border-left:4px solid #0fa84a;padding:6px 10px;margin:4px 0;background:rgba(15,168,74,.07);border-radius:4px}
+.dk-fd.old{opacity:.6}.dk-fs{display:block;font-size:14px;color:var(--muted,#5b6876)}.dk-fh{display:block;font-size:16px;font-weight:600}

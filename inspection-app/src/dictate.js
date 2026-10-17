@@ -207,7 +207,11 @@ const CEIL_CODE = n => n === '2story' ? 'TwoOrMoreStories' : +n < 7 ? 'LessThanS
 const roomName = r => r.label || (r.list === 'rooms' ? r.type : r.list === 'kitchens' ? (r.style || 'Kitchen') : r.list === 'baths' ? (r.kind === 'HalfBathroom' ? 'Half bath' : 'Bath') : ROOM_TITLE[r.list]);
 
 /* ---- read what she said ---- */
+function dkSpoken(text) {   // spoken commands: "accept" ends a sentence, "scratch that" drops the sentence it is in
+  return String(text || '').replace(/[^.!?\n]*\bscratch that\b[.!,]?/gi, '').replace(/\s*\baccept\b[.,!]?/gi, '.').replace(/\.(\s*\.)+/g, '.');
+}
 function dictParse(text, ins) {
+  text = dkSpoken(text);
   const IX = dictIndex(); const T = dictTokens(text); const n = T.length;
   const at = (i, ph) => { for (let j = 0; j < ph.length; j++) { const t = T[i + j]; if (!t || t.br || t.s !== ph[j]) return false; } return true; };
   const longest = (i, list) => { let best = null; list.forEach(e => { if ((!best || e.ph.length > best.ph.length) && at(i, e.ph)) best = e; }); return best; };
@@ -410,7 +414,7 @@ const PHOTO_WORDS = [ // [what she says, tab, photo field (first of its set), on
   ['tennis', 'amenities', 'photoRec'], ['sport court', 'amenities', 'photoRec'], ['pickleball', 'amenities', 'photoRec'], ['putting green', 'amenities', 'photoRec'],
   ['adu', 'adu'], ['accessory dwelling', 'adu'], ['guest house', 'adu'], ['granny unit', 'adu'], ['casita', 'adu']];
 function dkPhotoTarget(text) {   // the last room or area named in the text up to where she is
-  const T = dictTokens(text); const IX = dictIndex(); const PW = PHOTO_WORDS.map(([w, sec, f, st]) => ({ ph: phraseOf(w), sec, f, st }));
+  const T = dictTokens(dkSpoken(text)); const IX = dictIndex(); const PW = PHOTO_WORDS.map(([w, sec, f, st]) => ({ ph: phraseOf(w), sec, f, st }));
   const at = (i, ph) => ph.every((x, j) => T[i + j] && !T[i + j].br && T[i + j].s === x);
   const best = (i, list) => list.filter(e => at(i, e.ph)).sort((a, b) => b.ph.length - a.ph.length)[0];
   let last = null;
@@ -554,10 +558,14 @@ function renderDictate() {
     '<b>' + esc(it.label || labelOf(LISTS[it.list].fields[0].o, it.type) || it.type) + '</b>' + [it.permitted ? ' · permitted: ' + esc(it.permitted) : '', it.material ? ' · ' + esc(labelOf(LISTS.outdoorLiving.fields[2].o, it.material) || it.material) : '', it.mat ? ' · ' + esc(it.mat) : '', it.feat.length ? ' · ' + esc(it.feat.join(', ')) : '', it.note ? ' · ' + esc(it.note) : ''].join(''), '')).join('') : '';
   const any = R && (R.changes.length || R.items.length || R.rooms.length);
   return `<section class="group open"><div class="ghead static"><span class="gtitle">Dictate your notes</span></div><div class="exp">
+    <details class="dk-how"><summary>How to dictate (tap to open)</summary>
     <p class="help">Say the area or room first, then what you see, the way you walk it. For example: <i>“Exterior 2 story Spanish stucco clay tile roof copper gutters wood clad dual pane windows slab foundation. Exterior quality Q4 condition C3. 2 car attached garage. View residential full neutral. Topography level lot. Interior 9 foot ceilings recessed lighting. Forced air gas heating, central air, tankless water heater. Living room hardwood floors vaulted ceiling gas fireplace. Kitchen remodeled 5 to 10 years ago granite counters shaker cabinets Wolf range Sub-Zero refrigerator island with seating. Upstairs primary bedroom carpet walk-in closet. Primary bath double sink freestanding tub separate shower frameless glass. Bedroom 2 carpet. Hall bath tub shower combo tile surround. Interior quality Q3 condition C2. Overall quality Q4 condition C3.”</i></p>
     <p class="help">Tap in the box, then the <b>microphone on the iPad keyboard</b>, and talk.${DICT_SR ? ' Or use Listen.' : ''} You can dictate a little at a time: check it, save it to the appraisal file, then dictate the next part. Say “upstairs” or “level 2” before the rooms on that floor. When you finish, tap <b>1. Sort my notes</b> to see where each thing will go, then <b>2. Save to appraisal file</b>. Nothing is saved into the tabs until you tap Save.</p>
     <p class="help"><b>Photos:</b> say the room or area, then tap <b>Take photo</b> – it is labeled for the last room or area you named (shown next to the button; pick another place if it is wrong). <b>If you do not mention a defect, the defect questions are answered No</b>; if you do not mention a pool, spa, court, ADU or outbuilding, none is added.</p>
+    <p class="help"><b>Accept:</b> after each area or room, say <b>“accept”</b> or tap <b>✓ Accept</b> – that ends the sentence and shows what I heard. Say <b>“scratch that”</b> to drop the sentence you are on.</p></details>
     <textarea class="txt dk-box" id="dkText" rows="7" spellcheck="true" autocorrect="on" autocapitalize="sentences" placeholder="Tap here, then the microphone on the keyboard">${esc((app.dict && app.dict.text) || ins.dictDraft || '')}</textarea>
+    <div class="dk-bar"><button class="btn primary" id="dkAccept">✓ Accept</button><button class="btn" id="dkBkW">⌫ Word</button><button class="btn" id="dkBkS">⌫ Sentence</button></div>
+    <div id="dkFeed">${dkFeedHtml()}</div>
     <p class="help dk-saved">What you dictate is kept with this inspection until you tap Save to appraisal file or Clear, even if you close the app.</p>
     <div class="row">${DICT_SR ? `<button class="btn" id="dkListen">${app.dict && app.dict.listening ? '■ Stop' : '🎤 Listen'}</button>` : ''}<button class="btn primary" id="dkRead">1. Sort my notes</button><button class="btn" id="dkCopy">Copy text</button><button class="btn" id="dkMail">Email it</button><button class="btn ghost" id="dkClear">Clear</button></div>
     <div class="dk-cam" id="dkCamBar">${dkCamBar()}</div>
@@ -569,6 +577,19 @@ function renderDictate() {
       ${any ? `<div class="row"><button class="btn primary" id="dkApply">2. Save to appraisal file</button><span class="help"> – saves the ticked items into the tabs</span></div>` : ''}` : ''}
     ${log.length ? `<details class="dk-log"><summary>Dictation log (${log.length}) – workfile only, not sent to SFREP</summary>${log.slice().reverse().map(x => `<p><small>${esc(new Date(x.t).toLocaleString())}</small><br>${esc(x.text)}</p>`).join('')}</details>` : ''}
   </div></section>`;
+}
+function dkFeedHtml() {
+  const F = (app.dict && app.dict.feed) || []; if (!F.length) return '';
+  return `<div class="dk-feed">${F.slice(-3).reverse().map((f, k) => `<div class="dk-fd ${k ? 'old' : ''}"><span class="dk-fs">“${esc(f.text)}”</span><span class="dk-fh">${f.heard.length ? '✓ ' + f.heard.map(esc).join(' · ') : '<i>Nothing I recognize – it will go in the notes.</i>'}</span></div>`).join('')}</div>`;
+}
+function dkHeardShort(sentence, ins) {   // a quick one-line look at what one sentence fills
+  const R = dictParse(sentence, ins); const out = [];
+  R.changes.filter(c => !c.auto && !/\.(hasFeat|hasGarage|hasDrive|attic)$/.test(c.key)).forEach(c => { if (c.f.t === 'note') return; const v = c.vals.map(v => dkLabel(c.key, v)).join(', ');
+    out.push((c.room !== undefined ? roomName(R.rooms[c.room]) + ' ' : '') + c.f.l.replace(/\s*\(.*?\)/g, '') + ': ' + v); });
+  R.rooms.forEach((r, i) => { if (!R.changes.some(c => c.room === i && c.f.t !== 'note')) out.push(roomName(r)); });
+  R.items.forEach(it => out.push(it.label || labelOf(LISTS[it.list].fields[0].o, it.type) || it.type));
+  if (R.changes.some(c => c.f.t === 'note')) out.push('rest in notes');
+  return out;
 }
 function dkCamBar() {
   const ins = app.ins; const text = (app.dict && app.dict.text) || ins.dictDraft || ''; const upto = app.dict && app.dict.cur != null ? text.slice(0, app.dict.cur) : text;
@@ -585,6 +606,16 @@ function bindDictate(root) {
   if (!app.dict.text && app.ins.dictDraft) app.dict.text = app.ins.dictDraft;
   const keep = () => { if ((app.ins.dictDraft || '') !== app.dict.text) { app.ins.dictDraft = app.dict.text; save(); } };
   box.oninput = () => { app.dict.text = box.value; clearTimeout(app.dict.kt); app.dict.kt = setTimeout(keep, 1200); }; box.onblur = () => { app.dict.text = box.value; keep(); };
+  // Accept / backspace (6p): she ends each area with Accept; the last words or sentence can be taken back
+  const setText = v => { box.value = v; app.dict.text = v; app.dict.cur = v.length; keep(); where(); };
+  const lastSentenceStart = v => { const m = v.replace(/[.!?]\s*$/, '').match(/^[\s\S]*[.!?\n]/); return m ? m[0].length : 0; };
+  box.addEventListener('focus', () => setTimeout(() => { const r = box.getBoundingClientRect(); if (r.top < 140 || r.top > window.innerHeight * 0.4) window.scrollBy(0, r.top - 150); }, 350));   // keep the box and buttons above the keyboard
+  root.querySelector('#dkAccept').onclick = () => { let v = dkSpoken(box.value).replace(/\s+$/, ''); if (!v) return toast('Say something first');
+    if (!/[.!?]$/.test(v)) v += '.'; const st = lastSentenceStart(v); const sent = v.slice(st).trim();
+    const F = app.dict.feed || []; if (sent && !(F.length && F[F.length - 1].text === sent)) app.dict.feed = [...F, { text: sent, heard: dkHeardShort(sent, app.ins) }].slice(-20); setText(v + ' ');
+    const fd = root.querySelector('#dkFeed'); if (fd) fd.innerHTML = dkFeedHtml(); box.focus(); try { box.setSelectionRange(box.value.length, box.value.length); } catch (e) {} };
+  root.querySelector('#dkBkW').onclick = () => { setText(box.value.replace(/\s*\S+\s*$/, '')); box.focus(); };
+  root.querySelector('#dkBkS').onclick = () => { const v = box.value.replace(/\s+$/, ''); setText(v.slice(0, lastSentenceStart(v)).replace(/\s+$/, '') + (lastSentenceStart(v) ? ' ' : '')); box.focus(); };
   // camera: the photo is labeled for the last room or area named before the cursor
   const camRefresh = () => { const bar = root.querySelector('#dkCamBar'); if (!bar) return; bar.innerHTML = dkCamBar(); bindCam(); fillThumbs(bar); };
   const where = () => { app.dict.text = box.value; app.dict.cur = box.selectionEnd != null ? box.selectionEnd : box.value.length; const el = root.querySelector('#dkCamTo'); if (el && !app.dict.camSlot) { const a = dkPhotoSlot(app.ins, dkPhotoTarget(box.value.slice(0, app.dict.cur)), false); el.textContent = a ? a.label : 'Extra photos (say the room or area first)'; } };
