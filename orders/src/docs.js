@@ -329,6 +329,7 @@ async function readMyLetter(file) {
   }
   const ti = L.findIndex(l => /ENGAGEMENT LETTER$/.test(l)); if (ti >= 0 && L[ti + 1]) F.subtitle = L[ti + 1];
   m = T.match(/PROPERTY IDENTIFICATION\s*Address:\s*(.+?)(?:\s+APN:\s*([\d-]+))?\n/); if (m) { F.address = m[1].trim(); if (m[2]) F.apn = m[2]; }
+  m = T.match(/CONTACT FOR PROPERTY ACCESS(?:, IF APPLICABLE)?\s*\n([^\n]+)/); if (m && !/^Client \(see above\)/i.test(m[1].trim())) { const a = m[1].trim(); const ph = a.match(/\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}/); const rel = a.match(/\(([^)]+)\)/); F.access = { name: a.replace(ph ? ph[0] : '', '').replace(rel ? rel[0] : '', '').replace(/\s{2,}/g, ' ').trim(), rel: rel ? rel[1] : '', phone: ph ? ph[0] : '' }; }
   m = T.match(/Total Fee:\s*\$\s?([\d,]+(?:\.\d\d)?)/); if (m) F.fee = m[1];
   m = T.match(/Retainer:\s*\$\s?([\d,]+)/); if (m) F.retainer = m[1];
   return F;
@@ -338,6 +339,8 @@ function applyMyLetter(F) {   // the signed letter wins over what was typed befo
   if (F.agreeDate) put('agreeDate', F.agreeDate, 'Date of agreement');
   if (F.subtitle) { const key = Object.keys(TYPES).find(k => TYPES[k].subtitle && !/\{/.test(TYPES[k].subtitle) && TYPES[k].subtitle.toLowerCase() === F.subtitle.toLowerCase()); if (key && $('#f_type').value !== key) { $('#f_type').value = key; applyTypeDefaults(); did.push(['Assignment type', TYPES[key].label]); } }
   if (F.client) { CLIENT_KEYS.forEach(k => { const el = $('#c0_' + k); const v = F.client[k] || ''; if (el && v && el.value.trim() !== v) { el.value = v; did.push([{ name: 'Client name', company: 'Client company', addr1: 'Client street', addr2: 'Client city/ZIP', phone: 'Client phone', email: 'Client email' }[k], v]); } }); }
+  if (F.access) { put('accessName', F.access.name, 'Access contact'); put('accessPhone', F.access.phone, 'Access phone');
+    if (F.access.rel) { const pk = $('#f_accessRelPick'), r = F.access.rel; const opt = [...pk.options].find(o => o.value && o.value.toLowerCase() === r.toLowerCase()); if (opt) pk.value = opt.value; else { pk.value = 'Other'; $('#f_accessRel').hidden = false; $('#f_accessRel').value = r; } did.push(['Access relationship', r]); } }
   if (F.apn && !$('#f_apn').value.trim()) put('apn', F.apn, 'APN');
   if (F.fee) put('fee', Number(F.fee.replace(/,/g, '')).toLocaleString(), 'Fee');
   if (F.retainer) put('retainer', Number(F.retainer.replace(/,/g, '')).toLocaleString(), 'Retainer');

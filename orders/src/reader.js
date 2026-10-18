@@ -104,7 +104,7 @@ async function rdPage() {
     cv.width = Math.round(vp.width); cv.height = Math.round(vp.height); const g = cv.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, cv.width, cv.height); RD.task = pg.render({ canvasContext: g, viewport: vp }); try { await RD.task.promise; } catch (e) { return; } if (ticket !== RD.ticket) return;
     if (RD.q) { const tc = await pg.getTextContent(); g.fillStyle = 'rgba(255,214,0,.45)'; tc.items.forEach(it => { if (it.str.toLowerCase().includes(RD.q.toLowerCase())) { const [x, y] = vp.convertToViewportPoint(it.transform[4], it.transform[5]); const hgt = Math.abs(it.transform[3]) * sc; g.fillRect(x, y - hgt, it.width * sc, hgt * 1.2); } }); } }
   else { cv.hidden = true; box.hidden = false; box.textContent = (RD.rec.pagesText || [''])[RD.page - 1] || ''; }
-  const sc = RD.rec.scanPages || []; $('#rdNote').innerHTML = sc.includes(RD.page) ? 'This page is a scan with no readable text. To make it searchable, open the file in Acrobat → <b>Scan &amp; OCR → Recognize text</b>, save it, and drop it here again. Claude can still read the picture on AI orders.' : RD.rec.garbled ? 'The printed form text in this file is scrambled (normal for C.A.R. forms); the typed-in entries are readable. Read the page and fill the checklist, or use Read with Claude on an AI order.' : '';
+  const sc = RD.rec.scanPages || []; $('#rdNote').innerHTML = sc.includes(RD.page) ? scanNote() : RD.rec.garbled ? 'The printed form text in this file is scrambled (normal for C.A.R. forms); the typed-in entries are readable. Read the page and fill the checklist, or use Read with Claude on an AI order.' : '';
 }
 function rdRender() {
   const meta = cur.docs.find(d => d.id === RD.id), C = checkFor(meta.type), rv = cur.review[RD.id], facts = cur.facts || [];
@@ -188,6 +188,14 @@ async function redactPage(n, redact) { // → canvas with the page painted, sens
     if (b.mode === 'blur') { pixelate(g, X, Y, W, H); } else { g.fillStyle = '#000'; g.fillRect(X, Y, W, H); } hits++; });
   return { cv, hits };
 }
+function scanNote() {   // a scanned page: offer Claude right here when this order allows it, else say what to change
+  const ai = cur.aiUse, ok = ai === 'Yes' || ai === 'Redacted', key = aiKey();
+  const how = 'or open the file in Acrobat → <b>Scan &amp; OCR → Recognize text</b>, save it, and drop it here again.';
+  if (ok && key) return `This page is a scan with no readable text. <button type="button" class="btn small" data-scanai="1">Send the scanned pages to Claude</button> ${ai === 'Redacted' ? '(names, phones and emails are covered first) ' : ''}– you see the pictures before they go, ${how}`;
+  if (ok) return `This page is a scan with no readable text. Claude can read it, but no Claude API key is saved yet: <b>Standard wording → AI settings</b>. Or ${how.slice(3)}`;
+  return `This page is a scan with no readable text. AI use on this order is <b>${ai || 'not set'}</b>, so nothing is sent. To let Claude read it, set <b>AI use</b> on the order to Yes or Redacted; ${how}`;
+}
+document.addEventListener('click', e => { if (e.target.closest && e.target.closest('[data-scanai]')) rdPrepare('claude'); });
 async function rdPrepare(mode) { // mode 'claude' = to send; 'copy' = a redacted copy for the workfile or to send yourself
   if (!RD.pdf) { toast('This works on PDF files'); return; }
   if (mode) { RD.prepMode = mode; const fi = '#rdRFrom', ti = '#rdRTo'; RD.prepFrom = parseInt($(fi).value, 10) || 1; RD.prepTo = parseInt($(ti).value, 10) || RD.prepFrom; }
