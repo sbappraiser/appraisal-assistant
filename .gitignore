@@ -7,3 +7,6 @@
 data/
 dist/
 out/
+
+# helper working copies (temporary)
+.claude/worktrees/
