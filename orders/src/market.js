@@ -41,7 +41,7 @@ function parseMarketCsv(text) {
       listDate: G.isoDate(g('Begin Date', 'Start Active Date')), contractDate: G.isoDate(g('Under Contract Date')), saleDate: G.isoDate(g('Sold Date', 'COE')),
       offDate: ['A', 'P', 'C', 'U', 'S'].includes(st) ? '' : (offs[0] || G.isoDate(g('Status Change Date'))), fallDate: G.isoDate(g('Fallthrough Date')),
       listPrice: G.num(g('Price')), origList: G.num(g('Original List Price')), salePrice: G.num(g('Sold Price')), dom: G.num(g('Days On Market')), cdom: G.num(g('Cumulative DOM')),
-      gla: G.num(g('Total SqFt.', 'Total SqFt')), details, distressed: details.some(d => DISTRESS_RE.test(d)), twoUnits: /^\d+[A-Za-z]?\s*[\/&-]\s*\d+/.test(addr) };
+      gla: G.num(g('Total SqFt.', 'Total SqFt')), details, distressed: details.some(d => DISTRESS_RE.test(d)), conc: g('Seller Concessions').toUpperCase().slice(0, 1), twoUnits: /^\d+[A-Za-z]?\s*[\/&-]\s*\d+/.test(addr) };
   }).filter(r => r.mls);
 }
 function statusAt(r, eff) { // what the listing was on the effective date
@@ -414,7 +414,7 @@ function mkRender(redraft) {
   box.querySelectorAll('[data-zopen]').forEach(b => b.onclick = () => openDoc(b.dataset.zopen));
   box.querySelectorAll('input[name=zby]').forEach(r => r.onchange = () => { m.zillowBy = r.value; mkChanged(); mkRender(!m.commentEdited); });
   box.querySelectorAll('[data-z]').forEach(i => i.onchange = () => { if (!zKey) { toast('Fill in the property address first'); return; } const zz = MK.zillow[zKey] = MK.zillow[zKey] || {}; const k = i.dataset.z; { const n = Number(String(i.value).replace(/[$,%\s+]/g, '')); zz[k] = k === 'asOf' ? i.value : (i.value.trim() === '' || !isFinite(n) || /^[-–—]+$/.test(i.value.trim())) ? '' : n; i.value = k === 'asOf' ? i.value : zz[k] === '' ? '' : k === 'value' || k === 'medSale' ? Number(zz[k]).toLocaleString() : String(zz[k]); } mkSave('zillow'); if (!m.commentEdited) { m.comment = mkCommentDraft(mkLast || mkCompute()); const t = box.querySelector('textarea[data-mk=comment]'); if (t) t.value = m.comment; mkCounts(); mkChanged(); } });
-  mkCounts();
+  mkCounts(); if (typeof mcMount === 'function') mcMount(R);
 }
 function mkCounts() { document.querySelectorAll('[data-cnt]').forEach(s => { const t = document.querySelector(`textarea[data-mk="${s.dataset.cnt}"]`); const n = t ? t.value.length : 0, max = +s.dataset.max; s.textContent = `${n.toLocaleString()} of ${max.toLocaleString()} characters`; s.className = 'cnt' + (n > max ? ' over' : n > max * 0.92 ? ' near' : ''); }); }
 function mkStatsTable(S, ym) {

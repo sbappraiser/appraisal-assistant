@@ -11,7 +11,7 @@
    typed-in entries come out as text, so their checklist is filled by her or by Claude.
    ===================================================================== */
 const CHECK = {
-  contract: { title: 'Purchase contract', items: [['price', 'Final negotiated sales price (after counters)'], ['acceptDate', 'Acceptance date'], ['personal', 'Personal property included'], ['leaseback', 'Leaseback / rent-back'], ['credits', 'Credits / concessions to the buyer'], ['buyerBroker', 'Buyer’s broker: who pays, % or amount'], ['addenda', 'Counters and addenda – summary'], ['loanCont', 'Loan contingency (Yes / No)'], ['apprCont', 'Appraisal contingency (Yes / No)'], ['entity', 'Signing for an entity: who, and which entity'], ['special', 'Court-ordered, estate, trust, trustee or atypical terms'], ['written', 'Terms written in (not pre-printed on the form)']] },
+  contract: { title: 'Purchase contract', items: [['price', 'Final negotiated sales price (after counters)'], ['acceptDate', 'Acceptance date'], ['personal', 'Personal property included'], ['leaseback', 'Leaseback / rent-back'], ['credits', 'Credits / concessions to the buyer'], ['buyerBroker', 'Buyer’s broker: who pays, % or amount'], ['addenda', 'Counters and addenda – summary'], ['loanCont', 'Loan contingency (Yes / No)'], ['apprCont', 'Appraisal contingency (Yes / No)'], ['coe', 'Close of escrow (date or days)'], ['exch1031', '1031 exchange'], ['entity', 'Signing for an entity: who, and which entity'], ['special', 'Court-ordered, estate, trust, trustee or atypical terms'], ['written', 'Terms written in (not pre-printed on the form)']] },
   counter: { title: 'Counter offer', items: [['price', 'Price in the counter'], ['date', 'Date'], ['terms', 'Terms changed']] },
   addendum: { title: 'Addendum', items: [['date', 'Date'], ['terms', 'Terms changed']] },
   leaseback: { title: 'Leaseback / rent-back', items: [['rent', 'Rent (amount and period)'], ['term', 'Term (start and end)'], ['deposit', 'Security deposit'], ['furnished', 'Furnished / what the seller keeps'], ['terms', 'Other terms']] },
@@ -86,6 +86,9 @@ async function openReader(id, page, q) {
     (cur.facts || []).forEach(f => { if (f.docId === id && f.key !== 'dated') { const c = cleanPrelimValue(f.value); if (c && c !== f.value) { f.full = f.full || f.value; f.value = c; ch = true; } } }); if (ch) saveLetter(true, true); }
   if (meta.type === 'prelim' && (rv.prelimV || 0) < PRELIM_V) { rv.sugg = rv.sugg.filter(s => s.by !== 'reader' || s.state !== 'new'); const seen = new Set(rv.sugg.map(s => s.key + '|' + s.value + '|' + s.page));
     rv.sugg.push(...readPrelim(rec.pagesText).filter(s => !seen.has(s.key + '|' + s.value + '|' + s.page)).map(s => ({ ...s, id: uid(), state: 'new' }))); rv.prelimV = PRELIM_V; saveLetter(true, true); }
+  const CONTRACT_V = 1; // rule-based contract suggestions (typed-in entries only on C.A.R. forms)
+  if (['contract', 'counter', 'addendum'].includes(meta.type) && (rv.contractV || 0) < CONTRACT_V) { rv.sugg = rv.sugg.filter(s => s.by !== 'reader' || s.state !== 'new'); const seen = new Set(rv.sugg.map(s => s.key + '|' + s.value));
+    rv.sugg.push(...readContract(rec.pagesText, rec.garbled, meta.type).filter(s => !seen.has(s.key + '|' + s.value)).map(s => ({ ...s, id: uid(), state: 'new' }))); rv.contractV = CONTRACT_V; saveLetter(true, true); }
   $('#reader').hidden = false; document.body.classList.add('reading'); rdRender(); rdPage();
 }
 function closeReader() { $('#reader').hidden = true; document.body.classList.remove('reading'); RD.pdf = null; renderDocs(); renderFacts(); }
@@ -125,11 +128,11 @@ function rdRender() {
   const side = $('#rdSide');
   side.querySelectorAll('[data-goto]').forEach(b => b.onclick = () => { RD.page = +b.dataset.goto; rdPage(); });
   side.querySelectorAll('[data-acc]').forEach(b => b.onclick = () => { const s = rv.sugg.find(x => x.id === b.dataset.acc); const v = side.querySelector(`[data-sugv="${s.id}"]`).value.trim(); s.state = 'accepted';
-    (cur.facts = cur.facts || []).push({ id: uid(), docId: RD.id, doc: meta.name, type: meta.type, key: s.key, label: (C.items.find(i => i[0] === s.key) || [, s.key])[1], value: v, page: s.page, n: +((String(s.quote || '').match(/^#(\d+)/) || [])[1] || 0) || null, by: v === s.value ? s.by : 'you', at: new Date().toISOString() }); saveLetter(true, true); rdRender(); });
+    (cur.facts = cur.facts || []).push({ id: uid(), docId: RD.id, doc: meta.name, type: meta.type, key: s.key, label: (C.items.find(i => i[0] === s.key) || [, s.key])[1], value: v, page: s.page, n: +((String(s.quote || '').match(/^#(\d+)/) || [])[1] || 0) || null, by: v === s.value ? s.by : 'you', at: new Date().toISOString() }); if (meta.type === 'contract') contractToUad(s.key, v); saveLetter(true, true); rdRender(); });
   side.querySelectorAll('[data-rej]').forEach(b => b.onclick = () => { rv.sugg.find(x => x.id === b.dataset.rej).state = 'rejected'; saveLetter(true, true); rdRender(); });
   side.querySelectorAll('[data-unfact]').forEach(b => b.onclick = () => { cur.facts = cur.facts.filter(f => f.id !== b.dataset.unfact); saveLetter(true, true); rdRender(); });
   side.querySelectorAll('[data-ownadd]').forEach(b => b.onclick = () => { const k = b.dataset.ownadd, i = side.querySelector(`[data-own="${k}"]`); const v = i.value.trim(); if (!v) return;
-    (cur.facts = cur.facts || []).push({ id: uid(), docId: RD.id, doc: meta.name, type: meta.type, key: k, label: (C.items.find(x => x[0] === k) || [, k])[1], value: v, page: RD.page, by: 'you', at: new Date().toISOString() }); saveLetter(true, true); rdRender(); });
+    (cur.facts = cur.facts || []).push({ id: uid(), docId: RD.id, doc: meta.name, type: meta.type, key: k, label: (C.items.find(x => x[0] === k) || [, k])[1], value: v, page: RD.page, by: 'you', at: new Date().toISOString() }); if (meta.type === 'contract') contractToUad(k, v); saveLetter(true, true); rdRender(); });
   const prep = $('#rdPrep'); if (prep) prep.onclick = () => rdPrepare('claude');
   const rc = $('#rdRedact'); if (rc) rc.onclick = () => rdPrepare('copy');
   wireStickies(side); rdWireExtras(side);
@@ -473,4 +476,38 @@ function cleanPrelimValue(v) { // any prelim entry → her short label; anything
   return v.replace(/,?\s*(as\s+)?(set forth in a document\s+)?recorded\s+(on\s+)?([A-Z][a-z]+\.? \d{1,2},? \d{4}|\d{1,2}\/\d{1,2}\/\d{2,4})/gi, '')
     .replace(/,?\s*(as\s+)?(Instrument|Document|Doc\.?)\s*(No\.?|Number|#)\s*[\w-]+/gi, '').replace(/,?\s*(in\s+)?Book\s+\d+[^,.;]*?,?\s*Page\s+\d+/gi, '')
     .replace(/,?\s*of\s+(Official\s+Records|Deeds)/gi, '').replace(/\s{2,}/g, ' ').replace(/\s+([,.;])/g, '$1').replace(/[,;]\s*$/, '').trim();
+}
+
+/* ---------- purchase contract: rule-based suggestions from the text (Oct 18 2026) ----------
+   Works on typed or OCR'd contracts. C.A.R. forms print the form wording in scrambled fonts: only what was
+   typed in comes out, so on those only typed-in amounts are offered (and she checks every one). */
+function readContract(pages, garbled, kind) {
+  const S = []; const add = (key, value, page, quote) => { value = String(value || '').replace(/\s+/g, ' ').trim(); if (value && !S.some(x => x.key === key && x.value === value)) S.push({ key: kind === 'contract' ? key : (CHECK[kind].items.some(i => i[0] === key) ? key : 'terms'), value, page, quote: String(quote || '').replace(/\s+/g, ' ').trim().slice(0, 300), by: 'reader' }); };
+  const T = pages.map(t => reqFix(t));
+  const DATE = String.raw`(\d{1,2}\/\d{1,2}\/\d{2,4}|(?:January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sept?|Oct|Nov|Dec)\.? \d{1,2},? \d{4})`;
+  const R = [
+    ['price', /(?:purchase price|sales? price|offer price|price (?:shall be|of|is))[^$\d]{0,60}\$\s?([\d,]{5,}(?:\.\d\d)?)/i, m => '$' + m[1].replace(/\.00$/, '')],
+    [kind === 'contract' ? 'acceptDate' : 'date', new RegExp(String.raw`(?:date of acceptance|acceptance date|accepted on|date accepted|offer date|dated)[^\d]{0,30}` + DATE, 'i'), m => m[1]],
+    ['coe', new RegExp(String.raw`close of escrow[^.]{0,60}?(?:on\s+` + DATE + String.raw`|(\d{1,3})\s*(?:\([A-Za-z -]+\)\s*)?days)`, 'i'), m => m[1] ? 'On ' + m[1] : m[2] + ' days after acceptance'],
+    ['credits', /(?:seller|closing cost|non-recurring|buyer)\s*(?:shall\s+)?(?:credit|concession|contribution)s?[^.$]{0,80}\$\s?([\d,]{3,}(?:\.\d\d)?)/i, m => '$' + m[1] + ' – ' + m[0].slice(0, 90)],
+    ['buyerBroker', /buyer'?s?'? (?:broker|agent)[^.]{0,120}?(?:compensation|commission|fee)[^.]{0,80}?(\d+(?:\.\d+)?\s?%|\$\s?[\d,]{3,})/i, m => m[0].slice(0, 160)],
+    ['personal', /(?:personal property|items? (?:of personal property )?included)[^.]{0,30}?[:\-]\s*([^.]{4,160})/i, m => m[1]],
+    ['leaseback', /(Residential Lease After Sale|rent[- ]?back|lease[- ]?back|seller in possession|buyer in possession)[^.]{0,140}/i, m => m[0]],
+    ['exch1031', /\b1031\b[^.]{0,140}/i, m => m[0]],
+    ['apprCont', /appraisal contingency[^.]{0,80}?(?:(\d{1,2})\s*(?:\([A-Za-z -]+\)\s*)?days|(waived|removed|no appraisal contingency))/i, m => m[1] ? 'Yes – ' + m[1] + ' days' : 'No – ' + m[2]],
+    ['loanCont', /loan contingency[^.]{0,80}?(?:(\d{1,2})\s*(?:\([A-Za-z -]+\)\s*)?days|(waived|removed|no loan contingency|all cash|cash offer))/i, m => m[1] ? 'Yes – ' + m[1] + ' days' : 'No – ' + m[2]],
+    ['special', /\b(court confirmation|probate|trustee'?s? sale|estate sale|short sale|REO|bank owned|conservator|power of attorney)\b[^.]{0,120}/i, m => m[0]],
+  ];
+  if (!garbled) T.forEach((t, i) => R.forEach(([k, re, val]) => { const m = t.match(re); if (m) add(k, val(m), i + 1, m[0]); }));
+  // C.A.R. forms: the typed-in figures are the only readable text – offer the largest typed amount on the first pages as the price
+  if (garbled || !S.some(x => x.key === 'price')) { let best = null; T.slice(0, 3).forEach((t, i) => (t.match(/\$\s?[\d,]{6,}(?:\.\d\d)?/g) || []).forEach(a => { const v = Number(a.replace(/[^\d.]/g, '')); if (v >= 100000 && (!best || v > best.v)) best = { v, a, p: i + 1 }; }));
+    if (best) add('price', '$' + Math.round(best.v).toLocaleString(), best.p, 'typed-in amount on page ' + best.p + ' – check that it is the final price (counters may change it)'); }
+  return S;
+}
+function contractToUad(key, v) {   // accepted entries also fill the UAD 3.6 sales contract boxes (the Comp genie reads them) when those are still empty
+  cur.uad = cur.uad || {}; const U = cur.uad; const money = String(v).match(/\$\s?([\d,]+(?:\.\d\d)?)/);
+  if (key === 'price' && !String(U.price || '').trim() && money) U.price = '$' + money[1];
+  if (key === 'acceptDate' && !String(U.cdate || '').trim()) { const iso = G.isoDate(String(v).match(/\d{1,2}\/\d{1,2}\/\d{2,4}/)?.[0] || '') || (Date.parse(v) ? new Date(v).toISOString().slice(0, 10) : ''); if (iso) { const [y, m, d] = iso.split('-'); U.cdate = `${m}/${d}/${y}`; } }
+  if (key === 'personal' && U.pp == null) U.pp = /^(none|no)\b/i.test(String(v).trim()) ? 'false' : 'true';
+  if (key === 'credits' && U.conc == null) { U.conc = /^(none|no|\$0\b)/i.test(String(v).trim()) ? 'false' : 'true'; if (money && !U.concAmt) U.concAmt = money[1].replace(/,/g, ''); }
 }

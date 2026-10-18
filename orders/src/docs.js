@@ -125,7 +125,8 @@ async function readDoc(meta, file) { // turns the readable kinds into facts; not
       if (P.parcel && !$('#f_apn').value) $('#f_apn').value = P.parcel;
     } else if (meta.type === 'clientLetter') {
       if (isPdf(file) || /\.(docx|txt)$/i.test(file.name)) { await scanFile(file); meta.note = cur.orderDoc ? 'checked for AI wording' : '';
-        try { const F = await readClientLetter(file); const did = applyClientLetter(F); cur = readForm(); cur.letterFill = did; cur.letterFields = F; if (did.length) meta.note += ' · ' + did.length + ' items filled in'; } catch (e) { console.warn('letter fill', e); } }
+        try { const F = await readClientLetter(file); const did = applyClientLetter(F); cur = readForm(); cur.letterFill = did; cur.letterFields = F; if (did.length) meta.note += ' · ' + did.length + ' items filled in'; } catch (e) { console.warn('letter fill', e); } 
+        try { const n = await runReqs([meta.id], true); if (n) meta.note += ' · ' + n + ' client requirements listed'; } catch (e) { console.warn('requirements', e); } }
       if ($('#f_status').value === 'Drafted' && !cur.letterMade) { $('#f_status').value = 'Client letter'; toast('The client’s letter now shows on the left instead of yours. To write your own, set My letter back to Drafted.', 6000); }
     } else if (meta.type === 'myLetter') {   // her own letter, signed and sent back: it is not the client's letter and is not checked for AI wording
       cur = readForm(); if (cur.orderDoc && cur.orderDoc.name === meta.name) cur.orderDoc = null;
@@ -265,7 +266,7 @@ async function activeOrdersFile(onlyId) {   // onlyId: just this order (the iPad
     out.push({ id: o.id, fileNo: o.fileNo, address: o.address, unit: o.unit || '', apn: o.apn, county: o.county, lat: o.lat, lon: o.lon, owner: o.owner, legal: o.legal,
       stage: o.stage || 'New', reportForm: ({ uad36: 'UAD 3.6 – new URAR (Traditional)', uad26: 'UAD 2.6 (Legacy)', gpar: 'GPAR', other: 'Other / narrative' })[o.reportForm] || '', formName: o.format || '', inspDate: o.inspDate, inspTime: o.inspTime, effDate: effectiveDate(o), dueDate: o.dueDate, type: T.label || o.type, retro: !!T.retro, propType: o.propType,
       inspection: o.inspection, client: [c0.name, c0.company].filter(Boolean).join(', '), access: { name: o.accessName, rel: o.accessRel, phone: o.accessPhone },
-      notes: o.notes || '', todos: String(o.todos || '').split('\n').map(s => s.trim()).filter(Boolean), aiUse: o.aiUse,
+      notes: o.notes || '', todos: [...String(o.todos || '').split('\n').map(s => s.trim()).filter(Boolean), ...reqTodos(o)], aiUse: o.aiUse,
       crs: o.crs ? crsForSubject(o.crs) : null, permits: o.permits || null,
       listings: (o.listings || []).map(x => ({ mls: x.mls, status: x.status, listPrice: x.listPrice, origList: x.origList, listDate: x.listDate, contractDate: x.contractDate, saleDate: x.saleDate, salePrice: x.salePrice, dom: x.dom, cdom: x.cdom })),
       docs: (o.docs || []).map(d => ({ name: d.name, type: DOC_LABEL[d.type] || d.type })), plans });
@@ -302,7 +303,7 @@ async function readClientLetter(file) {
   let m; F.clientAs = line(/Client to be [\w ]{0,14}?as:?\s*(.+)$/i);
   F.users = line(/Intended Users? (?:to be [\w ]{0,14}?as|are|is)?\s*:\s*(.+)$/i); F.use = line(/Intended Use (?:to be [\w ]{0,14}?as|is)?\s*:\s*(.+)$/i);
   if (!F.clientAs) delete F.clientAs; if (!F.users) delete F.users; if (!F.use) delete F.use;
-  if (/\b1007\b|rent schedule|comparable rent schedule|operating income statement|\b216\b/i.test(T)) F.rent = true;
+  if (/\b1007\b|rent schedule|comparable rent schedule|operating income statement|\b216\b/i.test(T.replace(/(in the event|if)[^.]{0,80}(1007|rent schedule|\b216\b)[^.]*\./gi, ''))) F.rent = true;   // "In the event this assignment requests a 1007…" is not a request
   if (/requires? 1004MC:?\s*yes|1004MC (is )?required/i.test(T)) F.mc = true;
   if (/exterior[- ]only|\b2055\b|drive[- ]by|exterior inspection only/i.test(T)) F.exterior = true;
   if (/cost approach (is |will be )?(required|must)/i.test(T)) F.cost = true;

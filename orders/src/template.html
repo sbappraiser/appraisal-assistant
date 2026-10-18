@@ -178,6 +178,10 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
 #letterList td.acts { white-space: normal; width: 1%; } #letterList .acts2 { display: grid; grid-template-columns: auto auto; gap: 4px; } #letterList .acts2 .btn { margin: 0; justify-content: center; white-space: nowrap; }
 #letterList td small { display: block; color: var(--muted); } #letterList td { vertical-align: middle; }
 .formEnd { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 6px 0 20px; } .sheetHint { margin: 0; }
+.req { display: grid; grid-template-columns: auto 1fr auto; gap: 8px; align-items: start; padding: 4px 0; border-bottom: 1px solid var(--line); } .req textarea { font: inherit; font-size: 14px; min-height: 0; padding: 4px 6px; resize: vertical; } .req input[type=checkbox] { margin-top: 7px; width: 18px; height: 18px; }
+.req.done textarea { text-decoration: line-through; color: var(--muted); } .reqacts { display: flex; gap: 8px; align-items: center; white-space: nowrap; padding-top: 3px; } .reqacts label.check { display: inline-flex !important; gap: 4px; align-items: center; margin: 0; font-size: 13px; } .reqacts label.check input { margin: 0; width: 16px; height: 16px; }
+.reqadd { margin-top: 8px; } .reqadd input:not([type]) { flex: 1; min-width: 200px; } .reqadd label.check { display: inline-flex !important; gap: 4px; align-items: center; margin: 0; }
+.mc table.facts th { width: auto; } .mc td.t, .mc th.t { white-space: nowrap; } .mc .sug { color: var(--muted); font-size: 12px; display: block; } .mc select { font-size: 13px; padding: 2px 4px; }
 .btn.danger.armed { background: var(--warn); color: #fff; border-color: var(--warn); }
 </style>
 </head>
@@ -325,6 +329,22 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
       </div>
       <p class="help" id="deliveryNote"></p>
     </fieldset>
+    <fieldset id="booksSet"><legend>Invoice and payment</legend>
+      <div class="grid3">
+        <label>Invoice number<input id="f_invNo" placeholder="your file number"></label>
+        <label>Invoice date<input id="f_invDate" type="date"></label>
+        <label>Invoice amount ($) <span class="opt">blank = the fee</span><input id="f_invAmt" inputmode="decimal"></label>
+      </div>
+      <div class="formEnd"><button type="button" class="btn primary" id="btnInvoice">Make the invoice (print / Save as PDF)</button></div>
+      <div class="grid3">
+        <label>Paid on<input id="f_paidDate" type="date"></label>
+        <label>How<select id="f_paidMethod"><option value=""></option><option>Check</option><option>ACH / bank transfer</option><option>Credit card</option><option>Zelle</option><option>AMC payment</option><option>Cash</option><option>Other</option></select></label>
+        <label>Amount received ($)<input id="f_paidAmt" inputmode="decimal"></label>
+        <label style="grid-column:1/-1">Check number or payment reference <span class="opt">optional</span><input id="f_paidRef"></label>
+      </div>
+      <div class="formEnd"><button type="button" class="btn" id="btnPaid">Mark paid today</button></div>
+      <p class="help" id="booksNote"></p>
+    </fieldset>
     <fieldset><legend>Rent survey and court testimony</legend>
       <div class="grid2">
         <label class="check"><input type="checkbox" id="f_rent">Add a current market rent survey</label>
@@ -341,6 +361,9 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
     <fieldset><legend>Confidentiality and extra terms</legend>
       <p class="help">The AI-use paragraph prints at the end of Confidentiality unless AI use is set to No AI. Edit its wording on the Standard wording tab.</p>
       <label>Additional terms <span class="opt">optional · a blank line starts a new paragraph</span><textarea id="f_extra"></textarea></label>
+    </fieldset>
+    <fieldset id="reqSet"><legend>Client requirements <span class="opt">from the client’s engagement letter</span></legend>
+      <div id="reqBox" class="facts-box"></div>
     </fieldset>
     <fieldset><legend>Notes and inspection to-dos</legend>
       <label>Notes <span class="opt">for you; not in the letter</span><textarea id="f_notes"></textarea></label>
@@ -416,7 +439,23 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
       <li>Read the contract. C.A.R. forms print in scrambled text, so fill the checklist yourself while you read, or use Read with Claude on an AI order.</li>
       <li>Checklist: final negotiated price, acceptance date, personal property, leaseback, credits, buyer's broker (who pays, % or $), counters and addenda, loan and appraisal contingency, signing for an entity, court-ordered/estate/trust/atypical terms, written-in terms.</li>
       <li><b>Parts of this document:</b> go to the first page of each part and click <b>+ Add a part</b>; set its kind and pages. The sentence "I received a 75-page document which contains…" is built for you.</li>
-      <li>Fill the <b>UAD 3.6 sales contract</b> boxes. <b>20.011 Sales contract analysis</b> is drafted from your entries; edit, <b>Copy</b>, paste into SFREP.</li></ol></details>
+      <li>When the contract has readable text (typed or run through Acrobat's Recognize Text), the reader suggests the price, acceptance date, close of escrow, credits, buyer's broker compensation, personal property, leaseback, 1031 exchange, appraisal and loan contingency, and estate/trust/court terms, each with its page. On C.A.R. forms only the typed-in entries can be read, so it offers the largest typed amount on the first pages as the price – check it against the counters.</li>
+      <li><b>Accept</b>, edit then Accept, or <b>Reject</b> each suggestion. An accepted price, acceptance date, personal property or credit also fills the empty <b>UAD 3.6 sales contract</b> boxes, which the Comp genie puts in the report.</li>
+      <li>Check the <b>UAD 3.6 sales contract</b> boxes. <b>20.011 Sales contract analysis</b> is drafted from your entries; edit, <b>Copy</b>, paste into SFREP.</li></ol></details>
+    <details><summary>Client requirements from the client's letter</summary><ol>
+      <li>Drop the client's engagement letter or order in <b>Documents</b> (or in the New order step 2 box). It is read on this computer, with no AI.</li>
+      <li>On the order page, scroll to <b>Client requirements</b>. Each thing the letter asks for is listed by kind – before you accept, inspection, photos, comparables, approaches to value, report and addenda, comments to include, before you deliver, delivery and invoice – with the page it came from. Click <b>p. 3</b> to open the letter at that page.</li>
+      <li>Tick an item when it is done. Click into the wording to change it. <b>remove</b> takes it off the list. Type your own in <b>Add a requirement yourself</b> and click <b>Add</b>.</li>
+      <li><b>iPad</b>: items with this ticked go to the iPad as inspection to-dos (photos, measuring, inspection conduct are ticked for you). Untick any you do not want on the iPad. Ticked-done items are not sent.</li>
+      <li>Then click <b>Send this order to the iPad</b> (top of the order) and open that file on the iPad – the to-dos show in the order box with check boxes.</li>
+      <li><b>Read the client's letter again</b> re-reads it; your own items, your edits and your ticks are kept. <b>Copy the list</b> copies it for an email or your notes.</li></ol></details>
+    <details><summary>Invoice, payment and the unpaid list</summary><ol>
+      <li>The fee comes from <b>Total fee</b> (Fee and delivery). A rent survey fee is added when the rent survey is ticked; a retainer is taken off the balance.</li>
+      <li>When you deliver the report, go to <b>Invoice and payment</b> on the order and click <b>Make the invoice</b>. It fills in the invoice number (your file number), today's date and the amount (type a different amount to change it). A new tab opens with the invoice on your letterhead: in the print window choose <b>Destination: Save as PDF</b>, then Save. Attach that PDF to your email or the AMC portal. AMC orders are billed to the AMC, with the AMC order / reference ID (for example the Document ID) on the invoice.</li>
+      <li>When the money comes in, click <b>Mark paid today</b> (or type the date), pick how it was paid and the amount. The order status changes to Paid.</li>
+      <li><b>Home</b> shows <b>Unpaid invoices</b> with the days outstanding (over 30 days in red). <b>Follow-up email</b> opens a polite reminder in your mail program – read it, change it if you like, and send it yourself. Nothing is sent by the assistant. Orders marked Delivered with no invoice are listed under it.</li>
+      <li>Twice a year, pick the half year under the list and click <b>Print the summary</b>: invoices dated in that half year, retainers, payments received, and what is still unpaid. Save it as a PDF for your bookkeeper.</li>
+      <li>Invoices and payments are part of each order, so <b>Back up</b> keeps them.</li></ol></details>
     <details><summary>Redact a document (make a redacted copy)</summary><ol>
       <li>In Documents, click <b>Read</b> on the file.</li>
       <li>On the right, find <b>Redact a copy</b>. Set the pages (all pages are filled in) and click <b>Redact pages</b>.</li>
@@ -451,6 +490,14 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
       <li>Check the UAD 3.6 Market section in box 3. Pick Demand/Supply, Marketing Time and Distressed Market Competition (suggestions are shown). Type or pick the Market Area Boundary; <b>Save this area</b> to reuse it.</li>
       <li>Edit the search criteria and price trend comment, then <b>Copy</b> into SFREP.</li><li>Save each graph with <b>Save picture</b> for the report.</li>
       <li>Once a month, drop the SBMLS Monthly MLS Statistics PDF in box 5 (South Coast trends). Type the Zillow figures for the city.</li></ol></details>
+    <details><summary>1004MC market conditions (UAD 2.6)</summary><ol>
+      <li>Load the <b>Search Criteria</b> search in box 2 of the Market tab (box 1 is used until you do). Untick the listings that do not compete.</li>
+      <li>Open <b>1004MC – Market Conditions Addendum</b> under box 3 (it opens by itself when the order's report form is UAD 2.6).</li>
+      <li>The grid has the three periods ending on the effective date: prior 7–12 months, prior 4–6 months and the current 3 months – sales, absorption rate, active listings, months of supply, median sale price, sales DOM, median list price, listings DOM and sale price as % of list price. Active listings are counted as of the end of each period.</li>
+      <li>Each line has an Overall trend suggestion. The rule: the current 3 months compared with the prior 7–12 months – more than 5% higher is Increasing, more than 5% lower is Declining, otherwise Stable. “few – your call” means a period has fewer than 3 sales or listings. Pick the answer you will report; your choice is kept.</li>
+      <li>Answer seller concessions (the MLS Seller Concessions field is counted for you) and REO sales, check the data source (SBMLS) and edit the summary.</li>
+      <li>The two 2.6 lines for the Sales Comparison Approach (comparable listings offered now, comparable sales in the past 12 months, with price ranges) are under the grid.</li>
+      <li><b>Copy the grid</b> to paste it, or <b>Print / Save as PDF</b>. Price per square foot is not used as a trend measure.</li></ol></details>
     <details><summary>Comp genie from an order</summary><ol>
       <li>Click <b>Comp genie</b> on the order (or on its row in Orders). The comp genie opens with the subject filled in from the order.</li>
       <li>In the comp genie, <b>From an order…</b> lists your active orders.</li><li>Use Chrome on this computer for both, so they share the same storage.</li></ol></details>

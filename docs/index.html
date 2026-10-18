@@ -178,6 +178,10 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
 #letterList td.acts { white-space: normal; width: 1%; } #letterList .acts2 { display: grid; grid-template-columns: auto auto; gap: 4px; } #letterList .acts2 .btn { margin: 0; justify-content: center; white-space: nowrap; }
 #letterList td small { display: block; color: var(--muted); } #letterList td { vertical-align: middle; }
 .formEnd { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 6px 0 20px; } .sheetHint { margin: 0; }
+.req { display: grid; grid-template-columns: auto 1fr auto; gap: 8px; align-items: start; padding: 4px 0; border-bottom: 1px solid var(--line); } .req textarea { font: inherit; font-size: 14px; min-height: 0; padding: 4px 6px; resize: vertical; } .req input[type=checkbox] { margin-top: 7px; width: 18px; height: 18px; }
+.req.done textarea { text-decoration: line-through; color: var(--muted); } .reqacts { display: flex; gap: 8px; align-items: center; white-space: nowrap; padding-top: 3px; } .reqacts label.check { display: inline-flex !important; gap: 4px; align-items: center; margin: 0; font-size: 13px; } .reqacts label.check input { margin: 0; width: 16px; height: 16px; }
+.reqadd { margin-top: 8px; } .reqadd input:not([type]) { flex: 1; min-width: 200px; } .reqadd label.check { display: inline-flex !important; gap: 4px; align-items: center; margin: 0; }
+.mc table.facts th { width: auto; } .mc td.t, .mc th.t { white-space: nowrap; } .mc .sug { color: var(--muted); font-size: 12px; display: block; } .mc select { font-size: 13px; padding: 2px 4px; }
 .btn.danger.armed { background: var(--warn); color: #fff; border-color: var(--warn); }
 </style>
 </head>
@@ -325,6 +329,22 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
       </div>
       <p class="help" id="deliveryNote"></p>
     </fieldset>
+    <fieldset id="booksSet"><legend>Invoice and payment</legend>
+      <div class="grid3">
+        <label>Invoice number<input id="f_invNo" placeholder="your file number"></label>
+        <label>Invoice date<input id="f_invDate" type="date"></label>
+        <label>Invoice amount ($) <span class="opt">blank = the fee</span><input id="f_invAmt" inputmode="decimal"></label>
+      </div>
+      <div class="formEnd"><button type="button" class="btn primary" id="btnInvoice">Make the invoice (print / Save as PDF)</button></div>
+      <div class="grid3">
+        <label>Paid on<input id="f_paidDate" type="date"></label>
+        <label>How<select id="f_paidMethod"><option value=""></option><option>Check</option><option>ACH / bank transfer</option><option>Credit card</option><option>Zelle</option><option>AMC payment</option><option>Cash</option><option>Other</option></select></label>
+        <label>Amount received ($)<input id="f_paidAmt" inputmode="decimal"></label>
+        <label style="grid-column:1/-1">Check number or payment reference <span class="opt">optional</span><input id="f_paidRef"></label>
+      </div>
+      <div class="formEnd"><button type="button" class="btn" id="btnPaid">Mark paid today</button></div>
+      <p class="help" id="booksNote"></p>
+    </fieldset>
     <fieldset><legend>Rent survey and court testimony</legend>
       <div class="grid2">
         <label class="check"><input type="checkbox" id="f_rent">Add a current market rent survey</label>
@@ -341,6 +361,9 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
     <fieldset><legend>Confidentiality and extra terms</legend>
       <p class="help">The AI-use paragraph prints at the end of Confidentiality unless AI use is set to No AI. Edit its wording on the Standard wording tab.</p>
       <label>Additional terms <span class="opt">optional · a blank line starts a new paragraph</span><textarea id="f_extra"></textarea></label>
+    </fieldset>
+    <fieldset id="reqSet"><legend>Client requirements <span class="opt">from the client’s engagement letter</span></legend>
+      <div id="reqBox" class="facts-box"></div>
     </fieldset>
     <fieldset><legend>Notes and inspection to-dos</legend>
       <label>Notes <span class="opt">for you; not in the letter</span><textarea id="f_notes"></textarea></label>
@@ -416,7 +439,23 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
       <li>Read the contract. C.A.R. forms print in scrambled text, so fill the checklist yourself while you read, or use Read with Claude on an AI order.</li>
       <li>Checklist: final negotiated price, acceptance date, personal property, leaseback, credits, buyer's broker (who pays, % or $), counters and addenda, loan and appraisal contingency, signing for an entity, court-ordered/estate/trust/atypical terms, written-in terms.</li>
       <li><b>Parts of this document:</b> go to the first page of each part and click <b>+ Add a part</b>; set its kind and pages. The sentence "I received a 75-page document which contains…" is built for you.</li>
-      <li>Fill the <b>UAD 3.6 sales contract</b> boxes. <b>20.011 Sales contract analysis</b> is drafted from your entries; edit, <b>Copy</b>, paste into SFREP.</li></ol></details>
+      <li>When the contract has readable text (typed or run through Acrobat's Recognize Text), the reader suggests the price, acceptance date, close of escrow, credits, buyer's broker compensation, personal property, leaseback, 1031 exchange, appraisal and loan contingency, and estate/trust/court terms, each with its page. On C.A.R. forms only the typed-in entries can be read, so it offers the largest typed amount on the first pages as the price – check it against the counters.</li>
+      <li><b>Accept</b>, edit then Accept, or <b>Reject</b> each suggestion. An accepted price, acceptance date, personal property or credit also fills the empty <b>UAD 3.6 sales contract</b> boxes, which the Comp genie puts in the report.</li>
+      <li>Check the <b>UAD 3.6 sales contract</b> boxes. <b>20.011 Sales contract analysis</b> is drafted from your entries; edit, <b>Copy</b>, paste into SFREP.</li></ol></details>
+    <details><summary>Client requirements from the client's letter</summary><ol>
+      <li>Drop the client's engagement letter or order in <b>Documents</b> (or in the New order step 2 box). It is read on this computer, with no AI.</li>
+      <li>On the order page, scroll to <b>Client requirements</b>. Each thing the letter asks for is listed by kind – before you accept, inspection, photos, comparables, approaches to value, report and addenda, comments to include, before you deliver, delivery and invoice – with the page it came from. Click <b>p. 3</b> to open the letter at that page.</li>
+      <li>Tick an item when it is done. Click into the wording to change it. <b>remove</b> takes it off the list. Type your own in <b>Add a requirement yourself</b> and click <b>Add</b>.</li>
+      <li><b>iPad</b>: items with this ticked go to the iPad as inspection to-dos (photos, measuring, inspection conduct are ticked for you). Untick any you do not want on the iPad. Ticked-done items are not sent.</li>
+      <li>Then click <b>Send this order to the iPad</b> (top of the order) and open that file on the iPad – the to-dos show in the order box with check boxes.</li>
+      <li><b>Read the client's letter again</b> re-reads it; your own items, your edits and your ticks are kept. <b>Copy the list</b> copies it for an email or your notes.</li></ol></details>
+    <details><summary>Invoice, payment and the unpaid list</summary><ol>
+      <li>The fee comes from <b>Total fee</b> (Fee and delivery). A rent survey fee is added when the rent survey is ticked; a retainer is taken off the balance.</li>
+      <li>When you deliver the report, go to <b>Invoice and payment</b> on the order and click <b>Make the invoice</b>. It fills in the invoice number (your file number), today's date and the amount (type a different amount to change it). A new tab opens with the invoice on your letterhead: in the print window choose <b>Destination: Save as PDF</b>, then Save. Attach that PDF to your email or the AMC portal. AMC orders are billed to the AMC, with the AMC order / reference ID (for example the Document ID) on the invoice.</li>
+      <li>When the money comes in, click <b>Mark paid today</b> (or type the date), pick how it was paid and the amount. The order status changes to Paid.</li>
+      <li><b>Home</b> shows <b>Unpaid invoices</b> with the days outstanding (over 30 days in red). <b>Follow-up email</b> opens a polite reminder in your mail program – read it, change it if you like, and send it yourself. Nothing is sent by the assistant. Orders marked Delivered with no invoice are listed under it.</li>
+      <li>Twice a year, pick the half year under the list and click <b>Print the summary</b>: invoices dated in that half year, retainers, payments received, and what is still unpaid. Save it as a PDF for your bookkeeper.</li>
+      <li>Invoices and payments are part of each order, so <b>Back up</b> keeps them.</li></ol></details>
     <details><summary>Redact a document (make a redacted copy)</summary><ol>
       <li>In Documents, click <b>Read</b> on the file.</li>
       <li>On the right, find <b>Redact a copy</b>. Set the pages (all pages are filled in) and click <b>Redact pages</b>.</li>
@@ -451,6 +490,14 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
       <li>Check the UAD 3.6 Market section in box 3. Pick Demand/Supply, Marketing Time and Distressed Market Competition (suggestions are shown). Type or pick the Market Area Boundary; <b>Save this area</b> to reuse it.</li>
       <li>Edit the search criteria and price trend comment, then <b>Copy</b> into SFREP.</li><li>Save each graph with <b>Save picture</b> for the report.</li>
       <li>Once a month, drop the SBMLS Monthly MLS Statistics PDF in box 5 (South Coast trends). Type the Zillow figures for the city.</li></ol></details>
+    <details><summary>1004MC market conditions (UAD 2.6)</summary><ol>
+      <li>Load the <b>Search Criteria</b> search in box 2 of the Market tab (box 1 is used until you do). Untick the listings that do not compete.</li>
+      <li>Open <b>1004MC – Market Conditions Addendum</b> under box 3 (it opens by itself when the order's report form is UAD 2.6).</li>
+      <li>The grid has the three periods ending on the effective date: prior 7–12 months, prior 4–6 months and the current 3 months – sales, absorption rate, active listings, months of supply, median sale price, sales DOM, median list price, listings DOM and sale price as % of list price. Active listings are counted as of the end of each period.</li>
+      <li>Each line has an Overall trend suggestion. The rule: the current 3 months compared with the prior 7–12 months – more than 5% higher is Increasing, more than 5% lower is Declining, otherwise Stable. “few – your call” means a period has fewer than 3 sales or listings. Pick the answer you will report; your choice is kept.</li>
+      <li>Answer seller concessions (the MLS Seller Concessions field is counted for you) and REO sales, check the data source (SBMLS) and edit the summary.</li>
+      <li>The two 2.6 lines for the Sales Comparison Approach (comparable listings offered now, comparable sales in the past 12 months, with price ranges) are under the grid.</li>
+      <li><b>Copy the grid</b> to paste it, or <b>Print / Save as PDF</b>. Price per square foot is not used as a trend measure.</li></ol></details>
     <details><summary>Comp genie from an order</summary><ol>
       <li>Click <b>Comp genie</b> on the order (or on its row in Orders). The comp genie opens with the subject filled in from the order.</li>
       <li>In the comp genie, <b>From an order…</b> lists your active orders.</li><li>Use Chrome on this computer for both, so they share the same storage.</li></ol></details>
@@ -529,7 +576,7 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
 </div>
 <div id="toast" role="status" hidden></div>
 <script>
-const BUILD='o1-1016-2258';
+const BUILD='o1-1018-1935';
 const G = (() => {
 /* ---------------- small helpers ---------------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -800,6 +847,16 @@ function parseCRS(lines) {
   return c;
 }
 
+/* her low / mid / high tier inside a UAD rating, from the archive's remodel note: "C3+", "Dated C4-", "High C3", "Low Q3 Mid C3".
+   Used only when the note's number matches the record's rating. → "C3|high" */
+function archTier(note, L, rating) {
+  const t = String(note || ''); if (!t || !rating) return '';
+  const a = t.match(new RegExp('(?<![A-Za-z])' + L + '\\s?([1-6])\\s?(\\+|-)(?!\\d)', 'i'));
+  const b = t.match(new RegExp('(?<![A-Za-z])(high|mid|low)\\s*' + L + '\\s?([1-6])(?!\\d)', 'i'));
+  let d, tier;
+  if (b) { d = b[2]; tier = b[1].toLowerCase(); } else if (a) { d = a[1]; tier = a[2] === '+' ? 'high' : 'low'; } else return '';
+  return +d === +rating ? L + d + '|' + tier : '';
+}
 /* =====================================================================
    Sources. Each reader turns one kind of file into "canonical" records:
    plain objects whose keys are the field keys in FIELDS (model.js).
@@ -855,13 +912,14 @@ function archCanon(a) {
     attach: a.attachment || '', style: a.style || '', stories: a.stories,
     quality: a.quality ? 'Q' + a.quality + (a.quality_mod || '') : '', condition: a.condition ? 'C' + a.condition + (a.condition_mod || '') : '',
     yearBuilt: a.year_built_est || (a.actual_age != null && a.entered_date ? +String(a.entered_date).slice(0, 4) - a.actual_age : null), effAge: a.effective_age,
-    rooms: a.rooms, beds: a.beds, full: a.baths_full, half: a.baths_half, gla: a.gla, bsmtSf: a.bsmt_sf, bsmtFin: a.bsmt_fin_sf,
+    rooms: a.rooms, beds: a.beds, bgBeds: a.bg_beds, full: a.baths_full, half: a.baths_half, gla: a.gla, bsmtSf: a.bsmt_sf, bsmtFin: a.bsmt_fin_sf,
     garage: a.garage_spaces, garageType: a.garage_type || '', carport: a.carport_spaces, driveway: a.driveway_spaces,
     heatCool: a.heating_cooling || '', energy: [a.energy_raw, a.solar ? 'Solar' : '', a.battery ? 'Battery' : '', a.generator ? 'Generator' : ''].filter(Boolean).join('; '),
+    ...(() => { const liv = acc.filter(b => b.fin && !/storage|shed|barn|garage|stable|greenhouse|carport/i.test(b.type || '')); return { aduSf: liv.reduce((t, b) => t + (+b.sf || 0), 0) || (acc.length ? 0 : null), aduBaths: liv.reduce((t, b) => t + (+b.baths || 0), 0) }; })(),
     adu: a.adu_or_guest ? (hasType(/^(ADU|JADU)$/) ? 'ADU' : 'Guest house') : (a.acc_count != null ? 'None' : ''),
     guest: hasType(/guest/i) ? 'Yes' : '', barn: hasType(/barn/i) ? 'Yes' : '', stable: hasType(/stable/i) ? 'Yes' : '', horse: a.equestrian || am.includes('equestrian') ? 'Yes' : '',
     pool: a.pool ? 'Yes' : (a.amenities != null ? 'No' : ''), spa: a.spa ? 'Yes' : '', tennis: a.tennis ? 'Yes' : '', sport: a.sport_court || a.pickleball ? 'Yes' : '',
-    porch: a.porch_patio || '', accessory: a.accessory_raw || '', otherSf: (a.acc_fin_sf || 0) + (a.acc_unfin_sf || 0) || null, remodel: a.fu_raw || '',
+    landscaping: a.landscaping || '', porch: a.porch_patio || '', accessory: a.accessory_raw || '', otherSf: (a.acc_fin_sf || 0) + (a.acc_unfin_sf || 0) || null, remodel: a.fu_raw || '', qTier: archTier(a.fu_raw, 'Q', a.quality), cTier: archTier(a.fu_raw, 'C', a.condition),
     hoa: a.hoa_month, priorSaleText: a.prior_sale || '',
   };
   return v;
@@ -1754,7 +1812,8 @@ async function readDoc(meta, file) { // turns the readable kinds into facts; not
       if (P.parcel && !$('#f_apn').value) $('#f_apn').value = P.parcel;
     } else if (meta.type === 'clientLetter') {
       if (isPdf(file) || /\.(docx|txt)$/i.test(file.name)) { await scanFile(file); meta.note = cur.orderDoc ? 'checked for AI wording' : '';
-        try { const F = await readClientLetter(file); const did = applyClientLetter(F); cur = readForm(); cur.letterFill = did; cur.letterFields = F; if (did.length) meta.note += ' · ' + did.length + ' items filled in'; } catch (e) { console.warn('letter fill', e); } }
+        try { const F = await readClientLetter(file); const did = applyClientLetter(F); cur = readForm(); cur.letterFill = did; cur.letterFields = F; if (did.length) meta.note += ' · ' + did.length + ' items filled in'; } catch (e) { console.warn('letter fill', e); } 
+        try { const n = await runReqs([meta.id], true); if (n) meta.note += ' · ' + n + ' client requirements listed'; } catch (e) { console.warn('requirements', e); } }
       if ($('#f_status').value === 'Drafted' && !cur.letterMade) { $('#f_status').value = 'Client letter'; toast('The client’s letter now shows on the left instead of yours. To write your own, set My letter back to Drafted.', 6000); }
     } else if (meta.type === 'myLetter') {   // her own letter, signed and sent back: it is not the client's letter and is not checked for AI wording
       cur = readForm(); if (cur.orderDoc && cur.orderDoc.name === meta.name) cur.orderDoc = null;
@@ -1894,7 +1953,7 @@ async function activeOrdersFile(onlyId) {   // onlyId: just this order (the iPad
     out.push({ id: o.id, fileNo: o.fileNo, address: o.address, unit: o.unit || '', apn: o.apn, county: o.county, lat: o.lat, lon: o.lon, owner: o.owner, legal: o.legal,
       stage: o.stage || 'New', reportForm: ({ uad36: 'UAD 3.6 – new URAR (Traditional)', uad26: 'UAD 2.6 (Legacy)', gpar: 'GPAR', other: 'Other / narrative' })[o.reportForm] || '', formName: o.format || '', inspDate: o.inspDate, inspTime: o.inspTime, effDate: effectiveDate(o), dueDate: o.dueDate, type: T.label || o.type, retro: !!T.retro, propType: o.propType,
       inspection: o.inspection, client: [c0.name, c0.company].filter(Boolean).join(', '), access: { name: o.accessName, rel: o.accessRel, phone: o.accessPhone },
-      notes: o.notes || '', todos: String(o.todos || '').split('\n').map(s => s.trim()).filter(Boolean), aiUse: o.aiUse,
+      notes: o.notes || '', todos: [...String(o.todos || '').split('\n').map(s => s.trim()).filter(Boolean), ...reqTodos(o)], aiUse: o.aiUse,
       crs: o.crs ? crsForSubject(o.crs) : null, permits: o.permits || null,
       listings: (o.listings || []).map(x => ({ mls: x.mls, status: x.status, listPrice: x.listPrice, origList: x.origList, listDate: x.listDate, contractDate: x.contractDate, saleDate: x.saleDate, salePrice: x.salePrice, dom: x.dom, cdom: x.cdom })),
       docs: (o.docs || []).map(d => ({ name: d.name, type: DOC_LABEL[d.type] || d.type })), plans });
@@ -1931,7 +1990,7 @@ async function readClientLetter(file) {
   let m; F.clientAs = line(/Client to be [\w ]{0,14}?as:?\s*(.+)$/i);
   F.users = line(/Intended Users? (?:to be [\w ]{0,14}?as|are|is)?\s*:\s*(.+)$/i); F.use = line(/Intended Use (?:to be [\w ]{0,14}?as|is)?\s*:\s*(.+)$/i);
   if (!F.clientAs) delete F.clientAs; if (!F.users) delete F.users; if (!F.use) delete F.use;
-  if (/\b1007\b|rent schedule|comparable rent schedule|operating income statement|\b216\b/i.test(T)) F.rent = true;
+  if (/\b1007\b|rent schedule|comparable rent schedule|operating income statement|\b216\b/i.test(T.replace(/(in the event|if)[^.]{0,80}(1007|rent schedule|\b216\b)[^.]*\./gi, ''))) F.rent = true;   // "In the event this assignment requests a 1007…" is not a request
   if (/requires? 1004MC:?\s*yes|1004MC (is )?required/i.test(T)) F.mc = true;
   if (/exterior[- ]only|\b2055\b|drive[- ]by|exterior inspection only/i.test(T)) F.exterior = true;
   if (/cost approach (is |will be )?(required|must)/i.test(T)) F.cost = true;
@@ -2027,7 +2086,7 @@ function parseMarketCsv(text) {
       listDate: G.isoDate(g('Begin Date', 'Start Active Date')), contractDate: G.isoDate(g('Under Contract Date')), saleDate: G.isoDate(g('Sold Date', 'COE')),
       offDate: ['A', 'P', 'C', 'U', 'S'].includes(st) ? '' : (offs[0] || G.isoDate(g('Status Change Date'))), fallDate: G.isoDate(g('Fallthrough Date')),
       listPrice: G.num(g('Price')), origList: G.num(g('Original List Price')), salePrice: G.num(g('Sold Price')), dom: G.num(g('Days On Market')), cdom: G.num(g('Cumulative DOM')),
-      gla: G.num(g('Total SqFt.', 'Total SqFt')), details, distressed: details.some(d => DISTRESS_RE.test(d)), twoUnits: /^\d+[A-Za-z]?\s*[\/&-]\s*\d+/.test(addr) };
+      gla: G.num(g('Total SqFt.', 'Total SqFt')), details, distressed: details.some(d => DISTRESS_RE.test(d)), conc: g('Seller Concessions').toUpperCase().slice(0, 1), twoUnits: /^\d+[A-Za-z]?\s*[\/&-]\s*\d+/.test(addr) };
   }).filter(r => r.mls);
 }
 function statusAt(r, eff) { // what the listing was on the effective date
@@ -2400,7 +2459,7 @@ function mkRender(redraft) {
   box.querySelectorAll('[data-zopen]').forEach(b => b.onclick = () => openDoc(b.dataset.zopen));
   box.querySelectorAll('input[name=zby]').forEach(r => r.onchange = () => { m.zillowBy = r.value; mkChanged(); mkRender(!m.commentEdited); });
   box.querySelectorAll('[data-z]').forEach(i => i.onchange = () => { if (!zKey) { toast('Fill in the property address first'); return; } const zz = MK.zillow[zKey] = MK.zillow[zKey] || {}; const k = i.dataset.z; { const n = Number(String(i.value).replace(/[$,%\s+]/g, '')); zz[k] = k === 'asOf' ? i.value : (i.value.trim() === '' || !isFinite(n) || /^[-–—]+$/.test(i.value.trim())) ? '' : n; i.value = k === 'asOf' ? i.value : zz[k] === '' ? '' : k === 'value' || k === 'medSale' ? Number(zz[k]).toLocaleString() : String(zz[k]); } mkSave('zillow'); if (!m.commentEdited) { m.comment = mkCommentDraft(mkLast || mkCompute()); const t = box.querySelector('textarea[data-mk=comment]'); if (t) t.value = m.comment; mkCounts(); mkChanged(); } });
-  mkCounts();
+  mkCounts(); if (typeof mcMount === 'function') mcMount(R);
 }
 function mkCounts() { document.querySelectorAll('[data-cnt]').forEach(s => { const t = document.querySelector(`textarea[data-mk="${s.dataset.cnt}"]`); const n = t ? t.value.length : 0, max = +s.dataset.max; s.textContent = `${n.toLocaleString()} of ${max.toLocaleString()} characters`; s.className = 'cnt' + (n > max ? ' over' : n > max * 0.92 ? ' near' : ''); }); }
 function mkStatsTable(S, ym) {
@@ -2424,7 +2483,7 @@ function mkStatsTable(S, ym) {
    typed-in entries come out as text, so their checklist is filled by her or by Claude.
    ===================================================================== */
 const CHECK = {
-  contract: { title: 'Purchase contract', items: [['price', 'Final negotiated sales price (after counters)'], ['acceptDate', 'Acceptance date'], ['personal', 'Personal property included'], ['leaseback', 'Leaseback / rent-back'], ['credits', 'Credits / concessions to the buyer'], ['buyerBroker', 'Buyer’s broker: who pays, % or amount'], ['addenda', 'Counters and addenda – summary'], ['loanCont', 'Loan contingency (Yes / No)'], ['apprCont', 'Appraisal contingency (Yes / No)'], ['entity', 'Signing for an entity: who, and which entity'], ['special', 'Court-ordered, estate, trust, trustee or atypical terms'], ['written', 'Terms written in (not pre-printed on the form)']] },
+  contract: { title: 'Purchase contract', items: [['price', 'Final negotiated sales price (after counters)'], ['acceptDate', 'Acceptance date'], ['personal', 'Personal property included'], ['leaseback', 'Leaseback / rent-back'], ['credits', 'Credits / concessions to the buyer'], ['buyerBroker', 'Buyer’s broker: who pays, % or amount'], ['addenda', 'Counters and addenda – summary'], ['loanCont', 'Loan contingency (Yes / No)'], ['apprCont', 'Appraisal contingency (Yes / No)'], ['coe', 'Close of escrow (date or days)'], ['exch1031', '1031 exchange'], ['entity', 'Signing for an entity: who, and which entity'], ['special', 'Court-ordered, estate, trust, trustee or atypical terms'], ['written', 'Terms written in (not pre-printed on the form)']] },
   counter: { title: 'Counter offer', items: [['price', 'Price in the counter'], ['date', 'Date'], ['terms', 'Terms changed']] },
   addendum: { title: 'Addendum', items: [['date', 'Date'], ['terms', 'Terms changed']] },
   leaseback: { title: 'Leaseback / rent-back', items: [['rent', 'Rent (amount and period)'], ['term', 'Term (start and end)'], ['deposit', 'Security deposit'], ['furnished', 'Furnished / what the seller keeps'], ['terms', 'Other terms']] },
@@ -2499,6 +2558,9 @@ async function openReader(id, page, q) {
     (cur.facts || []).forEach(f => { if (f.docId === id && f.key !== 'dated') { const c = cleanPrelimValue(f.value); if (c && c !== f.value) { f.full = f.full || f.value; f.value = c; ch = true; } } }); if (ch) saveLetter(true, true); }
   if (meta.type === 'prelim' && (rv.prelimV || 0) < PRELIM_V) { rv.sugg = rv.sugg.filter(s => s.by !== 'reader' || s.state !== 'new'); const seen = new Set(rv.sugg.map(s => s.key + '|' + s.value + '|' + s.page));
     rv.sugg.push(...readPrelim(rec.pagesText).filter(s => !seen.has(s.key + '|' + s.value + '|' + s.page)).map(s => ({ ...s, id: uid(), state: 'new' }))); rv.prelimV = PRELIM_V; saveLetter(true, true); }
+  const CONTRACT_V = 1; // rule-based contract suggestions (typed-in entries only on C.A.R. forms)
+  if (['contract', 'counter', 'addendum'].includes(meta.type) && (rv.contractV || 0) < CONTRACT_V) { rv.sugg = rv.sugg.filter(s => s.by !== 'reader' || s.state !== 'new'); const seen = new Set(rv.sugg.map(s => s.key + '|' + s.value));
+    rv.sugg.push(...readContract(rec.pagesText, rec.garbled, meta.type).filter(s => !seen.has(s.key + '|' + s.value)).map(s => ({ ...s, id: uid(), state: 'new' }))); rv.contractV = CONTRACT_V; saveLetter(true, true); }
   $('#reader').hidden = false; document.body.classList.add('reading'); rdRender(); rdPage();
 }
 function closeReader() { $('#reader').hidden = true; document.body.classList.remove('reading'); RD.pdf = null; renderDocs(); renderFacts(); }
@@ -2538,11 +2600,11 @@ function rdRender() {
   const side = $('#rdSide');
   side.querySelectorAll('[data-goto]').forEach(b => b.onclick = () => { RD.page = +b.dataset.goto; rdPage(); });
   side.querySelectorAll('[data-acc]').forEach(b => b.onclick = () => { const s = rv.sugg.find(x => x.id === b.dataset.acc); const v = side.querySelector(`[data-sugv="${s.id}"]`).value.trim(); s.state = 'accepted';
-    (cur.facts = cur.facts || []).push({ id: uid(), docId: RD.id, doc: meta.name, type: meta.type, key: s.key, label: (C.items.find(i => i[0] === s.key) || [, s.key])[1], value: v, page: s.page, n: +((String(s.quote || '').match(/^#(\d+)/) || [])[1] || 0) || null, by: v === s.value ? s.by : 'you', at: new Date().toISOString() }); saveLetter(true, true); rdRender(); });
+    (cur.facts = cur.facts || []).push({ id: uid(), docId: RD.id, doc: meta.name, type: meta.type, key: s.key, label: (C.items.find(i => i[0] === s.key) || [, s.key])[1], value: v, page: s.page, n: +((String(s.quote || '').match(/^#(\d+)/) || [])[1] || 0) || null, by: v === s.value ? s.by : 'you', at: new Date().toISOString() }); if (meta.type === 'contract') contractToUad(s.key, v); saveLetter(true, true); rdRender(); });
   side.querySelectorAll('[data-rej]').forEach(b => b.onclick = () => { rv.sugg.find(x => x.id === b.dataset.rej).state = 'rejected'; saveLetter(true, true); rdRender(); });
   side.querySelectorAll('[data-unfact]').forEach(b => b.onclick = () => { cur.facts = cur.facts.filter(f => f.id !== b.dataset.unfact); saveLetter(true, true); rdRender(); });
   side.querySelectorAll('[data-ownadd]').forEach(b => b.onclick = () => { const k = b.dataset.ownadd, i = side.querySelector(`[data-own="${k}"]`); const v = i.value.trim(); if (!v) return;
-    (cur.facts = cur.facts || []).push({ id: uid(), docId: RD.id, doc: meta.name, type: meta.type, key: k, label: (C.items.find(x => x[0] === k) || [, k])[1], value: v, page: RD.page, by: 'you', at: new Date().toISOString() }); saveLetter(true, true); rdRender(); });
+    (cur.facts = cur.facts || []).push({ id: uid(), docId: RD.id, doc: meta.name, type: meta.type, key: k, label: (C.items.find(x => x[0] === k) || [, k])[1], value: v, page: RD.page, by: 'you', at: new Date().toISOString() }); if (meta.type === 'contract') contractToUad(k, v); saveLetter(true, true); rdRender(); });
   const prep = $('#rdPrep'); if (prep) prep.onclick = () => rdPrepare('claude');
   const rc = $('#rdRedact'); if (rc) rc.onclick = () => rdPrepare('copy');
   wireStickies(side); rdWireExtras(side);
@@ -2888,6 +2950,374 @@ function cleanPrelimValue(v) { // any prelim entry → her short label; anything
     .replace(/,?\s*of\s+(Official\s+Records|Deeds)/gi, '').replace(/\s{2,}/g, ' ').replace(/\s+([,.;])/g, '$1').replace(/[,;]\s*$/, '').trim();
 }
 
+/* ---------- purchase contract: rule-based suggestions from the text (Oct 18 2026) ----------
+   Works on typed or OCR'd contracts. C.A.R. forms print the form wording in scrambled fonts: only what was
+   typed in comes out, so on those only typed-in amounts are offered (and she checks every one). */
+function readContract(pages, garbled, kind) {
+  const S = []; const add = (key, value, page, quote) => { value = String(value || '').replace(/\s+/g, ' ').trim(); if (value && !S.some(x => x.key === key && x.value === value)) S.push({ key: kind === 'contract' ? key : (CHECK[kind].items.some(i => i[0] === key) ? key : 'terms'), value, page, quote: String(quote || '').replace(/\s+/g, ' ').trim().slice(0, 300), by: 'reader' }); };
+  const T = pages.map(t => reqFix(t));
+  const DATE = String.raw`(\d{1,2}\/\d{1,2}\/\d{2,4}|(?:January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sept?|Oct|Nov|Dec)\.? \d{1,2},? \d{4})`;
+  const R = [
+    ['price', /(?:purchase price|sales? price|offer price|price (?:shall be|of|is))[^$\d]{0,60}\$\s?([\d,]{5,}(?:\.\d\d)?)/i, m => '$' + m[1].replace(/\.00$/, '')],
+    [kind === 'contract' ? 'acceptDate' : 'date', new RegExp(String.raw`(?:date of acceptance|acceptance date|accepted on|date accepted|offer date|dated)[^\d]{0,30}` + DATE, 'i'), m => m[1]],
+    ['coe', new RegExp(String.raw`close of escrow[^.]{0,60}?(?:on\s+` + DATE + String.raw`|(\d{1,3})\s*(?:\([A-Za-z -]+\)\s*)?days)`, 'i'), m => m[1] ? 'On ' + m[1] : m[2] + ' days after acceptance'],
+    ['credits', /(?:seller|closing cost|non-recurring|buyer)\s*(?:shall\s+)?(?:credit|concession|contribution)s?[^.$]{0,80}\$\s?([\d,]{3,}(?:\.\d\d)?)/i, m => '$' + m[1] + ' – ' + m[0].slice(0, 90)],
+    ['buyerBroker', /buyer'?s?'? (?:broker|agent)[^.]{0,120}?(?:compensation|commission|fee)[^.]{0,80}?(\d+(?:\.\d+)?\s?%|\$\s?[\d,]{3,})/i, m => m[0].slice(0, 160)],
+    ['personal', /(?:personal property|items? (?:of personal property )?included)[^.]{0,30}?[:\-]\s*([^.]{4,160})/i, m => m[1]],
+    ['leaseback', /(Residential Lease After Sale|rent[- ]?back|lease[- ]?back|seller in possession|buyer in possession)[^.]{0,140}/i, m => m[0]],
+    ['exch1031', /\b1031\b[^.]{0,140}/i, m => m[0]],
+    ['apprCont', /appraisal contingency[^.]{0,80}?(?:(\d{1,2})\s*(?:\([A-Za-z -]+\)\s*)?days|(waived|removed|no appraisal contingency))/i, m => m[1] ? 'Yes – ' + m[1] + ' days' : 'No – ' + m[2]],
+    ['loanCont', /loan contingency[^.]{0,80}?(?:(\d{1,2})\s*(?:\([A-Za-z -]+\)\s*)?days|(waived|removed|no loan contingency|all cash|cash offer))/i, m => m[1] ? 'Yes – ' + m[1] + ' days' : 'No – ' + m[2]],
+    ['special', /\b(court confirmation|probate|trustee'?s? sale|estate sale|short sale|REO|bank owned|conservator|power of attorney)\b[^.]{0,120}/i, m => m[0]],
+  ];
+  if (!garbled) T.forEach((t, i) => R.forEach(([k, re, val]) => { const m = t.match(re); if (m) add(k, val(m), i + 1, m[0]); }));
+  // C.A.R. forms: the typed-in figures are the only readable text – offer the largest typed amount on the first pages as the price
+  if (garbled || !S.some(x => x.key === 'price')) { let best = null; T.slice(0, 3).forEach((t, i) => (t.match(/\$\s?[\d,]{6,}(?:\.\d\d)?/g) || []).forEach(a => { const v = Number(a.replace(/[^\d.]/g, '')); if (v >= 100000 && (!best || v > best.v)) best = { v, a, p: i + 1 }; }));
+    if (best) add('price', '$' + Math.round(best.v).toLocaleString(), best.p, 'typed-in amount on page ' + best.p + ' – check that it is the final price (counters may change it)'); }
+  return S;
+}
+function contractToUad(key, v) {   // accepted entries also fill the UAD 3.6 sales contract boxes (the Comp genie reads them) when those are still empty
+  cur.uad = cur.uad || {}; const U = cur.uad; const money = String(v).match(/\$\s?([\d,]+(?:\.\d\d)?)/);
+  if (key === 'price' && !String(U.price || '').trim() && money) U.price = '$' + money[1];
+  if (key === 'acceptDate' && !String(U.cdate || '').trim()) { const iso = G.isoDate(String(v).match(/\d{1,2}\/\d{1,2}\/\d{2,4}/)?.[0] || '') || (Date.parse(v) ? new Date(v).toISOString().slice(0, 10) : ''); if (iso) { const [y, m, d] = iso.split('-'); U.cdate = `${m}/${d}/${y}`; } }
+  if (key === 'personal' && U.pp == null) U.pp = /^(none|no)\b/i.test(String(v).trim()) ? 'false' : 'true';
+  if (key === 'credits' && U.conc == null) { U.conc = /^(none|no|\$0\b)/i.test(String(v).trim()) ? 'false' : 'true'; if (money && !U.concAmt) U.concAmt = money[1].replace(/,/g, ''); }
+}
+
+/* =====================================================================
+   Client requirements (her request, Oct 18 2026)
+   The client's engagement letter / order is read on this computer by rules (no AI, so it works
+   on "No AI" jobs): each sentence that asks for something (photos, comparables, addenda,
+   approaches, comments, inspection rules, invoicing) becomes a checklist item with its page.
+   She ticks, edits, adds and removes items. Items marked "iPad" go to the iPad as inspection
+   to-dos (order.todos on the iPad: plain lines) until they are ticked done.
+   Stored on the order: reqs [{id, docId, doc, page, cat, text, quote, done, ipad, by, edited}], reqsRead {docId: version}.
+   ===================================================================== */
+const REQ_V = 1;   // bump when the rules change: not-yet-edited items are read again
+const REQ_CATS = ['Before you accept', 'Inspection', 'Photos', 'Comparables', 'Approaches to value', 'Report and addenda', 'Comments to include', 'Before you deliver', 'Delivery and invoice', 'Other'];
+// first rule that matches wins; ipad: true / a regex on the sentence / false
+const REQ_RULES = [
+  { cat: 'Before you accept', re: /prior services|time of your bid|(any|the) prior (appraisal|report|service)|within the (past|prior|last) (three|3) years/i },
+  { cat: 'Before you deliver', re: /do not (complete|deliver|submit)|unless or until|executed purchase|purchase (sale |and sale )?(agreement|contract).{0,60}(review|supplied|provided)|must (receive|review) the (purchase|sales) (contract|agreement)/i },
+  { cat: 'Inspection', key: 'conduct', re: /attend the appointment alone|firearms|business card|dress professionally|on time for each appointment|announce your departure|do not state your value|pets should never/i, ipad: true,
+    text: 'Professional conduct at the inspection: be on time, attend alone (no children, friends or pets), show ID if asked, no value talk with the contact, no firearms, announce when you leave.' },
+  { cat: 'Inspection', re: /\bANSI\b|measur(e|ing|ement)s? .{0,40}(GLA|gross living|square f)/i, ipad: true },
+  { cat: 'Inspection', re: /arrange the inspection|inspection (within|date)|schedule (the )?inspection|enter the inspection date|lock ?box|key ?box|gate code|contact (the )?(borrower|owner|agent|occupant).{0,40}(inspect|schedul|appoint)|appointment/i, ipad: /lock ?box|key ?box|gate code/i },
+  { cat: 'Report and addenda', re: /location map|plat map|aerial|flood map|floor ?plan|sketch/i },
+  { cat: 'Photos', re: /photo(?!cop)/i, ipad: s => !/^(photos? of )?(the )?comparable|comparable (sales|rents|listings)\b.{0,20}photo|photos? of (the )?comp/i.test(s) || /subject|interior|exterior|street|front|rear|room|bath|kitchen|amenit|pool|structure/i.test(s) },
+  { cat: 'Comparables', re: /comparable (sales|listings|rents)|minimum of (\d+|two|three|four|five|six)\b|(settled|closed|sold) within|within \d+ (months|miles)|bracket/i },
+  { cat: 'Approaches to value', re: /cost approach|income approach|sales comparison approach|replacement cost|\bRCN\b|land value|approach(es)? to value/i },
+  { cat: 'Report and addenda', re: /\b1004MC\b|\b1007\b|rent schedule|\b1004D\b|\b216\b|addend|exhibit|client file ?#|document id ?#|USPAP and FIRREA|certified appraiser|license|E&O|errors and omissions|signatory|trainee|supervisory|report form|this (appraisal )?form is not to be used/i },
+  { cat: 'Comments to include', re: /highest and best use|zoning|exposure time|marketing time|USPS|non-?conforming|external (issues|obsolescence)|railroad|climate|extraordinary assumption|cost to cure|repairs? noted|commentary|comment on|please comment|explain|value to be reported|\bas is.{0,6}market value|\bas[ -]complete\b/i },
+  { cat: 'Delivery and invoice', re: /invoice|sales tax|payable upon|rush|due (date|by)|late (fee|penalt)|revision(s)? (request|within)/i },
+];
+const REQ_SKIP = /^CONTACT INFORMATION|marital status|guidelines (has|have) been provided|incorporated (by reference|into this)|appraiser independence|artificial intelligence|code of conduct|^firefox\b|https?:\/\/|subject to the rules and regulations|you represent to/i;   // boilerplate (AI wording is checked separately)
+function reqFix(t) {   // ligature characters in client PDFs: Ɵ = ti, Ʃ = tt
+  return String(t || '').replace(/Ɵ/g, 'ti').replace(/Ʃ/g, 'tt').replace(/ﬁ/g, 'fi').replace(/ﬂ/g, 'fl').replace(/ﬀ/g, 'ff').replace(/ﬃ/g, 'ffi').replace(/ﬄ/g, 'ffl').replace(/[ \t]+/g, ' ');
+}
+async function reqPdfPages(rec) {   // the text again, with pieces that touch joined without a space (ligatures "ti", "fi", "tt" are separate pieces in these PDFs)
+  const pdfjs = await loadPdfJs(); const doc = await pdfjs.getDocument({ data: new Uint8Array(await rec.blob.arrayBuffer()), isEvalSupported: false, wasmUrl: './wasm/', standardFontDataUrl: './standard_fonts/' }).promise; const out = [];
+  for (let n = 1; n <= doc.numPages; n++) { const tc = await (await doc.getPage(n)).getTextContent(); let s = '', last = null;
+    tc.items.forEach(it => { if (!it.str && !it.hasEOL) return; const x = it.transform[4], y = it.transform[5], fs = Math.abs(it.transform[0]) || 10;
+      if (last) { if (Math.abs(y - last.y) > fs * 0.5) s += '\n'; else if (x - last.end > fs * 0.12 && !/\s$/.test(s) && !/^\s/.test(it.str)) s += ' '; }
+      s += it.str; last = { y, end: x + (it.width || 0) }; if (it.hasEOL) { s += '\n'; last = null; } });
+    out.push(s); }
+  return out;
+}
+function reqSentences(pageText) {
+  const lines = reqFix(pageText).split('\n').map(l => l.trim()).filter(Boolean)
+    .filter(l => !/^[A-Z][\w #'’/()&.-]{1,40}:$/.test(l))   // a label with nothing after it
+    .map(l => /^[A-Z][\w #'’/()&.-]{1,30}:\s*[^:]{1,50}$/.test(l) && !/[.!?]$/.test(l) && !/\.\s/.test(l) ? l + '.' : l);   // short "Label: value" rows are their own sentence
+  const t = lines.join(' ').replace(/[•▪●◦]\s*/g, '. ').replace(/(^|\s)((?:[A-Z]{3,}\s){0,3}[A-Z]{5,}:?)(?=\s+[A-Z][a-z])/g, '$1. $2. ').replace(/\s+/g, ' ');   // headings in capitals start a new sentence
+  return t.split(/(?<=[.!?])\s+(?=[A-Z“"(*])|\*{3,}/).map(s => s.replace(/^[\s*.]+|\s+$/g, '').trim()).filter(s => s.length > 12);
+}
+async function readReqs(docId) {   // → items for one client letter
+  const rec = await docPages(docId); if (!rec || !rec.pagesText) return [];
+  const meta = (cur.docs || []).find(d => d.id === docId) || { name: rec.name }; const out = []; const seen = new Set(); const once = new Set();
+  let pages = rec.pagesText; if (isPdf({ name: rec.name, type: rec.mime || '' })) { try { pages = await reqPdfPages(rec); } catch (e) { console.warn('requirement text', e); } }
+  pages.forEach((pt, i) => reqSentences(pt).forEach(s0 => {
+    if (REQ_SKIP.test(s0)) return;
+    const rule = REQ_RULES.find(r => r.re.test(s0)); if (!rule) return;
+    if (/:\s*(n\/?a|no|none)\.?\s*$/i.test(s0) || !/[a-z]/.test(s0)) return;   // "Requires 1004MC: NO"; headings in capitals   // "Requires 1004MC: NO"
+    if (rule.key) { if (once.has(rule.key)) return; once.add(rule.key); }
+    let s = (rule.text || s0).replace(/\*{2,}/g, '').replace(/\s+/g, ' ').trim(); if (s.length > 320) { const m = s.match(rule.re); const at = m ? Math.max(0, m.index - 120) : 0; s = (at ? '… ' : '') + s.slice(at, at + 300).trim() + ' …'; }
+    const k = s.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim(); if (seen.has(k)) return; seen.add(k);
+    const ipad = typeof rule.ipad === 'function' ? rule.ipad(s0) : rule.ipad instanceof RegExp ? rule.ipad.test(s0) : !!rule.ipad;
+    out.push({ id: uid(), docId, doc: meta.name, page: i + 1, cat: rule.cat, text: s, quote: s0.slice(0, 400), done: false, ipad, by: 'reader' }); }));
+  // the order's own boxes (label: value rows) read by the client-letter reader
+  const F = cur.letterFields || {}; const pageOf = v => { v = String(v || '').toLowerCase().slice(0, 20); const i = v ? pages.findIndex(t => reqFix(t).toLowerCase().includes(v)) : -1; return i >= 0 ? i + 1 : null; };
+  const add = (cat, text, v, ipad) => { if (!out.some(x => x.text === text)) out.unshift({ id: uid(), docId, doc: meta.name, page: pageOf(v), cat, text, quote: String(v || ''), done: false, ipad: !!ipad, by: 'reader' }); };
+  if (F.due) add('Delivery and invoice', 'Report due: ' + F.due, F.due);
+  if (F.fee) add('Delivery and invoice', 'Fee: ' + F.fee, F.fee);
+  if (F.mc) add('Report and addenda', '1004MC (market conditions addendum) required', '1004MC');
+  if (F.rent) add('Report and addenda', 'Rent schedule (1007) requested', '1007');
+  if (F.exterior) add('Inspection', 'Exterior-only inspection', 'exterior', true);
+  if (F.form) add('Report and addenda', 'Report form: ' + F.form, F.form);
+  return out.slice(0, 60);
+}
+async function runReqs(docIds, quiet) {   // reads the client letters again; her own and edited items stay; ticks carry over
+  cur = cur || readForm(); docIds = docIds || (cur.docs || []).filter(d => d.type === 'clientLetter').map(d => d.id);
+  if (!docIds.length) { if (!quiet) toast('No client letter in this order’s documents'); return 0; }
+  const old = cur.reqs || []; let fresh = [];
+  for (const id of docIds) { try { fresh = fresh.concat(await readReqs(id)); } catch (e) { console.warn('requirements', e); } }
+  const key = x => x.docId + '|' + x.text;
+  fresh.forEach(x => { const o = old.find(y => y.by === 'reader' && !y.edited && key(y) === key(x)); if (o) { x.id = o.id; x.done = o.done; x.ipad = o.ipad; } });
+  const keep = old.filter(y => y.by !== 'reader' || y.edited || !docIds.includes(y.docId));
+  cur.reqs = [...keep.filter(y => !fresh.some(x => key(x) === key(y))), ...fresh];
+  cur.reqsRead = { ...(cur.reqsRead || {}) }; docIds.forEach(id => { cur.reqsRead[id] = REQ_V; });
+  renderReqs(); if (!quiet) toast(fresh.length + ' requirement' + (fresh.length === 1 ? '' : 's') + ' found in the client’s letter – check them'); saveLetter(true, true);
+  return fresh.length;
+}
+let reqAutoBusy = false;
+function renderReqs() {
+  const box = $('#reqBox'); if (!box || !cur) return; const R = cur.reqs || []; const letters = (cur.docs || []).filter(d => d.type === 'clientLetter');
+  const unread = letters.filter(d => (cur.reqsRead || {})[d.id] !== REQ_V);
+  if (unread.length && !reqAutoBusy) { reqAutoBusy = true; setTimeout(() => runReqs(unread.map(d => d.id), true).finally(() => { reqAutoBusy = false; }), 0); }
+  const nOpen = R.filter(x => !x.done).length, nPad = R.filter(x => x.ipad && !x.done).length;
+  const groups = REQ_CATS.map(c => [c, R.filter(x => (REQ_CATS.includes(x.cat) ? x.cat : 'Other') === c)]).filter(g => g[1].length);
+  box.innerHTML = `<p class="help">${letters.length ? 'Read from the client’s letter on this computer (no AI). Tick each one when it is done; edit the wording, add your own, or remove any. Items marked <b>iPad</b> go to the iPad as inspection to-dos until you tick them.' : 'When the client’s engagement letter or order is in Documents, its requirements (photos, comparables, addenda, approaches, comments, invoicing) are listed here.'}</p>
+    ${R.length ? `<p class="help"><b>${nOpen}</b> of ${R.length} still open · ${nPad} go${nPad === 1 ? 'es' : ''} to the iPad</p>` : ''}
+    ${groups.map(([c, list]) => `<h4>${h(c)}</h4>${list.map(x => `<div class="req${x.done ? ' done' : ''}">
+      <input type="checkbox" data-rqdone="${x.id}" ${x.done ? 'checked' : ''} aria-label="Done">
+      <textarea data-rqtext="${x.id}" rows="${Math.max(1, Math.min(4, Math.ceil(x.text.length / 55)))}" aria-label="Requirement">${h(x.text)}</textarea>
+      <span class="reqacts">${x.page ? `<button type="button" class="pgchip" data-rqpage="${x.id}" title="Open the letter at this page">p. ${x.page}</button>` : ''}<label class="check" title="Send to the iPad as an inspection to-do"><input type="checkbox" data-rqipad="${x.id}" ${x.ipad ? 'checked' : ''}>iPad</label><button type="button" class="lnk" data-rqdel="${x.id}" aria-label="Remove">remove</button></span></div>`).join('')}`).join('')}
+    <div class="row reqadd"><select id="rqCat">${REQ_CATS.map(c => `<option>${h(c)}</option>`).join('')}</select><input id="rqNew" placeholder="Add a requirement yourself"><label class="check"><input type="checkbox" id="rqNewPad">iPad</label><button type="button" class="btn ghost small" id="rqAdd">Add</button></div>
+    <div class="row">${letters.length ? '<button type="button" class="btn ghost small" id="rqRead">Read the client’s letter again</button>' : ''}${R.length ? '<button type="button" class="btn ghost small" id="rqCopy">Copy the list</button>' : ''}</div>`;
+  const fit = t => { if (!t.offsetParent) return; t.style.height = 'auto'; t.style.height = (t.scrollHeight + 2) + 'px'; };
+  box.querySelectorAll('textarea[data-rqtext]').forEach(t => { fit(t); t.addEventListener('input', () => fit(t)); });
+  const find = id => R.find(x => x.id === id);
+  box.querySelectorAll('[data-rqdone]').forEach(c => c.onchange = () => { find(c.dataset.rqdone).done = c.checked; saveLetter(true, true); renderReqs(); });
+  box.querySelectorAll('[data-rqipad]').forEach(c => c.onchange = () => { find(c.dataset.rqipad).ipad = c.checked; saveLetter(true, true); renderReqs(); });
+  box.querySelectorAll('[data-rqtext]').forEach(t => t.onchange = () => { const x = find(t.dataset.rqtext); const v = t.value.trim(); if (!v) return; if (v !== x.text) { x.text = v; x.edited = true; saveLetter(true, true); } });
+  box.querySelectorAll('[data-rqdel]').forEach(b => b.onclick = () => { cur.reqs = R.filter(x => x.id !== b.dataset.rqdel); saveLetter(true, true); renderReqs(); });
+  box.querySelectorAll('[data-rqpage]').forEach(b => b.onclick = () => { const x = find(b.dataset.rqpage); if ((cur.docs || []).some(d => d.id === x.docId)) { saveLetter(true, true); openReader(x.docId, x.page); } else toast('That document is no longer in this order'); });
+  $('#rqAdd').onclick = () => { const v = $('#rqNew').value.trim(); if (!v) { $('#rqNew').focus(); return; } (cur.reqs = cur.reqs || []).push({ id: uid(), docId: null, doc: '', page: null, cat: $('#rqCat').value, text: v, quote: '', done: false, ipad: $('#rqNewPad').checked, by: 'you' }); saveLetter(true, true); renderReqs(); };
+  $('#rqNew').onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); $('#rqAdd').click(); } };
+  const rr = $('#rqRead'); if (rr) rr.onclick = () => runReqs();
+  const rc = $('#rqCopy'); if (rc) rc.onclick = async () => { const txt = groups.map(([c, list]) => c + '\n' + list.map(x => (x.done ? '[x] ' : '[ ] ') + x.text + (x.page ? ' (p. ' + x.page + ')' : '')).join('\n')).join('\n\n'); try { await navigator.clipboard.writeText(txt); toast('Copied'); } catch (e) { toast('Could not copy'); } };
+}
+// the iPad's to-do lines: her own to-dos first, then the open client requirements marked iPad
+const reqTodos = o => (o.reqs || []).filter(x => x.ipad && !x.done).map(x => 'Client: ' + x.text);
+
+/* =====================================================================
+   Bookkeeping, kept minimal (her request, Oct 18 2026)
+   Fee from intake → Invoice at delivery (printed / saved as PDF, her letterhead from the letter
+   writer) → mark Paid (date, method). Home page: unpaid invoices with days outstanding and a
+   follow-up email draft (opens her mail program; nothing is sent by the app), and a printable
+   summary for each half year (Jan–Jun, Jul–Dec). Fields live on the order (invNo, invDate, invAmt,
+   paidDate, paidMethod, paidAmt, paidRef), so Back up / Restore carry them with the orders.
+   ===================================================================== */
+const PAY_METHODS = ['Check', 'ACH / bank transfer', 'Credit card', 'Zelle', 'AMC payment', 'Cash', 'Other'];
+const n$ = v => { const x = Number(String(v ?? '').replace(/[^\d.-]/g, '')); return isFinite(x) ? x : 0; };
+const usd = v => '$' + n$(v).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const invTotal = o => n$(o.fee) + (o.rent ? n$(o.rentFee) : 0);
+const invAmount = o => String(o.invAmt || '').trim() ? n$(o.invAmt) : invTotal(o);
+const invBalance = o => Math.max(0, invAmount(o) - n$(o.retainer));
+const daysOut = o => o.invDate ? Math.max(0, Math.round((Date.parse(todayISO()) - Date.parse(o.invDate)) / 864e5)) : null;
+const isUnpaid = o => !!o.invDate && !o.paidDate && (o.stage || '') !== 'Cancelled';
+function billTo(o) {
+  const c = (o.clients || [])[0] || {};
+  if (o.amcUsed && o.amcCo) return { lines: [o.amcCo, o.amcAddr1, o.amcAddr2].filter(Boolean), email: c.email || '', who: o.amcCo, attn: c.name || '' };
+  return { lines: [c.company && c.name ? c.name : '', c.company || c.name, c.addr1, c.addr2].filter(Boolean), email: c.email || '', who: c.company || c.name || '', attn: c.name || '' };
+}
+function invoiceHTML(o) {
+  const A = APPRAISER, T = TYPES[o.type] || {}, B = billTo(o); const rf = ({ uad36: 'UAD 3.6 – new URAR', uad26: 'UAD 2.6', gpar: 'GPAR', other: '' })[o.reportForm] || '';
+  const lines = [[`Appraisal of ${o.address || 'the property'}` + (o.format || rf ? ` – ${o.format || rf}` : '') + (T.label ? ` (${T.label})` : ''), n$(o.fee)]];
+  if (o.rent && n$(o.rentFee)) lines.push(['Market rent survey', n$(o.rentFee)]);
+  if (String(o.invAmt || '').trim() && Math.abs(n$(o.invAmt) - invTotal(o)) > 0.004) lines.push(['Adjustment', n$(o.invAmt) - invTotal(o)]);
+  const total = invAmount(o), ret = n$(o.retainer), due = invBalance(o);
+  const refs = [['File number', o.fileNo], [o.amcUsed ? 'AMC order / reference ID' : 'Client reference', o.amcRef], ['Loan number', o.loanNo], ['Borrower', o.borrower], [o.amcUsed ? 'Lender / client' : '', o.amcUsed ? ((o.clients || [])[0] || {}).company || ((o.clients || [])[0] || {}).name : ''], ['Effective date', effectiveDate(o) && longDate(effectiveDate(o))]].filter(r => r[0] && r[1]);
+  const terms = o.payWhen === 'other' && o.payDue ? o.payDue : 'Due upon receipt.';
+  return `<!doctype html><html><head><meta charset="utf-8"><title>Invoice ${hesc(o.invNo || o.fileNo || '')} - ${hesc(street(o))}</title><style>
+    @page { size: letter; margin: 0.7in; } body { font: 14px/1.45 Georgia, 'Times New Roman', serif; color: #111; max-width: 7.1in; margin: 24px auto; }
+    .hd { display: flex; justify-content: space-between; border-bottom: 2px solid #111; padding-bottom: 10px; } .hd b { font-size: 18px; } h1 { font: 700 26px Arial, sans-serif; letter-spacing: .08em; margin: 0; text-align: right; }
+    table { width: 100%; border-collapse: collapse; margin-top: 18px; } th, td { padding: 6px 4px; text-align: left; vertical-align: top; } .amt { text-align: right; white-space: nowrap; }
+    .items th { border-bottom: 1px solid #111; font: 600 12px Arial, sans-serif; text-transform: uppercase; letter-spacing: .05em; } .items td { border-bottom: 1px solid #ddd; } .tot td { border: 0; } .tot .big { font-weight: 700; font-size: 16px; border-top: 2px solid #111; }
+    .two { display: flex; gap: 40px; margin-top: 18px; } .two > div { flex: 1; } .lab { font: 600 11px Arial, sans-serif; text-transform: uppercase; letter-spacing: .06em; color: #555; } .refs td { padding: 2px 4px; } .refs td:first-child { color: #555; width: 45%; }
+    .paid { margin-top: 18px; border: 3px solid #0a7a37; color: #0a7a37; font: 700 20px Arial, sans-serif; padding: 8px 14px; display: inline-block; transform: rotate(-2deg); } .foot { margin-top: 28px; font-size: 13px; color: #333; }
+    @media print { body { margin: 0 auto; } .noprint { display: none; } }
+  </style></head><body>
+  <p class="noprint" style="font:14px Arial;background:#fff3e0;border:1px solid #ff8a00;padding:8px 12px;border-radius:8px">In the print window choose <b>Destination: Save as PDF</b>, then Save. Close this tab when done.</p>
+  <div class="hd"><div><b>${hesc(A.company)}</b><br>${hesc(A.name)}<br>${hesc(A.addr1)}<br>${hesc(A.addr2)}<br>${hesc(A.phone)} · ${hesc(A.email)}</div><div><h1>INVOICE</h1><table class="refs" style="margin-top:6px;white-space:nowrap"><tr><td>Invoice no.</td><td><b>${hesc(o.invNo || o.fileNo || '')}</b></td></tr><tr><td>Date</td><td>${hesc(longDate(o.invDate || todayISO()))}</td></tr></table></div></div>
+  <div class="two"><div><div class="lab">Bill to</div>${B.lines.map(hesc).join('<br>')}${B.email ? '<br>' + hesc(B.email) : ''}</div><div><div class="lab">Assignment</div><table class="refs">${refs.map(r => `<tr><td>${hesc(r[0])}</td><td>${hesc(r[1])}</td></tr>`).join('')}</table></div></div>
+  <table class="items"><tr><th>Description</th><th class="amt">Amount</th></tr>${lines.map(l => `<tr><td>${hesc(l[0])}</td><td class="amt">${usd(l[1])}</td></tr>`).join('')}<tr><td>Sales tax</td><td class="amt">$0.00</td></tr></table>
+  <table class="tot"><tr><td></td><td class="amt" style="width:40%">Total ${usd(total)}</td></tr>${ret ? `<tr><td></td><td class="amt">Retainer received −${usd(ret)}</td></tr>` : ''}<tr><td></td><td class="amt big">Balance due ${usd(due)}</td></tr></table>
+  ${o.paidDate ? `<div class="paid">PAID ${hesc(longDate(o.paidDate))}${o.paidMethod ? ' · ' + hesc(o.paidMethod) : ''}${o.paidRef ? ' · ' + hesc(o.paidRef) : ''}</div>` : ''}
+  <div class="foot"><b>Payment terms:</b> ${hesc(terms)} Please make checks payable to ${hesc(A.company)} and include the invoice number.<br>Thank you for the opportunity to be of service.</div>
+  </body></html>`;
+}
+function printWindow(html, what) {
+  const w = window.open('', '_blank'); if (!w) { toast('Chrome blocked the new tab – allow pop-ups for this page, then try again', 6000); return null; }
+  w.document.open(); w.document.write(html); w.document.close(); setTimeout(() => { try { w.focus(); w.print(); } catch (e) {} }, 300);
+  toast((what || 'It') + ' opened in a new tab – choose Destination: Save as PDF', 6000); return w;
+}
+function makeInvoice() {
+  if (!$('#f_invNo').value.trim()) $('#f_invNo').value = $('#f_fileNo').value.trim();
+  if (!$('#f_invDate').value) $('#f_invDate').value = todayISO();
+  cur = readForm(); if (!invAmount(cur)) { toast('Fill in the fee first (Total fee, above)'); $('#f_fee').focus(); return; }
+  saveLetter(true); renderBooks(); printWindow(invoiceHTML(cur), 'The invoice');
+}
+function markPaid() {
+  if (!$('#f_paidDate').value) $('#f_paidDate').value = todayISO();
+  cur = readForm(); if (!String(cur.paidAmt || '').trim()) { $('#f_paidAmt').value = invBalance(cur).toLocaleString(); }
+  if (!cur.invDate) { $('#f_invDate').value = $('#f_paidDate').value; if (!$('#f_invNo').value.trim()) $('#f_invNo').value = $('#f_fileNo').value.trim(); }
+  if ($('#f_stage').value !== 'Cancelled') $('#f_stage').value = 'Paid';
+  cur = readForm(); saveLetter(true); renderBooks(); renderLetters(); toast('Marked paid – order status set to Paid');
+}
+function renderBooks() {
+  const el = $('#booksNote'); if (!el || !cur) return; const o = readForm(); const tot = invAmount(o);
+  $('#f_invAmt').placeholder = tot ? tot.toLocaleString() + ' (the fee)' : 'the fee';
+  el.className = 'help' + (isUnpaid(o) && daysOut(o) > 30 ? ' warnTxt' : '');
+  el.innerHTML = o.paidDate ? `<b class="ck">✓</b> Paid ${h(longDate(o.paidDate))}${o.paidMethod ? ' by ' + h(o.paidMethod) : ''}${o.paidAmt ? ' · ' + usd(o.paidAmt) : ''}.`
+    : o.invDate ? `Invoiced ${h(longDate(o.invDate))} · balance due ${usd(invBalance(o))} · ${daysOut(o)} day${daysOut(o) === 1 ? '' : 's'} outstanding.`
+    : tot ? `Not invoiced yet. When you deliver the report, click <b>Make the invoice</b>: it fills in the number (your file number), today’s date and ${usd(tot)}${n$(o.retainer) ? ' less the ' + usd(o.retainer) + ' retainer' : ''}.` : 'Fill in the fee above, then make the invoice when you deliver the report.';
+}
+function followUpMail(o) {
+  const B = billTo(o); const first = (B.attn || '').trim().split(/\s+/)[0] || '';
+  const sub = `Invoice ${o.invNo || o.fileNo || ''} – ${street(o)}`.replace(/\s+/g, ' ');
+  const refs = [o.amcRef && 'reference ' + o.amcRef, o.loanNo && 'loan ' + o.loanNo].filter(Boolean).join(', ');
+  const body = `Hello${first ? ' ' + first : ''},\n\nI hope you are well. This is a friendly reminder that invoice ${o.invNo || o.fileNo || ''} for the appraisal of ${o.address || street(o)}${refs ? ' (' + refs + ')' : ''}, dated ${longDate(o.invDate)}, for ${usd(invBalance(o))} is still open.\n\nIf payment is already on its way, thank you, and please disregard this note. Otherwise, please let me know when I can expect it. I am happy to send another copy of the invoice.\n\nThank you,\n${APPRAISER.name}\n${APPRAISER.company}\n${APPRAISER.phone}`;
+  return 'mailto:' + encodeURIComponent(B.email || '') + '?subject=' + encodeURIComponent(sub) + '&body=' + encodeURIComponent(body);
+}
+function unpaidHTML() {
+  const U = letters.filter(isUnpaid).sort((a, b) => String(a.invDate).localeCompare(String(b.invDate)));
+  const notInv = letters.filter(o => (o.stage || '') === 'Delivered' && !o.invDate && !o.paidDate);
+  const total = U.reduce((s, o) => s + invBalance(o), 0); const yr = +todayISO().slice(0, 4), half = +todayISO().slice(5, 7) <= 6 ? 1 : 2;
+  return `<h3>Unpaid invoices</h3>${U.length ? `<div class="tableWrap"><table class="hmtable"><thead><tr><th>Invoice</th><th>Address</th><th>Bill to</th><th>Invoiced</th><th>Days</th><th class="num">Balance</th><th></th></tr></thead><tbody>${U.map(o => `<tr><td class="num"><b>${h(o.invNo || o.fileNo || '—')}</b></td><td><button type="button" class="lnk" data-bkopen="${o.id}">${h(street(o) || '(no address)')}</button></td><td>${h(billTo(o).who)}</td><td class="num">${h(longDate(o.invDate))}</td><td class="num${daysOut(o) > 30 ? ' warnTxt' : ''}">${daysOut(o)}</td><td class="num">${usd(invBalance(o))}</td>
+      <td class="acts"><a class="btn ghost small" href="${h(followUpMail(o))}" title="Opens a draft in your mail program – read it before you send">Follow-up email</a><button type="button" class="btn ghost small" data-bkpaid="${o.id}">Mark paid</button></td></tr>`).join('')}</tbody></table></div><p class="help">${U.length} open · ${usd(total)} in all. <b>Follow-up email</b> opens a draft in your mail program for you to read and send; nothing is sent from here.</p>` : '<p class="help">No unpaid invoices.</p>'}
+    ${notInv.length ? `<p class="help warnTxt">Delivered but not invoiced yet: ${notInv.map(o => `<button type="button" class="lnk" data-bkopen="${o.id}">${h(o.fileNo || street(o))}</button>`).join(', ')}.</p>` : ''}
+    <div class="row"><label>Summary for <select id="bkHalf">${[yr, yr - 1, yr - 2].flatMap(y => [[y, 2], [y, 1]]).filter(([y, hh]) => y < yr || hh <= half).map(([y, hh]) => `<option value="${y}-${hh}">${hh === 1 ? 'January–June' : 'July–December'} ${y}</option>`).join('')}</select></label><button type="button" class="btn ghost small" id="bkSum">Print the summary</button></div>`;
+}
+function wireUnpaid(box) {
+  box.querySelectorAll('[data-bkopen]').forEach(b => b.onclick = () => openLetter(b.dataset.bkopen));
+  box.querySelectorAll('[data-bkpaid]').forEach(b => b.onclick = () => { openLetter(b.dataset.bkpaid); setTimeout(() => { markPaid(); const f = $('#booksSet'); if (f) f.scrollIntoView({ block: 'center' }); }, 60); });
+  const s = box.querySelector('#bkSum'); if (s) s.onclick = () => { const [y, hh] = box.querySelector('#bkHalf').value.split('-').map(Number); printWindow(summaryHTML(y, hh), 'The summary'); };
+}
+function summaryHTML(y, half) {
+  const from = `${y}-${half === 1 ? '01' : '07'}-01`, to = `${y}-${half === 1 ? '06-30' : '12-31'}`; const inR = d => d && d >= from && d <= to; const name = (half === 1 ? 'January–June ' : 'July–December ') + y;
+  const inv = letters.filter(o => inR(o.invDate)).sort((a, b) => a.invDate.localeCompare(b.invDate));
+  const paidIn = letters.filter(o => inR(o.paidDate)); const sum = (L, f) => L.reduce((s, o) => s + f(o), 0);
+  const paidAmt = o => String(o.paidAmt || '').trim() ? n$(o.paidAmt) : invBalance(o);
+  const tInv = sum(inv, invAmount), tPaid = sum(paidIn, paidAmt), tOpen = sum(inv.filter(o => !o.paidDate), invBalance);
+  const tRet = sum(inv, o => n$(o.retainer));
+  return `<!doctype html><html><head><meta charset="utf-8"><title>Invoices ${name}</title><style>@page { size: letter landscape; margin: 0.5in; } body { font: 12.5px/1.4 Arial, sans-serif; color: #111; margin: 20px; } h1 { font-size: 20px; margin: 0 0 4px; } table { width: 100%; border-collapse: collapse; margin-top: 12px; } th, td { padding: 4px 6px; border-bottom: 1px solid #ddd; text-align: left; } th { border-bottom: 1.5px solid #111; font-size: 11px; text-transform: uppercase; } .n { text-align: right; white-space: nowrap; } .tot td { font-weight: 700; border-top: 2px solid #111; } .box { display: flex; gap: 30px; margin-top: 10px; } .box div { border: 1px solid #ccc; border-radius: 6px; padding: 8px 12px; } .box b { display: block; font-size: 17px; } @media print { .noprint { display: none; } }</style></head><body>
+  <p class="noprint" style="background:#fff3e0;border:1px solid #ff8a00;padding:8px 12px;border-radius:8px">In the print window choose <b>Destination: Save as PDF</b> to keep a copy.</p>
+  <h1>${hesc(APPRAISER.company)} – invoices, ${name}</h1><div>Printed ${hesc(longDate(todayISO()))} from the Appraisal Assistant. Invoices dated ${hesc(longDate(from))} to ${hesc(longDate(to))}.</div>
+  <div class="box"><div>Invoiced<b>${usd(tInv)}</b>${inv.length} invoice${inv.length === 1 ? '' : 's'}</div><div>Retainers on these<b>${usd(tRet)}</b></div><div>Payments received in the period<b>${usd(tPaid)}</b>${paidIn.length} payment${paidIn.length === 1 ? '' : 's'}</div><div>Still unpaid (of these invoices)<b>${usd(tOpen)}</b>${inv.filter(o => !o.paidDate).length} open</div></div>
+  <table><tr><th>Invoice</th><th>Invoiced</th><th>Property</th><th>Bill to</th><th class="n">Amount</th><th class="n">Retainer</th><th>Paid</th><th>Method</th><th class="n">Paid amount</th><th class="n">Unpaid</th></tr>
+  ${inv.map(o => `<tr><td>${hesc(o.invNo || o.fileNo || '')}</td><td>${hesc(shortDate(o.invDate))}</td><td>${hesc(street(o))}</td><td>${hesc(billTo(o).who)}</td><td class="n">${usd(invAmount(o))}</td><td class="n">${n$(o.retainer) ? usd(o.retainer) : ''}</td><td>${hesc(shortDate(o.paidDate || ''))}</td><td>${hesc(o.paidMethod || '')}</td><td class="n">${o.paidDate ? usd(paidAmt(o)) : ''}</td><td class="n">${o.paidDate ? '' : usd(invBalance(o))}</td></tr>`).join('') || '<tr><td colspan="10">No invoices dated in this period.</td></tr>'}
+  <tr class="tot"><td colspan="4">Total</td><td class="n">${usd(tInv)}</td><td class="n">${usd(tRet)}</td><td></td><td></td><td class="n">${usd(sum(inv.filter(o => o.paidDate), paidAmt))}</td><td class="n">${usd(tOpen)}</td></tr></table>
+  ${paidIn.filter(o => !inR(o.invDate)).length ? `<h3 style="margin-top:18px">Payments received in this period for invoices dated earlier</h3><table><tr><th>Invoice</th><th>Invoiced</th><th>Property</th><th>Paid</th><th class="n">Amount</th></tr>${paidIn.filter(o => !inR(o.invDate)).map(o => `<tr><td>${hesc(o.invNo || o.fileNo || '')}</td><td>${hesc(shortDate(o.invDate || ''))}</td><td>${hesc(street(o))}</td><td>${hesc(shortDate(o.paidDate))}</td><td class="n">${usd(paidAmt(o))}</td></tr>`).join('')}</table>` : ''}
+  </body></html>`;
+}
+
+/* =====================================================================
+   1004MC – Market Conditions Addendum (UAD 2.6 / legacy forms), from the Search Criteria search
+   (Market tab box 2; box 1 until box 2 is loaded). Same listings she ticked on the Market tab.
+   Periods: prior 7–12 months, prior 4–6 months, current 3 months (ending on the effective date).
+   Active listings and their DOM are counted as of the END of each period (dates in the export;
+   for past period ends DOM = period end − list date). Sale-to-list = sale price ÷ final list price.
+   Trend rule (stated on the page): the current 3 months compared with the prior 7–12 months –
+   more than 5% higher = Increasing, more than 5% lower = Declining, otherwise Stable; sales counts
+   are compared per month. Fewer than 3 sales (or listings) in either period → "few – your call".
+   Her rule: price per square foot is NOT a trend measure, so it is not on this page.
+   ===================================================================== */
+const MC_ROWS = [
+  ['sales', 'Total # of comparable sales (settled)', 'n'], ['absorb', 'Absorption rate (total sales / months)', 'r'], ['listings', 'Total # of comparable active listings', 'n'],
+  ['supply', 'Months of housing supply (total listings / absorption rate)', 'r'], ['medSale', 'Median comparable sale price', '$'], ['saleDom', 'Median comparable sales days on market', 'n'],
+  ['medList', 'Median comparable list price', '$'], ['listDom', 'Median comparable listings days on market', 'n'], ['stl', 'Median sale price as % of list price', '%']];
+const MC_TREND = ['Increasing', 'Stable', 'Declining'];
+function mcSrc() { const mi = MI(); return (mi.rows || []).length ? mi : M(); }
+function mcCompute() {
+  const src = mcSrc(), eff = mkEff(), nearToday = daysBetween(eff, todayISO()) <= 3;
+  const use = r => !(src.exclude || {})[r.mls] && (!src.types || src.types.includes(r.typ));
+  const rows = (src.rows || []).filter(use);
+  const P = [['p1', 'Prior 7–12 months', isoAddMonths(eff, -12), isoAddMonths(eff, -6), 6], ['p2', 'Prior 4–6 months', isoAddMonths(eff, -6), isoAddMonths(eff, -3), 3], ['p3', 'Current – 3 months', isoAddMonths(eff, -3), eff, 3]];
+  const per = P.map(([k, label, from, to, mo]) => {
+    const S = rows.filter(r => r.saleDate && r.saleDate > from && r.saleDate <= to && r.salePrice);
+    const A = rows.filter(r => statusAt(r, to) === 'active');
+    const aDom = A.map(r => to === eff && nearToday && r.dom != null ? r.dom : r.listDate ? daysBetween(r.listDate, to) : null);
+    const ratio = S.filter(r => r.listPrice).map(r => r.salePrice / r.listPrice);
+    const cKnown = S.filter(r => r.conc === 'Y' || r.conc === 'N');
+    const v = { sales: S.length, absorb: S.length / mo, listings: A.length, medSale: median(S.map(r => r.salePrice)), saleDom: median(S.map(r => r.cdom ?? r.dom)), medList: median(A.map(r => r.listPrice)), listDom: median(aDom), stl: ratio.length ? median(ratio) * 100 : null };
+    v.supply = v.absorb > 0 ? v.listings / v.absorb : null;
+    return { k, label, from, to, mo, v, nS: S.length, nA: A.length, conc: cKnown.filter(r => r.conc === 'Y').length, concKnown: cKnown.length, reo: S.filter(r => r.distressed).length, reoA: A.filter(r => r.distressed).length };
+  });
+  const trend = {}; const [a, , c] = per;
+  MC_ROWS.forEach(([key]) => { const x = a.v[key], y = c.v[key];
+    const nBase = ['listings', 'medList', 'listDom'].includes(key) ? Math.min(a.nA, c.nA) : ['supply'].includes(key) ? Math.min(a.nS, c.nS, a.nA, c.nA) : Math.min(a.nS, c.nS);
+    let t = '', why = '';
+    if (x == null || y == null) { why = 'not enough data'; }
+    else { const ch = key === 'stl' ? y - x : x === 0 ? (y > 0 ? 100 : 0) : (y / x - 1) * 100; const lim = 5; t = ch > lim ? 'Increasing' : ch < -lim ? 'Declining' : 'Stable'; why = key === 'stl' ? (ch >= 0 ? '+' : '') + Math.round(ch * 10) / 10 + ' points' : (ch >= 0 ? '+' : '') + Math.round(ch) + '%'; }
+    if (nBase < 3) why = (why ? why + ' · ' : '') + 'few – your call';
+    trend[key] = { t: t || 'Stable', why, few: nBase < 3 || x == null || y == null }; });
+  // the 2.6 one-liners (Neighborhood / top of the Sales Comparison Approach): actives on the effective date, sales in the past 12 months
+  const act = rows.filter(r => statusAt(r, eff) === 'active' && r.listPrice), sold12 = rows.filter(r => r.saleDate && r.saleDate > isoAddMonths(eff, -12) && r.saleDate <= eff && r.salePrice);
+  const allS = per.reduce((s, p) => s + p.nS, 0), conc = per.reduce((s, p) => s + p.conc, 0), concKnown = per.reduce((s, p) => s + p.concKnown, 0), reo = per.reduce((s, p) => s + p.reo, 0);
+  return { eff, per, trend, act, sold12, allS, conc, concKnown, reo, file: src.file || '', micro: src === MI() };
+}
+const mcFmt = (v, t) => v == null ? '—' : t === '$' ? $m(v) : t === '%' ? (Math.round(v * 10) / 10) + '%' : t === 'r' ? (Math.round(v * 100) / 100).toFixed(2) : String(Math.round(v));
+function mcLines(C) {
+  const lo = a => a.length ? Math.min(...a) : null, hi = a => a.length ? Math.max(...a) : null; const lp = C.act.map(r => r.listPrice), sp = C.sold12.map(r => r.salePrice);
+  return [`There are ${C.act.length} comparable propert${C.act.length === 1 ? 'y' : 'ies'} currently offered for sale in the subject neighborhood` + (C.act.length ? ` ranging in price from ${$m(lo(lp))} to ${$m(hi(lp))}.` : '.'),
+    `There are ${C.sold12.length} comparable sale${C.sold12.length === 1 ? '' : 's'} in the subject neighborhood within the past twelve months` + (C.sold12.length ? ` ranging in sale price from ${$m(lo(sp))} to ${$m(hi(sp))}.` : '.')];
+}
+function mcSummaryDraft(C) {
+  const m = M(), [a, , c] = C.per, pick = k => (m.mc && m.mc.trend && m.mc.trend[k]) || C.trend[k].t; const out = [];
+  out.push(`The data are from an SBMLS search of comparable properties competing with the subject (see the search criteria), as of the effective date of ${shortDate(C.eff)}.`);
+  out.push(`There were ${C.allS} comparable sale${C.allS === 1 ? '' : 's'} in the past 12 months: ${a.nS} in the prior 7–12 months, ${C.per[1].nS} in the prior 4–6 months and ${c.nS} in the current 3 months; absorption is considered ${pick('absorb').toLowerCase()}.`);
+  out.push(c.v.supply != null ? `There ${c.nA === 1 ? 'is' : 'are'} ${c.nA} active comparable listing${c.nA === 1 ? '' : 's'}, about ${(Math.round(c.v.supply * 10) / 10).toFixed(1)} month${Math.round(c.v.supply * 10) === 10 ? '' : 's'} of supply in the current period (${pick('supply').toLowerCase()}).` : `There ${c.nA === 1 ? 'is' : 'are'} ${c.nA} active comparable listing${c.nA === 1 ? '' : 's'}; with no sales in the current 3 months, months of supply cannot be measured.`);
+  if (a.v.medSale != null && c.v.medSale != null) out.push(`The median comparable sale price was ${$m(a.v.medSale)} in the prior 7–12 months and ${$m(c.v.medSale)} in the current 3 months. Medians of a small number of sales reflect the mix of properties sold rather than a change in value, and price per square foot is not a reliable trend measure (it does not account for differences in lot utility, quality, condition, bathrooms, features, view and other amenities).`);
+  if (C.concKnown) out.push(`${C.conc} of ${C.concKnown} sales reported seller concessions in MLS.`);
+  out.push(C.reo ? `${C.reo} of the sales ${C.reo === 1 ? 'was a' : 'were'} REO / short sale${C.reo === 1 ? '' : 's'}.` : 'No REO or short sales were found among the comparable sales.');
+  const TC = { increasing: 'increasing', stable: 'stable', declining: 'declining' }[m.trendConcl]; if (TC) out.push(`Overall, market values are considered ${TC} as of the effective date.`);
+  return out.join(' ');
+}
+function mcHTML(C) {
+  const m = M(); m.mc = m.mc || { trend: {} }; const T = m.mc.trend || {};
+  const sel = (k, opts, sug) => `<select data-mct="${k}">${opts.map(o => `<option${(T[k] || sug) === o ? ' selected' : ''}>${o}</option>`).join('')}</select>`;
+  const concPct = C.concKnown ? Math.round(C.conc / C.concKnown * 100) : null;
+  return `<summary><b>1004MC – Market Conditions Addendum (UAD 2.6)</b> <small class="muted">from the ${C.micro ? 'Search Criteria search (box 2)' : '<span class="warnTxt">Market Area Boundary search (box 1) – load box 2 for the comparable search</span>'}</small></summary>
+    <p class="help">Periods end on the effective date (${h(shortDate(C.eff))}). Active listings are counted as of the end of each period. <b>Trend rule:</b> the current 3 months compared with the prior 7–12 months – more than 5% higher is Increasing, more than 5% lower is Declining, otherwise Stable (sales are compared per month). With fewer than 3 sales or listings in a period the suggestion says “few – your call”. Price per square foot is not used as a trend measure.</p>
+    <div class="tableWrap"><table class="facts"><tr><th>Inventory analysis</th>${C.per.map(p => `<th class="t">${h(p.label)}<small class="sug">${h(shortDate(isoAddMonths(p.from, 0)))} – ${h(shortDate(p.to))}</small></th>`).join('')}<th>Overall trend</th></tr>
+      ${MC_ROWS.map(([k, label, t], i) => `${i === 4 ? `<tr><th colspan="5">Median sale &amp; list price, DOM, sale/list %</th></tr>` : ''}<tr><td>${h(label)}</td>${C.per.map(p => `<td class="t">${mcFmt(p.v[k], t)}</td>`).join('')}<td>${sel(k, MC_TREND, C.trend[k].t)}<small class="sug${T[k] && T[k] !== C.trend[k].t ? ' warnTxt' : ''}">suggested ${C.trend[k].t}${C.trend[k].why ? ' (' + h(C.trend[k].why) + ')' : ''}</small></td></tr>`).join('')}
+      <tr><td>Seller concessions reported in MLS (sales)</td>${C.per.map(p => `<td class="t">${p.concKnown ? p.conc + ' of ' + p.concKnown : '—'}</td>`).join('')}<td>${sel('conc', MC_TREND, 'Stable')}</td></tr>
+      <tr><td>REO / short sales (sales)</td>${C.per.map(p => `<td class="t">${p.reo}${p.reoA ? ' · ' + p.reoA + ' listed' : ''}</td>`).join('')}<td></td></tr></table></div>
+    <table class="facts"><tr><th>Seller-(developer, builder, etc.) paid financial assistance prevalent?</th><td>${sel('concYN', ['', 'Yes', 'No'], '')} <small class="muted">${concPct == null ? 'concessions not in this export' : concPct + '% of the sales with an answer reported concessions'}</small></td></tr>
+      <tr><th>Are foreclosure sales (REO sales) a factor in the market?</th><td>${sel('reoYN', ['', 'Yes', 'No'], C.reo ? '' : 'No')} <small class="muted">${C.reo} REO / short sale${C.reo === 1 ? '' : 's'} in the past 12 months</small></td></tr>
+      <tr><th>Cite data sources for the above information</th><td><input data-mcx="sources" value="${h(m.mc.sources ?? 'SBMLS')}"></td></tr>
+      <tr><th>Summarize the above as support for your conclusions</th><td><textarea data-mcx="summary" rows="6">${h(m.mc.summary ?? mcSummaryDraft(C))}</textarea><div class="row"><button type="button" class="btn ghost small" id="mcRedo">Draft again</button></div></td></tr></table>
+    <h4>For the 2.6 report (Sales Comparison Approach, top lines)</h4><p>${mcLines(C).map(h).join('<br>')}</p>
+    <div class="row"><button type="button" class="btn ghost small" id="mcCopy">Copy the grid</button><button type="button" class="btn ghost small" id="mcPrint">Print / Save as PDF</button></div>`;
+}
+function mcText(C) {
+  const m = M(), T = (m.mc && m.mc.trend) || {}; const L = ['Inventory analysis\t' + C.per.map(p => p.label).join('\t') + '\tOverall trend'];
+  MC_ROWS.forEach(([k, label, t]) => L.push([label, ...C.per.map(p => mcFmt(p.v[k], t)), T[k] || C.trend[k].t].join('\t')));
+  L.push('', mcLines(C).join('\n'), '', 'Summary: ' + ((m.mc && m.mc.summary) ?? mcSummaryDraft(C)), 'Data source: ' + ((m.mc && m.mc.sources) ?? 'SBMLS'));
+  return L.join('\n');
+}
+function mcPrintHTML(C) {
+  const m = M(), T = (m.mc && m.mc.trend) || {}; const f = readForm();
+  return `<!doctype html><html><head><meta charset="utf-8"><title>1004MC ${hesc([f.fileNo, street(f)].filter(Boolean).join(' '))}</title><style>@page { size: letter; margin: 0.6in; } body { font: 12.5px/1.4 Arial, sans-serif; margin: 20px; color: #111; } h1 { font-size: 18px; margin: 0; } table { width: 100%; border-collapse: collapse; margin-top: 10px; } th, td { border: 1px solid #999; padding: 4px 6px; text-align: left; } td.n { text-align: right; } @media print { .noprint { display: none; } }</style></head><body>
+    <p class="noprint" style="background:#fff3e0;border:1px solid #ff8a00;padding:8px 12px;border-radius:8px">In the print window choose <b>Destination: Save as PDF</b>.</p>
+    <h1>Market Conditions Addendum – ${hesc(f.address || '')}</h1><div>File ${hesc(f.fileNo || '')} · effective date ${hesc(shortDate(C.eff))} · data source: ${hesc((m.mc && m.mc.sources) ?? 'SBMLS')}</div>
+    <table><tr><th>Inventory analysis</th>${C.per.map(p => `<th>${hesc(p.label)}</th>`).join('')}<th>Overall trend</th></tr>${MC_ROWS.map(([k, label, t]) => `<tr><td>${hesc(label)}</td>${C.per.map(p => `<td class="n">${mcFmt(p.v[k], t)}</td>`).join('')}<td>${hesc(T[k] || C.trend[k].t)}</td></tr>`).join('')}</table>
+    <table><tr><th style="width:45%">Seller-paid financial assistance prevalent?</th><td>${hesc(T.concYN || '')} ${C.concKnown ? `(${C.conc} of ${C.concKnown} sales reported concessions; trend ${hesc(T.conc || 'Stable')})` : ''}</td></tr><tr><th>Foreclosure (REO) sales a factor?</th><td>${hesc(T.reoYN || (C.reo ? '' : 'No'))} (${C.reo} in the past 12 months)</td></tr><tr><th>Summary</th><td>${hesc((m.mc && m.mc.summary) ?? mcSummaryDraft(C))}</td></tr></table>
+    <p>${mcLines(C).map(hesc).join('<br>')}</p></body></html>`;
+}
+function mcMount() {
+  const body = $('#mkBody'); if (!body) return; const m = M(); const src = mcSrc(); if (!(src.rows || []).length) return;
+  const C = mcCompute(); const d = document.createElement('details'); d.className = 'mkcard mc'; d.id = 'mcBox';
+  d.open = m.mcOpen != null ? m.mcOpen : readForm().reportForm === 'uad26'; d.innerHTML = mcHTML(C);
+  const secs = body.querySelectorAll('.mkgrid > section'); (secs[2] || secs[secs.length - 1]).after(d);
+  d.addEventListener('toggle', () => { m.mcOpen = d.open; mkChanged(); });
+  d.querySelectorAll('[data-mct]').forEach(s => s.onchange = () => { m.mc.trend = m.mc.trend || {}; m.mc.trend[s.dataset.mct] = s.value; mkChanged(); });
+  d.querySelectorAll('[data-mcx]').forEach(t => t.oninput = () => { m.mc[t.dataset.mcx] = t.value; mkChanged(); });
+  $('#mcRedo').onclick = () => { m.mc.summary = mcSummaryDraft(C); d.querySelector('[data-mcx=summary]').value = m.mc.summary; mkChanged(); toast('Drafted again'); };
+  $('#mcCopy').onclick = async () => { try { await navigator.clipboard.writeText(mcText(C)); toast('Copied – paste it into your report software or a spreadsheet'); } catch (e) { toast('Could not copy'); } };
+  $('#mcPrint').onclick = () => printWindow(mcPrintHTML(C), 'The 1004MC');
+}
+
 /* =====================================================================
    Start page and the New order steps (her workflow, Oct 16 2026)
    Home: New order · Open an order · All files.
@@ -2912,7 +3342,8 @@ function renderHome() {
       ${tile('hmOpen', '↻', 'Open an order', 'Your last 10 orders', HOME_VIEW === 'recent')}
       ${tile('hmFind', '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 21 21"/></svg>', 'All files', 'Search every order', HOME_VIEW === 'find')}
     </div>
-    <div class="hmpanel" id="hmPanel"></div>`;
+    <div class="hmpanel" id="hmPanel"></div>${letters.some(o => o.invDate || o.paidDate || (o.stage || '') === 'Delivered') ? '<div class="hmpanel" id="hmUnpaid"></div>' : ''}`;
+  { const u = $('#hmUnpaid'); if (u) { u.innerHTML = unpaidHTML(); wireUnpaid(u); } }
   $('#hmNew').onclick = () => startNewOrder();
   $('#hmOpen').onclick = () => { HOME_VIEW = 'recent'; renderHome(); };
   $('#hmFind').onclick = () => { HOME_VIEW = 'find'; renderHome(); setTimeout(() => $('#hfFile') && $('#hfFile').focus(), 30); };
@@ -3056,7 +3487,7 @@ let cur = null;           // the letter being edited
 let clientCount = 1;
 
 const NEW_FIELDS = { jurisdiction: '', street: '', city: '', state: 'CA', zip: '', zip4: '', stage: 'New', inspDate: '', inspTime: '', effDate: '', unit: '', apn: '', county: '', lat: '', lon: '', owner: '', legal: '', borrower: '',
-  lenderDiff: false, govAgency: '', investorId: '', reportForm: '', lenderCo: '', lenderAddr1: '', lenderAddr2: '', loanNo: '', amcUsed: false, amcCo: '', amcAddr1: '', amcAddr2: '', amcLic: '', amcState: 'CA', amcExp: '', amcFee: '', amcRef: '', notes: '', todos: '' };
+  lenderDiff: false, govAgency: '', investorId: '', reportForm: '', lenderCo: '', lenderAddr1: '', lenderAddr2: '', loanNo: '', amcUsed: false, amcCo: '', amcAddr1: '', amcAddr2: '', amcLic: '', amcState: 'CA', amcExp: '', amcFee: '', amcRef: '', notes: '', todos: '', invNo: '', invDate: '', invAmt: '', paidDate: '', paidMethod: '', paidAmt: '', paidRef: '' };
 function blankLetter() {
   return { ...NEW_FIELDS, docs: [], crs: null, listings: [], permits: null, created: new Date().toISOString(), id: uid(), status: 'Client letter', reportForm: 'uad36', fileNo: '', orderDate: todayISO(), dueDate: '', aiUse: '', orderDoc: null, agreeDate: todayISO(), type: 'uadPurchase', clients: [{}], address: '', propType: 'sfr', propTypeOther: '',
     interest: '', decedent: '', dod: '', otherUsers: '', inspection: 'interior', apSales: true, apCost: true, apIncome: false, format: '',
@@ -3088,7 +3519,7 @@ function writeForm(f) {
   renderClients(f.clients || [{}]);
   document.querySelectorAll('input[name=aiUse]').forEach(r => { r.checked = r.value === f.aiUse; });
   renderScan(f.orderDoc);
-  renderDocs(); renderSubject(); renderLinks();
+  renderDocs(); renderSubject(); renderLinks(); renderReqs(); renderBooks();
   syncVisibility();
 }
 
@@ -3275,7 +3706,7 @@ function saveContact(i) {
 function openLetter(id, copy) {
   if (cur && cur.id !== id && hasContent(readForm())) saveLetter(true);
   const f = letters.find(x => x.id === id); if (!f) return;
-  cur = copy ? { ...JSON.parse(JSON.stringify(f)), ...NEW_FIELDS, notes: '', todos: '', docs: [], crs: null, listings: [], permits: null, created: new Date().toISOString(), id: uid(), status: 'Drafted', agreeDate: todayISO(), orderDate: todayISO(), dueDate: '', fileNo: '', address: '', decedent: '', dod: '', aiUse: '', orderDoc: null, saved: null,
+  cur = copy ? { ...JSON.parse(JSON.stringify(f)), ...NEW_FIELDS, notes: '', todos: '', docs: [], crs: null, listings: [], permits: null, created: new Date().toISOString(), id: uid(), status: 'Drafted', reqs: [], reqsRead: {}, agreeDate: todayISO(), orderDate: todayISO(), dueDate: '', fileNo: '', address: '', decedent: '', dod: '', aiUse: '', orderDoc: null, saved: null,
     lenderDiff: f.lenderDiff, lenderCo: f.lenderCo, lenderAddr1: f.lenderAddr1, lenderAddr2: f.lenderAddr2, amcUsed: f.amcUsed, amcCo: f.amcCo, amcAddr1: f.amcAddr1, amcAddr2: f.amcAddr2, amcLic: f.amcLic, amcState: f.amcState, amcExp: f.amcExp } : { ...NEW_FIELDS, ...JSON.parse(JSON.stringify(f)) };
   if (!copy) dedupeDocs(cur).then(n => { if (n) toast(n + ' duplicate document' + (n > 1 ? 's' : '') + ' removed (the same file was uploaded twice)', 5000); return recheckDocTypes(cur).then(() => { if (n) { renderDocs(); saveLetter(true); } }); });
   writeForm(cur); render(); showTab('letter'); window.scrollTo(0, 0); toast(copy ? 'Copied the client and terms – fill in the new job' : 'Opened ' + (f.fileNo || street(f) || 'the order'));
@@ -3411,6 +3842,7 @@ function showTab(t) { CUR_TAB = t;
   document.querySelectorAll('[data-tab]').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === t));
   document.querySelectorAll('.panel').forEach(p => { p.hidden = p.id !== 'panel-' + t; });
   if (t === 'home') renderHome();
+  if (t === 'letter') setTimeout(() => document.querySelectorAll('textarea[data-rqtext]').forEach(x => { x.style.height = 'auto'; x.style.height = (x.scrollHeight + 2) + 'px'; }), 0);
   syncGenieTop();
   if (t === 'market') { $('#mkTitle').textContent = 'Market conditions' + (cur && (cur.fileNo || street(cur)) ? ' – ' + [cur.fileNo, street(cur)].filter(Boolean).join(' ') : ''); mkRender(); }
 }
@@ -3476,6 +3908,7 @@ async function start() {
   $('#f_payWhen').addEventListener('change', () => { const w = $('#f_payWhen').value; $('#f_deliveryFrom').value = w === 'report' ? 'inspection' : 'either'; syncVisibility(); update(); }); $('#f_premise').addEventListener('change', syncVisibility); ['#f_rent', '#f_testimony'].forEach(id => $(id).addEventListener('change', syncVisibility));
   ['tRate', 'tDecl', 'tRetainer', 'tCancel'].forEach(k => $('#f_' + k).addEventListener('change', () => { const r = store.get('rates', {}); r[k] = $('#f_' + k).value; store.set('rates', r); }));
   $('#addClient').onclick = () => { const f = readForm(); clientCount++; f.clients.push({}); renderClients(f.clients); update(); };
+  $('#btnInvoice').onclick = makeInvoice; $('#btnPaid').onclick = markPaid; ['#f_invNo', '#f_invDate', '#f_invAmt', '#f_paidDate', '#f_paidMethod', '#f_paidAmt', '#f_fee', '#f_retainer', '#f_rentFee'].forEach(id => $(id).addEventListener('change', () => { if (id === '#f_paidDate' && $(id).value && !['Paid', 'Cancelled'].includes($('#f_stage').value)) { $('#f_stage').value = 'Paid'; toast('Order status set to Paid'); } setTimeout(() => { renderBooks(); renderLetters(); }, 80); }));
   $('#btnDocx').onclick = downloadDocx; $('#btnSave').onclick = () => saveLetter(false); $('#btnSave2').onclick = () => saveLetter(false); $('#btnIpadOne').onclick = () => cur && activeOrdersFile(cur.id); const pdf = () => { saveLetter(true); const t = document.title; document.title = fileName(readForm()).replace(/\.docx$/, ''); toast('In the print window choose Destination: Save as PDF, then Save', 5000); setTimeout(() => { window.print(); document.title = t; }, 150); }; $('#btnPdf').onclick = pdf; $('#btnPdf2').onclick = pdf; $('#btnWrite2').onclick = () => { saveLetter(true); downloadDocx(); };
   $('#f_accessRelPick').addEventListener('change', () => { const o = $('#f_accessRelPick').value === 'Other'; $('#f_accessRel').hidden = !o; if (o) $('#f_accessRel').focus(); update(); }); $('#f_accessRel').addEventListener('input', update);
   $('#sheet').addEventListener('click', () => { const n = $('#c0_name'); if (n && !n.value.trim()) { n.scrollIntoView({ block: 'center' }); n.focus(); toast('Type the client here – the letter fills in as you type'); } else toast('Type in the fields below the letter – it changes as you type'); }); $('#btnNew').onclick = newLetter;

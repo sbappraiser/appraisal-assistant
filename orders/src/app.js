@@ -15,7 +15,7 @@ let cur = null;           // the letter being edited
 let clientCount = 1;
 
 const NEW_FIELDS = { jurisdiction: '', street: '', city: '', state: 'CA', zip: '', zip4: '', stage: 'New', inspDate: '', inspTime: '', effDate: '', unit: '', apn: '', county: '', lat: '', lon: '', owner: '', legal: '', borrower: '',
-  lenderDiff: false, govAgency: '', investorId: '', reportForm: '', lenderCo: '', lenderAddr1: '', lenderAddr2: '', loanNo: '', amcUsed: false, amcCo: '', amcAddr1: '', amcAddr2: '', amcLic: '', amcState: 'CA', amcExp: '', amcFee: '', amcRef: '', notes: '', todos: '' };
+  lenderDiff: false, govAgency: '', investorId: '', reportForm: '', lenderCo: '', lenderAddr1: '', lenderAddr2: '', loanNo: '', amcUsed: false, amcCo: '', amcAddr1: '', amcAddr2: '', amcLic: '', amcState: 'CA', amcExp: '', amcFee: '', amcRef: '', notes: '', todos: '', invNo: '', invDate: '', invAmt: '', paidDate: '', paidMethod: '', paidAmt: '', paidRef: '' };
 function blankLetter() {
   return { ...NEW_FIELDS, docs: [], crs: null, listings: [], permits: null, created: new Date().toISOString(), id: uid(), status: 'Client letter', reportForm: 'uad36', fileNo: '', orderDate: todayISO(), dueDate: '', aiUse: '', orderDoc: null, agreeDate: todayISO(), type: 'uadPurchase', clients: [{}], address: '', propType: 'sfr', propTypeOther: '',
     interest: '', decedent: '', dod: '', otherUsers: '', inspection: 'interior', apSales: true, apCost: true, apIncome: false, format: '',
@@ -47,7 +47,7 @@ function writeForm(f) {
   renderClients(f.clients || [{}]);
   document.querySelectorAll('input[name=aiUse]').forEach(r => { r.checked = r.value === f.aiUse; });
   renderScan(f.orderDoc);
-  renderDocs(); renderSubject(); renderLinks();
+  renderDocs(); renderSubject(); renderLinks(); renderReqs(); renderBooks();
   syncVisibility();
 }
 
@@ -234,7 +234,7 @@ function saveContact(i) {
 function openLetter(id, copy) {
   if (cur && cur.id !== id && hasContent(readForm())) saveLetter(true);
   const f = letters.find(x => x.id === id); if (!f) return;
-  cur = copy ? { ...JSON.parse(JSON.stringify(f)), ...NEW_FIELDS, notes: '', todos: '', docs: [], crs: null, listings: [], permits: null, created: new Date().toISOString(), id: uid(), status: 'Drafted', agreeDate: todayISO(), orderDate: todayISO(), dueDate: '', fileNo: '', address: '', decedent: '', dod: '', aiUse: '', orderDoc: null, saved: null,
+  cur = copy ? { ...JSON.parse(JSON.stringify(f)), ...NEW_FIELDS, notes: '', todos: '', docs: [], crs: null, listings: [], permits: null, created: new Date().toISOString(), id: uid(), status: 'Drafted', reqs: [], reqsRead: {}, agreeDate: todayISO(), orderDate: todayISO(), dueDate: '', fileNo: '', address: '', decedent: '', dod: '', aiUse: '', orderDoc: null, saved: null,
     lenderDiff: f.lenderDiff, lenderCo: f.lenderCo, lenderAddr1: f.lenderAddr1, lenderAddr2: f.lenderAddr2, amcUsed: f.amcUsed, amcCo: f.amcCo, amcAddr1: f.amcAddr1, amcAddr2: f.amcAddr2, amcLic: f.amcLic, amcState: f.amcState, amcExp: f.amcExp } : { ...NEW_FIELDS, ...JSON.parse(JSON.stringify(f)) };
   if (!copy) dedupeDocs(cur).then(n => { if (n) toast(n + ' duplicate document' + (n > 1 ? 's' : '') + ' removed (the same file was uploaded twice)', 5000); return recheckDocTypes(cur).then(() => { if (n) { renderDocs(); saveLetter(true); } }); });
   writeForm(cur); render(); showTab('letter'); window.scrollTo(0, 0); toast(copy ? 'Copied the client and terms – fill in the new job' : 'Opened ' + (f.fileNo || street(f) || 'the order'));
@@ -370,6 +370,7 @@ function showTab(t) { CUR_TAB = t;
   document.querySelectorAll('[data-tab]').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === t));
   document.querySelectorAll('.panel').forEach(p => { p.hidden = p.id !== 'panel-' + t; });
   if (t === 'home') renderHome();
+  if (t === 'letter') setTimeout(() => document.querySelectorAll('textarea[data-rqtext]').forEach(x => { x.style.height = 'auto'; x.style.height = (x.scrollHeight + 2) + 'px'; }), 0);
   syncGenieTop();
   if (t === 'market') { $('#mkTitle').textContent = 'Market conditions' + (cur && (cur.fileNo || street(cur)) ? ' – ' + [cur.fileNo, street(cur)].filter(Boolean).join(' ') : ''); mkRender(); }
 }
@@ -435,6 +436,7 @@ async function start() {
   $('#f_payWhen').addEventListener('change', () => { const w = $('#f_payWhen').value; $('#f_deliveryFrom').value = w === 'report' ? 'inspection' : 'either'; syncVisibility(); update(); }); $('#f_premise').addEventListener('change', syncVisibility); ['#f_rent', '#f_testimony'].forEach(id => $(id).addEventListener('change', syncVisibility));
   ['tRate', 'tDecl', 'tRetainer', 'tCancel'].forEach(k => $('#f_' + k).addEventListener('change', () => { const r = store.get('rates', {}); r[k] = $('#f_' + k).value; store.set('rates', r); }));
   $('#addClient').onclick = () => { const f = readForm(); clientCount++; f.clients.push({}); renderClients(f.clients); update(); };
+  $('#btnInvoice').onclick = makeInvoice; $('#btnPaid').onclick = markPaid; ['#f_invNo', '#f_invDate', '#f_invAmt', '#f_paidDate', '#f_paidMethod', '#f_paidAmt', '#f_fee', '#f_retainer', '#f_rentFee'].forEach(id => $(id).addEventListener('change', () => { if (id === '#f_paidDate' && $(id).value && !['Paid', 'Cancelled'].includes($('#f_stage').value)) { $('#f_stage').value = 'Paid'; toast('Order status set to Paid'); } setTimeout(() => { renderBooks(); renderLetters(); }, 80); }));
   $('#btnDocx').onclick = downloadDocx; $('#btnSave').onclick = () => saveLetter(false); $('#btnSave2').onclick = () => saveLetter(false); $('#btnIpadOne').onclick = () => cur && activeOrdersFile(cur.id); const pdf = () => { saveLetter(true); const t = document.title; document.title = fileName(readForm()).replace(/\.docx$/, ''); toast('In the print window choose Destination: Save as PDF, then Save', 5000); setTimeout(() => { window.print(); document.title = t; }, 150); }; $('#btnPdf').onclick = pdf; $('#btnPdf2').onclick = pdf; $('#btnWrite2').onclick = () => { saveLetter(true); downloadDocx(); };
   $('#f_accessRelPick').addEventListener('change', () => { const o = $('#f_accessRelPick').value === 'Other'; $('#f_accessRel').hidden = !o; if (o) $('#f_accessRel').focus(); update(); }); $('#f_accessRel').addEventListener('input', update);
   $('#sheet').addEventListener('click', () => { const n = $('#c0_name'); if (n && !n.value.trim()) { n.scrollIntoView({ block: 'center' }); n.focus(); toast('Type the client here – the letter fills in as you type'); } else toast('Type in the fields below the letter – it changes as you type'); }); $('#btnNew').onclick = newLetter;
