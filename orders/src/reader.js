@@ -17,6 +17,7 @@ const CHECK = {
   leaseback: { title: 'Leaseback / rent-back', items: [['rent', 'Rent (amount and period)'], ['term', 'Term (start and end)'], ['deposit', 'Security deposit'], ['furnished', 'Furnished / what the seller keeps'], ['terms', 'Other terms']] },
   prelim: { title: 'Preliminary title report', items: [['dated', 'Dated as of'], ['easements', 'Easements'], ['restrictions', 'Restrictions, CC&Rs, covenants, reservations'], ['minerals', 'Oil, gas, minerals, wells'], ['encroach', 'Encroachments, boundary or survey matters'], ['clear', 'May need to be cleared before a transfer (judgments, liens, delinquent taxes)'], ['parcels', 'Legal description – parcels'], ['other', 'Anything else worth mentioning (type it yourself)']] },
   legal: { title: 'Legal description', items: [['legal', 'Legal description']] },
+  deed: { title: 'Deed', items: [['legal', 'Legal description'], ['vesting', 'Grantee / vesting'], ['recorded', 'Recorded (date and document number)'], ['reserve', 'Reservations / exceptions (oil, gas, minerals …)'], ['kind', 'Kind of deed and transfer tax']] },
   condoQ: { title: 'Condo questionnaire', items: [['dues', 'HOA dues'], ['special', 'Special assessments'], ['litigation', 'Litigation'], ['reserves', 'Reserves'], ['rentals', 'Rental restrictions / owner occupancy'], ['insurance', 'Master insurance'], ['other', 'Other']] },
   hoaBudget: { title: 'HOA budget', items: [['dues', 'HOA dues'], ['reserves', 'Reserves'], ['special', 'Special assessments'], ['other', 'Other']] },
   ccrs: { title: "CC&R's", items: [['restrictions', 'Use restrictions'], ['age', 'Age restriction (55+)'], ['rentals', 'Rental restrictions'], ['other', 'Other']] },
@@ -86,6 +87,9 @@ async function openReader(id, page, q) {
     (cur.facts || []).forEach(f => { if (f.docId === id && f.key !== 'dated') { const c = cleanPrelimValue(f.value); if (c && c !== f.value) { f.full = f.full || f.value; f.value = c; ch = true; } } }); if (ch) saveLetter(true, true); }
   if (meta.type === 'prelim' && (rv.prelimV || 0) < PRELIM_V) { rv.sugg = rv.sugg.filter(s => s.by !== 'reader' || s.state !== 'new'); const seen = new Set(rv.sugg.map(s => s.key + '|' + s.value + '|' + s.page));
     rv.sugg.push(...readPrelim(rec.pagesText).filter(s => !seen.has(s.key + '|' + s.value + '|' + s.page)).map(s => ({ ...s, id: uid(), state: 'new' }))); rv.prelimV = PRELIM_V; saveLetter(true, true); }
+  const DEED_V = 1;   // rule-based legal description from a deed or legal-description page with readable text
+  if (['deed', 'legal'].includes(meta.type) && (rv.deedV || 0) < DEED_V) { const seen = new Set(rv.sugg.map(s => s.key + '|' + s.value));
+    rv.sugg.push(...readDeed(rec.pagesText || [], meta.type).filter(s => !seen.has(s.key + '|' + s.value)).map(s => ({ ...s, id: uid(), state: 'new' }))); rv.deedV = DEED_V; saveLetter(true, true); }
   const CONTRACT_V = 1; // rule-based contract suggestions (typed-in entries only on C.A.R. forms)
   if (['contract', 'counter', 'addendum'].includes(meta.type) && (rv.contractV || 0) < CONTRACT_V) { rv.sugg = rv.sugg.filter(s => s.by !== 'reader' || s.state !== 'new'); const seen = new Set(rv.sugg.map(s => s.key + '|' + s.value));
     rv.sugg.push(...readContract(rec.pagesText, rec.garbled, meta.type).filter(s => !seen.has(s.key + '|' + s.value)).map(s => ({ ...s, id: uid(), state: 'new' }))); rv.contractV = CONTRACT_V; saveLetter(true, true); }
@@ -128,11 +132,11 @@ function rdRender() {
   const side = $('#rdSide');
   side.querySelectorAll('[data-goto]').forEach(b => b.onclick = () => { RD.page = +b.dataset.goto; rdPage(); });
   side.querySelectorAll('[data-acc]').forEach(b => b.onclick = () => { const s = rv.sugg.find(x => x.id === b.dataset.acc); const v = side.querySelector(`[data-sugv="${s.id}"]`).value.trim(); s.state = 'accepted';
-    (cur.facts = cur.facts || []).push({ id: uid(), docId: RD.id, doc: meta.name, type: meta.type, key: s.key, label: (C.items.find(i => i[0] === s.key) || [, s.key])[1], value: v, page: s.page, n: +((String(s.quote || '').match(/^#(\d+)/) || [])[1] || 0) || null, by: v === s.value ? s.by : 'you', at: new Date().toISOString() }); if (meta.type === 'contract') contractToUad(s.key, v); saveLetter(true, true); rdRender(); });
+    (cur.facts = cur.facts || []).push({ id: uid(), docId: RD.id, doc: meta.name, type: meta.type, key: s.key, label: (C.items.find(i => i[0] === s.key) || [, s.key])[1], value: v, page: s.page, n: +((String(s.quote || '').match(/^#(\d+)/) || [])[1] || 0) || null, by: v === s.value ? s.by : 'you', at: new Date().toISOString() }); if (meta.type === 'contract') contractToUad(s.key, v); factToOrder(s.key, v); saveLetter(true, true); rdRender(); });
   side.querySelectorAll('[data-rej]').forEach(b => b.onclick = () => { rv.sugg.find(x => x.id === b.dataset.rej).state = 'rejected'; saveLetter(true, true); rdRender(); });
   side.querySelectorAll('[data-unfact]').forEach(b => b.onclick = () => { cur.facts = cur.facts.filter(f => f.id !== b.dataset.unfact); saveLetter(true, true); rdRender(); });
   side.querySelectorAll('[data-ownadd]').forEach(b => b.onclick = () => { const k = b.dataset.ownadd, i = side.querySelector(`[data-own="${k}"]`); const v = i.value.trim(); if (!v) return;
-    (cur.facts = cur.facts || []).push({ id: uid(), docId: RD.id, doc: meta.name, type: meta.type, key: k, label: (C.items.find(x => x[0] === k) || [, k])[1], value: v, page: RD.page, by: 'you', at: new Date().toISOString() }); if (meta.type === 'contract') contractToUad(k, v); saveLetter(true, true); rdRender(); });
+    (cur.facts = cur.facts || []).push({ id: uid(), docId: RD.id, doc: meta.name, type: meta.type, key: k, label: (C.items.find(x => x[0] === k) || [, k])[1], value: v, page: RD.page, by: 'you', at: new Date().toISOString() }); if (meta.type === 'contract') contractToUad(k, v); factToOrder(k, v); saveLetter(true, true); rdRender(); });
   const prep = $('#rdPrep'); if (prep) prep.onclick = () => rdPrepare('claude');
   const rc = $('#rdRedact'); if (rc) rc.onclick = () => rdPrepare('copy');
   wireStickies(side); rdWireExtras(side);
@@ -326,6 +330,21 @@ function listInOrder(vals) { // keeps the order they appear in the report; repea
   return out.length > 1 ? out.slice(0, -1).join(', ') + ' and ' + out.at(-1) : out[0] || '';
 }
 const NUMW = ['', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'];
+function factToOrder(key, v) {   // an accepted legal description goes into the order's Legal description box (the Comp genie and SFREP use it)
+  if (key !== 'legal' || !v) return; const el = $('#f_legal'); if (!el) return; el.value = v; cur = readForm(); toast('Legal description is on the order now');
+}
+function readDeed(pages, type) {   // → suggestions; works on readable text (a scan needs Acrobat "Recognize text" or Read with Claude)
+  const out = []; pages.forEach((t, i) => { const T = String(t || '').replace(/[ \t]+/g, ' ');
+    let m = T.match(/(?:following described real property|real property (?:in|situated in|located in)[^:]{0,160}?described as follows|LEGAL DESCRIPTION)[^:]{0,200}?:\s*([\s\S]{40,4000}?)(?=\n\s*\(?signature|\n\s*Dated|\n\s*MAIL TAX|\n\s*IN WITNESS|\n\s*Commonly known|\n\s*(?:Assessor'?s? )?(?:APN|Parcel No)|\n\s*END OF (?:EXHIBIT|LEGAL)|$)/i);
+    if (m) out.push({ key: 'legal', value: m[1].replace(/\s*\n\s*/g, ' ').replace(/\s{2,}/g, ' ').trim().slice(0, 4000), page: i + 1, by: 'reader' });
+    if (type === 'deed') {
+      const g = T.match(/hereby (?:GRANTS?|QUITCLAIMS?|REMISES?)(?: to)?\s*:?\s*([\s\S]{5,400}?)(?=\n\s*(?:all (?:that|right)|the (?:following|real property)))/i); if (g) out.push({ key: 'vesting', value: g[1].replace(/\s+/g, ' ').trim().replace(/,$/, ''), page: i + 1, by: 'reader' });
+      const r = T.match(/(?:Doc(?:ument)?\s*#?|Instrument (?:No\.?|#))\s*:?\s*([\d-]{6,})/i); if (r) out.push({ key: 'recorded', value: r[1], page: i + 1, by: 'reader' });
+      const x = T.match(/(EXCEPTING THEREFROM[\s\S]{20,600}?\.)/i); if (x) out.push({ key: 'reserve', value: x[1].replace(/\s+/g, ' '), page: i + 1, by: 'reader' });
+      const k = T.match(/\b(GRANT DEED|TRUST TRANSFER DEED|QUITCLAIM DEED|INTERSPOUSAL TRANSFER (?:GRANT )?DEED|AFFIDAVIT OF DEATH[^\n]{0,40}|TRUSTEE'?S DEED[^\n]{0,30})\b/i); if (k) out.push({ key: 'kind', value: k[1].replace(/\s+/g, ' ').trim(), page: i + 1, by: 'reader' });
+    } });
+  const seen = new Set(); return out.filter(x => { const k = x.key + '|' + x.value.toLowerCase(); if (seen.has(k)) return false; seen.add(k); return true; });
+}
 function readParcels(pages) { // the legal description: how many parcels, and what each one is
   const all = pages.map((t, i) => ({ t, p: i + 1 })); let hit = null;
   for (const x of all) { if (/PARCEL (ONE|1|A)\s*:/i.test(x.t) && /PARCEL (TWO|2|B)\s*:/i.test(x.t)) { hit = x; break; } }

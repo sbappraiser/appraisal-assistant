@@ -7,7 +7,7 @@
 const h = s => hesc(s ?? '');
 const DOC_TYPES = [
   ['Order and client', [['clientLetter', 'Client’s engagement letter / order'], ['myLetter', 'My engagement letter (signed)'], ['invoice', 'Invoice / payment']]],
-  ['Public record', [['crs', 'CRS property report'], ['permitsCounty', 'Permit history by parcel (County)'], ['permitsPdf', 'Permit records'], ['legal', 'Legal description'], ['prelim', 'Preliminary title report']]],
+  ['Public record', [['crs', 'CRS property report'], ['permitsCounty', 'Permit history by parcel (County)'], ['permitsPdf', 'Permit records'], ['legal', 'Legal description'], ['deed', 'Deed (grant, trust transfer, quitclaim)'], ['prelim', 'Preliminary title report']]],
   ['MLS and market', [['mls', 'MLS listing (subject)'], ['marketSearch', 'MLS market-area search'], ['mlsStats', 'SBMLS monthly statistics'], ['zillow', 'Zillow market page']]],
   ['Plans and construction', [['floorplan', 'Floor plan (to trace in the sketch)'], ['plans', 'Plans'], ['specs', 'Specifications'], ['budget', 'Construction budget']]],
   ['HOA', [['condoQ', 'Condo questionnaire'], ['ccrs', 'CC&Rs'], ['hoaBudget', 'HOA budget'], ['bylaws', 'HOA bylaws'], ['minutes', 'HOA minutes']]],
@@ -42,6 +42,7 @@ const TEXT_RULES = [
   [/Specifications|Outline Spec|Finish Schedule/i, 'specs'],
   [/Budget|Cost Breakdown|Schedule of Values|Construction Cost/i, 'budget'],
   [/Building Permit|Permit (No|Number|#)/i, 'permitsPdf'],
+  [/\b(GRANT DEED|TRUST TRANSFER DEED|QUITCLAIM DEED|INTERSPOUSAL TRANSFER)\b[\s\S]{0,1500}hereby (GRANT|QUITCLAIM|REMISE)/i, 'deed'],
   [/LEGAL DESCRIPTION|EXHIBIT ["“]?A/i, 'legal'],
   [/INVOICE/i, 'invoice'],
 ];
@@ -56,7 +57,7 @@ const NAME_RULES = [
   [/engagement|order[_ ]?form|appraisal[_ ]?order/i, 'clientLetter'], [/floor[_ ]?plan|floorplan/i, 'floorplan'], [/plans?\b|drawings|architect/i, 'plans'], [/spec/i, 'specs'],
   [/questionnaire/i, 'condoQ'], [/cc&?rs?\b|declaration/i, 'ccrs'], [/bylaws?/i, 'bylaws'], [/minutes/i, 'minutes'], [/hoa.*budget|reserve/i, 'hoaBudget'], [/budget|cost/i, 'budget'],
   [/prelim|title/i, 'prelim'], [/lease[_ ]?after|lease[_ ]?back|rent[_ ]?back|\bsip\b|\bbip\b/i, 'leaseback'], [/counter/i, 'counter'], [/addend/i, 'addendum'],
-  [/purchase|contract|\brpa\b/i, 'contract'], [/disclos|\btds\b|\bspq\b|\bnhd\b/i, 'disclosures'], [/permit/i, 'permitsPdf'], [/legal/i, 'legal'], [/invoice|receipt/i, 'invoice'],
+  [/purchase|contract|\brpa\b/i, 'contract'], [/disclos|\btds\b|\bspq\b|\bnhd\b/i, 'disclosures'], [/permit/i, 'permitsPdf'], [/\bdeed\b/i, 'deed'], [/legal/i, 'legal'], [/invoice|receipt/i, 'invoice'],
 ];
 const isPdf = f => /\.pdf$/i.test(f.name) || f.type === 'application/pdf';
 const isImg = f => /^image\//.test(f.type) || /\.(jpe?g|png|gif|webp|heic)$/i.test(f.name);
