@@ -498,6 +498,10 @@ document.addEventListener('click', async e => {
     case 'wb-arrange': app.wbArrange = !app.wbArrange; renderKeepFocus(); break;
     case 'wb-undo': wbUndo(); break;
     case 'wb-undo-x': WB.undo = null; wbUndoBar(); break;
+    case 'dr-make': DR.text = drBuild(app.job); DR.open = true; renderKeepFocus(); setTimeout(() => { const t = $('#drText'); if (t) t.scrollIntoView({ block: 'center' }); }, 60); break;
+    case 'dr-replace': case 'dr-append': { const G = G0(app.job); const tx = ($('#drText') || {}).value || DR.text; G.note = t.dataset.act === 'dr-replace' || !String(G.note || '').trim() ? tx : String(G.note).trim() + '\n\n' + tx; DR.open = false; save(); renderKeepFocus(); toast('In the sales comparison comment – read it through and fill in the [brackets]'); break; }
+    case 'dr-copy': { const tx = ($('#drText') || {}).value || DR.text; try { await navigator.clipboard.writeText(tx); toast('Copied'); } catch (e) { toast('Select the text and press Ctrl+C'); } break; }
+    case 'dr-close': DR.open = false; renderKeepFocus(); break;
     case 'x-full-anyway': exportFullReport(true); break;
     case 'pre-run': { toast('Checking…'); await precheckRun(app.job, false); renderKeepFocus(); break; }
     case 'rev-add': { await revLoad(); const t = ($('#revText') || {}).value || ''; if (!t.trim()) { toast('Type what they asked first'); break; }
@@ -554,6 +558,7 @@ document.addEventListener('change', async e => {
     save(); renderKeepFocus(); return; }
 });
 document.addEventListener('input', e => {
+  if (e.target.id === 'drText') { DR.text = e.target.value; return; }
   const t = e.target; if (t.id !== 'addr') return;
   const s = archiveSuggest(t.value); const box = $('#sugg');
   const cortHits = t.value.trim().length > 3 ? app.cort.filter(r => r.addr && r.addr.toLowerCase().startsWith(t.value.trim().toLowerCase())).slice(0, 4) : [];

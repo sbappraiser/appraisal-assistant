@@ -459,12 +459,13 @@ mark.blank{background:#fff3a8;padding:0 2px;border-radius:3px}.cmt textarea{widt
       <li><b>Read the client's letter again</b> re-reads it; your own items, your edits and your ticks are kept. <b>Copy the list</b> copies it for an email or your notes.</li></ol></details>
     <details><summary>My comments – your comment library</summary><ol>
       <li>Click the <b>My comments</b> tab.</li>
-      <li>First time: under <b>Import my OneNote library</b>, choose what the comments were written for (your OneNote library is <b>UAD 2.6</b>), then click <b>Choose the PDF…</b> and pick the PDF you exported from OneNote. Each page becomes one comment, sorted by its OneNote section; long comments that run onto a second page are joined back together. Pages with a title but no text yet are left out and listed.</li>
+      <li>First time: under <b>Import my OneNote library</b>, choose what the comments were written for (your OneNote library is <b>UAD 2.6</b>), then click <b>Choose the PDF or comment file…</b> and pick the PDF you exported from OneNote (or a comment file Claude made for you – those carry their own UAD 2.6 / 3.6 tag). Each page becomes one comment, sorted by its OneNote section; long comments that run onto a second page are joined back together. Pages with a title but no text yet are left out and listed.</li>
       <li>To use one: type a word in the search box (for example <i>laser</i>, <i>ADU</i>, <i>fire</i>) or pick a section, then click <b>Copy</b> and paste it into SFREP. Blanks in square brackets, like <mark class="blank">[date]</mark>, are highlighted so you remember to fill them in.</li>
       <li>The tag on each comment shows the form it was written for: <b>UAD 2.6</b>, <b>UAD 3.6</b> or <b>2.6 and 3.6</b>. Use the drop-down at the top to show only the ones for the form you are working on. When you have checked a 2.6 comment for 3.6, click <b>Edit</b> and change <b>Written for</b>.</li>
       <li><b>Edit</b> changes the title, section, form or wording; <b>Delete</b> (click twice) removes it. <b>Add a comment</b> starts a new one (marked UAD 3.6).</li>
       <li>Importing the same OneNote PDF again later adds the new comments and updates the ones you have not edited; your edited ones stay as you have them.</li>
       <li>In the <b>Comp genie</b>, the comment boxes (sales comparison, highest and best use, reconciliation) have a <b>My comments</b> button: search, then <b>Insert</b> puts the comment where your cursor is. It uses the same list, so import it here first.</li>
+      <li><b>Draft from your grid:</b> in the Comp genie, under the sales comparison comment, click <b>Draft the comment from my grid</b>. It writes the comparable paragraphs (superior / inferior overall, each adjustment with its amount, your low / mid / high tiers, sale-to-list price, your notes for the comp in [brackets]), your rate paragraphs with the rates on the grid, and the start of the reconciliation (bracketing and adjusted range, your weights). Read it, fill in the [brackets], then click <b>Put it in the comment</b> or <b>Add it to the end</b>. Nothing goes in until you click.</li>
       <li>Your library is kept in this browser on this computer and in your <b>Back up</b> zip – keep backing up.</li></ol></details>
     <details><summary>Invoice, payment and the unpaid list</summary><ol>
       <li>The fee comes from <b>Total fee</b> (Fee and delivery). A rent survey fee is added when the rent survey is ticked; a retainer is taken off the balance.</li>
@@ -577,7 +578,7 @@ mark.blank{background:#fff3a8;padding:0 2px;border-radius:3px}.cmt textarea{widt
       <select id="cmtVer"><option value="">2.6 and 3.6</option><option value="3.6">For UAD 3.6</option><option value="2.6">For UAD 2.6</option></select>
       <button type="button" class="btn" id="cmtAdd">Add a comment</button></div></div>
   <div class="cmtImp"><label>Import my OneNote library (PDF) – these comments were written for <select id="cmtImpVer"><option value="2.6">UAD 2.6</option><option value="3.6">UAD 3.6</option><option value="both">both</option></select></label>
-    <label class="btn ghost small">Choose the PDF…<input id="cmtFile" type="file" accept=".pdf,application/pdf" hidden></label><span id="cmtMsg" class="help"></span></div>
+    <label class="btn ghost small">Choose the PDF or comment file…<input id="cmtFile" type="file" accept=".pdf,application/pdf,.json,application/json" hidden></label><span id="cmtMsg" class="help"></span></div>
   <p class="help">Copy puts the comment on the clipboard – paste it into SFREP and fill in the <mark class="blank">[blanks]</mark>. Kept in this browser only and in your Back up; nothing is sent anywhere. The Comp genie's comment boxes have a <b>My comments</b> button that uses this same list.</p>
   <div id="cmtBody"></div>
 </section>
@@ -603,7 +604,7 @@ mark.blank{background:#fff3a8;padding:0 2px;border-radius:3px}.cmt textarea{widt
 </div>
 <div id="toast" role="status" hidden></div>
 <script>
-const BUILD='o1-1018-2157';
+const BUILD='o1-1018-2253';
 const G = (() => {
 /* ---------------- small helpers ---------------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -3395,13 +3396,18 @@ function cmtParse(pages) {   // → { items, empty: [titles], pages }
 async function cmtImport(file, ver) {
   try {
     toast('Reading your comment library…', 6000);
-    const r = cmtParse(await cmtPdfPages(file)); if (!r.items.length) throw new Error('No comments found in that PDF. Export the OneNote section or notebook as PDF and try again.');
+    let r;
+    if (/\.json$/i.test(file.name)) {   // a comment file (from Claude, or her own export): {app:'my-comments', items:[{title, section, text, ver}]}
+      const d = JSON.parse(await file.text()); const L = Array.isArray(d) ? d : d.items; if (!Array.isArray(L)) throw new Error('That file is not a comment file.');
+      r = { items: L.filter(x => x && x.text).map(x => ({ title: String(x.title || 'Untitled'), section: String(x.section || 'My comments'), text: String(x.text), ver: x.ver })), empty: [], pages: L.length };
+    } else r = cmtParse(await cmtPdfPages(file));
+    if (!r.items.length) throw new Error('No comments found in that file. Export the OneNote section or notebook as PDF and try again.');
     let added = 0, updated = 0, kept = 0; const now = new Date().toISOString().slice(0, 10);
     r.items.forEach(x => { const id = cmtId(x.section, x.title, x.text); const have = CMT[id];
       if (have && have.edited) { kept++; return; }
-      if (have) { have.text = x.text; updated++; } else { CMT[id] = { id, title: x.title, section: x.section, text: x.text, ver, src: file.name, added: now }; added++; } });
+      if (have) { have.text = x.text; updated++; } else { CMT[id] = { id, title: x.title, section: x.section, text: x.text, ver: x.ver || ver, src: file.name, added: now }; added++; } });
     await cmtSave(); cmtRender();
-    $('#cmtMsg').innerHTML = `<b>${added} comments added</b>${updated ? `, ${updated} updated` : ''}${kept ? `, ${kept} you edited were kept as you have them` : ''} – from ${r.pages} pages, all marked <b>${h(CMT_VER[ver])}</b>.${r.empty.length ? `<br><small>${r.empty.length} pages had a title but no text yet, so they were left out: ${h(r.empty.join(' · '))}</small>` : ''}`;
+    $('#cmtMsg').innerHTML = `<b>${added} comments added</b>${updated ? `, ${updated} updated` : ''}${kept ? `, ${kept} you edited were kept as you have them` : ''} – from ${r.pages} ${/\.json$/i.test(file.name) ? 'comments in the file' : 'pages'}${/\.json$/i.test(file.name) ? '' : `, all marked <b>${h(CMT_VER[ver])}</b>`}.${r.empty.length ? `<br><small>${r.empty.length} pages had a title but no text yet, so they were left out: ${h(r.empty.join(' · '))}</small>` : ''}`;
   } catch (e) { console.error(e); toast(e.message || 'Could not read that PDF'); }
 }
 const cmtList = () => Object.values(CMT).sort((a, b) => a.section.localeCompare(b.section) || a.title.localeCompare(b.title));

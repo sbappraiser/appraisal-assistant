@@ -48,13 +48,18 @@ function cmtParse(pages) {   // → { items, empty: [titles], pages }
 async function cmtImport(file, ver) {
   try {
     toast('Reading your comment library…', 6000);
-    const r = cmtParse(await cmtPdfPages(file)); if (!r.items.length) throw new Error('No comments found in that PDF. Export the OneNote section or notebook as PDF and try again.');
+    let r;
+    if (/\.json$/i.test(file.name)) {   // a comment file (from Claude, or her own export): {app:'my-comments', items:[{title, section, text, ver}]}
+      const d = JSON.parse(await file.text()); const L = Array.isArray(d) ? d : d.items; if (!Array.isArray(L)) throw new Error('That file is not a comment file.');
+      r = { items: L.filter(x => x && x.text).map(x => ({ title: String(x.title || 'Untitled'), section: String(x.section || 'My comments'), text: String(x.text), ver: x.ver })), empty: [], pages: L.length };
+    } else r = cmtParse(await cmtPdfPages(file));
+    if (!r.items.length) throw new Error('No comments found in that file. Export the OneNote section or notebook as PDF and try again.');
     let added = 0, updated = 0, kept = 0; const now = new Date().toISOString().slice(0, 10);
     r.items.forEach(x => { const id = cmtId(x.section, x.title, x.text); const have = CMT[id];
       if (have && have.edited) { kept++; return; }
-      if (have) { have.text = x.text; updated++; } else { CMT[id] = { id, title: x.title, section: x.section, text: x.text, ver, src: file.name, added: now }; added++; } });
+      if (have) { have.text = x.text; updated++; } else { CMT[id] = { id, title: x.title, section: x.section, text: x.text, ver: x.ver || ver, src: file.name, added: now }; added++; } });
     await cmtSave(); cmtRender();
-    $('#cmtMsg').innerHTML = `<b>${added} comments added</b>${updated ? `, ${updated} updated` : ''}${kept ? `, ${kept} you edited were kept as you have them` : ''} – from ${r.pages} pages, all marked <b>${h(CMT_VER[ver])}</b>.${r.empty.length ? `<br><small>${r.empty.length} pages had a title but no text yet, so they were left out: ${h(r.empty.join(' · '))}</small>` : ''}`;
+    $('#cmtMsg').innerHTML = `<b>${added} comments added</b>${updated ? `, ${updated} updated` : ''}${kept ? `, ${kept} you edited were kept as you have them` : ''} – from ${r.pages} ${/\.json$/i.test(file.name) ? 'comments in the file' : 'pages'}${/\.json$/i.test(file.name) ? '' : `, all marked <b>${h(CMT_VER[ver])}</b>`}.${r.empty.length ? `<br><small>${r.empty.length} pages had a title but no text yet, so they were left out: ${h(r.empty.join(' · '))}</small>` : ''}`;
   } catch (e) { console.error(e); toast(e.message || 'Could not read that PDF'); }
 }
 const cmtList = () => Object.values(CMT).sort((a, b) => a.section.localeCompare(b.section) || a.title.localeCompare(b.title));
