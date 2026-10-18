@@ -155,6 +155,7 @@ function buildCompsMISMO(job, comps) {
   const DSS = X(va, 'DATA_SOURCES');
   const PROPS = X(va, 'PROPERTIES');
   comps.forEach((c, i) => buildCompXML(PROPS, RELS, DSS, c, i + 1, job));
+  notUsedXML(PROPS, job);   // analyzed – not used (UAD 22.17)
   svc.kids = [...svc.kids.filter(k => k !== RELS), RELS]; // UAD order: VALUATION, then RELATIONSHIPS
   XV(X(X(X(va, 'VALUATION_REPORT'), 'VALUATION_SOFTWARE_SYSTEMS'), 'VALUATION_SOFTWARE_SYSTEM'), 'ValuationSoftwareProductName', 'Appraisal Assistant – Comp Genie');
   const dc = X(doc, 'DOCUMENT_CLASSIFICATION'); XV(X(X(dc, 'DOCUMENT_CLASSES'), 'DOCUMENT_CLASS'), 'DocumentType', 'AppraisalReport');

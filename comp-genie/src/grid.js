@@ -56,6 +56,42 @@ const viewTier = v => { const t = String(v || '').toLowerCase(); if (!t.trim()) 
 const aduNums = F => { if (F.aduSf !== undefined && F.aduSf !== null && F.aduSf !== '') return { sf: +F.aduSf || 0, baths: +F.aduBaths || 0 };
   const t = String(F.adu || ''); if (!t.trim() || /^(no|none)$/i.test(t.trim())) return { sf: 0, baths: 0 };
   const sf = t.match(/([\d,]{2,})\s*(?:sf|sq|square)/i), ba = t.match(/(\d+(?:\.\d)?)\s*(?:full\s*)?ba/i); return { sf: sf ? +sf[1].replace(/,/g, '') : null, baths: ba ? +ba[1] : 0 }; };
+RATES.halfBath = ['$ per half bath', 'half-bath difference × rate (blank = half the full-bath rate)'];
+
+/* ---------------- her starting points by market segment and value tier (Oct 18 2026) ----------------
+   A general starting point only – she decides on every property. Kept on this computer (kv 'starts'). */
+const STARTS_DEFAULT = {
+  lowBelow: 3000000, highFrom: 10000000,
+  usableAc: { 'Montecito': 1500000, 'Hope Ranch': 1275000, 'Santa Barbara / Goleta': 1000000 },
+  tiers: {
+    high: { bath: 100000, halfBath: 50000, bed: 250000, pool: 200000, spa: 50000, tennis: 250000, sport: 100000 },
+    middle: { bath: 50000, halfBath: 25000, bed: null, pool: 125000, spa: 25000, tennis: 200000, sport: 50000 },
+    low: { bath: 40000, halfBath: 20000, bed: 50000, pool: 85000, spa: 25000, tennis: null, sport: 50000 } },
+  notes: 'Bedroom (2-bedroom floor plan): low end about $50,000; high value $250,000 to $500,000. Quality, design and view: set on each property, usually a % of the sale price across the grid.' };
+const ST_KEYS = [['bath', 'Full bath'], ['halfBath', 'Half bath'], ['bed', 'Bedroom (up to 3)'], ['pool', 'Pool'], ['spa', 'Spa'], ['tennis', 'Tennis court'], ['sport', 'Sport court']];
+let STARTS = null; DB.get('kv', 'starts').then(r => { STARTS = (r && r.v) || JSON.parse(JSON.stringify(STARTS_DEFAULT)); }).catch(() => { STARTS = JSON.parse(JSON.stringify(STARTS_DEFAULT)); });
+const startsNow = () => STARTS || STARTS_DEFAULT;
+function segGuess(J) { const S = subjFacts(J); const t = [J.subject.addr, J.subject.city, J.subject.zip, S.nbhd, J.name].join(' ');
+  return /93108|montecito/i.test(t) ? 'Montecito' : /hope ranch/i.test(t) ? 'Hope Ranch' : 'Santa Barbara / Goleta'; }
+function tierGuess(J) { const G = G0(J); const P = startsNow(); let v = num(G.value); if (!v) { const ps = usedComps(J).map(c => compFacts(c, J).price).filter(Boolean).sort((a, b) => a - b); v = ps.length ? ps[Math.floor((ps.length - 1) / 2)] : null; }
+  return v === null ? 'middle' : v >= P.highFrom ? 'high' : v < P.lowBelow ? 'low' : 'middle'; }
+function startsFor(J) { const G = G0(J); const P = startsNow(); const seg = G.seg || segGuess(J), tier = G.tier || tierGuess(J); const out = { ...(P.tiers[tier] || {}) }; out.usableAc = (P.usableAc || {})[seg]; return { seg, tier, rates: out }; }
+function startsBar(J) { const G = G0(J); const st = startsFor(J); const P = startsNow(); const tl = { high: `High (from ${money(P.highFrom)})`, middle: 'Middle', low: `Low (under ${money(P.lowBelow)})` };
+  return `<div class="starts"><b>My starting points</b>
+    <select data-gseg="1">${Object.keys(P.usableAc).map(s => `<option ${s === st.seg ? 'selected' : ''}>${esc(s)}</option>`).join('')}</select>
+    <select data-gtier="1">${['high', 'middle', 'low'].map(t => `<option value="${t}" ${t === st.tier ? 'selected' : ''}>${esc(tl[t])}</option>`).join('')}</select>
+    <button class="btn sm primary" data-act="starts-use">Use my starting points</button> <button class="btn sm" data-act="starts-edit">${app.startsEdit ? 'Close' : 'Edit my starting points'}</button>
+    <small>Fills only the rates you have not typed. ${esc(P.notes || '')}</small>${app.startsEdit ? startsEditor() : ''}</div>`; }
+function startsEditor() { const P = startsNow(); const inp = (path, v) => `<input class="txt xs" data-st="${path}" value="${blank(v) ? '' : v}" inputmode="decimal">`;
+  return `<div class="stedit"><table><tr><th>$ per usable acre</th>${Object.keys(P.usableAc).map(s => `<td>${esc(s)}<br>${inp('usableAc.' + s, P.usableAc[s])}</td>`).join('')}</tr></table>
+    <table><tr><th></th><th>High (from ${inp('highFrom', P.highFrom)})</th><th>Middle</th><th>Low (under ${inp('lowBelow', P.lowBelow)})</th></tr>
+    ${ST_KEYS.map(([k, l]) => `<tr><th>${esc(l)}</th>${['high', 'middle', 'low'].map(t => `<td>${inp('tiers.' + t + '.' + k, P.tiers[t][k])}</td>`).join('')}</tr>`).join('')}</table>
+    <label class="fld"><span>Notes</span><textarea class="txt" rows="2" data-st="notes">${esc(P.notes || '')}</textarea></label>
+    <div class="row"><button class="btn sm" data-act="starts-file">Save my starting points to a file</button> <label class="btn sm">Load from a file<input type="file" accept=".json" data-act="starts-load" hidden></label> <button class="btn sm" data-act="starts-reset">Back to the original list</button></div></div>`; }
+function startsUse(J) { const G = G0(J); const st = startsFor(J); G.rateFrom = G.rateFrom || {}; let n = 0;
+  Object.entries(st.rates).forEach(([k, v]) => { if (blank(v) || !blank(G.rates[k])) return; G.rates[k] = v; G.rateFrom[k] = `${st.seg} · ${st.tier}`; n++; });
+  return n; }
+
 RATES.bed = ['$ per bedroom (up to 3)', 'bedrooms above + below grade; a difference counts only up to 3 – buyers pay for a 3rd bedroom, not for more (living area covers the rest)'];
 const BED_CAP = 3;
 const capBeds = v => blank(v) ? null : Math.min(+v, BED_CAP);
@@ -113,10 +149,10 @@ function rateAmount(row, S, C, J) {
   const r = num(R[key]); if (!key || !r) return null;
   const d = (a, b) => (blank(a) || blank(b)) ? null : (+a) - (+b);
   let x = null;
-  if (key === 'gla') { const dd = d(S.gla, C.gla); x = dd === null ? null : dd * r; }
+  if (key === 'gla') { const dd = d(S.gla, C.gla); x = dd === null ? null : Math.abs(dd) < 100 ? 0 : dd * r; }   // her rule: no adjustment under 100 sq ft
   if (key === 'usableAc') { const dd = d(S.usable, C.usable); x = dd === null ? null : dd * r; }
   if (key === 'bed') { const dd = d(capBeds(S.beds), capBeds(C.beds)); x = dd === null ? null : dd * r; }
-  if (key === 'bath') { const df = d(S.full, C.full), dh = d(S.half || 0, C.half || 0); x = df === null ? null : df * r + (dh || 0) * r / 2; }
+  if (key === 'bath') { const df = d(S.full, C.full), dh = d(S.half || 0, C.half || 0); const rh = num(R.halfBath); x = df === null ? null : df * r + (dh || 0) * (rh || r / 2); }
   if (key === 'space') { const dd = d(S.garage, C.garage); x = dd === null ? null : dd * r; }
   if (key === 'timePct') { const eff = J.subject.eff; if (!C.sale || !eff || !C.price) return null; const m = monthsBetween(C.sale, eff); x = m === null ? null : C.price * r / 100 * m; }
   return x === null ? null : Math.round(x / 500) * 500;
@@ -150,13 +186,13 @@ function gridHTML(J) {
       if (!type) return `<td>${shown}</td>`;
       const a = cellAmount(J, c, row);
       return `<td><div class="gval">${shown}</div><input class="txt sm adj ${a.own ? 'own' : a.v !== null ? 'auto' : ''}" data-gadj="${c.id}|${id}" value="${a.own ? a.v : ''}" placeholder="${a.v !== null && !a.own ? (a.v >= 0 ? '+' : '') + a.v.toLocaleString() : '$ adj'}" inputmode="decimal" title="${a.own ? 'Your amount – clear it to use the rate' : a.v !== null ? 'From your rate – type to override' : 'Type the adjustment'}"></td>`; }).join('');
-    const rk = row[4]; const rate = rk ? [].concat(rk).map(k => `<div class="grate"><label title="${esc(RATES[k][1])}">${esc(RATES[k][0])} <input class="txt xs" data-grate="${k}" value="${esc(blank(G.rates[k]) ? '' : G.rates[k])}" inputmode="decimal"></label></div>`).join('') : '';
+    const rk = row[4]; const rate = rk ? [].concat(rk === 'bath' ? ['bath', 'halfBath'] : rk).map(k => `<div class="grate"><label title="${esc(RATES[k][1])}">${esc(RATES[k][0])} <input class="txt xs" data-grate="${k}" value="${esc(blank(G.rates[k]) ? '' : G.rates[k])}" inputmode="decimal"></label>${G.rateFrom && G.rateFrom[k] && !blank(G.rates[k]) ? `<small class="from">from your starting points (${esc(G.rateFrom[k])})</small>` : ''}</div>`).join('') : '';
     return head + `<tr><th>${esc(label)}${rate}</th>${subjCell}${cells}</tr>`;
   }).join('');
   const sumRow = (label, fn, cls = '') => `<tr class="tot ${cls}"><th>${label}</th><td></td>${used.map((c, i) => `<td>${fn(tot[i], c)}</td>`).join('')}</tr>`;
   const adjs = tot.map(t => t.adj).filter(Boolean); const lo = Math.min(...adjs), hi = Math.max(...adjs);
   const med = adjs.length ? [...adjs].sort((a, b) => a - b)[Math.floor((adjs.length - 1) / 2)] : null;
-  return `<h2>Adjustment grid <small>UAD 3.6 lines · your amounts</small></h2>
+  return `<h2>Adjustment grid <small>UAD 3.6 lines · your amounts</small></h2>${startsBar(J)}
     <p class="help">${inspNote} Type an amount in any cell (minus for a downward adjustment). Or type a rate once beside a line; cells without your own amount then use it (shown in grey). Clear a cell to go back to the rate. Usable Lot Area/Utility comes only from your archive or your measurement – blank comps say <span class="measure">Measure it</span>.</p>
     <div class="tablewrap"><table class="grid"><thead><tr><th></th><th>Subject<br><small>${esc(J.subject.addr || '')}</small></th>${used.map(c => `<th>Comp ${c.use}<br><small>${esc(compTitle(c))}</small></th>`).join('')}</tr></thead>
     <tbody>${rows}
@@ -168,7 +204,7 @@ function gridHTML(J) {
     <div class="gsum"><div><span>Adjusted range</span><b>${adjs.length ? money(lo) + ' – ' + money(hi) : '–'}</b></div><div><span>Spread</span><b>${adjs.length > 1 ? money(hi - lo) + ' (' + ((hi - lo) / lo * 100).toFixed(1) + '%)' : '–'}</b></div><div><span>Median</span><b>${med ? money(med) : '–'}</b></div>
       <label><span>Your indicated value (sales comparison)</span><input class="txt" data-gvalue="1" value="${esc(blank(G.value) ? '' : G.value)}" placeholder="$" inputmode="decimal"></label></div>
     <label class="fld"><span>Sales comparison comment (your words)</span><textarea class="txt" rows="3" data-gnote="1">${esc(G.note || '')}</textarea></label>
-    <div class="row"><button class="btn sm" data-gtiers="1">Add the low / mid / high rating tiers to the comment</button></div>
+    <div class="row"><button class="btn sm" data-gtiers="1">Add the low / mid / high rating tiers to the comment</button><button class="btn sm" data-act="savealldb">Save these comps to my comp database (with your tiers)</button></div>
     ${reviewHTML(J)}`;
 }
 
@@ -178,6 +214,42 @@ function tiersText(J) { const S = subjFacts(J); const one = (F, who) => ['q', 'c
   const parts = usedComps(J).map(c => { const t = one(compFacts(c, J), c.id); return t ? `Comparable ${c.use} ${t}` : ''; }).filter(Boolean);
   const st = one(S, 'subj'); if (!st && !parts.length) return '';
   return `Within the UAD quality and condition ratings, the subject is rated ${st || 'as shown'}${parts.length ? '; ' + parts.join('; ') : ''}. Quality and condition adjustments reflect these positions within each rating.`; }
+
+/* ---------------- analyzed – not used (UAD 22.17) and her comp database ---------------- */
+const NOTUSED_REASONS = [['AccessoryDwellingUnit', 'ADU'], ['Age', 'Age'], ['Amenities', 'Amenities'], ['AreaBelowGrade', 'Below-grade area'], ['BathroomCount', 'Baths'], ['BedroomCount', 'Bedrooms'], ['Condition', 'Condition'], ['DatedSale', 'Dated sale'],
+  ['DesignOrStyleVariance', 'Design / style'], ['GrossBuildingArea', 'Gross building area'], ['GrossLivingArea', 'Living area'], ['LotSize', 'Lot size / usable area'], ['Outbuildings', 'Outbuildings'], ['Proximity', 'Proximity'], ['Quality', 'Quality'],
+  ['SaleOrTransferType', 'Sale / transfer type'], ['SiteInfluence', 'Site influence / location'], ['Other', 'Other']];
+const markNotUsed = c => { c.notUsed = c.notUsed || { reasons: [], text: '', report: true }; c.use = null; };
+function notUsedHTML(J) { const L = J.comps.filter(c => c.notUsed && !c.use); if (!L.length && !app.nuAsk) return '';
+  const ask = app.nuAsk && J.comps.find(c => c.id === app.nuAsk);
+  return `<h2>Analyzed – not used <small>${L.filter(c => c.notUsed.report).length} go in the report (UAD “Additional properties analyzed not used”)</small></h2>
+    ${ask ? `<div class="nuask"><b>${esc(compTitle(ask))}</b> is off the grid and kept here as analyzed – not used. Pick the reason(s) below. <button class="btn sm" data-savedb="${ask.id}">Save it to my comp database</button> <button class="btn sm" data-act="nuok">OK</button></div>` : ''}
+    ${L.map(c => { const N = c.notUsed; const st = V(c, 'status') || ''; return `<div class="nu"><div class="nuh"><b>${esc(compTitle(c))}</b> <small>${esc([st, money(V(c, 'salePrice') || V(c, 'listPrice')), showDate(V(c, 'saleDate') || V(c, 'contractDate'))].filter(Boolean).join(' · '))}</small>
+      <label class="inl"><input type="checkbox" data-nu="${c.id}|report" ${N.report ? 'checked' : ''}> show in the report</label> <label class="inl"><input type="checkbox" data-nu="${c.id}|client" ${N.client ? 'checked' : ''}> client asked me to consider it</label>
+      <button class="btn sm" data-savedb="${c.id}">Save to my comp database</button> <button class="btn sm" data-nuback="${c.id}">Back to the grid list</button></div>
+      <div class="nur">${NOTUSED_REASONS.map(([v, l]) => `<label class="chip2"><input type="checkbox" data-nur="${c.id}|${v}" ${N.reasons.includes(v) ? 'checked' : ''}>${esc(l)}</label>`).join('')}
+      ${N.reasons.includes('Other') ? `<input class="txt sm" data-nu="${c.id}|other" maxlength="27" value="${esc(N.other || '')}" placeholder="Other reason (27 characters)">` : ''}</div>
+      <input class="txt" data-nu="${c.id}|text" maxlength="360" value="${esc(N.text || '')}" placeholder="Comment, e.g. Superior quality and located further from the subject (360 characters)"></div>`; }).join('')}`; }
+function notUsedXML(PROPS, job) { let k = 0;
+  job.comps.filter(c => c.notUsed && c.notUsed.report && !c.use).forEach(c => { const N = c.notUsed; const g = x => V(c, x); k++;
+    const P = X(PROPS, 'PROPERTY', { ValuationUseType: 'PropertyAnalyzedNotUsed' });
+    const ad = X(P, 'ADDRESS'); XV(ad, 'AddressLineText', g('addr')); if (g('unit')) { XV(ad, 'AddressUnitDesignatorType', 'Unit'); XV(ad, 'AddressUnitIdentifier', g('unit')); }
+    XV(ad, 'CityName', g('city') || ARCH.zipCity[g('zip')] || ''); XV(ad, 'PostalCode', g('zip')); XV(ad, 'StateCode', 'CA');
+    XV(X(X(P, 'COMPARABLE'), 'COMPARABLE_DETAIL'), 'PropertyOrdinalNumber', k);
+    const s = String(g('status') || (g('salePrice') ? 'Closed' : '')); const lst = /closed|sold|settled/i.test(s) ? 'SettledSale' : /pending|escrow|contingent/i.test(s) ? 'Pending' : /active|coming/i.test(s) ? 'Active' : s ? 'OffMarket' : null;
+    if (lst) XV(X(X(X(P, 'LISTING_INFORMATIONS'), 'LISTING_INFORMATION'), 'LISTING_INFORMATION_DETAIL'), 'ListingStatusType', lst);
+    const PN = X(P, 'PROPERTY_NOT_USED'); const det = X(PN, 'PROPERTY_NOT_USED_DETAIL'); XV(det, 'AdditionalPropertyAnalyzedNotUsedText', (N.text || '').slice(0, 360)); XV(det, 'ConsiderationRequestedIndicator', N.client ? 'true' : 'false');
+    if (N.reasons.length) { const RS = X(PN, 'PROPERTY_NOT_USED_REASONS'); N.reasons.forEach(r => { const e = X(RS, 'PROPERTY_NOT_USED_REASON'); XV(e, 'ReasonPropertyNotUsedType', r); if (r === 'Other') XV(e, 'ReasonPropertyNotUsedTypeOtherDescription', (N.other || 'Other').slice(0, 27)); }); }
+    const sd = g('saleDate'); if (lst === 'SettledSale' && sd && String(sd).length === 10) { const h = X(X(P, 'SALES_HISTORIES'), 'SALES_HISTORY'); XV(h, 'OwnershipTransferDate', sd); XV(h, 'OwnershipTransferTransactionType', 'Sale'); }
+  }); }
+async function saveToMyDb(c) {   // her own comp database: kept on this computer, merged into the archive at the next rebuild
+  const rec = await DB.get('kv', 'mycomps'); const list = (rec && rec.v) || []; const J = app.job;
+  const values = Object.fromEntries(FIELDS.map(f => [f.k, V(c, f.k)]).filter(([, v]) => !blank(v)));
+  const key = (values.addr || compTitle(c)) + '|' + (values.saleDate || values.contractDate || '');
+  const row = { key, saved: Date.now(), job: J.name, title: compTitle(c), values, sources: sourcesOf(c), notUsed: c.notUsed || null, adjustments: J.grid && J.grid.cells ? J.grid.cells[c.id] || null : null,
+    tiers: { q: fineOf(J, c.id, 'q'), c: fineOf(J, c.id, 'c') }, landscaping: values.landscaping || null, compNo: c.use || null };   // her low / mid / high tiers: her database only, never UAD
+  const i = list.findIndex(x => x.key === key); if (i >= 0) list[i] = row; else list.push(row);
+  await DB.put('kv', { id: 'mycomps', v: list }); return list.length; }
 
 /* text for an Add Other row (subject or comp) */
 function otherDesc(r, F) {
@@ -223,6 +295,7 @@ function gridReview(J) {
       else if (d < 0 && a > 0) add(`dir:${c.id}:${id}`, 'Direction', `${name} – ${row[1]}: the comp is superior to the subject, so the adjustment is usually minus (−), but it is +${money(a)}.`);
       const small = SMALL[id] !== undefined && Math.abs(d) < SMALL[id];
       if (d !== 0 && !small && !a && id !== 'site') add(`miss:${c.id}:${id}`, 'Not adjusted', `${name} – ${row[1]}: the comp differs from the subject (${factText(id, S)} vs ${factText(id, C)}) but has no adjustment.`);
+      if (id === 'gla' && d !== 0 && Math.abs(d) < 100 && a) add(`gla100:${c.id}`, 'Check', `${name} – living area differs by only ${Math.abs(d)} sq ft; your rule is no adjustment under 100 sq ft, but it is ${sgn(a)}.`);
       if (d === 0 && a && ['gla', 'beds', 'baths', 'garage', 'q', 'c', 'land', 'usable'].includes(id)) add(`eq:${c.id}:${id}`, 'Check', `${name} – ${row[1]}: same as the subject, but adjusted ${sgn(a)}.`);
       if (d !== 0 && a && REVIEW_ROWS[id]) per.push({ name, rate: a / d });
       // math: her own amount against the rate she set

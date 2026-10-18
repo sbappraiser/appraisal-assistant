@@ -251,6 +251,7 @@ function render() {
   <section class="card" id="compsCard">${compsCardHTML(J)}</section>
   <div id="detail">${app.sel ? detailHTML(J.comps.find(c => c.id === app.sel)) : ''}</div>
   <section class="card" id="gridCard">${gridHTML(J)}</section>
+  <section class="card" id="nuCard">${notUsedHTML(J)}</section>
   <section class="card" id="reportCard">${reportHTML(J)}</section>
   <section class="card" id="exportCard"><h2>Export</h2>${exportHTML(J)}</section>
   <footer class="foot">Comp Genie · your data stays on this computer · build ${typeof BUILD !== 'undefined' ? BUILD : ''}</footer>`;
@@ -276,6 +277,7 @@ function renderParts(opts = {}) {
   const cc = $('#compsCard'); if (cc) { cc.innerHTML = compsCardHTML(J); fillImages(cc); }
   const ex = $('#exportCard'); if (ex) ex.innerHTML = '<h2>Export</h2>' + exportHTML(J);
   if (opts.grid !== false) { const gc = $('#gridCard'); if (gc) gc.innerHTML = gridHTML(J); }
+  { const nc = $('#nuCard'); if (nc) nc.innerHTML = notUsedHTML(J); }
   if (opts.field && app.sel) { // one row of the field-by-field table
     const c = J.comps.find(x => x.id === app.sel); const f = FIELD[opts.field]; const u = val(c, f.k);
     const inp = document.querySelector(`[data-edit="${f.k}"]`); const row = inp && inp.closest('tr');
@@ -315,7 +317,7 @@ function compsTable(J) {
       <td class="r">${px ? px.mi.toFixed(2) + '<br><small>' + px.dir.replace(/([a-z])([A-Z])/, '$1 $2') + '</small>' : ''}</td>
       <td>${sourcesOf(c).map(s => `<span class="src">${esc(s)}</span>`).join(' ')}</td>
       <td>${fl.length ? `<span class="badge ${warn ? 'warn' : ''}">${fl.length}</span>` : ''}</td>
-      <td>${app.confirm === 'rm:' + c.id ? `<button class="btn danger solid sm" data-rmyes="${c.id}">Remove</button><button class="btn sm" data-act="cancel">Keep</button>` : `<button class="btn sm" data-rm="${c.id}" title="Remove from this list">✕</button>`}</td></tr>`; }).join('')}
+      <td>${app.confirm === 'rm:' + c.id ? `<span class="rmask">Keep it as analyzed – not used? <button class="btn sm primary" data-rmnu="${c.id}">Keep as not used</button><button class="btn sm" data-rmdb="${c.id}">Save to my comp database, then remove</button><button class="btn danger solid sm" data-rmyes="${c.id}">Remove</button><button class="btn sm" data-act="cancel">Cancel</button></span>` : `<button class="btn sm" data-rm="${c.id}" title="Remove from this list">✕</button>`}</td></tr>`; }).join('')}
   </tbody></table></div>`;
 }
 function cellHTML(c, f, s, S, using) {
@@ -430,6 +432,13 @@ document.addEventListener('click', async e => {
     if (gb.dataset.gokstd) G.ok[gb.dataset.gokstd] = 'Lack of more similar sales; non-conforming market segment – expected (see sales comparison comment).';
     if (gb.dataset.glimnote || gb.dataset.gokstd) { if (!(G.note || '').includes(LIMIT_TEXT.slice(0, 60))) G.note = [(G.note || '').trim(), LIMIT_TEXT].filter(Boolean).join(' '); }
     save(); renderKeepFocus(); toast('Added to the sales comparison comment – read it over'); return; }
+  const nb = e.target.closest('[data-rmnu],[data-rmdb],[data-savedb],[data-nuback]');
+  if (nb) { const id = nb.dataset.rmnu || nb.dataset.rmdb || nb.dataset.savedb || nb.dataset.nuback; const c = app.job.comps.find(x => x.id === id); if (!c) return;
+    if (nb.dataset.rmnu) { markNotUsed(c); app.nuAsk = c.id; app.confirm = null; save(); render(); toast('Kept as analyzed – not used. Pick the reason below the grid.'); return; }
+    if (nb.dataset.savedb || nb.dataset.rmdb) { const n = await saveToMyDb(c); toast(`Saved to your comp database (${n} saved) – it goes into your archive the next time it is rebuilt`); }
+    if (nb.dataset.rmdb) { app.job.comps = app.job.comps.filter(x => x.id !== id); if (app.sel === id) app.sel = null; app.confirm = null; save(); render(); return; }
+    if (nb.dataset.nuback) { delete c.notUsed; if (app.nuAsk === id) app.nuAsk = null; save(); render(); return; }
+    return; }
   const t = e.target.closest('[data-act],[data-open],[data-pick],[data-reset],[data-front],[data-view],[data-rm],[data-rmyes],[data-rf],[data-rfyes],.sug');
   if (!t) return;
   if (t.matches('select,input,option')) return;
@@ -454,6 +463,12 @@ document.addEventListener('click', async e => {
     case 'rmall-yes': app.job.comps = []; app.sel = null; app.confirm = null; await saveNow(); render(); toast('All comps removed – your files list is unchanged'); break;
     case 'close': app.sel = null; render(); break;
     case 'backup': backupJob(); break;
+    case 'nuok': app.nuAsk = null; render(); break;
+    case 'savealldb': { const L = app.job.comps.filter(c => c.use || c.notUsed); let n = 0; for (const c of L) n = await saveToMyDb(c); toast(L.length ? `${L.length} comps saved to your comp database (${n} saved in all) – with your tiers` : 'No comps on the grid yet'); break; }
+    case 'starts-use': { const n = startsUse(app.job); save(); renderKeepFocus(); toast(n ? n + ' rate' + (n > 1 ? 's' : '') + ' filled from your starting points – change any of them' : 'Your rates are already filled – clear one to use the starting point'); break; }
+    case 'starts-edit': app.startsEdit = !app.startsEdit; renderKeepFocus(); break;
+    case 'starts-file': download(new Blob([JSON.stringify({ app: 'comp-genie-starting-points', v: startsNow() }, null, 1)], { type: 'application/json' }), 'My starting points.json'); break;
+    case 'starts-reset': if (confirm('Go back to the original starting-point list? Your changes to the list are replaced.')) { STARTS = JSON.parse(JSON.stringify(STARTS_DEFAULT)); await DB.put('kv', { id: 'starts', v: STARTS }); renderKeepFocus(); } break;
     case 'x-sfrep': exportSfrep(); break;
     case 'x-full': exportFullReport(); break;
     case 'pullmicro': { const o = (app.orders || []).find(x => x.id === app.job.orderId); if (o) await pullMicro(o); break; }
@@ -469,7 +484,7 @@ document.addEventListener('change', async e => {
   if (t.dataset.act === 'fromorder' && t.value) { const o = app.orders.find(x => x.id === t.value); if (o) { await jobFromOrder(o); render(); } return; }
   if (t.dataset.act === 'pickjob') { app.job = app.jobs.find(j => j.id === t.value); app.sel = null; await DB.put('kv', { id: 'lastJob', v: app.job.id }); await loadPhotos(); render(); return; }
   if (t.dataset.act === 'showall') { app.showAll = t.checked; render(); return; }
-  if (t.dataset.use) { const c = app.job.comps.find(x => x.id === t.dataset.use); const n = t.value ? +t.value : null; if (n) app.job.comps.forEach(x => { if (x !== c && x.use === n) x.use = null; }); c.use = n; save(); render(); return; }
+  if (t.dataset.use) { const c = app.job.comps.find(x => x.id === t.dataset.use); const n = t.value ? +t.value : null; if (!n && c.use) { markNotUsed(c); app.nuAsk = c.id; } if (n) app.job.comps.forEach(x => { if (x !== c && x.use === n) x.use = null; }); c.use = n; save(); render(); return; }
   if (t.dataset.archpick) { const c = app.job.comps.find(x => x.id === t.dataset.archpick); c.archPick = +t.value; save(); render(); return; }
   if (t.dataset.cortpick) { const c = app.job.comps.find(x => x.id === t.dataset.cortpick); c.cortPick = +t.value; save(); render(); return; }
   if (t.dataset.edit) { const c = app.job.comps.find(x => x.id === app.sel); const f = FIELD[t.dataset.edit]; const v = parseInput(f, t.value); if (blank(v)) delete c.edit[f.k]; else c.edit[f.k] = v; save(); renderParts({ field: f.k }); return; }
@@ -477,6 +492,13 @@ document.addEventListener('change', async e => {
   if (t.dataset.jobname) { app.job.name = t.value.trim() || 'Assignment'; save(); renderParts(); return; }
   if (t.dataset.notes) { const c = app.job.comps.find(x => x.id === t.dataset.notes); c.notes = t.value; save(); return; }
   // adjustment grid
+  if (t.dataset.nu || t.dataset.nur) { const [id, k] = (t.dataset.nu || t.dataset.nur).split('|'); const c = app.job.comps.find(x => x.id === id); if (!c) return; markNotUsed(c); const N = c.notUsed;
+    if (t.dataset.nur) { N.reasons = N.reasons.filter(x => x !== k); if (t.checked) N.reasons.push(k); } else if (k === 'report' || k === 'client') N[k] = t.checked; else N[k] = t.value;
+    save(); if (t.dataset.nur && k === 'Other') render(); return; }
+  if (t.dataset.gseg || t.dataset.gtier) { const G = G0(app.job); if (t.dataset.gseg) G.seg = t.value; else G.tier = t.value; save(); renderKeepFocus(); return; }
+  if (t.dataset.st) { const P = STARTS || (STARTS = JSON.parse(JSON.stringify(STARTS_DEFAULT))); const path = t.dataset.st.split('.'); let o = P; path.slice(0, -1).forEach(k => { o[k] = o[k] || {}; o = o[k]; });
+    const last = path[path.length - 1]; o[last] = path[0] === 'notes' ? t.value : (t.value.trim() === '' ? null : num(t.value.replace(/[$,\s]/g, ''))); DB.put('kv', { id: 'starts', v: P }); renderKeepFocus(); return; }
+  if (t.dataset.act === 'starts-load' && t.files && t.files[0]) { try { const d = JSON.parse(await t.files[0].text()); if (!d.v || !d.v.tiers) throw 0; STARTS = d.v; await DB.put('kv', { id: 'starts', v: STARTS }); toast('Starting points loaded'); renderKeepFocus(); } catch (e) { toast('That is not a starting-points file'); } return; }
   if (t.dataset.gfine) { const G = G0(app.job); G.fine = G.fine || {}; const [who, k] = t.dataset.gfine.split('|'); G.fine[who] = G.fine[who] || {}; G.fine[who][k] = t.value; save(); renderKeepFocus(); return; }
   if (t.dataset.gok !== undefined) { const G = G0(app.job); G.ok = G.ok || {}; const v = t.value.trim(); if (v) G.ok[t.dataset.gok] = v; else delete G.ok[t.dataset.gok]; save(); renderKeepFocus(); return; }
   if (t.dataset.gadj || t.dataset.gsubj || t.dataset.grate || t.dataset.gvalue || t.dataset.gnote || t.dataset.gweight) { const G = G0(app.job); const v = t.value.trim();

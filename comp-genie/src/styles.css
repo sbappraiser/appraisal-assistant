@@ -79,3 +79,10 @@ input.xs{width:80px}
 .rvs{font-size:12px;font-weight:700;padding:2px 6px;border-radius:4px;background:#eef1f4;text-align:center}
 .rv-Direction,.rv-Math{background:#fde2e1;color:#a51111}.rv-Limit{background:#fff1d6;color:#8a5300}.rv-Notadjusted,.rv-Consistency,.rv-Bracketing,.rv-Check{background:#e8f0fb;color:#1d4f91}
 select.fine{font-size:12px;padding:1px 2px;margin-left:4px;border-radius:4px}
+.starts{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;padding:8px 10px;margin:6px 0 10px;background:#f2f7f6;border-radius:8px}.starts small{flex-basis:100%;color:#5b6876}
+.stedit{flex-basis:100%;margin-top:6px}.stedit table{border-collapse:collapse;margin:6px 0}.stedit th,.stedit td{padding:4px 8px;text-align:left;font-size:13px;vertical-align:top}
+.grate small.from{display:block;color:#0b7a5a;font-size:11px}
+.nuask{background:#fff6e0;border:1px solid #f0c060;padding:8px 10px;border-radius:8px;margin:6px 0}
+.nu{border-bottom:1px solid #e3e8ec;padding:8px 0}.nuh{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center}.nur{display:flex;flex-wrap:wrap;gap:4px 10px;margin:6px 0}
+.chip2{display:inline-flex;gap:4px;align-items:center;font-size:13px;border:1px solid #d6dde3;border-radius:14px;padding:2px 8px}.inl{display:inline-flex;gap:4px;align-items:center;font-size:13px}
+.rmask{display:flex;flex-wrap:wrap;gap:4px;align-items:center;font-size:12px}
