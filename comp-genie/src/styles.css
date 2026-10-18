@@ -92,3 +92,16 @@ table.ts{border-collapse:collapse;width:100%;margin:8px 0}table.ts th,table.ts t
 table.ts.small td,table.ts.small th{font-size:12px;padding:4px 6px}
 .tschart{width:100%;max-width:720px;height:auto;margin:6px 0}.tschart .ln{fill:none;stroke:#0b7a5a;stroke-width:2.5}.tschart .pt{fill:#0b7a5a}.tschart .gl{stroke:#e3e8ec}.tschart .tl{font-size:11px;fill:#5b6876}
 p.warn{color:#8a5300;background:#fff6e0;padding:6px 8px;border-radius:6px}
+select.fine.arch{background:#eef6ff;border:1px dashed #6a9fd8}
+.sens{margin-top:18px;border-top:1px solid #ddd;padding-top:10px}
+table.senst{border-collapse:collapse;font-size:13px}table.senst td,table.senst th{border-bottom:1px solid #eee;padding:5px 8px;text-align:left;vertical-align:top}
+.sens .warn{color:#9a5b00}svg.spark{display:block}
+table.sup td:nth-child(4){white-space:nowrap}table.sup td:last-child{min-width:260px}table.sup td:nth-child(2){white-space:nowrap}
+.rv-Mustfix{background:#c0392b;color:#fff}.rv-Check{background:#e8a33d;color:#fff}
+#preCard .ok{color:#2a7a3a;font-weight:600}.revlog{margin-top:14px}.revlog .rev{padding:4px 0;border-bottom:1px solid #eee}.revlog #revText{min-width:340px}label.tick{white-space:nowrap;margin-left:8px;font-size:13px}
+.wbbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;background:#f4f8fb;border:1px solid #dbe6ee;border-radius:8px;padding:8px 10px;margin:8px 0}
+.wbbar .pops .btn{margin-left:4px}.wbarr{background:#fafafa;border:1px solid #e5e5e5;border-radius:8px;padding:8px 10px;margin-bottom:8px}.wbarr div{padding:3px 0}
+.keys{font-size:12px}table.grid th.cur{background:#fff4d6;outline:2px solid #e8a33d}table.grid th[data-wbcol]{cursor:pointer}
+table.grid.wb input.fact{width:100%;min-width:110px;margin-bottom:3px;background:#fffef6}
+.wbundo{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:#263238;color:#fff;padding:10px 14px;border-radius:10px;z-index:50;box-shadow:0 4px 18px rgba(0,0,0,.3)}
+header.top.pop{gap:8px}header.top.pop h1{font-size:18px}

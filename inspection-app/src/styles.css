@@ -356,3 +356,11 @@ html.testcopy .bar { border-bottom-color: #7b2cbf; }
 .thumb.rep::after{content:'→ SFREP';position:absolute;top:4px;left:4px;background:#0fa84a;color:#fff;font-size:11px;font-weight:700;padding:1px 5px;border-radius:4px}.thumb{position:relative}
 .dk-apl{display:flex;flex-wrap:wrap;gap:6px 10px;margin-top:6px;align-items:center}.dk-ap{display:inline-flex;gap:4px;align-items:center}.dk-brand{width:auto;font-size:14px;padding:3px 4px}
 .dk-ited{display:flex;flex-direction:column;gap:5px}.dk-ited select{width:100%}
+
+/* blur tool (6u) */
+.blur-ed { position: fixed; inset: 0; z-index: 60; background: #111; display: flex; flex-direction: column; }
+.blur-bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 10px 12px; background: #fff; border-bottom: 3px solid #000; padding-top: max(10px, env(safe-area-inset-top)); }
+.blur-bar .sp { flex: 1; }
+.blur-help { color: #fff; font-size: 14px; padding: 6px 12px; }
+.blur-wrap { flex: 1; min-height: 0; display: grid; place-items: center; padding: 8px; }
+.blur-wrap canvas { touch-action: none; display: block; background: #000; }

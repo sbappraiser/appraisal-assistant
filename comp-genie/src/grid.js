@@ -49,7 +49,10 @@ Object.assign(RATES, { qStep: ['$ per quality step', 'whole steps, thirds for lo
   landStep: ['$ per landscaping step', 'minimal · fair · avg-fair · average · avg-good · good · very good · excellent'],
   aduSf: ['$ per ADU / guest sq ft', 'finished ADU, guest house and other living outbuildings (not storage)'], aduBath: ['$ per ADU / guest bath', 'baths in the ADU / guest house / outbuildings – set it for this property'] });
 const FINE = { low: -1 / 3, mid: 0, high: 1 / 3 };
-const fineOf = (J, who, k) => ((G0(J).fine || {})[who] || {})[k] || 'mid';
+const fineOf = (J, who, k) => ((G0(J).fine || {})[who] || {})[k] || fineArch(J, who, k) || 'mid';
+// a tier from her archive note counts only while the comp still carries that same rating (e.g. "C3|high" with condition C3)
+function fineArch(J, who, k) { if (who === 'subj') return ''; const c = (J.comps || []).find(x => x.id === who); if (!c) return '';
+  const t = String(V(c, k + 'Tier') || ''), r = String(V(c, k === 'q' ? 'quality' : 'condition') || '').toUpperCase().match(/[QC]\d/); return t && r && t.split('|')[0] === r[0] ? t.split('|')[1] : ''; }
 const ratingPos = (v, fine) => { const m = String(v || '').match(/(\d)/); return m ? -(+m[1]) + (FINE[fine] || 0) : null; };   // higher = better; Q2 > Q4; high C3 > low C3
 const viewTier = v => { const t = String(v || '').toLowerCase(); if (!t.trim()) return null; if (/adverse/.test(t)) return -1; if (/neutral/.test(t)) return 0;
   if (/beneficial|ocean|mountain|city|lake|golf|canyon|panoram/.test(t)) return /panoram|excellent/.test(t) ? 3 : /limited/.test(t) ? 1 : 2; return null; };
@@ -172,33 +175,41 @@ function compTotals(J, c) {
 
 /* ---------------- the grid card ---------------- */
 function gridHTML(J) {
-  const used = usedComps(J); if (!used.length) return '<h2>Adjustment grid</h2><p class="help">Pick comps with “Use as” in the list above; they line up here in grid order.</p>';
-  const G = G0(J), S = subjFacts(J); const tot = used.map(c => compTotals(J, c));
+  const usedAll = usedComps(J); if (!usedAll.length) return '<h2>Adjustment grid</h2><p class="help">Pick comps with “Use as” in the list above; they line up here in grid order.</p>';
+  const used = wbSlice(usedAll); const lean = wbLean();
+  const G = G0(J), S = subjFacts(J); const tot = used.map(c => compTotals(J, c)); const totAll = usedAll.map(c => compTotals(J, c));
   const inspNote = J.subject.insp ? `Subject from your inspection (${esc(J.subject.insp.file || 'workfile')}).` : 'Subject: drop your iPad <b>Workfile package</b> (.zip) on this page to fill the subject column from your inspection, or type the subject values in the grid.';
   let sec = '';
-  const rows = ADJ_ROWS.map(row => {
+  const rows = ADJ_ROWS.filter(WB_ROWS).map(row => {
     const [id, label, section, type] = row; const head = section !== sec ? `<tr class="grp"><th colspan="${2 + used.length}">${esc(section)}</th></tr>` : ''; sec = section;
     const sv = id === 'baths' ? [S.full, S.half].every(blank) ? '' : `${S.full ?? '–'} / ${S.half ?? 0}` : showFact(id, S[id]);
     const subjCell = ['price', 'ppsf', 'src', 'prox', 'dom', 'terms', 'conc', 'contract', 'sale'].includes(id) ? `<td class="subj">${esc(sv)}</td>`
       : `<td class="subj"><input class="txt sm" data-gsubj="${id}" value="${esc(blank(G.subj[id]) ? '' : G.subj[id])}" placeholder="${esc(sv || (id === 'usable' ? 'Measure it' : id === 'adu' ? 'e.g. Guest house 450 sf 1 bath' : ''))}">${id === 'q' || id === 'c' ? fineSel('subj', id, J) : ''}</td>`;
     const cells = used.map(c => { const C = compFacts(c, J);
       let shown = id === 'beds' && C.bedsBg ? `${C.beds} (${C.bedsBg} below grade)` : id === 'baths' ? ([C.full, C.half].every(blank) ? '' : `${C.full ?? '–'} / ${C.half ?? 0}`) : id === 'ppsf' ? (C.price && C.gla ? money(C.price / C.gla) : '') : showFact(id, C[id]);
-      if (id === 'usable' && blank(C.usable)) shown = '<span class="measure">Measure it</span>'; else shown = esc(shown);
+      if (lean && !WB_NOEDIT.includes(id)) { const raw = id === 'usable' ? (blank(C.usable) ? '' : String(C.usable)) : wbFactText(id, C);
+        shown = `<input class="txt sm fact" data-gfact="${c.id}|${id}" value="${esc(raw)}" placeholder="${id === 'usable' ? 'Measure it (ac)' : ''}" title="Type the comp's entry · = copies the subject · =2 copies comp 2">`; }
+      else if (id === 'usable' && blank(C.usable)) shown = '<span class="measure">Measure it</span>'; else shown = esc(shown);
       if (id === 'q' || id === 'c') shown += fineSel(c.id, id, J);
       if (!type) return `<td>${shown}</td>`;
       const a = cellAmount(J, c, row);
       return `<td><div class="gval">${shown}</div><input class="txt sm adj ${a.own ? 'own' : a.v !== null ? 'auto' : ''}" data-gadj="${c.id}|${id}" value="${a.own ? a.v : ''}" placeholder="${a.v !== null && !a.own ? (a.v >= 0 ? '+' : '') + a.v.toLocaleString() : '$ adj'}" inputmode="decimal" title="${a.own ? 'Your amount – clear it to use the rate' : a.v !== null ? 'From your rate – type to override' : 'Type the adjustment'}"></td>`; }).join('');
     const bedAsk = id === 'beds' && blank(G.rates.bed) ? used.filter(c => { const C = compFacts(c, J); const a = capBeds(S.beds), b = capBeds(C.beds); return a !== null && b !== null && a !== b && blank((G.cells[c.id] || {}).beds); }) : [];
-    const rk = row[4]; const rate = rk ? [].concat(rk === 'bath' ? ['bath', 'halfBath'] : rk).map(k => `<div class="grate"><label title="${esc(RATES[k][1])}">${esc(RATES[k][0])} <input class="txt xs" data-grate="${k}" value="${esc(blank(G.rates[k]) ? '' : G.rates[k])}" inputmode="decimal"></label>${G.rateFrom && G.rateFrom[k] && !blank(G.rates[k]) ? `<small class="from">from your starting points (${esc(G.rateFrom[k])})</small>` : ''}</div>`).join('') : '';
+    const rk = row[4]; const rate = rk ? [].concat(rk === 'bath' ? ['bath', 'halfBath'] : rk).map(k => `<div class="grate"><label title="${esc(RATES[k][1])}">${esc(RATES[k][0])} <input class="txt xs" data-grate="${k}" value="${esc(blank(G.rates[k]) ? '' : G.rates[k])}" inputmode="decimal"></label>${G.rateFrom && G.rateFrom[k] && !blank(G.rates[k]) ? `<small class="from">${/ · /.test(G.rateFrom[k]) ? `from your starting points (${esc(G.rateFrom[k])})` : 'from ' + esc(G.rateFrom[k])}</small>` : ''}</div>`).join('') : '';
     const ask = bedAsk.length ? `<div class="bedask">${bedAsk.map(c => `Comp ${c.use} has ${compFacts(c, J).beds} bedroom${compFacts(c, J).beds === 1 ? '' : 's'}`).join(', ')} – what bedroom adjustment do you want? Type it per bedroom above, or in the comp's box.</div>` : '';
     return head + `<tr${ask ? ' class="asking"' : ''}><th>${esc(label)}${rate}${ask}</th>${subjCell}${cells}</tr>`;
   }).join('');
   const sumRow = (label, fn, cls = '') => `<tr class="tot ${cls}"><th>${label}</th><td></td>${used.map((c, i) => `<td>${fn(tot[i], c)}</td>`).join('')}</tr>`;
-  const adjs = tot.map(t => t.adj).filter(Boolean); const lo = Math.min(...adjs), hi = Math.max(...adjs);
+  const adjs = totAll.map(t => t.adj).filter(Boolean); const lo = Math.min(...adjs), hi = Math.max(...adjs);
   const med = adjs.length ? [...adjs].sort((a, b) => a - b)[Math.floor((adjs.length - 1) / 2)] : null;
-  return `<h2>Adjustment grid <small>UAD 3.6 lines · your amounts</small></h2>${startsBar(J)}
+  if (POP) return `<div class="tablewrap"><table class="grid${lean ? ' wb' : ''}"><thead><tr><th></th><th>Subject<br><small>${esc(J.subject.addr || '')}</small></th>${used.map(c => `<th data-wbcol="${c.id}" class="${WB.cur === c.id ? 'cur' : ''}">Comp ${c.use}<br><small>${esc(compTitle(c))}</small></th>`).join('')}</thead><tbody>${rows}
+    ${sumRow('Net adjustment', t => `${t.net >= 0 ? '+' : '−'}${money(Math.abs(t.net))} <small class="${Math.abs(t.netPct) > GRID_LIMITS.net ? 'over' : ''}">${t.netPct.toFixed(1)}%</small>`)}
+    ${sumRow('Gross adjustment', t => `${money(t.gross)} <small class="${t.grossPct > GRID_LIMITS.gross ? 'over' : ''}">${t.grossPct.toFixed(1)}%</small>`)}
+    ${sumRow('Adjusted sale price', t => `<b>${money(t.adj)}</b>${t.adjPsf ? `<br><small>${money(t.adjPsf)} / sq ft</small>` : ''}`, 'big')}</tbody></table></div>
+    <div class="gsum"><div><span>Adjusted range (all comps)</span><b>${adjs.length ? money(lo) + ' – ' + money(hi) : '–'}</b></div><div><span>Median</span><b>${med ? money(med) : '–'}</b></div><div><span>Your value</span><b>${blank(G.value) ? '–' : money(G.value)}</b></div></div>`;
+  return `<h2>Adjustment grid <small>UAD 3.6 lines · your amounts</small></h2>${startsBar(J)}${wbBar(J, usedAll)}
     <p class="help">${inspNote} Type an amount in any cell (minus for a downward adjustment). Or type a rate once beside a line; cells without your own amount then use it (shown in grey). Clear a cell to go back to the rate. Usable Lot Area/Utility comes only from your archive or your measurement – blank comps say <span class="measure">Measure it</span>.</p>
-    <div class="tablewrap"><table class="grid"><thead><tr><th></th><th>Subject<br><small>${esc(J.subject.addr || '')}</small></th>${used.map(c => `<th>Comp ${c.use}<br><small>${esc(compTitle(c))}</small></th>`).join('')}</tr></thead>
+    <div class="tablewrap"><table class="grid${lean ? ' wb' : ''}"><thead><tr><th></th><th>Subject<br><small>${esc(J.subject.addr || '')}</small></th>${used.map(c => `<th data-wbcol="${c.id}" class="${WB.cur === c.id ? 'cur' : ''}" title="Click to pick this comp for Ctrl+Shift+number or Ctrl+Z">Comp ${c.use}<br><small>${esc(compTitle(c))}</small></th>`).join('')}</tr></thead>
     <tbody>${rows}
     ${sumRow('Net adjustment', t => `${t.net >= 0 ? '+' : '−'}${money(Math.abs(t.net))} <small class="${Math.abs(t.netPct) > GRID_LIMITS.net ? 'over' : ''}">${t.netPct.toFixed(1)}%</small>`)}
     ${sumRow('Gross adjustment', t => `${money(t.gross)} <small class="${t.grossPct > GRID_LIMITS.gross ? 'over' : ''}">${t.grossPct.toFixed(1)}%</small>`)}
@@ -209,11 +220,11 @@ function gridHTML(J) {
       <label><span>Your indicated value (sales comparison)</span><input class="txt" data-gvalue="1" value="${esc(blank(G.value) ? '' : G.value)}" placeholder="$" inputmode="decimal"></label></div>
     <label class="fld"><span>Sales comparison comment (your words)</span><textarea class="txt" rows="3" data-gnote="1">${esc(G.note || '')}</textarea></label>
     <div class="row"><button class="btn sm" data-gtiers="1">Add the low / mid / high rating tiers to the comment</button><button class="btn sm" data-act="savealldb">Save these comps to my comp database (with your tiers)</button></div>
-    ${reviewHTML(J)}`;
+    ${reviewHTML(J)}${sensHTML(J)}`;
 }
 
 /* low / mid / high within a UAD rating – on her grid and in her comments, never in the UAD fields */
-function fineSel(who, k, J) { const v = fineOf(J, who, k); return ` <select class="fine" data-gfine="${who}|${k}" title="Where it sits within the UAD rating">${['low', 'mid', 'high'].map(x => `<option value="${x}" ${x === v ? 'selected' : ''}>${x}</option>`).join('')}</select>`; }
+function fineSel(who, k, J) { const v = fineOf(J, who, k); const set = ((G0(J).fine || {})[who] || {})[k], fromA = !set && fineArch(J, who, k); return ` <select class="fine${fromA ? ' arch' : ''}" data-gfine="${who}|${k}" title="${fromA ? 'From your archive note – change it if you see it differently' : 'Where it sits within the UAD rating'}">${['low', 'mid', 'high'].map(x => `<option value="${x}" ${x === v ? 'selected' : ''}>${x}</option>`).join('')}</select>`; }
 function tiersText(J) { const S = subjFacts(J); const one = (F, who) => ['q', 'c'].filter(k => F[k]).map(k => `${fineOf(J, who, k)} ${String(F[k]).match(/[QC]\d/i) ? String(F[k]).match(/[QC]\d/i)[0].toUpperCase() : F[k]}`).join(' / ');
   const parts = usedComps(J).map(c => { const t = one(compFacts(c, J), c.id); return t ? `Comparable ${c.use} ${t}` : ''; }).filter(Boolean);
   const st = one(S, 'subj'); if (!st && !parts.length) return '';
@@ -367,10 +378,17 @@ function gridAdjustXML(CMP, c, job) {
 }
 
 /* full report: her iPad subject file + the comps with your grid, value and Usable Lot Area/Utility row; photos from both */
-async function exportFullReport() {
-  const J = app.job; const used = usedComps(J); if (!used.length) { toast('Pick comps first'); return; }
-  const rec = await DB.get('kv', 'insp:' + J.id); if (!rec) { toast('Drop your iPad Workfile package on this page first'); return; }
-  const files = await readZip(rec.blob); const xmlName = [...files.keys()].find(k => /^SFREP\/[^/]+\.xml$/i.test(k)); if (!xmlName) { toast('That workfile has no SFREP file'); return; }
+async function exportFullReport(anyway) {   // the pre-check runs first; "Export anyway" skips it
+  const J = app.job;
+  if (!anyway) { const T = await precheckRun(J, true); const must = T.items.filter(x => x.sev === 'Must fix').length;
+    if (must || T.items.length) { renderKeepFocus(); const c = $('#preCard'); if (c) c.scrollIntoView({ behavior: 'smooth', block: 'start' }); toast(must ? `Pre-check: ${must} to fix before export` : `Pre-check: ${T.items.length} to look at – then press Export now`); return; } }
+  const r = await buildFullReport(J); if (r.err) { toast(r.err); return; }
+  download(await makeZip(r.entries), jobBase() + ' - Full report SFREP.zip'); toast('Saved to your Downloads folder');
+}
+async function buildFullReport(J) {
+  const used = usedComps(J); if (!used.length) return { err: 'Pick comps first' };
+  const rec = await DB.get('kv', 'insp:' + J.id); if (!rec) return { err: 'Drop your iPad Workfile package on this page first' };
+  const files = await readZip(rec.blob); const xmlName = [...files.keys()].find(k => /^SFREP\/[^/]+\.xml$/i.test(k)); if (!xmlName) return { err: 'That workfile has no SFREP file' };
   const NS = 'http://www.mismo.org/residential/2009/schemas', XL = 'http://www.w3.org/1999/xlink';
   const P = new DOMParser(); const sub = P.parseFromString(new TextDecoder().decode(files.get(xmlName)), 'application/xml');
   const cmp = P.parseFromString(buildCompsMISMO(J, used), 'application/xml');
@@ -401,5 +419,5 @@ async function exportFullReport() {
   const entries = [{ name: jobBase() + ' - Full report.xml', data: xml }];
   for (const [k, v] of files) if (/^SFREP\/Images\//i.test(k)) entries.push({ name: k.replace(/^SFREP\//i, ''), data: v });
   for (const c of used) { const fr = frontOf(c); if (fr) { const r = await DB.get('photos', fr.id); if (r) entries.push({ name: 'Images/' + photoName(c), data: r.blob }); } }
-  download(await makeZip(entries), jobBase() + ' - Full report SFREP.zip'); toast('Saved to your Downloads folder');
+  return { xml, entries };
 }

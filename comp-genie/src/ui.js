@@ -9,9 +9,10 @@ async function start() {
   try { if (navigator.storage && navigator.storage.persist) await navigator.storage.persist(); } catch (e) {} // ask Chrome to keep this data, never clear it to free space
   const arch = await DB.get('kv', 'archive'); if (arch && arch.data) archiveIndex(arch.data);
   const cort = await DB.get('kv', 'cort'); setCort(cort ? cort.rows : []);
+  await revLoad();
   app.jobs = (await DB.all('jobs')).sort((a, b) => b.updated - a.updated);
   const last = await DB.get('kv', 'lastJob');
-  app.job = app.jobs.find(j => last && j.id === last.v) || app.jobs[0] || null;
+  app.job = (POP && app.jobs.find(j => j.id === POP.job)) || app.jobs.find(j => last && j.id === last.v) || app.jobs[0] || null;
   app.orders = await readOrders();
   const oq = new URLSearchParams(location.search).get('order');
   if (oq) { history.replaceState(null, '', location.pathname); const o = app.orders.find(x => x.id === oq); if (o) await jobFromOrder(o); else toast('That order was not found in this browser. Open the Appraisal Assistant in this same browser (Chrome).', 6000); }
@@ -72,7 +73,7 @@ async function newJob(name) {
 }
 let saveT = null;
 function save() { clearTimeout(saveT); saveT = setTimeout(saveNow, 300); }
-async function saveNow() { if (!app.job) return; app.job.updated = Date.now(); await DB.put('jobs', app.job); await DB.put('kv', { id: 'lastJob', v: app.job.id }); }
+async function saveNow() { if (!app.job) return; app.job.updated = Date.now(); await DB.put('jobs', app.job); if (!POP) await DB.put('kv', { id: 'lastJob', v: app.job.id }); wbNotify(); }
 
 /* ---------------- photos ---------------- */
 app.photos = []; // [{id, mls, n, name}] for this job (blobs stay in storage)
@@ -223,6 +224,7 @@ function fillSubjectFrom(r) {
 /* ---------------- rendering ---------------- */
 function render() {
   const J = app.job; const root = $('#app');
+  if (POP) { root.innerHTML = popHTML(J); document.title = `Comps ${POP.from}–${POP.to} · ${J.name}`; wbUndoBar(); return; }
   root.innerHTML = `
   <header class="top"><h1>Comp Genie</h1>
     <span class="pill ${ARCH.loaded ? 'ok' : 'warn'}">${ARCH.loaded ? `Archive: ${ARCH.rows.length.toLocaleString()} records` : 'Archive not loaded'}</span>
@@ -253,6 +255,8 @@ function render() {
   <section class="card" id="gridCard">${gridHTML(J)}</section>
   <section class="card" id="nuCard">${notUsedHTML(J)}</section>
   <section class="card" id="timeCard">${timeHTML(J)}</section>
+  <section class="card" id="supCard">${supHTML(J)}</section>
+  <section class="card" id="preCard">${precheckHTML(J)}</section>
   <section class="card" id="reportCard">${reportHTML(J)}</section>
   <section class="card" id="exportCard"><h2>Export</h2>${exportHTML(J)}</section>
   <footer class="foot">Comp Genie · your data stays on this computer · build ${typeof BUILD !== 'undefined' ? BUILD : ''}</footer>`;
@@ -260,7 +264,7 @@ function render() {
 }
 /* Redraw after a field changes without losing your place: Tab moves on first, then the page is
    redrawn and the cursor is put back in the field you tabbed (or clicked) into. */
-const FOCUS_KEYS = ['data-subj', 'data-edit', 'data-jobname', 'data-notes', 'data-gadj', 'data-gsubj', 'data-grate', 'data-gvalue', 'data-gnote', 'data-gok', 'id'];
+const FOCUS_KEYS = ['data-gfact', 'data-subj', 'data-edit', 'data-jobname', 'data-notes', 'data-gadj', 'data-gsubj', 'data-grate', 'data-gvalue', 'data-gnote', 'data-gok', 'id'];
 function renderKeepFocus() {
   setTimeout(() => {
     const a = document.activeElement; let key = null;
@@ -278,7 +282,7 @@ function renderParts(opts = {}) {
   const cc = $('#compsCard'); if (cc) { cc.innerHTML = compsCardHTML(J); fillImages(cc); }
   const ex = $('#exportCard'); if (ex) ex.innerHTML = '<h2>Export</h2>' + exportHTML(J);
   if (opts.grid !== false) { const gc = $('#gridCard'); if (gc) gc.innerHTML = gridHTML(J); }
-  { const nc = $('#nuCard'); if (nc) nc.innerHTML = notUsedHTML(J); const tc = $('#timeCard'); if (tc) tc.innerHTML = timeHTML(J); }
+  { const nc = $('#nuCard'); if (nc) nc.innerHTML = notUsedHTML(J); const tc = $('#timeCard'); if (tc) tc.innerHTML = timeHTML(J); const sc = $('#supCard'); if (sc) sc.innerHTML = supHTML(J); const pc = $('#preCard'); if (pc) pc.innerHTML = precheckHTML(J); }
   if (opts.field && app.sel) { // one row of the field-by-field table
     const c = J.comps.find(x => x.id === app.sel); const f = FIELD[opts.field]; const u = val(c, f.k);
     const inp = document.querySelector(`[data-edit="${f.k}"]`); const row = inp && inp.closest('tr');
@@ -433,6 +437,18 @@ document.addEventListener('click', async e => {
     if (gb.dataset.gokstd) G.ok[gb.dataset.gokstd] = 'Lack of more similar sales; non-conforming market segment – expected (see sales comparison comment).';
     if (gb.dataset.glimnote || gb.dataset.gokstd) { if (!(G.note || '').includes(LIMIT_TEXT.slice(0, 60))) G.note = [(G.note || '').trim(), LIMIT_TEXT].filter(Boolean).join(' '); }
     save(); renderKeepFocus(); toast('Added to the sales comparison comment – read it over'); return; }
+  const su = e.target.closest('[data-sensuse]');
+  if (su) { const G = G0(app.job); const k = su.dataset.sensuse, v = +su.dataset.v; G.rates[k] = v; G.rateFrom = G.rateFrom || {}; G.rateFrom[k] = 'sensitivity (tightest adjusted range, ' + usedComps(app.job).length + ' comps)'; save(); app.sens = { job: app.job.id, res: sensRun(app.job) }; renderKeepFocus(); toast((SENS_LABEL[k] || k) + ': ' + sensFmt(k, v) + ' – every comp is recalculated'); return; }
+  const wp = e.target.closest('[data-wbpop],[data-wbmv],[data-wbpage],[data-wbcol]');
+  if (wp) { const d = wp.dataset;
+    if (d.wbpop) { const [a, b] = d.wbpop.split('|'); await saveNow(); window.open(`${location.pathname}?pop=grid&from=${a}&to=${b}&job=${encodeURIComponent(app.job.id)}`, 'genie-grid-' + a, 'width=1000,height=1100'); return; }
+    if (d.wbmv) { const [id, to] = d.wbmv.split('|'); wbMove(app.job, id, +to); save(); renderKeepFocus(); return; }
+    if (d.wbpage) { const k = +d.wbpage; const a = Math.max(1, POP.from + k), b = a + (POP.to - POP.from); location.search = `?pop=grid&from=${a}&to=${b}&job=${encodeURIComponent(POP.job)}`; return; }
+    if (d.wbcol) { WB.cur = d.wbcol; document.querySelectorAll('[data-wbcol]').forEach(x => x.classList.toggle('cur', x.dataset.wbcol === WB.cur)); return; } }
+  const rd = e.target.closest('[data-revdel]');
+  if (rd) { await revLoad(); REVLOG = REVLOG.filter(r => r.id !== rd.dataset.revdel); await revSave(); renderKeepFocus(); return; }
+  const sp = e.target.closest('[data-supuse]');
+  if (sp) { const G = G0(app.job); const k = sp.dataset.supuse, v = +sp.dataset.v; const T = app.job.support || {}; G.rates[k] = v; G.rateFrom = G.rateFrom || {}; G.rateFrom[k] = 'grouped sales: ' + (T.seg || '') + ', ' + (T.n || 0) + ' sales'; save(); renderKeepFocus(); toast((RATES[k] ? RATES[k][0] : k) + ': ' + (/Pct$/.test(k) ? v + '%' : money(v)) + ' – every comp is recalculated'); return; }
   const tu = e.target.closest('[data-tsuse]');
   if (tu) { const G = G0(app.job); G.rates.timePct = +tu.dataset.tsuse; G.rateFrom = G.rateFrom || {}; G.rateFrom.timePct = 'market conditions support: ' + tu.dataset.tslabel; save(); renderKeepFocus(); toast('Sale date line: ' + tu.dataset.tsuse + '% per month – every comp is recalculated'); return; }
   const nb = e.target.closest('[data-rmnu],[data-rmdb],[data-savedb],[data-nuback]');
@@ -467,6 +483,8 @@ document.addEventListener('click', async e => {
     case 'close': app.sel = null; render(); break;
     case 'backup': backupJob(); break;
     case 'nuok': app.nuAsk = null; render(); break;
+    case 'sens-run': { app.sens = { job: app.job.id, res: sensRun(app.job) }; renderKeepFocus(); break; }
+    case 'sup-run': { toast('Measuring your lines from your groups…'); await new Promise(r => setTimeout(r, 30)); app.job.support = supRun(app.job); save(); renderKeepFocus(); break; }
     case 'ts-run': { toast('Measuring time from your groups…'); await new Promise(r => setTimeout(r, 30)); app.job.timeSupport = await tsRun(app.job); save(); renderKeepFocus(); break; }
     case 'savealldb': { const L = app.job.comps.filter(c => c.use || c.notUsed); let n = 0; for (const c of L) n = await saveToMyDb(c); toast(L.length ? `${L.length} comps saved to your comp database (${n} saved in all) – with your tiers` : 'No comps on the grid yet'); break; }
     case 'starts-use': { const n = startsUse(app.job); save(); renderKeepFocus(); toast(n ? n + ' rate' + (n > 1 ? 's' : '') + ' filled from your starting points – change any of them' : 'Your rates are already filled – clear one to use the starting point'); break; }
@@ -475,13 +493,26 @@ document.addEventListener('click', async e => {
     case 'starts-reset': if (confirm('Go back to the original starting-point list? Your changes to the list are replaced.')) { STARTS = JSON.parse(JSON.stringify(STARTS_DEFAULT)); await DB.put('kv', { id: 'starts', v: STARTS }); renderKeepFocus(); } break;
     case 'x-sfrep': exportSfrep(); break;
     case 'x-full': exportFullReport(); break;
+    case 'wb-prev': WB.page--; renderKeepFocus(); break;
+    case 'wb-next': WB.page++; renderKeepFocus(); break;
+    case 'wb-arrange': app.wbArrange = !app.wbArrange; renderKeepFocus(); break;
+    case 'wb-undo': wbUndo(); break;
+    case 'wb-undo-x': WB.undo = null; wbUndoBar(); break;
+    case 'x-full-anyway': exportFullReport(true); break;
+    case 'pre-run': { toast('Checking…'); await precheckRun(app.job, false); renderKeepFocus(); break; }
+    case 'rev-add': { await revLoad(); const t = ($('#revText') || {}).value || ''; if (!t.trim()) { toast('Type what they asked first'); break; }
+      app.revOpen = true; REVLOG.push({ id: 'r' + Date.now().toString(36), text: t.trim(), word: (($('#revWord') || {}).value || '').trim(), client: (($('#revClient') || {}).value || '').trim(), added: todayISO(), on: true }); await revSave();
+      if (app.pre && app.pre.job === app.job.id) await precheckRun(app.job, app.pre.wantExport); renderKeepFocus(); toast('Added – every pre-check will remind you'); break; }
     case 'pullmicro': { const o = (app.orders || []).find(x => x.id === app.job.orderId); if (o) await pullMicro(o); break; }
     case 'x-csv': exportCsv(); break;
     case 'x-photos': exportPhotos(); break;
     case 'showall': app.showAll = t.checked; render(); break;
   }
 });
+document.addEventListener('toggle', e => { if (e.target.dataset && e.target.dataset.revopen) app.revOpen = e.target.open; }, true);
 document.addEventListener('change', async e => {
+  if (e.target.dataset && e.target.dataset.revdone) { const J = app.job; J.revDone = J.revDone || {}; J.revDone[e.target.dataset.revdone] = e.target.checked; save(); await precheckRun(J, app.pre && app.pre.wantExport); renderKeepFocus(); return; }
+  if (e.target.dataset && e.target.dataset.revon) { await revLoad(); const r = REVLOG.find(x => x.id === e.target.dataset.revon); if (r) r.on = e.target.checked; await revSave(); return; }
   const t = e.target;
   if (t.dataset.act === 'files' && t.files.length) { await ingest([...t.files]); t.value = ''; return; }
   if (t.dataset.act === 'subjcrs' && t.files.length) { try { const r = crsCanon(parseCRS(await pdfLines(t.files[0]))); app.job.subject.crs = r; ['addr', 'city', 'zip', 'apn'].forEach(k => { if (r[k]) app.job.subject[k] = r[k]; }); if (r.lat) { app.job.subject.lat = r.lat; app.job.subject.lon = r.lon; } if (app.job.name === 'New assignment' && r.addr) app.job.name = r.addr; logFile(t.files[0].name, 'CRS (subject)', 1); save(); render(); toast('Subject filled from the CRS report'); } catch (err) { toast('Could not read that CRS report'); } return; }
@@ -505,12 +536,18 @@ document.addEventListener('change', async e => {
   if (t.dataset.act === 'starts-load' && t.files && t.files[0]) { try { const d = JSON.parse(await t.files[0].text()); if (!d.v || !d.v.tiers) throw 0; STARTS = d.v; await DB.put('kv', { id: 'starts', v: STARTS }); toast('Starting points loaded'); renderKeepFocus(); } catch (e) { toast('That is not a starting-points file'); } return; }
   if (t.dataset.gfine) { const G = G0(app.job); G.fine = G.fine || {}; const [who, k] = t.dataset.gfine.split('|'); G.fine[who] = G.fine[who] || {}; G.fine[who][k] = t.value; save(); renderKeepFocus(); return; }
   if (t.dataset.gok !== undefined) { const G = G0(app.job); G.ok = G.ok || {}; const v = t.value.trim(); if (v) G.ok[t.dataset.gok] = v; else delete G.ok[t.dataset.gok]; save(); renderKeepFocus(); return; }
+  if (t.dataset.gfact) { const [cid, row] = t.dataset.gfact.split('|'); const c = app.job.comps.find(x => x.id === cid); if (!c) return;
+    if (!wbEquals(app.job, cid, row, t.value, true)) wbFactSet(app.job, c, row, t.value); save(); renderKeepFocus(); return; }
+  if (t.dataset.gadj && /^\s*=/.test(t.value)) { const [cid, row] = t.dataset.gadj.split('|'); if (wbEquals(app.job, cid, row, t.value, false)) { save(); renderKeepFocus(); return; } }
+  if (t.dataset.wbon) { WB.on = t.checked; WB.page = 0; renderKeepFocus(); return; }
+  if (t.dataset.wbper) { WB.per = +t.value; WB.page = 0; renderKeepFocus(); return; }
+  if (t.dataset.wbto) { const v = +t.value; if (v) { wbMove(app.job, t.dataset.wbto, v); save(); renderKeepFocus(); } return; }
   if (t.dataset.gadj || t.dataset.gsubj || t.dataset.grate || t.dataset.gvalue || t.dataset.gnote || t.dataset.gweight) { const G = G0(app.job); const v = t.value.trim();
     const n = s => { const x = num(String(s).replace(/[$,\s]/g, '').replace(/^\+/, '')); return x === null ? null : x; };
     if (t.dataset.gadj) { const [cid, row] = t.dataset.gadj.split('|'); G.cells[cid] = G.cells[cid] || {}; if (v === '') delete G.cells[cid][row]; else G.cells[cid][row] = n(v); }
     if (t.dataset.gsubj === 'baths') { const m = v.match(/(\d+)\D*(\d+)?/); if (v === '' || !m) { delete G.subj.baths; delete G.subj.full; delete G.subj.half; } else { G.subj.baths = v; G.subj.full = +m[1]; G.subj.half = m[2] ? +m[2] : 0; } }
     else if (t.dataset.gsubj) { const k = t.dataset.gsubj; if (v === '') delete G.subj[k]; else G.subj[k] = ['site', 'usable', 'year', 'beds', 'full', 'half', 'gla', 'bsmt', 'garage'].includes(k) ? (n(v.replace(/ac$/i, '')) ?? v) : v; }
-    if (t.dataset.grate) { if (v === '') delete G.rates[t.dataset.grate]; else G.rates[t.dataset.grate] = n(v.replace('%', '')); }
+    if (t.dataset.grate) { if (v === '') delete G.rates[t.dataset.grate]; else G.rates[t.dataset.grate] = n(v.replace('%', '')); if (G.rateFrom) delete G.rateFrom[t.dataset.grate]; }
     if (t.dataset.gvalue) G.value = v === '' ? null : n(v);
     if (t.dataset.gnote) { G.note = t.value; save(); return; }
     if (t.dataset.gweight) { if (v) G.weights[t.dataset.gweight] = v; else delete G.weights[t.dataset.gweight]; }

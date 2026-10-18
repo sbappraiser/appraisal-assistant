@@ -146,16 +146,17 @@ function openUnderlay() {
   const u = ulHere();
   openSheet(`<h3>Floor plan underlay</h3><p class="help">Put a floor plan picture or a PDF page under this level (${esc(LEVEL_NAME(SK.level))}) and trace over it. It shows faintly on screen only and is never printed or sent to SFREP. Your measured wall lengths always set the square footage.</p>
     <div class="grid-btns col">${(((SK.ins.data.property || {}).order || {}).plans || []).map(pl => `<button class="btn" data-oplan="${esc(pl.key)}">From the order: ${esc(pl.name)}</button>`).join('')}<label class="btn">${u ? 'Replace with another plan…' : 'Choose a floor plan (picture or PDF)…'}<input type="file" id="ulFile" accept="image/*,application/pdf" hidden></label>
-    ${u ? `<button class="btn" id="ulScale">Set the scale (tap two points)</button><button class="btn" id="ulMove">Move it to line it up</button>
+    ${u ? `${u.lock ? '<div class="help"><b>Locked</b> – it cannot be moved, turned or re-scaled by accident. Unlock it to change those.</div>' : `<button class="btn" id="ulScale">Set the scale (tap two points)</button><button class="btn" id="ulMove">Move it to line it up</button>`}
     <div class="lrow"><span><b>Strength</b> ${Math.round((u.op ?? 0.35) * 100)}%</span><span><button class="btn sm" data-op="-0.1">Lighter</button> <button class="btn sm" data-op="0.1">Darker</button></span></div>
-    <div class="lrow"><span><b>Turn</b></span><span><button class="btn sm" data-ur="-90">↺ 90°</button> <button class="btn sm" data-ur="90">↻ 90°</button></span></div>
-    <button class="btn" id="ulHide">${u.hide ? 'Show it' : 'Hide it'}</button><button class="btn danger" id="ulDel">Remove it</button>` : ''}</div>
+    ${u.lock ? '' : `<div class="lrow"><span><b>Turn</b></span><span><button class="btn sm" data-ur="-90">↺ 90°</button> <button class="btn sm" data-ur="90">↻ 90°</button></span></div>`}
+    <button class="btn" id="ulLock">${u.lock ? '🔓 Unlock it' : '🔒 Lock it in place'}</button><button class="btn" id="ulHide">${u.hide ? 'Show it' : 'Hide it'}</button><button class="btn danger" id="ulDel">Remove it</button>` : ''}</div>
     <div class="row"><button class="btn" data-close>Close</button></div>`, sh => {
       sh.querySelectorAll('[data-oplan]').forEach(b => b.onclick = async () => { closeSheet(); try { const r = await DB.get('sketches', b.dataset.oplan); if (!r || !r.src) throw new Error('it is not on this iPad any more – get the orders file again'); const bl = await (await fetch(r.src)).blob(); await ulLoad(new File([bl], (r.name || 'floor plan') + '.jpg', { type: 'image/jpeg' })); } catch (err) { toast('Could not open that plan: ' + (err.message || err)); } });
       sh.querySelector('#ulFile').onchange = async e => { const f = e.target.files[0]; if (!f) return; closeSheet(); try { await ulLoad(f); } catch (err) { toast('Could not open that plan: ' + (err.message || err)); } };
       if (!u) return;
-      sh.querySelector('#ulScale').onclick = () => { closeSheet(); u.hide = false; SK.mode = 'uscale'; SK.us = { a: null }; SK.sel = null; draw(); renderPanel(); };
-      sh.querySelector('#ulMove').onclick = () => { closeSheet(); u.hide = false; SK.mode = 'umove'; SK.sel = null; draw(); renderPanel(); };
+      sh.querySelector('#ulLock').onclick = () => { u.lock = !u.lock; if (u.lock && (SK.mode === 'umove' || SK.mode === 'uscale')) SK.mode = 'select'; markDirty(); draw(); renderPanel(); openUnderlay(); toast(u.lock ? 'Floor plan locked' : 'Floor plan unlocked'); };
+      if (!u.lock) sh.querySelector('#ulScale').onclick = () => { closeSheet(); u.hide = false; SK.mode = 'uscale'; SK.us = { a: null }; SK.sel = null; draw(); renderPanel(); };
+      if (!u.lock) sh.querySelector('#ulMove').onclick = () => { closeSheet(); u.hide = false; SK.mode = 'umove'; SK.sel = null; draw(); renderPanel(); };
       sh.querySelectorAll('[data-op]').forEach(b => b.onclick = () => { u.op = Math.max(0.1, Math.min(0.9, Math.round(((u.op ?? 0.35) + +b.dataset.op) * 10) / 10)); markDirty(); draw(); openUnderlay(); });
       sh.querySelectorAll('[data-ur]').forEach(b => b.onclick = () => { const c = [u.x + u.iw * u.k / 2, u.y + u.ih * u.k / 2]; u.rot = norm360((u.rot || 0) + +b.dataset.ur); const t = u.rot * Math.PI / 180, cx = u.iw * u.k / 2, cy = u.ih * u.k / 2; u.x = r3(c[0] - (cx * Math.cos(t) - cy * Math.sin(t))); u.y = r3(c[1] - (cx * Math.sin(t) + cy * Math.cos(t))); markDirty(); draw(); });
       sh.querySelector('#ulHide').onclick = () => { u.hide = !u.hide; markDirty(); draw(); openUnderlay(); };
@@ -615,7 +616,7 @@ function onDown(e) {
   if (SK.mode === 'select') { const c = nearCorner(ft, 18); if (c) { const g = { type: 'tap', x: e.offsetX, y: e.offsetY, t: Date.now(), moved: false, v: { ...SK.view }, drag: null, corner: [...c] };
       g.hold = setTimeout(() => { if (gest === g && !g.moved) { gest = { type: 'startdrag', at: g.corner, x: g.x, y: g.y, moved: false, held: true }; longPressStart(g.corner); } }, 450); gest = g; return; } }
   let drag = null;
-  if (SK.mode === 'umove') { const u = ulHere(); if (u) drag = { kind: 'under', u, start: ft, orig: [u.x, u.y] }; }
+  if (SK.mode === 'umove') { const u = ulHere(); if (u && !u.lock) drag = { kind: 'under', u, start: ft, orig: [u.x, u.y] }; }
   if (SK.mode === 'select' && SK.sel) {
     if (SK.sel.type === 'area') { const a = SK.sk.areas.find(x => x.id === SK.sel.id); if (a && a.closed && hitName(ft) === a) SK.grabbed = a.id, drag = { kind: 'name', a, start: ft, orig: namePt(a, computeAreas(), SK.view.s, NAME_PX()) };
       else if (a && a.closed && inPoly(ft, shape(a))) { const sh0 = shape(a), inA = p => insideOrOn(p, sh0);

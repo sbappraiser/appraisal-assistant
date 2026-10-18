@@ -1,3 +1,13 @@
+/* her low / mid / high tier inside a UAD rating, from the archive's remodel note: "C3+", "Dated C4-", "High C3", "Low Q3 Mid C3".
+   Used only when the note's number matches the record's rating. → "C3|high" */
+function archTier(note, L, rating) {
+  const t = String(note || ''); if (!t || !rating) return '';
+  const a = t.match(new RegExp('(?<![A-Za-z])' + L + '\\s?([1-6])\\s?(\\+|-)(?!\\d)', 'i'));
+  const b = t.match(new RegExp('(?<![A-Za-z])(high|mid|low)\\s*' + L + '\\s?([1-6])(?!\\d)', 'i'));
+  let d, tier;
+  if (b) { d = b[2]; tier = b[1].toLowerCase(); } else if (a) { d = a[1]; tier = a[2] === '+' ? 'high' : 'low'; } else return '';
+  return +d === +rating ? L + d + '|' + tier : '';
+}
 /* =====================================================================
    Sources. Each reader turns one kind of file into "canonical" records:
    plain objects whose keys are the field keys in FIELDS (model.js).
@@ -60,7 +70,7 @@ function archCanon(a) {
     adu: a.adu_or_guest ? (hasType(/^(ADU|JADU)$/) ? 'ADU' : 'Guest house') : (a.acc_count != null ? 'None' : ''),
     guest: hasType(/guest/i) ? 'Yes' : '', barn: hasType(/barn/i) ? 'Yes' : '', stable: hasType(/stable/i) ? 'Yes' : '', horse: a.equestrian || am.includes('equestrian') ? 'Yes' : '',
     pool: a.pool ? 'Yes' : (a.amenities != null ? 'No' : ''), spa: a.spa ? 'Yes' : '', tennis: a.tennis ? 'Yes' : '', sport: a.sport_court || a.pickleball ? 'Yes' : '',
-    landscaping: a.landscaping || '', porch: a.porch_patio || '', accessory: a.accessory_raw || '', otherSf: (a.acc_fin_sf || 0) + (a.acc_unfin_sf || 0) || null, remodel: a.fu_raw || '',
+    landscaping: a.landscaping || '', porch: a.porch_patio || '', accessory: a.accessory_raw || '', otherSf: (a.acc_fin_sf || 0) + (a.acc_unfin_sf || 0) || null, remodel: a.fu_raw || '', qTier: archTier(a.fu_raw, 'Q', a.quality), cTier: archTier(a.fu_raw, 'C', a.condition),
     hoa: a.hoa_month, priorSaleText: a.prior_sale || '',
   };
   return v;

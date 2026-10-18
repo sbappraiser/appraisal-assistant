@@ -22,27 +22,54 @@ function tsSegment(J) {
 }
 const LOT_BANDS_AC = [0.5, 1.5, 3, 10], LOT_BANDS_SF = [5000, 8500, 14000, 20000, 43560, 65340, 130680, 435600];
 const bandOf = (v, cuts) => { let i = 0; while (i < cuts.length && v >= cuts[i]) i++; return i; };
-function tsSales(J) {   // her archive sales in the segment, with her group key
-  const seg = tsSegment(J); if (!seg || !ARCH.loaded) return { seg, rows: [], skipped: {} };
+function tsSales(J) {   // her archive sales in the segment, plus closed sales from this job's MLS search, with her group key
+  const seg = tsSegment(J); if (!seg || !ARCH.loaded) return { seg, rows: [], skipped: {}, job: { n: 0, skipped: 0, site: 0 } };
   if (!ARCH.recIdx) { ARCH.recIdx = new Map(); ARCH.rows.forEach((r, i) => ARCH.recIdx.set(r[ARCH.c.rec_id], i)); }
   const eff = J.subject.eff || todayISO(); const effM = +eff.slice(0, 4) * 12 + (+eff.slice(5, 7) - 1);
-  const rows = [], skipped = { lot: 0, view: 0, q: 0, area: 0, year: 0 };
+  const rows = [], skipped = { lot: 0, view: 0, q: 0, area: 0, year: 0 }; const seen = new Set();
+  const mk = (o, src) => {   // o: price, month, usAc|siteSf, vt, q, c, fin, gla, yb + features
+    const m = +String(o.month).slice(0, 4) * 12 + (+String(o.month).slice(5, 7) - 1); const back = effM - m; if (!(back >= 0 && back < 72)) return 'old';
+    if (o.usAc == null && o.siteSf == null) return 'lot'; if (o.vt == null) return 'view'; if (o.q == null) return 'q'; if (!o.fin) return 'area'; if (!o.yb) return 'year';
+    const lotV = o.usAc != null ? o.usAc * 43560 : o.siteSf;
+    const lot = (o.usAc != null ? '' : 's') + (seg.acres ? bandOf(lotV / 43560, LOT_BANDS_AC) : bandOf(lotV, LOT_BANDS_SF));   // 's' = grouped by site size (no usable lot on file) – kept apart
+    const age = !seg.acres && lotV < 5000 ? 'any' : (o.yb < 1945 ? 'pre1945' : '1945+');
+    const qn = Math.round(-o.q);   // whole UAD step for the group
+    const dims = { lot, vt: o.vt, age, q: qn, area: bandOf(o.fin, [2000, 4000, 6000]) };
+    rows.push({ ...o, src, y: Math.log(o.price), p: Math.floor(back / 6), back, dims, key: [dims.lot, dims.vt, dims.age, dims.q, dims.area].join('|') }); return '';
+  };
   Object.values(ARCH.sales).forEach(s => {
     if (!s.use || !s.price || !s.month) return; const i = ARCH.recIdx.get(s.primary); if (i === undefined) return;
     const R = ARCH.rows[i], g = k => R[ARCH.c[k]];
-    const r = { zip: String(g('zip') || ''), nbhd: g('neighborhood') || '' }; if (!seg.test(r)) return;
-    const m = +String(s.month).slice(0, 4) * 12 + (+String(s.month).slice(5, 7) - 1); const back = effM - m; if (back < 0 || back >= 72) return;   // last 6 years
-    const us = g('usable_sf'), vr = String(g('view_rating') || ''), q = g('quality'), fin = (+g('gla') || 0) + (+g('bsmt_fin_sf') || 0);
+    if (!seg.test({ zip: String(g('zip') || ''), nbhd: g('neighborhood') || '' })) return;
+    const us = g('usable_sf'), vr = String(g('view_rating') || ''), q = g('quality'), cd = g('condition'), fin = (+g('gla') || 0) + (+g('bsmt_fin_sf') || 0);
     const yb = g('year_built_est') || (g('actual_age') != null && g('entered_date') ? +String(g('entered_date')).slice(0, 4) - g('actual_age') : null);
-    if (!us) { skipped.lot++; return; } if (!vr) { skipped.view++; return; } if (!q) { skipped.q++; return; } if (!fin) { skipped.area++; return; } if (!yb) { skipped.year++; return; }
-    const vt = /adverse/i.test(vr) ? -1 : /neutral/i.test(vr) ? 0 : g('view_panoramic') ? 3 : g('view_limited') ? 1 : 2;
-    const lot = seg.acres ? bandOf(us / 43560, LOT_BANDS_AC) : bandOf(us, LOT_BANDS_SF);
-    const age = !seg.acres && us < 5000 ? 'any' : (yb < 1945 ? 'pre1945' : '1945+');
-    const key = [lot, vt, age, q, bandOf(fin, [2000, 4000, 6000])].join('|');
-    rows.push({ price: +s.price, y: Math.log(+s.price), p: Math.floor(back / 6), back, key, addr: g('norm_address') || '', month: s.month, remodel: g('remodel_year'), title: [g('street_number'), g('street_name')].filter(Boolean).join(' ') });
+    const vt = !vr ? null : /adverse/i.test(vr) ? -1 : /neutral/i.test(vr) ? 0 : g('view_panoramic') ? 3 : g('view_limited') ? 1 : 2;
+    const tq = (archTier(g('fu_raw'), 'Q', q) || '|mid').split('|')[1], tc = (archTier(g('fu_raw'), 'C', cd) || '|mid').split('|')[1];
+    const acc = (() => { try { return JSON.parse(g('accessory_json') || '[]'); } catch (e) { return []; } })(); const liv = acc.filter(b => b.fin && !/storage|shed|barn|garage|stable|greenhouse|carport/i.test(b.type || ''));
+    const why = mk({ price: +s.price, month: s.month, usAc: us ? us / 43560 : null, vt, q: q ? ratingPos('Q' + q, tq) : null, c: cd ? ratingPos('C' + cd, tc) : null, fin, gla: +g('gla') || null, yb,
+      full: g('baths_full'), half: g('baths_half') || 0, pool: g('pool') ? 1 : 0, spa: g('spa') ? 1 : 0, tennis: g('tennis') ? 1 : 0, sport: g('sport_court') || g('pickleball') ? 1 : 0,
+      aduSf: acc.length || g('acc_count') != null ? liv.reduce((t, b) => t + (+b.sf || 0), 0) : null, land: goodness('land', { land: g('landscaping') }), garage: g('garage_spaces'),
+      addr: g('norm_address') || '', remodel: g('remodel_year'), title: [g('street_number'), g('street_name')].filter(Boolean).join(' ') }, 'arch');
+    if (why && why !== 'old') skipped[why]++;
+    if (!why) seen.add((g('norm_address') || '') + '|' + String(s.month).slice(0, 7));
   });
-  return { seg, rows, skipped };
+  // closed sales from this job (her MLS search, PDFs, CORT) that are not already in the archive
+  const job = { n: 0, skipped: 0, site: 0 };
+  (J.comps || []).forEach(c => {
+    const C = compFacts(c, J); if (!C.price || !C.sale) return; if (!/closed|sold/i.test(String(V(c, 'status') || 'Closed'))) return;
+    if (!seg.test({ zip: String(V(c, 'zip') || ''), nbhd: V(c, 'nbhd') || '' })) return;
+    const month = String(C.sale).slice(0, 7); const addr = (c.src.arch[0] && c.src.arch[0].v && archRowAddr(c)) || '';
+    if (c.src.arch.some(a => a.v && String(a.v.saleDate || '').slice(0, 7) === month)) return;   // the archive already has this sale
+    if (addr && seen.has(addr + '|' + month)) return;
+    const A = aduNums(C);
+    const why = mk({ price: C.price, month, usAc: blank(C.usable) ? null : +C.usable, siteSf: blank(C.usable) && C.site ? +C.site : null, vt: viewTier(C.view), q: C.q ? ratingPos(C.q, fineOf(J, c.id, 'q')) : null,
+      c: C.c ? ratingPos(C.c, fineOf(J, c.id, 'c')) : null, fin: (+C.gla || 0) + (+C.bsmt || 0), gla: C.gla || null, yb: C.year, full: C.full, half: C.half || 0,
+      pool: hasFeat(C, 'pool'), spa: hasFeat(C, 'spa'), tennis: hasFeat(C, 'tennis'), sport: hasFeat(C, 'sport'), aduSf: A.sf, land: goodness('land', C), garage: C.garage, addr, title: compTitle(c) }, 'job');
+    if (why === '') { job.n++; if (blank(C.usable)) job.site++; } else if (why !== 'old') job.skipped++;
+  });
+  return { seg, rows, skipped, job };
 }
+const archRowAddr = c => { const a = c.src.arch[0]; const i = a && ARCH.recIdx ? ARCH.recIdx.get(a.rec) : undefined; return i === undefined ? '' : ARCH.rows[i][ARCH.c.norm_address] || ''; };
 /* least squares: log price = group + half-year (the newest half-year is the reference) */
 function tsFit(rows, P) {
   const cnt = new Map(); rows.forEach(r => cnt.set(r.key, (cnt.get(r.key) || 0) + 1));
@@ -82,8 +109,8 @@ function readOrderKv(id) { return new Promise(res => { let r; try { r = indexedD
   r.onupgradeneeded = () => { try { r.transaction.abort(); } catch (e) {} }; r.onerror = () => res(null);
   r.onsuccess = () => { const d = r.result; if (!d.objectStoreNames.contains('kv')) { d.close(); res(null); return; } const q = d.transaction('kv').objectStore('kv').get(id); q.onsuccess = () => { d.close(); res(q.result || null); }; q.onerror = () => { d.close(); res(null); }; }; }); }
 async function tsRun(J) {
-  const { seg, rows, skipped } = tsSales(J); const P = 12;
-  const res = { at: Date.now(), seg: seg && seg.name, n: rows.length, skipped };
+  const { seg, rows, skipped, job } = tsSales(J); const P = 12;
+  const res = { at: Date.now(), seg: seg && seg.name, n: rows.length, skipped, job };
   if (!seg) { res.err = 'Enter the subject address (and neighborhood) first.'; return res; }
   if (!ARCH.loaded) { res.err = 'Load your comp archive first (top of the page).'; return res; }
   const fit = tsFit(rows, P); res.all = fit && { ...tsRates(fit), ci: tsBoot(rows, P), per: fit.per, cntP: fit.cntP, n: fit.n, groups: fit.groups };
@@ -134,7 +161,7 @@ function timeHTML(J) {
       ${T.zillow ? `<tr><th>Zillow ZIP ${esc(T.zillow.zip)}<br><small>${esc(T.zillow.asOf || '')}</small></th><td colspan="2">${pct(T.zillow.change, 1)} in a year = <b>${pct(T.zillow.monthly)}</b> per month <small>(typical home value, all homes in the ZIP – context only)</small></td></tr>` : `<tr><th>Zillow</th><td colspan="2"><small>No Zillow figures saved for this ZIP on the hub's Market tab.</small></td></tr>`}
     </tbody></table>
     ${A ? tsChart(A.per, A.cntP) : ''}
-    <p class="help">${skN ? `${skN} sales in the segment were left out because your archive lacks a needed item (usable lot ${sk.lot}, view ${sk.view}, quality ${sk.q}, finished area ${sk.area}, year built ${sk.year}). ` : ''}Price tiers only decide which line applies to your subject; sales were not filtered by price, so a house that sold higher does not drop out of the trend.</p>
+    <p class="help">${skN ? `${skN} sales in the segment were left out because your archive lacks a needed item (usable lot ${sk.lot}, view ${sk.view}, quality ${sk.q}, finished area ${sk.area}, year built ${sk.year}). ` : ''}${T.job && T.job.n ? `Includes ${T.job.n} closed sale${T.job.n === 1 ? '' : 's'} from this job's MLS search that are not in your archive${T.job.site ? ` (${T.job.site} grouped by site size because no usable lot is on file – kept in their own groups)` : ''}. ` : ''}${T.job && T.job.skipped ? `${T.job.skipped} job sales were left out (no view, quality, area or year built on file). ` : ''}Price tiers only decide which line applies to your subject; sales were not filtered by price, so a house that sold higher does not drop out of the trend.</p>
     ${RS.pairs.length ? `<details><summary>The resales (${RS.pairs.length})</summary><table class="ts small"><tr><th>Address</th><th>First sale</th><th>Second sale</th><th>% per month</th></tr>${RS.pairs.slice(0, 40).map(p => `<tr><td>${esc(p.title)}</td><td>${esc(p.m1)} ${money(p.p1)}</td><td>${esc(p.m2)} ${money(p.p2)}</td><td>${pct(p.rate)}</td></tr>`).join('')}</table></details>` : ''}
     ${G.rates.timePct !== undefined && !blank(G.rates.timePct) ? `<p>Your rate on the grid: <b>${pct(+G.rates.timePct)} per month</b>${G.rateFrom && G.rateFrom.timePct ? ' – from ' + esc(G.rateFrom.timePct) : ''}.</p>` : ''}`;
 }

@@ -480,6 +480,11 @@ async function photoEntries(ins, names, prefix) {
   for (const p of ins.photos) { const rec = await DB.get('photos', p.id); if (rec) out.push({ name: prefix + names.get(p.id), data: rec.blob }); }
   return out;
 }
+async function originalEntries(ins, names, prefix) { // unblurred originals of blurred photos: workfile package only, never SFREP
+  const out = [];
+  for (const p of ins.photos) { const rec = await DB.get('photos', p.id); if (rec && rec.original) out.push({ name: prefix + names.get(p.id), data: rec.original }); }
+  return out;
+}
 async function doExport(kind, btn) {
   const ins = app.ins; const old = btn.textContent; btn.disabled = true; btn.textContent = 'Building…';
   try {
@@ -492,6 +497,7 @@ async function doExport(kind, btn) {
         { name: 'Inspection Notes.html', data: notesHTML(ins, names) },
         { name: 'inspection-backup.json', data: JSON.stringify({ app: 'uad36-inspect', version: 1, inspection: ins }) },
         ...(await photoEntries(ins, names, 'Photos/')),
+        ...(await originalEntries(ins, names, 'Photos – unblurred originals (workfile only)/')),
         { name: 'SFREP/' + base + '.xml', data: buildMISMO(ins, sNames) },
       ];
       for (const p of sfrepPhotos) { const rec = await DB.get('photos', p.id); if (rec) entries.push({ name: 'SFREP/Images/' + sNames.get(p.id), data: rec.blob }); }
@@ -522,8 +528,9 @@ async function restoreBackup(file) {
     for (const p of ins.photos) {
       const bytes = files.get('Photos/' + names.get(p.id)); if (!bytes) continue;
       const blob = new Blob([bytes], { type: 'image/jpeg' }); const { thumb } = await processImage(new File([blob], 'p.jpg', { type: 'image/jpeg' }));
+      const ob = files.get('Photos – unblurred originals (workfile only)/' + names.get(p.id));
       if (await DB.get('photos', p.id)) p.id = uid();
-      await DB.put('photos', { id: p.id, insId: ins.id, blob, thumb }); n++;
+      await DB.put('photos', ob ? { id: p.id, insId: ins.id, blob, thumb, original: new Blob([ob], { type: 'image/jpeg' }) } : { id: p.id, insId: ins.id, blob, thumb }); n++;
     }
     await DB.put('inspections', ins); toast(`Restored with ${n} photos`); openInspection(ins.id);
   } catch (e) { toast(e.message || 'Could not restore that file'); }

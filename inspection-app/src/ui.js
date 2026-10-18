@@ -805,6 +805,8 @@ async function openViewer(pid) {
     <div class="help">The label becomes the photo file name and the caption in SFREP (max 100 characters).</div>
     ${p.extra ? `<label class="dk-walk"><input type="checkbox" id="phRep" ${p.toReport ? 'checked' : ''}> <b>Send to SFREP</b> as an additional photo in this section</label>` : ''}
     <div id="phConfirm"></div>
+    ${isSketchPhoto(p) ? '' : `<div class="row"><button class="btn" id="phBlur">▦ Blur part of photo</button>${rec && rec.original ? '<button class="btn" id="phUnblur">Remove blur (use original)</button>' : ''}</div>
+    ${rec && rec.original ? '<div class="help">This photo is blurred. The blurred copy goes to SFREP and the report; the unblurred original stays on this iPad and goes only in the workfile package.</div>' : ''}`}
     <div class="row"><button class="btn primary" id="phSave">Save label</button><button class="btn danger" id="phDel">Delete photo</button><button class="btn" id="phClose">Close</button></div></div></div>`;
   document.body.appendChild(bg);
   const close = () => { URL.revokeObjectURL(url); bg.remove(); renderTab(); };
@@ -812,10 +814,95 @@ async function openViewer(pid) {
   $('#phClose', bg).onclick = close;
   const rp = $('#phRep', bg); if (rp) rp.onchange = () => { p.toReport = rp.checked; save(); toast(rp.checked ? 'This photo will go to SFREP' : 'Workfile only'); };
   $('#phSave', bg).onclick = () => { p.label = $('#phLabel', bg).value.trim() || p.label; p.autoLabel = false; save(); toast('Label saved'); close(); };
+  const bb = $('#phBlur', bg); if (bb) bb.onclick = () => { if (!rec) return toast('This photo is not on this iPad'); close(); openBlurEditor(pid); };
+  const ub = $('#phUnblur', bg); if (ub) ub.onclick = async () => { await unblurPhoto(pid); close(); openViewer(pid); };
   $('#phDel', bg).onclick = () => {
     $('#phConfirm', bg).innerHTML = `<div class="confirm">Delete this photo? <button class="btn danger solid sm" id="phDelYes">Delete</button></div>`;
     $('#phDelYes', bg).onclick = async () => { await DB.del('photos', pid); ins.photos = ins.photos.filter(x => x.id !== pid); await saveNow(); toast('Photo deleted'); close(); };
   };
+}
+/* ---------- blur tool: hide people, family photos, artwork, religious items, graffiti, personal items ---------- */
+// The blurred copy replaces the photo (SFREP, report, thumbnails). The unblurred original is kept in the same record
+// (rec.original) and is exported only in the workfile package. The blur is pixelate + box blur, so it cannot be undone from the file.
+const isSketchPhoto = p => p && p.sec === 'interior' && p.field === 'sketchImg';
+function boxBlur(id, w, h, r) { // separable running-sum box blur on ImageData, in place
+  if (r < 1) return; const d = id.data, tmp = new Uint8ClampedArray(d.length), n = r * 2 + 1;
+  for (let y = 0; y < h; y++) { const row = y * w * 4; for (let c = 0; c < 3; c++) { let sum = 0;
+    for (let i = -r; i <= r; i++) sum += d[row + Math.min(w - 1, Math.max(0, i)) * 4 + c];
+    for (let x = 0; x < w; x++) { tmp[row + x * 4 + c] = sum / n; sum += d[row + Math.min(w - 1, x + r + 1) * 4 + c] - d[row + Math.max(0, x - r) * 4 + c]; } }
+    for (let x = 0; x < w; x++) tmp[row + x * 4 + 3] = 255; }
+  for (let x = 0; x < w; x++) for (let c = 0; c < 3; c++) { let sum = 0;
+    for (let i = -r; i <= r; i++) sum += tmp[Math.min(h - 1, Math.max(0, i)) * w * 4 + x * 4 + c];
+    for (let y = 0; y < h; y++) { d[y * w * 4 + x * 4 + c] = sum / n; sum += tmp[Math.min(h - 1, y + r + 1) * w * 4 + x * 4 + c] - tmp[Math.max(0, y - r) * w * 4 + x * 4 + c]; } }
+}
+function makeBlurred(img, W, H) { // pixelate (downscale, upscale) then box blur
+  const blk = Math.max(12, Math.round(Math.max(W, H) / 55));
+  const sm = document.createElement('canvas'); sm.width = Math.max(1, Math.round(W / blk)); sm.height = Math.max(1, Math.round(H / blk));
+  const sg = sm.getContext('2d'); sg.imageSmoothingEnabled = true; sg.drawImage(img, 0, 0, sm.width, sm.height);
+  const out = document.createElement('canvas'); out.width = W; out.height = H; const g = out.getContext('2d');
+  g.imageSmoothingEnabled = false; g.drawImage(sm, 0, 0, W, H);
+  const id = g.getImageData(0, 0, W, H); boxBlur(id, W, H, Math.round(blk / 2)); g.putImageData(id, 0, 0); return out;
+}
+async function thumbFromCanvas(c) { const s = Math.min(1, 360 / Math.max(c.width, c.height)); const t = document.createElement('canvas'); t.width = Math.round(c.width * s); t.height = Math.round(c.height * s); t.getContext('2d').drawImage(c, 0, 0, t.width, t.height); return t.toDataURL('image/jpeg', 0.72); }
+async function blobImage(blob) { const u = URL.createObjectURL(blob); try { return await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => rej(new Error('The photo could not be opened')); i.src = u; }); } finally { setTimeout(() => URL.revokeObjectURL(u), 1000); } }
+async function unblurPhoto(pid) {
+  const ins = app.ins; const p = ins.photos.find(x => x.id === pid); const rec = await DB.get('photos', pid); if (!p || !rec || !rec.original) return;
+  const img = await blobImage(rec.original); const c = document.createElement('canvas'); c.width = img.naturalWidth; c.height = img.naturalHeight; c.getContext('2d').drawImage(img, 0, 0);
+  rec.blob = rec.original; delete rec.original; rec.thumb = await thumbFromCanvas(c); await DB.put('photos', rec);
+  thumbCache.set(pid, rec.thumb); delete p.blurred; await saveNow(); toast('Blur removed – the original photo is back');
+}
+async function openBlurEditor(pid) {
+  const ins = app.ins; const p = ins.photos.find(x => x.id === pid); const rec = await DB.get('photos', pid); if (!p || !rec) return;
+  let img; try { img = await blobImage(rec.blob); } catch (e) { return toast(e.message); }
+  const W = img.naturalWidth, H = img.naturalHeight; const blurred = makeBlurred(img, W, H);
+  const mask = document.createElement('canvas'); mask.width = W; mask.height = H; const mg = mask.getContext('2d');
+  const SIZES = { s: 0.025, m: 0.05, l: 0.1 }; let tool = 'm', strokes = [], cur = null;
+  const ed = document.createElement('div'); ed.className = 'blur-ed'; ed.setAttribute('role', 'dialog'); ed.setAttribute('aria-label', 'Blur part of photo');
+  ed.innerHTML = `<div class="blur-bar"><b>Blur:</b>
+    <button class="btn sm" data-bt="s">Brush small</button><button class="btn sm" data-bt="m">Brush medium</button><button class="btn sm" data-bt="l">Brush large</button><button class="btn sm" data-bt="rect">▭ Box</button>
+    <span class="sp"></span><button class="btn sm" id="blUndo">↶ Undo</button><button class="btn sm" id="blReset">Reset</button><button class="btn sm" id="blCancel">Cancel</button><button class="btn primary sm" id="blSave">Save blur</button></div>
+    <div class="blur-help">Paint over people, family photos, artwork, religious items, graffiti or personal items with your finger, or choose Box and drag a rectangle. The original stays in the workfile only.</div>
+    <div class="blur-wrap"><canvas></canvas></div>`;
+  document.body.appendChild(ed);
+  const cv = ed.querySelector('canvas'), g = cv.getContext('2d'); const tmp = document.createElement('canvas'); let sc = 1;
+  const fit = () => { const wr = ed.querySelector('.blur-wrap'); sc = Math.min(wr.clientWidth / W, wr.clientHeight / H); cv.width = Math.max(1, Math.round(W * sc)); cv.height = Math.max(1, Math.round(H * sc)); tmp.width = cv.width; tmp.height = cv.height; render(); };
+  const paint = (k, s) => { // draw a stroke onto the full-size mask
+    mg.fillStyle = mg.strokeStyle = '#000';
+    if (s.t === 'rect') { const x = Math.min(s.a[0], s.b[0]), y = Math.min(s.a[1], s.b[1]); mg.fillRect(x, y, Math.abs(s.b[0] - s.a[0]), Math.abs(s.b[1] - s.a[1])); return; }
+    mg.lineWidth = s.r * 2; mg.lineCap = mg.lineJoin = 'round'; mg.beginPath(); mg.moveTo(s.pts[0][0], s.pts[0][1]); s.pts.forEach(q => mg.lineTo(q[0], q[1])); if (s.pts.length === 1) mg.lineTo(s.pts[0][0] + 0.1, s.pts[0][1]); mg.stroke(); };
+  const rebuild = () => { mg.clearRect(0, 0, W, H); strokes.forEach(s => paint(mg, s)); if (cur) paint(mg, cur); };
+  let raf = 0; const render = () => { raf = 0; g.clearRect(0, 0, cv.width, cv.height); g.drawImage(img, 0, 0, cv.width, cv.height);
+    const t = tmp.getContext('2d'); t.globalCompositeOperation = 'source-over'; t.clearRect(0, 0, tmp.width, tmp.height); t.drawImage(blurred, 0, 0, tmp.width, tmp.height);
+    t.globalCompositeOperation = 'destination-in'; t.drawImage(mask, 0, 0, tmp.width, tmp.height); t.globalCompositeOperation = 'source-over'; g.drawImage(tmp, 0, 0);
+    if (cur && cur.t === 'rect') { g.strokeStyle = '#ff7a00'; g.lineWidth = 2; g.setLineDash([6, 4]); g.strokeRect(Math.min(cur.a[0], cur.b[0]) * sc, Math.min(cur.a[1], cur.b[1]) * sc, Math.abs(cur.b[0] - cur.a[0]) * sc, Math.abs(cur.b[1] - cur.a[1]) * sc); g.setLineDash([]); } };
+  const later = () => { if (!raf) raf = requestAnimationFrame(render); };
+  const at = e => { const r = cv.getBoundingClientRect(); return [(e.clientX - r.left) / sc, (e.clientY - r.top) / sc]; };
+  const setTool = t => { tool = t; ed.querySelectorAll('[data-bt]').forEach(b => b.classList.toggle('primary', b.dataset.bt === t)); };
+  setTool('m');
+  ed.querySelectorAll('[data-bt]').forEach(b => b.onclick = () => setTool(b.dataset.bt));
+  cv.addEventListener('pointerdown', e => { e.preventDefault(); cv.setPointerCapture(e.pointerId); const q = at(e);
+    cur = tool === 'rect' ? { t: 'rect', a: q, b: q } : { t: 'brush', r: Math.max(W, H) * SIZES[tool] / 2, pts: [q] }; if (cur.t === 'brush') paint(mg, cur); later(); });
+  cv.addEventListener('pointermove', e => { if (!cur) return; const q = at(e); if (cur.t === 'rect') { cur.b = q; rebuild(); } else { cur.pts.push(q); paint(mg, { ...cur, pts: cur.pts.slice(-2) }); } later(); });
+  const up = () => { if (!cur) return; if (cur.t !== 'rect' || (Math.abs(cur.b[0] - cur.a[0]) > 3 && Math.abs(cur.b[1] - cur.a[1]) > 3)) strokes.push(cur); cur = null; rebuild(); later(); };
+  cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
+  cv.style.touchAction = 'none';
+  const shut = () => { window.removeEventListener('resize', fit); ed.remove(); renderTab(); };
+  ed.querySelector('#blUndo').onclick = () => { if (!strokes.length) return toast('Nothing to undo'); strokes.pop(); rebuild(); later(); };
+  ed.querySelector('#blReset').onclick = () => { strokes = []; rebuild(); later(); };
+  ed.querySelector('#blCancel').onclick = shut;
+  ed.querySelector('#blSave').onclick = async () => {
+    if (!strokes.length) return toast('Paint over the part to blur first');
+    const btn = ed.querySelector('#blSave'); btn.disabled = true; btn.textContent = 'Saving…';
+    try {
+      const out = document.createElement('canvas'); out.width = W; out.height = H; const og = out.getContext('2d'); og.drawImage(img, 0, 0);
+      const bl = document.createElement('canvas'); bl.width = W; bl.height = H; const bg2 = bl.getContext('2d'); bg2.drawImage(blurred, 0, 0); bg2.globalCompositeOperation = 'destination-in'; bg2.drawImage(mask, 0, 0); og.drawImage(bl, 0, 0);
+      const blob = await new Promise(res => out.toBlob(res, 'image/jpeg', 0.86)); if (!blob) throw new Error('The blurred photo could not be made');
+      const fresh = await DB.get('photos', pid) || rec; if (!fresh.original) fresh.original = fresh.blob;
+      fresh.blob = blob; fresh.thumb = await thumbFromCanvas(out); await DB.put('photos', fresh);
+      thumbCache.set(pid, fresh.thumb); p.blurred = true; await saveNow(); toast('Blur saved – the original is kept for the workfile only'); shut(); openViewer(pid);
+    } catch (e) { btn.disabled = false; btn.textContent = 'Save blur'; toast('Could not save: ' + (e.message || e)); }
+  };
+  window.addEventListener('resize', fit); requestAnimationFrame(fit);
 }
 function photoWhere(ins, p) {
   if (p.list) { const l = ins.lists[p.list] || []; const i = l.findIndex(x => x.id === p.item); return LISTS[p.list].title + (i >= 0 ? ' › ' + LISTS[p.list].name(l[i], i, l) : ''); }
