@@ -218,12 +218,13 @@ function gridHTML(J) {
     </tbody></table></div>
     <div class="gsum"><div><span>Adjusted range</span><b>${adjs.length ? money(lo) + ' – ' + money(hi) : '–'}</b></div><div><span>Spread</span><b>${adjs.length > 1 ? money(hi - lo) + ' (' + ((hi - lo) / lo * 100).toFixed(1) + '%)' : '–'}</b></div><div><span>Median</span><b>${med ? money(med) : '–'}</b></div>
       <label><span>Your indicated value (sales comparison)</span><input class="txt" data-gvalue="1" value="${esc(blank(G.value) ? '' : G.value)}" placeholder="$" inputmode="decimal"></label></div>
-    <label class="fld"><span>Sales comparison comment (your words) ${cmtBtn('textarea[data-gnote]')}</span><textarea class="txt" rows="3" data-gnote="1">${esc(G.note || '')}</textarea></label>
+    <label class="fld"><span>Sales comparison comment (your words) ${cmtBtn('textarea[data-gnote]')}</span><textarea class="txt" rows="3" data-gnote="1">${esc(G.note || '')}</textarea></label><div class="charct" id="gnoteCt">${scCount(G.note)}</div>
     ${draftHTML(J)}
     <div class="row"><button class="btn sm" data-gtiers="1">Add the low / mid / high rating tiers to the comment</button><button class="btn sm" data-act="savealldb">Save these comps to my comp database (with your tiers)</button></div>
     ${reviewHTML(J)}${sensHTML(J)}`;
 }
 
+const scCount = t => { const n = String(t || '').length; return `${n.toLocaleString()} of 10,000 characters (UAD 3.6 limit)${n > 10000 ? ` – <b class="over">${(n - 10000).toLocaleString()} over</b>` : ''}`; };
 /* low / mid / high within a UAD rating – on her grid and in her comments, never in the UAD fields */
 function fineSel(who, k, J) { const v = fineOf(J, who, k); const set = ((G0(J).fine || {})[who] || {})[k], fromA = !set && fineArch(J, who, k); return ` <select class="fine${fromA ? ' arch' : ''}" data-gfine="${who}|${k}" title="${fromA ? 'From your archive note – change it if you see it differently' : 'Where it sits within the UAD rating'}">${['low', 'mid', 'high'].map(x => `<option value="${x}" ${x === v ? 'selected' : ''}>${x}</option>`).join('')}</select>`; }
 function tiersText(J) { const S = subjFacts(J); const one = (F, who) => ['q', 'c'].filter(k => F[k]).map(k => `${fineOf(J, who, k)} ${String(F[k]).match(/[QC]\d/i) ? String(F[k]).match(/[QC]\d/i)[0].toUpperCase() : F[k]}`).join(' / ');
@@ -414,7 +415,7 @@ async function buildFullReport(J) {
   // value and comment
   const G = G0(J); const VR = child(VA, 'VALUATION_REPORT');
   if (!blank(G.value) || G.note) { const sca = child(child(VR, 'APPROACH_TO_VALUE'), 'SALES_COMPARISON_APPROACH'); const det = child(sca, 'SALES_COMPARISON_APPROACH_DETAIL');
-    if (G.note) leaf(det, 'SalesComparisonCommentDescription', G.note.slice(0, 5000)); if (!blank(G.value)) leaf(det, 'ValueIndicatedBySalesComparisonAmount', Math.round(num(G.value))); }
+    if (G.note) leaf(det, 'SalesComparisonCommentDescription', G.note.slice(0, 10000)); if (!blank(G.value)) leaf(det, 'ValueIndicatedBySalesComparisonAmount', Math.round(num(G.value))); }
   writeReportXML(sub, NS, J, SUBJ, VA, SVC);   // assignment, legal, zoning, H&BU, market, contract, value (report.js)
   const xml = '<?xml version="1.0" encoding="UTF-8"?>\n<!--Subject from the UAD Field Inspection app, comps and adjustment grid from Comp Genie, for import into Appraise-It Pro (Home > Import Forms).-->\n' + new XMLSerializer().serializeToString(sub.documentElement);
   const entries = [{ name: jobBase() + ' - Full report.xml', data: xml }];

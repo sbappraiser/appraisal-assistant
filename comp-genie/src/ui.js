@@ -515,6 +515,7 @@ document.addEventListener('click', async e => {
 });
 document.addEventListener('toggle', e => { if (e.target.dataset && e.target.dataset.revopen) app.revOpen = e.target.open; }, true);
 document.addEventListener('change', async e => {
+  if (e.target.dataset && e.target.dataset.drshort) { DR.forceShort = e.target.checked; DR.text = drBuild(app.job); if (!e.target.checked && DR.text.length > 10000) DR.text = drBuild(app.job); renderKeepFocus(); return; }
   if (e.target.dataset && e.target.dataset.revdone) { const J = app.job; J.revDone = J.revDone || {}; J.revDone[e.target.dataset.revdone] = e.target.checked; save(); await precheckRun(J, app.pre && app.pre.wantExport); renderKeepFocus(); return; }
   if (e.target.dataset && e.target.dataset.revon) { await revLoad(); const r = REVLOG.find(x => x.id === e.target.dataset.revon); if (r) r.on = e.target.checked; await revSave(); return; }
   const t = e.target;
@@ -558,7 +559,8 @@ document.addEventListener('change', async e => {
     save(); renderKeepFocus(); return; }
 });
 document.addEventListener('input', e => {
-  if (e.target.id === 'drText') { DR.text = e.target.value; return; }
+  if (e.target.id === 'drText') { DR.text = e.target.value; const c = $('#drCt'); if (c) c.innerHTML = scCount(DR.text); return; }
+  if (e.target.dataset && e.target.dataset.gnote) { const c = $('#gnoteCt'); if (c) c.innerHTML = scCount(e.target.value); }
   const t = e.target; if (t.id !== 'addr') return;
   const s = archiveSuggest(t.value); const box = $('#sugg');
   const cortHits = t.value.trim().length > 3 ? app.cort.filter(r => r.addr && r.addr.toLowerCase().startsWith(t.value.trim().toLowerCase())).slice(0, 4) : [];
