@@ -65,6 +65,7 @@ async function renderHome() {
     </form>
     ${!DB.persistent ? '<p class="warn-box">This browser is not letting the app save to the iPad. Open the app from its Home Screen icon so inspections are kept.</p>' : ''}
     <div class="cards">${all.map(i => safeCard(i)).join('') || '<p class="help">No inspections yet. Start one above; everything you enter saves to this iPad as you go, with or without a signal.</p>'}</div>
+    <p class="app-ver">Version ${typeof BUILD !== 'undefined' ? esc(BUILD) : '?'}</p>
   </main>`;
   $('#newForm').onsubmit = async e => {
     e.preventDefault(); const a = $('#nAddr').value.trim(), f = $('#nFile').value.trim(); if (!a || !f) return;

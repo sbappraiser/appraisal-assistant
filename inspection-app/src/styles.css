@@ -364,3 +364,4 @@ html.testcopy .bar { border-bottom-color: #7b2cbf; }
 .blur-help { color: #fff; font-size: 14px; padding: 6px 12px; }
 .blur-wrap { flex: 1; min-height: 0; display: grid; place-items: center; padding: 8px; }
 .blur-wrap canvas { touch-action: none; display: block; background: #000; }
+.app-ver{text-align:center;color:#8a8a8a;font-size:13px;margin:28px 0 12px}
