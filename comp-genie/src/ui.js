@@ -252,6 +252,7 @@ function render() {
   <div id="detail">${app.sel ? detailHTML(J.comps.find(c => c.id === app.sel)) : ''}</div>
   <section class="card" id="gridCard">${gridHTML(J)}</section>
   <section class="card" id="nuCard">${notUsedHTML(J)}</section>
+  <section class="card" id="timeCard">${timeHTML(J)}</section>
   <section class="card" id="reportCard">${reportHTML(J)}</section>
   <section class="card" id="exportCard"><h2>Export</h2>${exportHTML(J)}</section>
   <footer class="foot">Comp Genie · your data stays on this computer · build ${typeof BUILD !== 'undefined' ? BUILD : ''}</footer>`;
@@ -277,7 +278,7 @@ function renderParts(opts = {}) {
   const cc = $('#compsCard'); if (cc) { cc.innerHTML = compsCardHTML(J); fillImages(cc); }
   const ex = $('#exportCard'); if (ex) ex.innerHTML = '<h2>Export</h2>' + exportHTML(J);
   if (opts.grid !== false) { const gc = $('#gridCard'); if (gc) gc.innerHTML = gridHTML(J); }
-  { const nc = $('#nuCard'); if (nc) nc.innerHTML = notUsedHTML(J); }
+  { const nc = $('#nuCard'); if (nc) nc.innerHTML = notUsedHTML(J); const tc = $('#timeCard'); if (tc) tc.innerHTML = timeHTML(J); }
   if (opts.field && app.sel) { // one row of the field-by-field table
     const c = J.comps.find(x => x.id === app.sel); const f = FIELD[opts.field]; const u = val(c, f.k);
     const inp = document.querySelector(`[data-edit="${f.k}"]`); const row = inp && inp.closest('tr');
@@ -432,6 +433,8 @@ document.addEventListener('click', async e => {
     if (gb.dataset.gokstd) G.ok[gb.dataset.gokstd] = 'Lack of more similar sales; non-conforming market segment – expected (see sales comparison comment).';
     if (gb.dataset.glimnote || gb.dataset.gokstd) { if (!(G.note || '').includes(LIMIT_TEXT.slice(0, 60))) G.note = [(G.note || '').trim(), LIMIT_TEXT].filter(Boolean).join(' '); }
     save(); renderKeepFocus(); toast('Added to the sales comparison comment – read it over'); return; }
+  const tu = e.target.closest('[data-tsuse]');
+  if (tu) { const G = G0(app.job); G.rates.timePct = +tu.dataset.tsuse; G.rateFrom = G.rateFrom || {}; G.rateFrom.timePct = 'market conditions support: ' + tu.dataset.tslabel; save(); renderKeepFocus(); toast('Sale date line: ' + tu.dataset.tsuse + '% per month – every comp is recalculated'); return; }
   const nb = e.target.closest('[data-rmnu],[data-rmdb],[data-savedb],[data-nuback]');
   if (nb) { const id = nb.dataset.rmnu || nb.dataset.rmdb || nb.dataset.savedb || nb.dataset.nuback; const c = app.job.comps.find(x => x.id === id); if (!c) return;
     if (nb.dataset.rmnu) { markNotUsed(c); app.nuAsk = c.id; app.confirm = null; save(); render(); toast('Kept as analyzed – not used. Pick the reason below the grid.'); return; }
@@ -464,6 +467,7 @@ document.addEventListener('click', async e => {
     case 'close': app.sel = null; render(); break;
     case 'backup': backupJob(); break;
     case 'nuok': app.nuAsk = null; render(); break;
+    case 'ts-run': { toast('Measuring time from your groups…'); await new Promise(r => setTimeout(r, 30)); app.job.timeSupport = await tsRun(app.job); save(); renderKeepFocus(); break; }
     case 'savealldb': { const L = app.job.comps.filter(c => c.use || c.notUsed); let n = 0; for (const c of L) n = await saveToMyDb(c); toast(L.length ? `${L.length} comps saved to your comp database (${n} saved in all) – with your tiers` : 'No comps on the grid yet'); break; }
     case 'starts-use': { const n = startsUse(app.job); save(); renderKeepFocus(); toast(n ? n + ' rate' + (n > 1 ? 's' : '') + ' filled from your starting points – change any of them' : 'Your rates are already filled – clear one to use the starting point'); break; }
     case 'starts-edit': app.startsEdit = !app.startsEdit; renderKeepFocus(); break;
