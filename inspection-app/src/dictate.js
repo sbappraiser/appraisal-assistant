@@ -25,6 +25,9 @@ const DICT_PRE = [ // numbers, ratings, levels, counts – turned into one word 
   [/\b(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\b/g, (m, w) => String(NUMW[w])], [/\b(first|second|third|fourth|fifth)\b/g, (m, w) => ORDW[w]],
   [/\b(\d)\.5\s+bath(?:room)?s?\b/g, 'bathcount$1 halfcount1'], [/\b(\d)\s+and a half\s+bath(?:room)?s?\b/g, 'bathcount$1 halfcount1'],
   [/\b([1-9])\s+half\s+bath(?:room)?s?\b/g, dkCount('halfcount')], [/\b([1-9])\s+(?:full\s+)?bath(?:room)?s\b/g, dkCount('bathcount')], [/\b(1)\s+(?:full\s+)?bath(?:room)?\b(?=\s*(?:and|,|$|\.))/g, dkCount('bathcount')], [/\b([1-9])\s+bedrooms?\b/g, dkCount('bedcount')],
+  [/\b(?:front door|front entry|entry door|front entrance|threshold|entry)\b(?:\s+(?:is|sits|elevation|height|threshold|about|approximately|around|roughly|at))*\s+(\d+(?:\.\d+)?|a)\s*(feet|foot|ft|inches|inch)\b(?:\s+(?:above|off|from)\s+(?:the\s+)?(?:grade|ground|finished grade))?/g, (m, n, u) => 'frontelev' + Math.round((n === 'a' ? 1 : +n) * (/^in/.test(u) ? 1 : 12))],
+  [/\b(\d{1,2})\s+steps?\s+(?:up\s+)?(?:to\s+)?(?:the\s+)?(?:front door|entry|front entry|threshold)\b/g, (m, n) => 'frontelev' + (+n * 7)],
+  [/\b(?:front door|front entry|entry door|threshold|entry)\b(?:\s+(?:is|sits|at))*\s+(?:at\s+)?(?:ground level|grade level|grade|ground)\b/g, 'frontelev0'],
   [/\b(\d{1,2})\s*(?:foot|feet|ft)\s+(?:high\s+|tall\s+)?((?:(?:vaulted|beamed|beam|coffered|tray|open|flat|wood|tongue and groove)\s+){1,3})ceilings?\b/g, 'ceilht$1 $2ceiling'],
   [/\b([qc])\.\s*(\d)/g, '$1$2'], [/\b(?:q|queue|cue|kyu|que)\s*-?\s*([1-6])\b/g, 'qrate$1'], [/\bc\s*-?\s*([1-6])\b/g, 'crate$1'],
   [/\bquality\s+(?:rating\s+)?(?:of\s+|is\s+)?([1-6])\b/g, 'quality qrate$1'], [/\bcondition\s+(?:rating\s+)?(?:of\s+|is\s+)?([1-6])\b/g, 'condition crate$1'],
@@ -207,6 +210,25 @@ const CEIL_CODE = n => n === '2story' ? 'TwoOrMoreStories' : +n < 7 ? 'LessThanS
 const roomName = r => r.label || (r.list === 'rooms' ? r.type : r.list === 'kitchens' ? (r.style || 'Kitchen') : r.list === 'baths' ? (r.kind === 'HalfBathroom' ? 'Half bath' : 'Bath') : ROOM_TITLE[r.list]);
 
 /* ---- read what she said ---- */
+/* ---- her inspection notes offered next to the matching comment box on the Summaries tab (6r); nothing is added until she taps it ---- */
+const DK_NOTE_MAP = { exterior: ['front.note', 'exterior.note'], interior: ['interior.note', 'systems.note', 'L:rooms', 'L:bedrooms', 'L:baths', 'L:kitchens', 'L:wetbars'],
+  vehicle: ['garage.note', 'driveway.note'], amenities: ['amenities.note', 'L:outdoorLiving', 'L:waterFeatures'], siteFeatures: ['site.note', 'street.note'], outbuilding: ['L:outbuildings'], adu: ['L:adus'] };
+function dkNoteSugg(ins, id) {
+  const src = DK_NOTE_MAP[id]; if (!src) return '';
+  const have = ((ins.comments[id] || '') + ' ' + (ins.finals[id] || '')).toLowerCase(); const out = [];
+  const addText = (t, who) => String(t || '').split(/\n+|(?<=[.!?])\s+/).map(x => x.trim()).filter(x => x.length > 3 && !/\(report: [QC]\d\)/.test(x)).forEach(x => { if (!have.includes(x.toLowerCase()) && !out.some(o => o.t === x)) out.push({ t: x, who }); });
+  src.forEach(k => { if (k.startsWith('L:')) { const L = k.slice(2); (ins.lists[L] || []).forEach((it, i) => it.note && addText(it.note, LISTS[L].name(it, i, ins.lists[L]))); }
+    else { const [sec, f] = k.split('.'); const d = ins.data[sec] || {}; if (d[f]) addText(d[f], (SECTIONS.find(x => x.id === sec) || {}).title); } });
+  if (!out.length) return '';
+  return `<div class="dk-sugg"><div class="flabel"><span class="tag">From your notes</span><span class="lab">Tap a line to add it to your comment – then read it over</span></div>
+    ${out.map(o => `<button class="dk-sg" data-addnote="${id}" data-text="${esc(o.t)}"><small>${esc(o.who || '')}</small> ${esc(o.t)}</button>`).join('')}
+    ${out.length > 1 ? `<button class="btn sm" data-addallnotes="${id}">Add all ${out.length}</button>` : ''}</div>`;
+}
+
+/* ---- walk-through mode (6r): kept on this iPad ---- */
+function dkWalk() { try { return localStorage.getItem('uad-dk-walk') === '1'; } catch (e) { return false; } }
+function dkSetWalk(on) { try { localStorage.setItem('uad-dk-walk', on ? '1' : '0'); } catch (e) {} }
+
 /* ---- words she has taught it (6q): "when the iPad writes X, I mean Y" – kept on this iPad for every inspection ---- */
 const DK_TEACH_KEY = 'uad-dk-teach';
 function dkTeachList() { try { const a = JSON.parse(localStorage.getItem(DK_TEACH_KEY) || '[]'); return Array.isArray(a) ? a.filter(x => x && x.heard) : []; } catch (e) { return []; } }
@@ -232,7 +254,7 @@ function dictParse(text, ins) {
   const report = new Set(); let inRep = false;
   sentW.forEach((ws, k) => { const w = ws.map(t => t.w).join(' '); if (REPORT_RX.test(w)) inRep = true; else if (inRep && !UPDATE_RX.test(w)) inRep = false; if (inRep && ws.length) report.add(k); });
   T.forEach((t, j) => { if (report.has(sentOf[j])) t.rep = true; });
-  const SPECIAL = /^(qrate|crate)[1-6]$|^ceilht(\d+|2story)$|^stories[1-4]$|^garcar[1-9]$|^islands[1-9]$|^fpcount[1-9]$|^bedcount[1-9]$|^bathcount[1-9]$|^halfcount[1-9]$|^lvl(\d|b1)$|^fireplace$/;
+  const SPECIAL = /^(qrate|crate)[1-6]$|^ceilht(\d+|2story)$|^stories[1-4]$|^garcar[1-9]$|^islands[1-9]$|^fpcount[1-9]$|^bedcount[1-9]$|^bathcount[1-9]$|^halfcount[1-9]$|^lvl(\d|b1)$|^fireplace$|^frontelev\d+$/;
   // pass 1: longest match wins; on a tie: room > item > area > cue > value
   const marks = []; let tabs = [], pref = [], inside = false;
   for (let i = 0; i < n; i++) { const t = T[i]; if (t.br || t.rep) continue;
@@ -310,6 +332,8 @@ function dictParse(text, ins) {
         const pre = T[m.i - 1], post = T[m.i + 1]; const fine = pre && !pre.br && /^(low|high|mid|middle|solid|strong|weak|upper|lower)$/.test(pre.s) ? pre.w + ' ' + R : post && !post.br && /^(plus|minus)$/.test(post.s) ? R + ' ' + post.w : null;
         if (fine) { (pre && fine.startsWith(pre.w) ? pre : post).item = true; put({ ext: 'front.note', int: 'interior.note', all: 'condition.supp' }[where], { ext: 'Exterior', int: 'Interior', all: 'Overall' }[where] + (s[0] === 'q' ? ' quality ' : ' condition ') + fine + ' (report: ' + R + ').'); }
         return; }
+      if (/^frontelev/.test(s)) { const inch = +s.slice(9); const B = ['UpToOneFoot', 'OneToTwoFeet', 'TwoToThreeFeet', 'ThreeToFourFeet', 'FourToFiveFeet', 'FiveToSixFeet', 'SixToSevenFeet', 'SevenToEightFeet', 'EightToNineFeet', 'NineToTenFeet'];
+        put('front.frontElev', inch <= 0 ? 'GroundLevel' : inch >= 120 ? 'TenOrMoreFeet' : B[Math.ceil(inch / 12) - 1]); return; }
       if (/^ceilht/.test(s)) { put('interior.ceilH', CEIL_CODE(s.slice(6))); return; }
       if (/^stories/.test(s)) { put('front.stories', +num); return; }
       if (/^garcar/.test(s)) { const nx = T.slice(m.i + 1, m.i + 3).map(t => t.s); if (nx.includes('carport')) put('garage.carport', +num); else { put('garage.hasGarage', true); put('garage.garSpaces', +num); } return; }
@@ -383,11 +407,24 @@ function dictParse(text, ins) {
   T.forEach((t, j) => { if (t.br || t.rep || t.item) return; const mk = marks.find(m => j >= m.i && j < m.i + m.len); if (mk && !mk.unused) return; if (!sub(t)) return;
     left.push(t.w); const k = sentOf[j]; if (noted.has(k)) return; noted.add(k); const st = stAt(j);
     if (mk && mk.negSec) put(NOTE_KEY[mk.negSec], sentText(k)); else if (st.room !== null && LISTS[rooms[st.room].list].fields.some(f => f.k === 'note')) put('L:' + rooms[st.room].list + '.note', sentText(k), st.room); else put(NOTE_KEY[st.tabs[0]] || 'front.note', sentText(k)); });
+  { const fw = T.filter(t => !t.rep && !t.br).map(t => t.s).join(' ');
+    if (/\b(?:oceanfront|beachfront|lakefront|creekfront|waterfront|water frontage|ocean frontage|beach frontage|on the (?:ocean|beach|lake|creek))\b/.test(fw)) {
+      put('site.influences', 'BodyOfWater'); const wb = /ocean|beach/.test(fw) ? 'Ocean' : /lake/.test(fw) ? 'Lake' : /creek/.test(fw) ? 'Creek' : null; if (wb) put('site.water', wb); put('site.waterPrivate', true);
+      if (/\bbeach\b|beachfront/.test(fw)) put('site.waterFeat', 'Beach'); if (/seawall|bulkhead/.test(fw)) put('site.waterFeat', 'SeawallOrBulkhead'); if (/riprap|rip rap/.test(fw)) put('site.waterFeat', 'Riprap'); if (/\bdock\b/.test(fw)) put('site.waterFeat', 'Dock');
+      if (/\bdeeded\b/.test(fw)) put('site.waterRights', 'Deeded'); } }
   // her rule (Oct 2026): if she does not say a defect there is no defect → the defect questions are answered No (she can change them in the list)
   const DEFECT_RX = /\b(?:defects?|damaged?|cracks?|cracked|cracking|leaks?|leaking|rot|rotted|rotting|termites?|broken|peeling|deferred maintenance|needs? (?:repair|replacing|replacement)|water stains?|mold|mildew|missing|inoperable|not working)\b/;
   const defectSaid = sentW.some((ws, k) => { if (report.has(k)) return false; const w = ws.map(t => t.w).join(' ').replace(/\bno (?:visible |apparent |observed |known )?(?:defects?|damage)\b/g, ''); return DEFECT_RX.test(w); });
   if (!defectSaid) [['site', 'siteDefects'], ['exterior', 'extDefects'], ['interior', 'intDefects'], ['amenities', 'amenDefects'], ['garage', 'vsDefects']].forEach(([sec, k]) => {
     if (ins && ins.data[sec] && ins.data[sec][k] !== undefined) return; put(sec + '.' + k, false); const c = changes.get(sec + '.' + k); if (c) c.auto = 'You did not mention a defect'; });
+  // the same rule for yes/no questions she would only mention when the answer is yes
+  { const fw = T.filter(t => !t.rep && !t.br).map(t => t.w).join(' '); const unset = (sec, k) => !(ins && ins.data[sec] && ins.data[sec][k] !== undefined) && !changes.has(sec + '.' + k);
+    const no = (sec, k, why) => { if (!unset(sec, k)) return; put(sec + '.' + k, false); const c = changes.get(sec + '.' + k); if (c) c.auto = why; };
+    const garage = changes.has('garage.hasGarage') || !!(ins && ins.data.garage && ins.data.garage.hasGarage);
+    if (garage && !/convert/i.test(fw)) no('garage', 'garConverted', 'You did not mention a garage conversion');
+    if (garage && !/tandem/i.test(fw)) no('garage', 'garTandemYN', 'You did not mention tandem parking');
+    if (rooms.length && !/non ?continuous|separate (?:living|unit)|not connected/i.test(fw)) no('interior', 'noncont', 'You did not mention a noncontinuous area');
+    if (T.length && !/\b(?:55|age[- ]restrict|senior community)/i.test(fw)) no('site', 'ageRestr', 'You did not mention an age restriction'); }
   // a field she filled implies the yes/no above it (garage features → has a garage); then drop anything the tab would not show
   const has = re => [...changes.values()].some(c => c.room === undefined && re.test(c.key));
   if (has(/^garage\.(garAttach|garFinish|garFeat|garSpaces|garConverted)$/)) put('garage.hasGarage', true);
@@ -567,11 +604,13 @@ function renderDictate() {
     '<b>' + esc(it.label || labelOf(LISTS[it.list].fields[0].o, it.type) || it.type) + '</b>' + [it.permitted ? ' · permitted: ' + esc(it.permitted) : '', it.material ? ' · ' + esc(labelOf(LISTS.outdoorLiving.fields[2].o, it.material) || it.material) : '', it.mat ? ' · ' + esc(it.mat) : '', it.feat.length ? ' · ' + esc(it.feat.join(', ')) : '', it.note ? ' · ' + esc(it.note) : ''].join(''), '')).join('') : '';
   const any = R && (R.changes.length || R.items.length || R.rooms.length);
   return `<section class="group open"><div class="ghead static"><span class="gtitle">Dictate your notes</span></div><div class="exp">
+    <label class="dk-walk"><input type="checkbox" id="dkWalk" ${dkWalk() ? 'checked' : ''}> <b>Walk-through mode</b> – show only Dictate, Photos and Needs Attention while I walk the property</label>
     <details class="dk-how"><summary>How to dictate (tap to open)</summary>
     <p class="help">Say the area or room first, then what you see, the way you walk it. For example: <i>“Exterior 2 story Spanish stucco clay tile roof copper gutters wood clad dual pane windows slab foundation. Exterior quality Q4 condition C3. 2 car attached garage. View residential full neutral. Topography level lot. Interior 9 foot ceilings recessed lighting. Forced air gas heating, central air, tankless water heater. Living room hardwood floors vaulted ceiling gas fireplace. Kitchen remodeled 5 to 10 years ago granite counters shaker cabinets Wolf range Sub-Zero refrigerator island with seating. Upstairs primary bedroom carpet walk-in closet. Primary bath double sink freestanding tub separate shower frameless glass. Bedroom 2 carpet. Hall bath tub shower combo tile surround. Interior quality Q3 condition C2. Overall quality Q4 condition C3.”</i></p>
     <p class="help">Tap in the box, then the <b>microphone on the iPad keyboard</b>, and talk.${DICT_SR ? ' Or use Listen.' : ''} You can dictate a little at a time: check it, save it to the appraisal file, then dictate the next part. Say “upstairs” or “level 2” before the rooms on that floor. When you finish, tap <b>1. Sort my notes</b> to see where each thing will go, then <b>2. Save to appraisal file</b>. Nothing is saved into the tabs until you tap Save.</p>
     <p class="help"><b>Photos:</b> say the room or area, then tap <b>Take photo</b> – it is labeled for the last room or area you named (shown next to the button; pick another place if it is wrong). <b>If you do not mention a defect, the defect questions are answered No</b>; if you do not mention a pool, spa, court, ADU or outbuilding, none is added.</p>
-    <p class="help"><b>Accept:</b> after each area or room, say <b>“accept”</b> or tap <b>✓ Accept</b> – that ends the sentence and shows what I heard. Say <b>“scratch that”</b> to drop the sentence you are on.</p></details>
+    <p class="help"><b>Accept:</b> after each area or room, say <b>“accept”</b> or tap <b>✓ Accept</b> – that ends the sentence and shows what I heard. Say <b>“scratch that”</b> to drop the sentence you are on.</p>
+    <p class="help"><b>Easy to forget:</b> front door height – say “front door 2 feet above grade”, “3 steps up to the front door” or “entry at ground level”. Water – say “oceanfront with a beach and seawall, deeded access”; measure the frontage at the office from the plat or satellite. After you save, the orange <b>Before you leave</b> box lists what UAD still needs from the property.</p></details>
     <textarea class="txt dk-box" id="dkText" rows="7" spellcheck="true" autocorrect="on" autocapitalize="sentences" placeholder="Tap here, then the microphone on the keyboard">${esc((app.dict && app.dict.text) || ins.dictDraft || '')}</textarea>
     <div class="dk-bar"><button class="btn primary" id="dkAccept">✓ Accept</button><button class="btn" id="dkBkW">⌫ Word</button><button class="btn" id="dkBkS">⌫ Sentence</button><button class="btn" id="dkTeach">🎓 Teach</button></div>
     <div class="dk-teach" id="dkTeachBox" hidden>${dkTeachHtml()}</div>
@@ -579,6 +618,7 @@ function renderDictate() {
     <p class="help dk-saved">What you dictate is kept with this inspection until you tap Save to appraisal file or Clear, even if you close the app.</p>
     <div class="row">${DICT_SR ? `<button class="btn" id="dkListen">${app.dict && app.dict.listening ? '■ Stop' : '🎤 Listen'}</button>` : ''}<button class="btn primary" id="dkRead">1. Sort my notes</button><button class="btn" id="dkCopy">Copy text</button><button class="btn" id="dkMail">Email it</button><button class="btn ghost" id="dkClear">Clear</button></div>
     <div class="dk-cam" id="dkCamBar">${dkCamBar()}</div>
+    ${R ? '' : `<div id="dkLeaveBox">${dkLeaveHtml(ins)}</div>`}
     ${R ? `<h3 class="dk-h">What I heard</h3>
       ${any ? '' : '<p class="help">Nothing I recognize yet.</p>'}
       ${secRows}${roomRows ? `<h4 class="dk-h4">Rooms</h4>${roomRows}` : ''}${itemRows ? `<h4 class="dk-h4">Outdoor</h4>${itemRows}` : ''}
@@ -593,6 +633,22 @@ function dkTeachHtml() {
   return `<p class="help">Select the wrong word in the box (or it uses the last word), then type what you meant. From now on it reads it your way, on every inspection on this iPad.</p>
     <div class="dk-trow"><label>When the iPad writes<input class="txt" id="dkTh" autocapitalize="none" autocorrect="off"></label><label>I mean<input class="txt" id="dkTm" autocapitalize="none" autocorrect="off" placeholder="e.g. : or Tuff Shed"></label><button class="btn primary" id="dkTsave">Save</button></div>
     ${L.length ? `<div class="dk-tlist"><b>Your words (${L.length})</b>${L.map((x, i) => `<div class="dk-titem"><span>“${esc(x.heard)}” → “${esc(x.meant)}”</span><button class="btn sm ghost" data-dktdel="${i}">✕</button></div>`).join('')}</div>` : ''}`;
+}
+/* ---- before you leave (6r): what UAD still needs, split into "at the property" and "can wait for the office" ---- */
+const DK_OFFICE_TABS = new Set(['property', 'project', 'condition', 'summaries', 'export']);
+const dkOffice = x => DK_OFFICE_TABS.has(x.tab) || /^(word:|lim:|hold:|enf:|condotel|vc:|ea:|skimg)/.test(x.key) || /zoning|flood|census|parcel|legal description|water frontage|plat/i.test(x.label);
+function dkLeaveHtml(ins) {
+  if (typeof computeIssues !== 'function') return '';
+  const all = computeIssues(ins).filter(x => !ins.overrides[x.key] && (x.sev === 'Required' || x.sev === 'Photo' || /^measure:/.test(x.key)));
+  const here = all.filter(x => !dkOffice(x)), office = all.filter(x => dkOffice(x));
+  const title = id => { const t = ALL_TABS_FULL().find(t => t.id === id) || SECTIONS.find(s => s.id === id); return t ? t.title.replace(/^🎤 /, '') : id; };
+  const groups = list => { const by = new Map(); list.forEach(x => { const k = x.tab; if (!by.has(k)) by.set(k, []); by.get(k).push(x); }); return [...by.entries()]; };
+  const line = x => `<button class="dk-lv ${x.photo ? 'ph' : ''}" data-lvtab="${esc(x.tab)}" data-lvanchor="${esc(x.anchor || '')}" data-lvgroup="${esc(x.group || '')}">${x.photo ? '📷 ' : /^measure:/.test(x.key) ? '📏 ' : '• '}${esc(x.label.replace(/^Measure for SFREP: /, 'Measure: '))}</button>`;
+  const block = list => groups(list).map(([tab, xs]) => `<div class="dk-lvg"><b>${esc(title(tab))}</b> <small>(${xs.length})</small><div>${xs.slice(0, 12).map(line).join('')}${xs.length > 12 ? `<button class="dk-lv more" data-lvtab="${esc(tab)}">+ ${xs.length - 12} more on that tab</button>` : ''}</div></div>`).join('');
+  return `<section class="dk-leave" id="dkLeave"><h3 class="dk-h">${here.length ? `Before you leave: ${here.length} still needed here` : '✓ Nothing left that needs the property'}</h3>
+    ${here.length ? `<p class="help">Tap one to go to it. 📷 = photo, 📏 = measure, • = a question.</p>${block(here)}` : '<p class="help">Everything that needs you on site is done. Recheck after any change.</p>'}
+    ${office.length ? `<details class="dk-office"><summary>Can wait for the office: ${office.length} (assignment, zoning, water frontage from the plat or satellite, comments…)</summary>${block(office)}</details>` : ''}
+    <div class="row"><button class="btn" id="dkLvRefresh">↻ Check again</button><button class="btn" data-lvtab="attention">Open Needs Attention</button></div></section>`;
 }
 function dkFeedHtml() {
   const F = (app.dict && app.dict.feed) || []; if (!F.length) return '';
@@ -658,6 +714,11 @@ function bindDictate(root) {
       catch (e) { toast('Could not save that photo. Try again.'); }
       app.dict.camSlot = null; camRefresh(); }; }); };
   bindCam();
+  const bindLeave = () => { root.querySelectorAll('[data-lvtab]').forEach(b => b.onclick = () => goTab(b.dataset.lvtab, b.dataset.lvanchor || undefined, b.dataset.lvgroup || undefined));
+    const rf = root.querySelector('#dkLvRefresh'); if (rf) rf.onclick = () => { const bx = root.querySelector('#dkLeaveBox'); if (bx) { bx.innerHTML = dkLeaveHtml(app.ins); bindLeave(); } toast('Checked'); }; };
+  bindLeave();
+  // walk-through mode: only Dictate, Photos and Needs Attention tabs show
+  const wk = root.querySelector('#dkWalk'); if (wk) wk.onchange = () => { dkSetWalk(wk.checked); refreshChrome(); toast(wk.checked ? 'Walk-through mode on – only Dictate, Photos and Needs Attention show' : 'All tabs are back'); };
   const bodyText = () => { const t = box.value.trim(); const R = app.dict.res; const TL = dkTeachList(); return t + (R ? '\n\n--- What the app heard ---\n' + dkSummary(R, app.ins) : '') + (TL.length ? '\n\n--- Words I taught it ---\n' + TL.map(x => x.heard + ' => ' + x.meant).join('\n') : ''); };
   root.querySelector('#dkCopy').onclick = async () => { const t = bodyText(); if (!t) return toast('Nothing to copy yet');
     try { await navigator.clipboard.writeText(t); toast('Copied – paste it into an email or a message'); } catch (e) { box.focus(); box.select(); toast('Tap Copy on the menu that appears'); } };
@@ -683,7 +744,7 @@ function bindDictate(root) {
     R.changes.forEach((c, i) => pick.c[i] = P.c[i] !== false && (c.room === undefined || P.r[c.room] !== false)); R.items.forEach((x, i) => pick.i[i] = P.i[i] !== false); R.rooms.forEach((x, i) => pick.r[i] = P.r[i] !== false);
     dictApply(app.ins, R, pick); app.ins.dictLog = [...(app.ins.dictLog || []), { t: Date.now(), text: app.dict.text }];
     const n = Object.values(pick.c).filter(Boolean).length + Object.values(pick.i).filter(Boolean).length;
-    app.dict = blank(); app.ins.dictDraft = ''; save(); renderTab(); toast(n + ' item' + (n === 1 ? '' : 's') + ' saved to the appraisal file. Check each tab for anything still marked.'); };
+    app.dict = blank(); app.ins.dictDraft = ''; save(); renderTab(); setTimeout(() => { const lv = document.getElementById('dkLeave'); if (lv) lv.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 150); toast(n + ' item' + (n === 1 ? '' : 's') + ' saved to the appraisal file. Check each tab for anything still marked.'); };
   const ls = root.querySelector('#dkListen'); if (ls && DICT_SR) ls.onclick = () => {
     if (app.dict.listening && app.dict.sr) { app.dict.sr.stop(); return; }
     const sr = new DICT_SR(); sr.lang = 'en-US'; sr.continuous = true; sr.interimResults = false; app.dict.sr = sr; app.dict.listening = true;

@@ -2,7 +2,9 @@
 const app = { ins: null, tab: 'property', open: new Set(), groups: {}, cur: null, confirm: null, saving: null, ovrOpen: null, appl: null, missIdx: 0, undo: null };
 const EXTRA_TABS = [{ id: 'photos', title: 'Photos' }, { id: 'summaries', title: 'Summaries' }, { id: 'attention', title: 'Needs Attention' }, { id: 'export', title: 'Save & Export' }];
 const tabShown = (sec, ins) => !sec.showTab || !!sec.showTab(ins || app.ins);
-const ALL_TABS = () => [{ id: 'dictate', title: '🎤 Dictate' }, ...SECTIONS.filter(s => tabShown(s)).map(s => ({ id: s.id, title: s.title })), ...EXTRA_TABS];
+const ALL_TABS_FULL = () => [{ id: 'dictate', title: '🎤 Dictate' }, ...SECTIONS.filter(s => tabShown(s)).map(s => ({ id: s.id, title: s.title })), ...EXTRA_TABS];
+const ALL_TABS = () => { const T = ALL_TABS_FULL(); if (typeof dkWalk !== 'function' || !dkWalk()) return T;   // walk-through mode (6r)
+  const keep = new Set(['dictate', 'photos', 'attention', app.tab]); return [...T.filter(t => keep.has(t.id)), { id: 'alltabs', title: '☰ All tabs' }]; };
 const CAM_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>';
 const LIB_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-8 8"/></svg>';
 
@@ -193,6 +195,7 @@ function refreshChrome() {
   if (sel) { const nav = $('#tabs'); nav.scrollLeft = sel.offsetLeft - nav.clientWidth / 2 + sel.offsetWidth / 2; }
 }
 function goTab(id, anchor, groupId) {
+  if (id === 'alltabs') { dkSetWalk(false); refreshChrome(); toast('All tabs are back'); return; }
   if (app.tab !== id) saveNow();
   app.tab = id; app.missIdx = 0;
   if (groupId) openGroup(id, groupId);
@@ -436,7 +439,7 @@ function photoSlot(slot) {
   const ins = app.ins; const ph = photosInSlot(ins, slot);
   const s = esc(JSON.stringify(slot));
   return `<div class="photo-slot">
-    ${ph.map(p => `<button class="thumb ${p.required ? 'req' : ''}" data-view="${p.id}"><img data-pid="${p.id}" alt=""><span>${esc(p.label)}</span></button>`).join('')}
+    ${ph.map(p => `<button class="thumb ${p.required ? 'req' : ''} ${p.extra && p.toReport ? 'rep' : ''}" data-view="${p.id}"><img data-pid="${p.id}" alt=""><span>${esc(p.label)}</span></button>`).join('')}
     <label class="cam">${CAM_SVG}${ph.length ? 'Add another' : 'Take photo'}<input type="file" accept="image/*" capture="environment" data-slot="${s}"></label>
     <label class="cam lib">${LIB_SVG}From library<input type="file" accept="image/*" multiple data-slot="${s}"></label>
   </div>`;
@@ -739,6 +742,9 @@ function bind(root) {
   root.querySelectorAll('[data-applrm]').forEach(b => b.onclick = () => { const it = itemOf(b); delete it.appl[b.dataset.applrm]; app.appl = null; save(); renderTab(); });
   root.querySelectorAll('[data-appldone]').forEach(b => b.onclick = () => { app.appl = null; renderTab(); });
   root.querySelectorAll('[data-view]').forEach(b => b.onclick = () => openViewer(b.dataset.view));
+  const addNote = (id, txt) => { const ins = app.ins; ins.comments[id] = [(ins.comments[id] || '').trim(), txt].filter(Boolean).join(' '); const ta = root.querySelector('#c-' + id); if (ta) ta.value = ins.comments[id]; updateSummary(id); save(); };
+  root.querySelectorAll('[data-addnote]').forEach(b => b.onclick = () => { addNote(b.dataset.addnote, b.dataset.text); const box = b.closest('.dk-sugg'); b.remove(); if (box && !box.querySelector('.dk-sg')) box.remove(); toast('Added – read it over in the comment box'); });
+  root.querySelectorAll('[data-addallnotes]').forEach(b => b.onclick = () => { const id = b.dataset.addallnotes; root.querySelectorAll(`[data-addnote="${id}"]`).forEach(x => { addNote(id, x.dataset.text); x.remove(); }); const box = b.closest('.dk-sugg'); if (box) box.remove(); else b.remove(); toast('Added – read it over in the comment box'); });
   root.querySelectorAll('[data-toggle]').forEach(b => b.onclick = () => { const id = b.dataset.toggle; const wasOpen = app.open.has(id); if (wasOpen) app.shiftAt = Date.now(); wasOpen ? app.open.delete(id) : app.open.add(id); saveNow(); renderTab();
     if (!wasOpen) scrollToEl('item-' + id);
     else if (b.closest('.gfoot')) { const key = Object.keys(app.ins.lists).find(k => app.ins.lists[k].some(x => x.id === id)); const add = key && document.getElementById('add-' + key); if (add) { const top = add.getBoundingClientRect().top + window.scrollY - window.innerHeight / 2; window.scrollTo(0, Math.max(0, top)); add.classList.add('flash'); setTimeout(() => add.classList.remove('flash'), 1600); } } });
@@ -797,12 +803,14 @@ async function openViewer(pid) {
     <div class="flabel"><span class="tag">${p.required ? 'UAD required' : 'Photo'}</span><span class="lab">${esc(photoWhere(ins, p))}</span></div>
     <label class="flabel" for="phLabel">Label</label><input class="txt" id="phLabel" value="${esc(p.label)}" maxlength="100">
     <div class="help">The label becomes the photo file name and the caption in SFREP (max 100 characters).</div>
+    ${p.extra ? `<label class="dk-walk"><input type="checkbox" id="phRep" ${p.toReport ? 'checked' : ''}> <b>Send to SFREP</b> as an additional photo in this section</label>` : ''}
     <div id="phConfirm"></div>
     <div class="row"><button class="btn primary" id="phSave">Save label</button><button class="btn danger" id="phDel">Delete photo</button><button class="btn" id="phClose">Close</button></div></div></div>`;
   document.body.appendChild(bg);
   const close = () => { URL.revokeObjectURL(url); bg.remove(); renderTab(); };
   bg.onclick = e => { if (e.target === bg) close(); };
   $('#phClose', bg).onclick = close;
+  const rp = $('#phRep', bg); if (rp) rp.onchange = () => { p.toReport = rp.checked; save(); toast(rp.checked ? 'This photo will go to SFREP' : 'Workfile only'); };
   $('#phSave', bg).onclick = () => { p.label = $('#phLabel', bg).value.trim() || p.label; p.autoLabel = false; save(); toast('Label saved'); close(); };
   $('#phDel', bg).onclick = () => {
     $('#phConfirm', bg).innerHTML = `<div class="confirm">Delete this photo? <button class="btn danger solid sm" id="phDelYes">Delete</button></div>`;
@@ -828,7 +836,7 @@ function renderGallery() {
     if (!ph.length && !miss.length) return '';
     return `<div class="gal-sec"><h3>${esc(s.title)} · ${ph.length}</h3>
       ${miss.length ? `<div class="missing-photos">${miss.map(m => `<button class="${m.sev === 'Recommended' ? 'sug' : ''}" data-go="${m.tab}|${m.anchor}|${m.item || ''}|${m.group || ''}" data-ret="photos|||All Photos">${m.sev === 'Recommended' ? 'Suggested: ' : 'Missing: '}${esc(m.label)} ›</button>`).join('')}</div>` : ''}
-      <div class="gal">${ph.map(p => `<button class="thumb ${p.required ? 'req' : ''}" data-view="${p.id}"><img data-pid="${p.id}" alt=""><span>${esc(p.label)}</span></button>`).join('')}</div></div>`;
+      <div class="gal">${ph.map(p => `<button class="thumb ${p.required ? 'req' : ''} ${p.extra && p.toReport ? 'rep' : ''}" data-view="${p.id}"><img data-pid="${p.id}" alt=""><span>${esc(p.label)}</span></button>`).join('')}</div></div>`;
   }).join('');
   const req = issues.filter(x => x.sev === 'Photo').length;
   return `<section class="group open"><div class="ghead static"><span class="gtitle">All photos</span><span class="count">${ins.photos.length} taken · ${req} required missing</span></div>
@@ -851,7 +859,8 @@ function renderSummaries() {
         ${r.dropped.length ? `<div class="dropped">Left out to stay under the limit (kept in your workfile): ${esc(r.dropped.join(' '))}</div>` : ''}
         <label class="flabel" for="c-${t.id}"><span class="tag">Optional</span><span class="lab">Your added comment</span></label>
         <textarea class="txt" spellcheck="true" autocorrect="on" autocapitalize="sentences" id="c-${t.id}" data-comment="${t.id}" placeholder="Added after the checkbox summary">${esc(ins.comments[t.id] || '')}</textarea>
-        <div class="row"><button class="btn sm" data-editfinal="${t.id}">Edit final wording</button><button class="btn sm" data-copy="${t.id}">Copy</button></div>`}
+        <div class="row"><button class="btn sm" data-editfinal="${t.id}">Edit final wording</button><button class="btn sm" data-copy="${t.id}">Copy</button></div>
+        ${typeof dkNoteSugg === 'function' ? dkNoteSugg(ins, t.id) : ''}`}
     </div>`;
   }).join('');
   const rq = [...ins.lists.kitchens.map((k, i) => [LISTS.kitchens.name(k, i), roomQualityComment('kitchens', k)]), ...ins.lists.baths.map((b, i) => [LISTS.baths.name(b, i, ins.lists.baths), roomQualityComment('baths', b)])];
@@ -976,8 +985,8 @@ function renderAttention() {
   const ins = app.ins; const all = computeIssues(ins);
   const open = all.filter(x => !ins.overrides[x.key]), done = all.filter(x => ins.overrides[x.key]);
   const order = { Required: 0, Photo: 1, Check: 2, Recommended: 3 };
-  open.sort((a, b) => order[a.sev] - order[b.sev] || ALL_TABS().findIndex(t => t.id === a.tab) - ALL_TABS().findIndex(t => t.id === b.tab));
-  const tabName = id => (ALL_TABS().find(t => t.id === id) || {}).title || '';
+  open.sort((a, b) => order[a.sev] - order[b.sev] || ALL_TABS_FULL().findIndex(t => t.id === a.tab) - ALL_TABS_FULL().findIndex(t => t.id === b.tab));
+  const tabName = id => (ALL_TABS_FULL().find(t => t.id === id) || {}).title || '';
   const sevName = { Required: 'Required', Photo: 'Required photo', Check: 'Check', Recommended: 'Suggested photo' };
   const row = (x, over) => `<div class="att ${over ? 'overridden' : ''}"><span class="sev ${x.sev}">${sevName[x.sev]}</span>
     <div class="what">${esc(x.label)}<small>${esc(tabName(x.tab))}${over ? ' · overridden: ' + esc(ins.overrides[x.key]) : ''}</small></div>

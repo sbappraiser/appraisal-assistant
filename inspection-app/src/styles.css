@@ -346,3 +346,11 @@ html.testcopy .bar { border-bottom-color: #7b2cbf; }
 .dk-teach{border:1px solid var(--line,#cfd6dd);border-radius:10px;padding:8px 10px;margin:6px 0}
 .dk-trow{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end}.dk-trow label{flex:1 1 180px;font-size:14px;display:flex;flex-direction:column;gap:3px}.dk-trow input{font-size:17px}
 .dk-tlist{margin-top:8px}.dk-titem{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--line,#e2e6ea);padding:4px 0}
+.dk-walk{display:flex;gap:8px;align-items:center;font-size:15px;margin:2px 0 6px}.dk-walk input{width:22px;height:22px;accent-color:#0fa84a}
+.dk-leave{margin:14px 0;padding:10px 12px;border:2px solid #f08c00;border-radius:10px;background:rgba(240,140,0,.06)}
+.dk-lvg{margin:8px 0}.dk-lvg>div{display:flex;flex-direction:column;gap:2px;margin-top:3px}
+.dk-lv{text-align:left;background:none;border:0;border-bottom:1px solid var(--line,#e2e6ea);padding:8px 4px;font-size:16px;color:inherit;cursor:pointer}.dk-lv.more{color:#0b6bcb}
+.dk-office{margin-top:8px}.dk-office summary{cursor:pointer;font-weight:600;padding:6px 0}
+.dk-sugg{margin:10px 0 4px;padding:8px;border:1px dashed #0fa84a;border-radius:8px}
+.dk-sg{display:block;width:100%;text-align:left;background:none;border:0;border-bottom:1px solid var(--line,#e2e6ea);padding:8px 4px;font-size:15px;color:inherit;cursor:pointer}.dk-sg small{color:var(--muted,#5b6876);display:block}
+.thumb.rep::after{content:'→ SFREP';position:absolute;top:4px;left:4px;background:#0fa84a;color:#fff;font-size:11px;font-weight:700;padding:1px 5px;border-radius:4px}.thumb{position:relative}

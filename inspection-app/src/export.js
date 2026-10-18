@@ -77,7 +77,7 @@ function buildMISMO(ins, imgName) {
   const d = ins.data, Lx = ins.lists;
   const imagesInto = (parent, photos, extra) => { if (!photos.length) return; const box = X(parent, 'IMAGES'); photos.forEach(p => { const im = X(box, 'IMAGE'); V(im, 'ImageCaptionCommentDescription', p.label.slice(0, 100)); if (extra && extra.cat) V(im, 'ImageCategoryType', extra.cat); V(im, 'ImageFileLocationIdentifier', '\\\\Images\\' + imgName.get(p.id)); V(im, 'MIMETypeIdentifier', 'image/jpeg'); }); };
   const used = new Set();
-  const take = filter => { const out = ins.photos.filter(p => !p.extra && !used.has(p.id) && filter(p)); out.forEach(p => used.add(p.id)); return out; };
+  const take = filter => { const out = ins.photos.filter(p => (!p.extra || p.toReport) && !used.has(p.id) && filter(p)); out.forEach(p => used.add(p.id)); return out; };
 
   const root = X(null, 'MESSAGE', { 'xmlns:xlink': 'http://www.w3.org/1999/xlink', xmlns: 'http://www.mismo.org/residential/2009/schemas', 'xmlns:gse': 'http://www.datamodelextension.org', MISMOReferenceModelIdentifier: '3.6.0366' });
   const doc = X(X(X(X(root, 'DOCUMENT_SETS'), 'DOCUMENT_SET'), 'DOCUMENTS'), 'DOCUMENT');
@@ -322,6 +322,10 @@ function buildMISMO(ins, imgName) {
   if ((d.systems.heatZones || 0) >= 2) amen.push({ type: 'MultipleZoneHeatingVentilationAndAirConditioning' });
   if ((d.systems.mech || []).includes('Whole House Ventilation')) amen.push({ type: 'WholeHouseVentilation' });
   if (a.equestrian) amen.push({ type: 'Other', other: 'Equestrian', photos: take(p => p.sec === 'amenities' && p.field === 'photoEquine') });
+  // anything not placed above (amenity / site / parking photos, and extra photos she ticked "Send to SFREP") goes in as an exhibit of its section
+  take(p => p.sec === 'amenities' || p.sec === 'buildings').forEach(p => push(p, 'SubjectPropertyAmenitiesExhibit'));
+  take(p => p.sec === 'site').forEach(p => push(p, 'SiteExhibit'));
+  take(p => p.sec === 'garage' || p.sec === 'driveway').forEach(p => push(p, 'VehicleStorageExhibit'));
   // PROJECT (condo / co-op; PUD gets amenities, legal action and developer control)
   if (isHoa) {
     const PR = X(P, 'PROJECT', { 'xlink:label': 'PROJECT_SUBJECT' });
@@ -437,6 +441,8 @@ function buildMISMO(ins, imgName) {
   if ((d.condition.valCond || []).length) { const vcs = X(X(X(VR, 'VALUATION_RECONCILIATION'), 'VALUATION_RECONCILIATION_SUMMARY'), 'VALUATION_CONDITIONS'); (d.condition.valCond.includes('AsIs') ? ['AsIs'] : d.condition.valCond).forEach(v => V(X(vcs, 'VALUATION_CONDITION'), 'PropertyValuationConditionalConclusionType', v)); }
   V(X(X(VR, 'VALUATION_SOFTWARE_SYSTEMS'), 'VALUATION_SOFTWARE_SYSTEM'), 'ValuationSoftwareProductName', 'UAD Field Inspection (iPad)');
 
+  take(() => true).forEach(p => push(p, 'SupplementalExhibit'));   // last: anything still not placed
+
   // DOCUMENT_CLASSIFICATION
   const dc = X(doc, 'DOCUMENT_CLASSIFICATION'); V(X(X(dc, 'DOCUMENT_CLASSES'), 'DOCUMENT_CLASS'), 'DocumentType', 'AppraisalReport');
   const dcd = X(dc, 'DOCUMENT_CLASSIFICATION_DETAIL'); V(dcd, 'DocumentFormIssuingEntityNameType', 'FNM_FRE'); V(dcd, 'DocumentFormIssuingEntityVersionIdentifier', 'September 2024');
@@ -481,7 +487,7 @@ async function doExport(kind, btn) {
     let blob, fname;
     if (kind === 'workfile') {
       const sNames = sfrepNames(names);
-      const sfrepPhotos = ins.photos.filter(p => !p.extra);
+      const sfrepPhotos = ins.photos.filter(p => !p.extra || p.toReport);
       const entries = [
         { name: 'Inspection Notes.html', data: notesHTML(ins, names) },
         { name: 'inspection-backup.json', data: JSON.stringify({ app: 'uad36-inspect', version: 1, inspection: ins }) },
@@ -495,7 +501,7 @@ async function doExport(kind, btn) {
       blob = await makeZip(entries); fname = base + ' – Workfile.zip';
     } else {
       const sNames = sfrepNames(names); const entries = [{ name: base + '.xml', data: buildMISMO(ins, sNames) }];
-      for (const p of ins.photos.filter(p => !p.extra)) { const rec = await DB.get('photos', p.id); if (rec) entries.push({ name: 'Images/' + sNames.get(p.id), data: rec.blob }); }
+      for (const p of ins.photos.filter(p => !p.extra || p.toReport)) { const rec = await DB.get('photos', p.id); if (rec) entries.push({ name: 'Images/' + sNames.get(p.id), data: rec.blob }); }
       blob = await makeZip(entries); fname = base + ' – SFREP.zip';
     }
     const r = await deliver(blob, fname);
