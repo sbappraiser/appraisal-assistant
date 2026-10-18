@@ -339,7 +339,19 @@ function listInOrder(vals) { // keeps the order they appear in the report; repea
 }
 const NUMW = ['', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'];
 function factToOrder(key, v) {   // an accepted legal description goes into the order's Legal description box (the Comp genie and SFREP use it)
-  if (key !== 'legal' || !v) return; const el = $('#f_legal'); if (!el) return; el.value = v; cur = readForm(); toast('Legal description is on the order now');
+  if (!v) return;
+  if (key === 'legal') { const el = $('#f_legal'); if (!el) return; el.value = v; cur = readForm(); toast('Legal description is on the order now'); return; }
+  if (key === 'reserve') { const el = $('#f_rightsNot'); if (!el) return; const t = rightsNotText(v);
+    el.value = el.value.trim() && !el.value.includes(t) ? (el.value.trim() + ' ' + t).slice(0, 540) : t; cur = readForm(); toast('Added to "Rights not appraised" on the order. You decide in the Comp genie whether all rights are included.'); }
+}
+function rightsNotText(v) {   // a short line for UAD 3.6 (540 characters); OCR's S00 → 500
+  let t = String(v).replace(/\s+/g, ' ').replace(/\bS(\d{2})\b/g, '5$1').replace(/\bO(\d{2})\b/g, '0$1').trim();
+  if (/EXCEPTING THEREFROM/i.test(t)) { t = t.replace(/^.*?EXCEPTING THEREFROM\s*/i, ''); t = 'Excepted from the legal description: ' + t; }
+  return t.slice(0, 540);
+}
+function rightsFromFacts() {   // orders read before this box existed: fill it once from an accepted reservation
+  const el = $('#f_rightsNot'); if (!el || el.value.trim()) return; const f = (cur.facts || []).find(f => f.key === 'reserve' && f.value); if (!f) return;
+  el.value = rightsNotText(f.value); cur = readForm(); toast('Rights not appraised filled from the deed you read');
 }
 function readDeed(pages, type) {   // → suggestions; works on readable text (a scan needs Acrobat "Recognize text" or Read with Claude)
   const out = []; pages.forEach((t, i) => { const T = String(t || '').replace(/[ \t]+/g, ' ');
@@ -348,7 +360,7 @@ function readDeed(pages, type) {   // → suggestions; works on readable text (a
     if (type === 'deed') {
       const g = T.match(/hereby (?:GRANTS?|QUITCLAIMS?|REMISES?)(?: to)?\s*:?\s*([\s\S]{5,400}?)(?=\n\s*(?:all (?:that|right)|the (?:following|real property)))/i); if (g) out.push({ key: 'vesting', value: g[1].replace(/\s+/g, ' ').trim().replace(/,$/, ''), page: i + 1, by: 'reader' });
       const r = T.match(/(?:Doc(?:ument)?\s*#?|Instrument (?:No\.?|#))\s*:?\s*([\d-]{6,})/i); if (r) out.push({ key: 'recorded', value: r[1], page: i + 1, by: 'reader' });
-      const x = T.match(/(EXCEPTING THEREFROM[\s\S]{20,600}?\.)/i); if (x) out.push({ key: 'reserve', value: x[1].replace(/\s+/g, ' '), page: i + 1, by: 'reader' });
+      const x = T.match(/(EXCEPTING THEREFROM[\s\S]{20,600}?(?<![\s.][A-Z])(?<!\b(?:NO|NOS|INST|BK|PG|PGS|ET AL|ET UX|INC|CO|CORP|LTD|JR|SR|ST|AVE|RD|DR|LN|BLVD|SEC|TWP|RGE|R|T))\.(?=\s|$))/i); if (x) out.push({ key: 'reserve', value: x[1].replace(/\s+/g, ' '), page: i + 1, by: 'reader' });
       const k = T.match(/\b(GRANT DEED|TRUST TRANSFER DEED|QUITCLAIM DEED|INTERSPOUSAL TRANSFER (?:GRANT )?DEED|AFFIDAVIT OF DEATH[^\n]{0,40}|TRUSTEE'?S DEED[^\n]{0,30})\b/i); if (k) out.push({ key: 'kind', value: k[1].replace(/\s+/g, ' ').trim(), page: i + 1, by: 'reader' });
     } });
   const seen = new Set(); return out.filter(x => { const k = x.key + '|' + x.value.toLowerCase(); if (seen.has(k)) return false; seen.add(k); return true; });

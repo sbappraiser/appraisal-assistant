@@ -55,6 +55,9 @@ function precheckGrid(J) {
   if (!String(G.note || '').trim()) out.push({ sev: 'Check', msg: 'The sales comparison comment is empty.' });
   if (String(G.note || '').length > 10000) out.push({ sev: 'Must fix', msg: `The sales comparison comment is ${G.note.length.toLocaleString()} characters – UAD 3.6 allows 10,000; only the first 10,000 are sent. Move the standard rate paragraphs to a general commentary section.` });
   if (!J.subject.eff) out.push({ sev: 'Must fix', msg: 'No effective date on the assignment.' });
+  { const R = (J.report || {}), rn = typeof rv === 'function' ? rv(J, 'rightsNot') : R.rightsNot;
+    if (R.allRights === 'false' && !String(rn || '').trim()) out.push({ sev: 'Must fix', msg: 'You answered No to "All rights included in the appraisal?" – describe the rights not included (report section, 540 characters).' });
+    if (R.allRights !== 'false' && String(rn || '').trim()) out.push({ sev: 'Check', msg: 'The order lists rights not appraised (from the deed), but "All rights included in the appraisal?" is Yes, so they are not reported. Answer No if those rights are not part of what you appraised.' }); }
   const tot = used.map(c => compTotals(J, c)).filter(t => t.price); const adj = tot.map(t => t.adj);
   if (!blank(G.value) && adj.length) { const v = num(G.value), lo = Math.min(...adj), hi = Math.max(...adj); if (v < lo || v > hi) out.push({ sev: 'Check', msg: `Your value ${money(v)} is outside the adjusted range ${money(lo)} – ${money(hi)}.`, hint: 'Explain it in the comment, or look again at the adjustments.' }); }
   used.forEach(c => { const C = compFacts(c, J); const miss = [['sale price', C.price], ['sale date', C.sale], ['living area', C.gla], ['quality', C.q], ['condition', C.c]].filter(x => blank(x[1])).map(x => x[0]);

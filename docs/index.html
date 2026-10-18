@@ -289,6 +289,7 @@ mark.blank{background:#fff3a8;padding:0 2px;border-radius:3px}.cmt textarea{widt
         <label>Latitude<input id="f_lat" inputmode="decimal"></label>
         <label>Longitude<input id="f_lon" inputmode="decimal"></label>
         <label style="grid-column:1/-1">Legal description<textarea id="f_legal" rows="2"></textarea></label>
+        <label style="grid-column:1/-1">Rights not appraised <span class="opt">e.g. reserved oil, gas and mineral rights; UAD 3.6 allows 540 characters</span><textarea id="f_rightsNot" rows="2" maxlength="540"></textarea></label>
         <label style="grid-column:1/-1">Interest valued <span class="opt">blank = the usual one for this property type</span><input id="f_interest"></label>
         <label style="grid-column:1/-1">Property type<select id="f_propType"></select></label>
         <label style="grid-column:1/-1">Describe the property<input id="f_propTypeOther"></label>
@@ -436,7 +437,7 @@ mark.blank{background:#fff3a8;padding:0 2px;border-radius:3px}.cmt textarea{widt
       <li><b>Sticky notes</b> are listed under Documents. Use the drop-down to show one tag (for example "Clear before transfer"). Click one to jump to its page.</li>
       <li><b>Your signed engagement letter:</b> drop it in Documents (it is recognized as <b>My engagement letter (signed)</b>). The order then follows the letter: date of agreement, assignment type (e.g. Refinance), client name/company, address, phone and email, the access contact (when it is not "Client (see above)"), APN, fee and retainer – and the order is marked <b>Signed</b>. The file's note lists what changed. Orders that already had your letter uploaded are read once the next time you open them. A scanned letter cannot be read – check those boxes yourself.</li>
       
-      <li><b>Deeds</b> (grant deed, trust transfer deed, quitclaim): choose <b>Deed</b> in the drop-down (it is picked by itself when page 1 says so). Click <b>Read</b>: it suggests the legal description, vesting, reservations (oil, gas, minerals) and the kind of deed. <b>Accept</b> the legal description and it goes into the order's <b>Legal description</b> box (used by the Comp genie and SFREP). A legal description accepted from a <b>Legal description</b> or prelim document does the same.</li>
+      <li><b>Deeds</b> (grant deed, trust transfer deed, quitclaim): choose <b>Deed</b> in the drop-down (it is picked by itself when page 1 says so). Click <b>Read</b>: it suggests the legal description, vesting, reservations (oil, gas, minerals) and the kind of deed. <b>Accept</b> the legal description and it goes into the order's <b>Legal description</b> box (used by the Comp genie and SFREP). A legal description accepted from a <b>Legal description</b> or prelim document does the same. <b>Accept</b> a reservation (for example "excepting all oil, gas and mineral rights below 500 feet") and a short version goes into the order's <b>Rights not appraised</b> box (540 characters, the UAD 3.6 limit). It only reaches the report if you answer <b>No</b> to "All rights included in the appraisal?" in the Comp genie's report section – that is your call.</li>
       <li><b>Any scanned document</b> (deed, signed letter, permit): the reader says the page is a scan. On an order where <b>AI use</b> is Yes or Redacted and your Claude key is saved, it shows <b>Send the scanned pages to Claude</b> right there – you see the pictures before they go. Otherwise it tells you what to change.</li>
       <li><b>Scanned deeds</b> have no text to read. Either open the PDF in Acrobat → <b>Scan &amp; OCR → Recognize text</b>, save, and drop it here again; or, on an order where AI is allowed, use <b>Read with Claude</b>; or type it in the reader's box under Legal description.</li>
       </ol></details>
@@ -614,7 +615,7 @@ mark.blank{background:#fff3a8;padding:0 2px;border-radius:3px}.cmt textarea{widt
 </div>
 <div id="toast" role="status" hidden></div>
 <script>
-const BUILD='o1-1018-2341';
+const BUILD='o1-1018-2351';
 const G = (() => {
 /* ---------------- small helpers ---------------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -2885,7 +2886,19 @@ function listInOrder(vals) { // keeps the order they appear in the report; repea
 }
 const NUMW = ['', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'];
 function factToOrder(key, v) {   // an accepted legal description goes into the order's Legal description box (the Comp genie and SFREP use it)
-  if (key !== 'legal' || !v) return; const el = $('#f_legal'); if (!el) return; el.value = v; cur = readForm(); toast('Legal description is on the order now');
+  if (!v) return;
+  if (key === 'legal') { const el = $('#f_legal'); if (!el) return; el.value = v; cur = readForm(); toast('Legal description is on the order now'); return; }
+  if (key === 'reserve') { const el = $('#f_rightsNot'); if (!el) return; const t = rightsNotText(v);
+    el.value = el.value.trim() && !el.value.includes(t) ? (el.value.trim() + ' ' + t).slice(0, 540) : t; cur = readForm(); toast('Added to "Rights not appraised" on the order. You decide in the Comp genie whether all rights are included.'); }
+}
+function rightsNotText(v) {   // a short line for UAD 3.6 (540 characters); OCR's S00 → 500
+  let t = String(v).replace(/\s+/g, ' ').replace(/\bS(\d{2})\b/g, '5$1').replace(/\bO(\d{2})\b/g, '0$1').trim();
+  if (/EXCEPTING THEREFROM/i.test(t)) { t = t.replace(/^.*?EXCEPTING THEREFROM\s*/i, ''); t = 'Excepted from the legal description: ' + t; }
+  return t.slice(0, 540);
+}
+function rightsFromFacts() {   // orders read before this box existed: fill it once from an accepted reservation
+  const el = $('#f_rightsNot'); if (!el || el.value.trim()) return; const f = (cur.facts || []).find(f => f.key === 'reserve' && f.value); if (!f) return;
+  el.value = rightsNotText(f.value); cur = readForm(); toast('Rights not appraised filled from the deed you read');
 }
 function readDeed(pages, type) {   // → suggestions; works on readable text (a scan needs Acrobat "Recognize text" or Read with Claude)
   const out = []; pages.forEach((t, i) => { const T = String(t || '').replace(/[ \t]+/g, ' ');
@@ -2894,7 +2907,7 @@ function readDeed(pages, type) {   // → suggestions; works on readable text (a
     if (type === 'deed') {
       const g = T.match(/hereby (?:GRANTS?|QUITCLAIMS?|REMISES?)(?: to)?\s*:?\s*([\s\S]{5,400}?)(?=\n\s*(?:all (?:that|right)|the (?:following|real property)))/i); if (g) out.push({ key: 'vesting', value: g[1].replace(/\s+/g, ' ').trim().replace(/,$/, ''), page: i + 1, by: 'reader' });
       const r = T.match(/(?:Doc(?:ument)?\s*#?|Instrument (?:No\.?|#))\s*:?\s*([\d-]{6,})/i); if (r) out.push({ key: 'recorded', value: r[1], page: i + 1, by: 'reader' });
-      const x = T.match(/(EXCEPTING THEREFROM[\s\S]{20,600}?\.)/i); if (x) out.push({ key: 'reserve', value: x[1].replace(/\s+/g, ' '), page: i + 1, by: 'reader' });
+      const x = T.match(/(EXCEPTING THEREFROM[\s\S]{20,600}?(?<![\s.][A-Z])(?<!\b(?:NO|NOS|INST|BK|PG|PGS|ET AL|ET UX|INC|CO|CORP|LTD|JR|SR|ST|AVE|RD|DR|LN|BLVD|SEC|TWP|RGE|R|T))\.(?=\s|$))/i); if (x) out.push({ key: 'reserve', value: x[1].replace(/\s+/g, ' '), page: i + 1, by: 'reader' });
       const k = T.match(/\b(GRANT DEED|TRUST TRANSFER DEED|QUITCLAIM DEED|INTERSPOUSAL TRANSFER (?:GRANT )?DEED|AFFIDAVIT OF DEATH[^\n]{0,40}|TRUSTEE'?S DEED[^\n]{0,30})\b/i); if (k) out.push({ key: 'kind', value: k[1].replace(/\s+/g, ' ').trim(), page: i + 1, by: 'reader' });
     } });
   const seen = new Set(); return out.filter(x => { const k = x.key + '|' + x.value.toLowerCase(); if (seen.has(k)) return false; seen.add(k); return true; });
@@ -3714,7 +3727,7 @@ let aiText = store.get('aiText', null);
 let cur = null;           // the letter being edited
 let clientCount = 1;
 
-const NEW_FIELDS = { jurisdiction: '', street: '', city: '', state: 'CA', zip: '', zip4: '', stage: 'New', inspDate: '', inspTime: '', effDate: '', unit: '', apn: '', county: '', lat: '', lon: '', owner: '', legal: '', borrower: '',
+const NEW_FIELDS = { rightsNot: '', jurisdiction: '', street: '', city: '', state: 'CA', zip: '', zip4: '', stage: 'New', inspDate: '', inspTime: '', effDate: '', unit: '', apn: '', county: '', lat: '', lon: '', owner: '', legal: '', borrower: '',
   lenderDiff: false, govAgency: '', investorId: '', reportForm: '', lenderCo: '', lenderAddr1: '', lenderAddr2: '', loanNo: '', amcUsed: false, amcCo: '', amcAddr1: '', amcAddr2: '', amcLic: '', amcState: 'CA', amcExp: '', amcFee: '', amcRef: '', notes: '', todos: '', invNo: '', invDate: '', invAmt: '', paidDate: '', paidMethod: '', paidAmt: '', paidRef: '' };
 function blankLetter() {
   return { ...NEW_FIELDS, docs: [], crs: null, listings: [], permits: null, created: new Date().toISOString(), id: uid(), status: 'Client letter', reportForm: 'uad36', fileNo: '', orderDate: todayISO(), dueDate: '', aiUse: '', orderDoc: null, agreeDate: todayISO(), type: 'uadPurchase', clients: [{}], address: '', propType: 'sfr', propTypeOther: '',
@@ -3723,7 +3736,7 @@ function blankLetter() {
 }
 
 /* ---------- form <-> object ---------- */
-const FIELDS = ['fileNo', 'orderDate', 'dueDate', 'agreeDate', 'type', 'status', 'address', 'propType', 'propTypeOther', 'interest', 'decedent', 'dod', 'otherUsers', 'inspection', 'apSales', 'apCost', 'apIncome',
+const FIELDS = ['rightsNot', 'fileNo', 'orderDate', 'dueDate', 'agreeDate', 'type', 'status', 'address', 'propType', 'propTypeOther', 'interest', 'decedent', 'dod', 'otherUsers', 'inspection', 'apSales', 'apCost', 'apIncome',
   'format', 'listing', 'listingDetail', 'ea', 'hc', 'accessName', 'accessRel', 'accessPhone', 'fee', 'retainer', 'payDue', 'payWhen', 'deliveryN', 'deliveryUnit', 'deliveryFrom', 'userText', 'extra', 'premise', 'completion', 'plans', 'purpose', 'joint', 'rent', 'rentFee', 'testimony', 'tRate', 'tDecl', 'tRetainer', 'tCancel',
   ...Object.keys(NEW_FIELDS)];
 function readForm() {
@@ -3939,6 +3952,7 @@ function openLetter(id, copy) {
   if (!copy) dedupeDocs(cur).then(n => { if (n) toast(n + ' duplicate document' + (n > 1 ? 's' : '') + ' removed (the same file was uploaded twice)', 5000); return recheckDocTypes(cur).then(() => { if (n) { renderDocs(); saveLetter(true); } }); });
   writeForm(cur); render(); showTab('letter'); window.scrollTo(0, 0); toast(copy ? 'Copied the client and terms – fill in the new job' : 'Opened ' + (f.fileNo || street(f) || 'the order'));
   if (!copy) rereadMyLetter(cur.id);
+  if (!copy && !(cur.rightsNot || '').trim()) { rightsFromFacts(); if ((cur.rightsNot || '').trim()) saveLetter(true); }
 }
 async function rereadMyLetter(id) {   // orders whose signed letter was uploaded before the hub could read it (Oct 18 2026): read it once now
   const c = cur; if (!c || c.id !== id || c.myLetterV >= 1) return; const d = (c.docs || []).find(x => x.type === 'myLetter'); if (!d) return;

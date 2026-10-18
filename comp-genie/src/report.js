@@ -23,7 +23,7 @@ function reportFrom(J) {
   const apns = String(o.apn || J.subject.apn || I.apn || '').split(/[;,&]| and /).map(x => x.trim()).filter(Boolean);
   const c0 = (o.clients || [])[0] || {};
   return { assign: ORDER_ASSIGN[o.type] || (o.type ? 'Other' : ''), fileNo: o.fileNo || J.fileNo || '', eff: o.effDate || o.inspDate || o.dod || J.subject.eff || '',
-    legal: o.legal || I.legal || crs.legal || '', zone, zoneDesc: I.zoneDesc || zoneTable()[zone.toUpperCase()] || '', parcels: apns.length || (I.apn ? 1 : ''),
+    legal: o.legal || I.legal || crs.legal || '', rightsNot: o.rightsNot || '', zone, zoneDesc: I.zoneDesc || zoneTable()[zone.toUpperCase()] || '', parcels: apns.length || (I.apn ? 1 : ''),
     client: c0.company || c0.name || '', clientAddr1: c0.addr1 || '', clientAddr2: c0.addr2 || '',
     lender: o.lenderDiff ? (o.lenderCo || '') : '', lenderAddr1: o.lenderDiff ? o.lenderAddr1 || '' : '', lenderAddr2: o.lenderDiff ? o.lenderAddr2 || '' : '',
     amc: o.amcUsed ? (o.amcCo || '') : '', amcAddr1: o.amcUsed ? o.amcAddr1 || '' : '', amcAddr2: o.amcUsed ? o.amcAddr2 || '' : '',
@@ -55,6 +55,7 @@ function reportHTML(J) {
       <label class="fld"><span>Legal description</span><textarea class="txt" rows="2" data-rpt="legal" placeholder="${esc(F.legal || 'From the CRS report or the preliminary title report')}">${esc(R.legal || '')}</textarea></label>
       <label class="fld"><span>Number of parcels</span>${inp('parcels', '1', '5em')}</label>
       <label class="fld"><span>All rights included in the appraisal?</span>${yn('allRights', true)}</label>
+      <label class="fld"><span>Rights not included <small class="muted">(only sent when the answer above is No; 540 characters)</small></span><textarea class="txt" rows="2" maxlength="540" data-rpt="rightsNot" placeholder="${esc(F.rightsNot || 'e.g. Oil, gas and mineral rights below 500 feet, reserved in a prior deed')}">${esc(R.rightsNot || '')}</textarea>${F.rightsNot && R.allRights !== 'false' ? '<small class="muted">The order has a reservation from the deed. If those rights are not part of what you appraised, answer No above.</small>' : ''}</label>
       <label class="fld"><span>Zoning code</span>${inp('zone', 'e.g. E-3', '8em')}</label>
       <label class="fld"><span>Zoning description</span>${inp('zoneDesc', 'e.g. One-family residential, 7,000 sq. ft. minimum lot')}<small class="muted">Kept for this code, so you type it once.</small></label></section>
     <section><h3>Highest and best use</h3>
@@ -130,12 +131,13 @@ function writeReportXML(doc, NS, J, SUBJ, VA, SVC) {
   const op = num(String(R.opinion || '').replace(/[$,\s]/g, '')); set(rsd, 'OpinionOfValueAmount', op === null ? null : Math.round(op));
   if (R.reconNote) set(path(VR, 'VALUATION_RECONCILIATION', 'VALUATION_RECONCILIATION_DETAIL'), 'ValuationReconciliationSummaryCommentDescription', R.reconNote.slice(0, 5000));
   // subject: legal, parcels, zoning, rights, H&BU
-  const legal = rv(J, 'legal'); if (legal) set(path(SUBJ, 'PARCEL_SUMMARY', 'PARCEL_SUMMARY_DETAIL'), 'ParcelsLegalDescription', legal.slice(0, 1000));
+  const legal = rv(J, 'legal'); if (legal) set(path(SUBJ, 'PARCEL_SUMMARY', 'PARCEL_SUMMARY_DETAIL'), 'ParcelsLegalDescription', legal.slice(0, 15000));
   const SITE = child(SUBJ, 'SITE');
   set(child(SITE, 'SITE_SIZE_LAYOUT'), 'ParcelCount', num(rv(J, 'parcels')) || 1);
   const zone = rv(J, 'zone'), zd = rv(J, 'zoneDesc');
   if (zone || zd) { const z = path(SITE, 'SITE_ZONING', 'SITE_ZONING_DETAIL'); set(z, 'SiteZoningClassificationDescription', zd && zd.slice(0, 100)); set(z, 'SiteZoningClassificationIdentifier', zone); }
   set(path(SUBJ, 'SALES_CONTRACTS', 'SALES_CONTRACT', 'SALES_CONTRACT_DETAIL'), 'AllPropertyRightsAppraisedIndicator', tf('allRights', 'true'));
+  if (tf('allRights', 'true') === 'false') { const rn = rv(J, 'rightsNot'); if (rn) set(sow, 'PropertyRightsNotAppraisedDescription', String(rn).slice(0, 540)); }
   if (HBU_TESTS.some(([k]) => H[k]) || R.hbuPresent) { const hb = child(SITE, 'HIGHEST_AND_BEST_USE');
     set(hb, 'FinanciallyFeasibleIndicator', String(!!H.fin)); set(hb, 'LegallyPermissibleIndicator', String(!!H.legal)); set(hb, 'MaximallyProductiveIndicator', String(!!H.max)); set(hb, 'PhysicallyPossibleIndicator', String(!!H.phys)); set(hb, 'SiteHighestBestUseIndicator', R.hbuPresent || null); }
   comment('HighestAndBestUse', R.hbuNote, 4000);
