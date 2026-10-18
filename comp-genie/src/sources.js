@@ -53,7 +53,7 @@ function archCanon(a) {
     attach: a.attachment || '', style: a.style || '', stories: a.stories,
     quality: a.quality ? 'Q' + a.quality + (a.quality_mod || '') : '', condition: a.condition ? 'C' + a.condition + (a.condition_mod || '') : '',
     yearBuilt: a.year_built_est || (a.actual_age != null && a.entered_date ? +String(a.entered_date).slice(0, 4) - a.actual_age : null), effAge: a.effective_age,
-    rooms: a.rooms, beds: a.beds, full: a.baths_full, half: a.baths_half, gla: a.gla, bsmtSf: a.bsmt_sf, bsmtFin: a.bsmt_fin_sf,
+    rooms: a.rooms, beds: a.beds, bgBeds: a.bg_beds, full: a.baths_full, half: a.baths_half, gla: a.gla, bsmtSf: a.bsmt_sf, bsmtFin: a.bsmt_fin_sf,
     garage: a.garage_spaces, garageType: a.garage_type || '', carport: a.carport_spaces, driveway: a.driveway_spaces,
     heatCool: a.heating_cooling || '', energy: [a.energy_raw, a.solar ? 'Solar' : '', a.battery ? 'Battery' : '', a.generator ? 'Generator' : ''].filter(Boolean).join('; '),
     adu: a.adu_or_guest ? (hasType(/^(ADU|JADU)$/) ? 'ADU' : 'Guest house') : (a.acc_count != null ? 'None' : ''),

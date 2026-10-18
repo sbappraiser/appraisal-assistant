@@ -76,6 +76,7 @@ const FIELDS = [
   { k: 'bathsTotal', l: 'Baths (total, public record)', g: 'Improvements', kind: 'phys', t: 'num' },
   { k: 'bsmtSf', l: 'Basement sq ft', g: 'Improvements', kind: 'phys', t: 'int' },
   { k: 'bsmtFin', l: 'Basement finished sq ft', g: 'Improvements', kind: 'phys', t: 'int' },
+  { k: 'bgBeds', l: 'Below-grade bedrooms', g: 'Improvements', kind: 'phys', t: 'int' },
   { k: 'basement', l: 'Basement (MLS)', g: 'Improvements', kind: 'phys', t: 'text' },
   { k: 'garage', l: 'Garage spaces', g: 'Improvements', kind: 'phys', t: 'int' },
   { k: 'garageType', l: 'Garage type', g: 'Improvements', kind: 'phys', t: 'text' },
