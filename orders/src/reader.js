@@ -11,7 +11,7 @@
    typed-in entries come out as text, so their checklist is filled by her or by Claude.
    ===================================================================== */
 const CHECK = {
-  contract: { title: 'Purchase contract', items: [['price', 'Final negotiated sales price (after counters)'], ['acceptDate', 'Acceptance date'], ['personal', 'Personal property included'], ['leaseback', 'Leaseback / rent-back'], ['credits', 'Credits / concessions to the buyer'], ['buyerBroker', 'Buyer’s broker: who pays, % or amount'], ['addenda', 'Counters and addenda – summary'], ['loanCont', 'Loan contingency (Yes / No)'], ['apprCont', 'Appraisal contingency (Yes / No)'], ['coe', 'Close of escrow (date or days)'], ['exch1031', '1031 exchange'], ['entity', 'Signing for an entity: who, and which entity'], ['special', 'Court-ordered, estate, trust, trustee or atypical terms'], ['written', 'Terms written in (not pre-printed on the form)']] },
+  contract: { title: 'Purchase contract', items: [['price', 'Final negotiated sales price (after counters)'], ['acceptDate', 'Acceptance date'], ['personal', 'Personal property included'], ['excluded', 'Excluded items (art, fixtures the seller keeps)'], ['leaseback', 'Leaseback / rent-back'], ['credits', 'Credits / concessions to the buyer'], ['buyerBroker', 'Buyer’s broker: who pays, % or amount'], ['addenda', 'Counters and addenda – summary'], ['loanCont', 'Loan contingency (Yes / No)'], ['apprCont', 'Appraisal contingency (Yes / No)'], ['coe', 'Close of escrow (date or days)'], ['exch1031', '1031 exchange'], ['entity', 'Signing for an entity: who, and which entity'], ['special', 'Court-ordered, estate, trust, trustee or atypical terms'], ['written', 'Terms written in (not pre-printed on the form)']] },
   counter: { title: 'Counter offer', items: [['price', 'Price in the counter'], ['date', 'Date'], ['terms', 'Terms changed']] },
   addendum: { title: 'Addendum', items: [['date', 'Date'], ['terms', 'Terms changed']] },
   leaseback: { title: 'Leaseback / rent-back', items: [['rent', 'Rent (amount and period)'], ['term', 'Term (start and end)'], ['deposit', 'Security deposit'], ['furnished', 'Furnished / what the seller keeps'], ['terms', 'Other terms']] },
@@ -283,20 +283,31 @@ function partsSentence(parts, total) {
   const list = bits.length > 1 ? bits.slice(0, -1).join(', ') + ', and ' + bits.at(-1) : bits[0];
   return `I received a ${total ? total + '-page ' : ''}document which contains ${list}.`;
 }
-function contractDraft(docId) {
+function contractDraft(docId) {   // her model "ANALYSIS OF THE SALES CONTRACT" (Oct 18 2026) – [brackets] are for her
   const rv = cur.review[docId], total = RD.pdf ? RD.pdf.numPages : null; const v = k => fval(docId, k).join('; ');
-  const out = []; const ps = partsSentence(rv.parts || [], total); if (ps) out.push(ps);
+  const parts = rv.parts || []; const out = ['ANALYSIS OF THE SALES CONTRACT', '[Arm\'s length sale.]'];
+  const ps = partsSentence(parts, total); out.push(ps ? ps.replace(/^I received a /, 'The client uploaded a ') : `The client uploaded a ${total ? total + '-page ' : ''}document which contains [the purchase contract].`);
   if (v('price')) out.push(`The final negotiated sales price is ${v('price')}${v('acceptDate') ? ', with an acceptance date of ' + v('acceptDate') : ''}.`); else if (v('acceptDate')) out.push(`The acceptance date is ${v('acceptDate')}.`);
-  if (v('personal')) out.push(`Personal property included: ${v('personal')}.`);
-  if (v('leaseback')) out.push(`Leaseback: ${v('leaseback')}.`);
-  if (v('credits')) out.push(`Credits/concessions: ${v('credits')}.`);
-  if (v('buyerBroker')) out.push(`Buyer's broker compensation: ${v('buyerBroker')}.`);
-  if (v('addenda')) out.push(`Counter offers and addenda: ${v('addenda')}.`);
-  if (v('loanCont') || v('apprCont')) out.push([v('loanCont') && `Loan contingency: ${v('loanCont')}.`, v('apprCont') && `Appraisal contingency: ${v('apprCont')}.`].filter(Boolean).join(' '));
-  if (v('entity')) out.push(`${v('entity')}.`);
-  if (v('special')) out.push(`${v('special')}.`);
-  if (v('written')) out.push(`Other terms written into the agreement: ${v('written')}.`);
-  return out.join(' ').replace(/\.\./g, '.').slice(0, 5000);
+  out.push(v('entity') ? `${v('entity').replace(/\.$/, '')}. It is assumed that the signer is legally authorized to sign for the owner of record.` : 'According to the contract, the seller is [seller] and it is signed by [signer]. It is assumed that [he/she] is the legally authorized signer for the owner of record.');
+  const lc = v('loanCont'), ac = v('apprCont'); const no = x => /^no\b|waived|removed|none/i.test(x);
+  if (lc || ac) { if (lc && ac && no(lc) && no(ac)) out.push('There is no loan nor appraisal contingency[, but the borrower reserves the right to obtain a loan].');
+    else out.push([lc && (no(lc) ? 'There is no loan contingency' : `There is a loan contingency (${lc.replace(/^Yes\s*–\s*/, '')})`), ac && (no(ac) ? (lc ? 'no appraisal contingency' : 'There is no appraisal contingency') : `${lc ? 'an' : 'There is an'} appraisal contingency (${ac.replace(/^Yes\s*–\s*/, '')})`)].filter(Boolean).join(' and ') + '.'); }
+  else out.push('[Loan and appraisal contingencies.]');
+  if (v('coe')) out.push(`Close of escrow: ${v('coe')}.`);
+  if (v('personal')) out.push(`Personal property included: ${v('personal').replace(/\.$/, '')}.`);
+  if (v('excluded')) out.push(`Excluded: ${v('excluded').replace(/\.$/, '')}.`);
+  if (v('leaseback')) out.push(`The contract includes a leaseback to the seller: ${v('leaseback').replace(/\.$/, '')}. [Rent and term compared with market rent, and the agent's comment on its effect on the price.]`);
+  const tidy = (x, rx) => x.replace(rx, '').replace(/^[\s:;,–-]+/, '').replace(/\.$/, '');
+  if (v('exch1031')) { const t = tidy(v('exch1031'), /^(this is )?(part of )?(a )?1031 exchange( by)?/i); out.push(`The transaction is part of a 1031 exchange${t ? ' (' + t + ')' : ''}.`); }
+  if (v('buyerBroker')) { const t = tidy(v('buyerBroker'), /^buyer'?s'? (broker|agent)('?s)? compensation/i); out.push(/^seller|^buyer/i.test(t) ? t.charAt(0).toUpperCase() + t.slice(1) + '.' : `Buyer's broker compensation: ${t}.`); }
+  if (v('addenda')) out.push(`Counter offers and addenda: ${v('addenda').replace(/\.$/, '')}.`);
+  if (v('special')) out.push(`${v('special').replace(/\.$/, '')}.`);
+  if (v('written')) out.push(`${v('written').replace(/\.$/, '')}.`);
+  out.push('All other terms in these documents are fairly typical.');
+  out.push(v('credits') ? `Credits/concessions: ${v('credits').replace(/\.$/, '')}. [Effect on the price.]` : 'There are no reported financial concessions, credits, commission reductions, or other personal property included in the price.');
+  if (!parts.some(x => /counter/i.test(x.kind))) out.push('There are no buyer nor counter offers uploaded for the appraiser.');
+  if (/furnish/i.test(v('personal'))) out.push('The selling agent reported that the existing furnishings will transfer with the property for the convenience of the buyer and seller and that no separate consideration or value was assigned to the furnishings in the current transaction. The available assessment record reports land and improvement assessments but does not identify a separate personal-property allocation. The furnishings are personal property, were not appraised, and are excluded from the appraiser\u2019s opinion of the market value of the real property.');
+  return (out[0] + '\n' + out.slice(1).join(' ')).replace(/\.\./g, '.').slice(0, 5000);
 }
 function prelimDraft(docId) { // her model comment (Oct 15 2026)
   const v = k => fval(docId, k); const dated = v('dated')[0];
