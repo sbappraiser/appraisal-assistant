@@ -62,14 +62,16 @@ RATES.halfBath = ['$ per half bath', 'half-bath difference × rate (blank = half
    A general starting point only – she decides on every property. Kept on this computer (kv 'starts'). */
 const STARTS_DEFAULT = {
   lowBelow: 3000000, highFrom: 10000000,
-  usableAc: { 'Montecito': 1500000, 'Hope Ranch': 1275000, 'Santa Barbara / Goleta': 1000000 },
+  usableAc: { 'Montecito': 1500000, 'Hope Ranch': 1250000, 'Santa Barbara / Goleta': 1000000 },
   tiers: {
-    high: { bath: 100000, halfBath: 50000, bed: 250000, pool: 200000, spa: 50000, tennis: 250000, sport: 100000 },
-    middle: { bath: 50000, halfBath: 25000, bed: null, pool: 125000, spa: 25000, tennis: 200000, sport: 50000 },
-    low: { bath: 40000, halfBath: 20000, bed: 50000, pool: 85000, spa: 25000, tennis: null, sport: 50000 } },
-  notes: 'Bedroom (2-bedroom floor plan): low end about $50,000; high value $250,000 to $500,000. Quality, design and view: set on each property, usually a % of the sale price across the grid.' };
-const ST_KEYS = [['bath', 'Full bath'], ['halfBath', 'Half bath'], ['bed', 'Bedroom (up to 3)'], ['pool', 'Pool'], ['spa', 'Spa'], ['tennis', 'Tennis court'], ['sport', 'Sport court']];
-let STARTS = null; DB.get('kv', 'starts').then(r => { STARTS = (r && r.v) || JSON.parse(JSON.stringify(STARTS_DEFAULT)); }).catch(() => { STARTS = JSON.parse(JSON.stringify(STARTS_DEFAULT)); });
+    high: { bath: 100000, halfBath: 50000, pool: 200000, spa: 50000, tennis: 250000, sport: 100000 },
+    middle: { bath: 50000, halfBath: 25000, pool: 125000, spa: 25000, tennis: 200000, sport: 50000 },
+    low: { bath: 40000, halfBath: 20000, pool: 85000, spa: 25000, tennis: null, sport: 50000 } },
+  notes: 'Bedroom: you choose it on each property (the grid asks when a comp has fewer than 3 bedrooms). Quality, design and view: set on each property, usually a % of the sale price across the grid.' };
+const ST_KEYS = [['bath', 'Full bath'], ['halfBath', 'Half bath'], ['pool', 'Pool'], ['spa', 'Spa'], ['tennis', 'Tennis court'], ['sport', 'Sport court']];
+let STARTS = null; DB.get('kv', 'starts').then(r => { STARTS = (r && r.v) || JSON.parse(JSON.stringify(STARTS_DEFAULT));
+  if (STARTS.usableAc && STARTS.usableAc['Hope Ranch'] === 1275000) STARTS.usableAc['Hope Ranch'] = 1250000;   // her correction Oct 18
+  Object.values(STARTS.tiers || {}).forEach(t => { delete t.bed; }); STARTS.notes = STARTS_DEFAULT.notes; }).catch(() => { STARTS = JSON.parse(JSON.stringify(STARTS_DEFAULT)); });
 const startsNow = () => STARTS || STARTS_DEFAULT;
 function segGuess(J) { const S = subjFacts(J); const t = [J.subject.addr, J.subject.city, J.subject.zip, S.nbhd, J.name].join(' ');
   return /93108|montecito/i.test(t) ? 'Montecito' : /hope ranch/i.test(t) ? 'Hope Ranch' : 'Santa Barbara / Goleta'; }
@@ -186,8 +188,10 @@ function gridHTML(J) {
       if (!type) return `<td>${shown}</td>`;
       const a = cellAmount(J, c, row);
       return `<td><div class="gval">${shown}</div><input class="txt sm adj ${a.own ? 'own' : a.v !== null ? 'auto' : ''}" data-gadj="${c.id}|${id}" value="${a.own ? a.v : ''}" placeholder="${a.v !== null && !a.own ? (a.v >= 0 ? '+' : '') + a.v.toLocaleString() : '$ adj'}" inputmode="decimal" title="${a.own ? 'Your amount – clear it to use the rate' : a.v !== null ? 'From your rate – type to override' : 'Type the adjustment'}"></td>`; }).join('');
+    const bedAsk = id === 'beds' && blank(G.rates.bed) ? used.filter(c => { const C = compFacts(c, J); const a = capBeds(S.beds), b = capBeds(C.beds); return a !== null && b !== null && a !== b && blank((G.cells[c.id] || {}).beds); }) : [];
     const rk = row[4]; const rate = rk ? [].concat(rk === 'bath' ? ['bath', 'halfBath'] : rk).map(k => `<div class="grate"><label title="${esc(RATES[k][1])}">${esc(RATES[k][0])} <input class="txt xs" data-grate="${k}" value="${esc(blank(G.rates[k]) ? '' : G.rates[k])}" inputmode="decimal"></label>${G.rateFrom && G.rateFrom[k] && !blank(G.rates[k]) ? `<small class="from">from your starting points (${esc(G.rateFrom[k])})</small>` : ''}</div>`).join('') : '';
-    return head + `<tr><th>${esc(label)}${rate}</th>${subjCell}${cells}</tr>`;
+    const ask = bedAsk.length ? `<div class="bedask">${bedAsk.map(c => `Comp ${c.use} has ${compFacts(c, J).beds} bedroom${compFacts(c, J).beds === 1 ? '' : 's'}`).join(', ')} – what bedroom adjustment do you want? Type it per bedroom above, or in the comp's box.</div>` : '';
+    return head + `<tr${ask ? ' class="asking"' : ''}><th>${esc(label)}${rate}${ask}</th>${subjCell}${cells}</tr>`;
   }).join('');
   const sumRow = (label, fn, cls = '') => `<tr class="tot ${cls}"><th>${label}</th><td></td>${used.map((c, i) => `<td>${fn(tot[i], c)}</td>`).join('')}</tr>`;
   const adjs = tot.map(t => t.adj).filter(Boolean); const lo = Math.min(...adjs), hi = Math.max(...adjs);
