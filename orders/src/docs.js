@@ -130,8 +130,11 @@ async function readDoc(meta, file) { // turns the readable kinds into facts; not
       if ($('#f_status').value === 'Drafted' && !cur.letterMade) { $('#f_status').value = 'Client letter'; toast('The client’s letter now shows on the left instead of yours. To write your own, set My letter back to Drafted.', 6000); }
     } else if (meta.type === 'myLetter') {   // her own letter, signed and sent back: it is not the client's letter and is not checked for AI wording
       cur = readForm(); if (cur.orderDoc && cur.orderDoc.name === meta.name) cur.orderDoc = null;
-      if (!(cur.docs || []).some(d => d.type === 'clientLetter' && d.id !== meta.id)) { cur.letterMode = 'mine'; if (['Client letter', 'Drafted', 'Sent'].includes($('#f_status').value)) $('#f_status').value = /sign/i.test(meta.name) ? 'Signed' : 'Sent'; }
-      meta.note = 'your letter' + ($('#f_status').value === 'Signed' ? ' · marked Signed' : ''); if (typeof renderScan === 'function') renderScan(cur.orderDoc);
+      if (!(cur.docs || []).some(d => d.type === 'clientLetter' && d.id !== meta.id)) { cur.letterMode = 'mine'; if (['Client letter', 'Drafted', 'Sent'].includes($('#f_status').value)) $('#f_status').value = /unsigned|draft/i.test(meta.name) ? 'Sent' : 'Signed'; }   // uploaded as "My engagement letter (signed)"
+      meta.note = 'your letter' + ($('#f_status').value === 'Signed' ? ' · marked Signed' : '');
+      try { const F = await readMyLetter(file); if (F.scan) meta.note += ' · a scan – check the client, date and type on the order yourself';
+        else { const did = applyMyLetter(F); cur = readForm(); cur.myLetterFill = did; cur.myLetterV = 1; if (did.length) { meta.note += ' · order updated from it: ' + did.map(x => x[0]).join(', '); toast('Your signed letter is now on the order: ' + did.map(x => x[0] + ' ' + x[1]).slice(0, 4).join(' · '), 7000); } else meta.note += ' · matches the order'; } } catch (e) { console.warn('my letter', e); }
+      if (typeof renderScan === 'function') renderScan(cur.orderDoc);
     } else if (meta.type === 'floorplan') {
       const prev = await planPreview(file, meta.page || 1); if (prev) { const rec = await ODB.get('docs', meta.id); rec.preview = prev.src; rec.pages = prev.pages; await ODB.put('docs', rec); meta.pages = prev.pages; meta.note = 'ready for the iPad'; }
     }
@@ -309,6 +312,35 @@ async function readClientLetter(file) {
   if (/cost approach (is |will be )?(required|must)/i.test(T)) F.cost = true;
   if (/\bPURCHASE appraisal\b/i.test(T) && !F.purpose) F.purpose = 'Purchase';
   return F;
+}
+/* her own engagement letter, signed and uploaded (Oct 18 2026): the letter is the record of the agreement, so the order follows it */
+async function readMyLetter(file) {
+  const { text } = await letterPairs(file); const L = String(text || '').split('\n').map(l => l.replace(/\s+/g, ' ').trim()).filter(Boolean);
+  const T = L.join('\n'); const F = {}; if (T.replace(/\s/g, '').length < 200) return { scan: true };
+  let m = T.match(/DATE OF AGREEMENT:?\s*([A-Z][a-z]+ \d{1,2},? \d{4}|\d{1,2}\/\d{1,2}\/\d{2,4})/); if (m) F.agreeDate = G.isoDate(m[1]) || (() => { const d = new Date(m[1]); return isNaN(d) ? '' : d.toISOString().slice(0, 10); })();
+  const ci = L.findIndex(l => /^Clients?:$/.test(l) || /^Clients?:\s/.test(l)), ai = L.findIndex((l, i) => i > ci && /^Appraiser:/.test(l));
+  if (ci >= 0 && ai > ci) {
+    const block = [L[ci].replace(/^Clients?:\s*/, ''), ...L.slice(ci + 1, ai)].filter(Boolean); const c = {}; const rest = [];
+    block.forEach(l => { if (/@/.test(l)) c.email = l; else if (/^\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}/.test(l)) c.phone = l; else if (/,\s*[A-Z]{2}\s+\d{5}/.test(l)) c.addr2 = l; else if (/^\d+\s|^P\.?\s?O\.? Box/i.test(l) && !c.addr1) c.addr1 = l; else rest.push(l); });
+    if (rest.length === 1) { if (/bank|trust|credit union|mortgage|lending|financial|capital|llc|inc\b|corp|company|& |\bLLP\b|law|escrow|fund/i.test(rest[0])) c.company = rest[0]; else c.name = rest[0]; }
+    else if (rest.length >= 2) { c.name = rest[0]; c.company = rest[1]; }
+    if (Object.keys(c).length) F.client = c;
+  }
+  const ti = L.findIndex(l => /ENGAGEMENT LETTER$/.test(l)); if (ti >= 0 && L[ti + 1]) F.subtitle = L[ti + 1];
+  m = T.match(/PROPERTY IDENTIFICATION\s*Address:\s*(.+?)(?:\s+APN:\s*([\d-]+))?\n/); if (m) { F.address = m[1].trim(); if (m[2]) F.apn = m[2]; }
+  m = T.match(/Total Fee:\s*\$\s?([\d,]+(?:\.\d\d)?)/); if (m) F.fee = m[1];
+  m = T.match(/Retainer:\s*\$\s?([\d,]+)/); if (m) F.retainer = m[1];
+  return F;
+}
+function applyMyLetter(F) {   // the signed letter wins over what was typed before; returns [label, value] for what changed
+  const did = []; const put = (id, v, label) => { const el = $('#f_' + id); if (!el || !v) return; if (String(el.value).trim() === String(v).trim()) return; el.value = v; did.push([label, v]); };
+  if (F.agreeDate) put('agreeDate', F.agreeDate, 'Date of agreement');
+  if (F.subtitle) { const key = Object.keys(TYPES).find(k => TYPES[k].subtitle && !/\{/.test(TYPES[k].subtitle) && TYPES[k].subtitle.toLowerCase() === F.subtitle.toLowerCase()); if (key && $('#f_type').value !== key) { $('#f_type').value = key; applyTypeDefaults(); did.push(['Assignment type', TYPES[key].label]); } }
+  if (F.client) { CLIENT_KEYS.forEach(k => { const el = $('#c0_' + k); const v = F.client[k] || ''; if (el && v && el.value.trim() !== v) { el.value = v; did.push([{ name: 'Client name', company: 'Client company', addr1: 'Client street', addr2: 'Client city/ZIP', phone: 'Client phone', email: 'Client email' }[k], v]); } }); }
+  if (F.apn && !$('#f_apn').value.trim()) put('apn', F.apn, 'APN');
+  if (F.fee) put('fee', Number(F.fee.replace(/,/g, '')).toLocaleString(), 'Fee');
+  if (F.retainer) put('retainer', Number(F.retainer.replace(/,/g, '')).toLocaleString(), 'Retainer');
+  return did;
 }
 function applyClientLetter(F) { // fills only empty boxes (type, form, client always follow the letter); returns what was filled
   const did = []; const set = (id, v, label, always) => { const el = $('#f_' + id); if (!el || v == null || v === '') return; if (el.type === 'checkbox') { if (el.checked !== !!v) { el.checked = !!v; did.push([label, v ? 'Yes' : 'No']); } return; } if (!always && el.value.trim()) return; el.value = v; did.push([label, v]); };

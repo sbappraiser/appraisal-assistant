@@ -238,6 +238,11 @@ function openLetter(id, copy) {
     lenderDiff: f.lenderDiff, lenderCo: f.lenderCo, lenderAddr1: f.lenderAddr1, lenderAddr2: f.lenderAddr2, amcUsed: f.amcUsed, amcCo: f.amcCo, amcAddr1: f.amcAddr1, amcAddr2: f.amcAddr2, amcLic: f.amcLic, amcState: f.amcState, amcExp: f.amcExp } : { ...NEW_FIELDS, ...JSON.parse(JSON.stringify(f)) };
   if (!copy) dedupeDocs(cur).then(n => { if (n) toast(n + ' duplicate document' + (n > 1 ? 's' : '') + ' removed (the same file was uploaded twice)', 5000); return recheckDocTypes(cur).then(() => { if (n) { renderDocs(); saveLetter(true); } }); });
   writeForm(cur); render(); showTab('letter'); window.scrollTo(0, 0); toast(copy ? 'Copied the client and terms – fill in the new job' : 'Opened ' + (f.fileNo || street(f) || 'the order'));
+  if (!copy) rereadMyLetter(cur.id);
+}
+async function rereadMyLetter(id) {   // orders whose signed letter was uploaded before the hub could read it (Oct 18 2026): read it once now
+  const c = cur; if (!c || c.id !== id || c.myLetterV >= 1) return; const d = (c.docs || []).find(x => x.type === 'myLetter'); if (!d) return;
+  try { const f = await docFile(d.id); if (!f || cur.id !== id) return; await readDoc(d, f); cur = readForm(); cur.myLetterV = 1; renderDocs(); update(); saveLetter(true); } catch (e) { console.warn('reread my letter', e); }
 }
 function newLetter() { cur = blankLetter(); writeForm(cur); render(); showTab('letter'); window.scrollTo(0, 0); $('#f_fileNo').focus(); }
 
