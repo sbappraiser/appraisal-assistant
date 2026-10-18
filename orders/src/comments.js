@@ -51,18 +51,19 @@ async function cmtImport(file, ver) {
     let r;
     if (/\.json$/i.test(file.name)) {   // a comment file (from Claude, or her own export): {app:'my-comments', items:[{title, section, text, ver}]}
       const d = JSON.parse(await file.text()); const L = Array.isArray(d) ? d : d.items; if (!Array.isArray(L)) throw new Error('That file is not a comment file.');
-      r = { items: L.filter(x => x && x.text).map(x => ({ title: String(x.title || 'Untitled'), section: String(x.section || 'My comments'), text: String(x.text), ver: x.ver })), empty: [], pages: L.length };
+      r = { items: L.filter(x => x && x.text).map(x => ({ title: String(x.title || 'Untitled'), section: String(x.section || 'My comments'), text: String(x.text), ver: x.ver, limit: +x.limit || null, note: x.note || '' })), empty: [], pages: L.length };
     } else r = cmtParse(await cmtPdfPages(file));
     if (!r.items.length) throw new Error('No comments found in that file. Export the OneNote section or notebook as PDF and try again.');
     let added = 0, updated = 0, kept = 0; const now = new Date().toISOString().slice(0, 10);
     r.items.forEach(x => { const id = cmtId(x.section, x.title, x.text); const have = CMT[id];
       if (have && have.edited) { kept++; return; }
-      if (have) { have.text = x.text; updated++; } else { CMT[id] = { id, title: x.title, section: x.section, text: x.text, ver: x.ver || ver, src: file.name, added: now }; added++; } });
+      if (have) { have.text = x.text; if (x.limit) have.limit = x.limit; if (x.note) have.note = x.note; updated++; } else { CMT[id] = { id, title: x.title, section: x.section, text: x.text, ver: x.ver || ver, src: file.name, added: now, ...(x.limit ? { limit: x.limit } : {}), ...(x.note ? { note: x.note } : {}) }; added++; } });
     await cmtSave(); cmtRender();
     $('#cmtMsg').innerHTML = `<b>${added} comments added</b>${updated ? `, ${updated} updated` : ''}${kept ? `, ${kept} you edited were kept as you have them` : ''} – from ${r.pages} ${/\.json$/i.test(file.name) ? 'comments in the file' : 'pages'}${/\.json$/i.test(file.name) ? '' : `, all marked <b>${h(CMT_VER[ver])}</b>`}.${r.empty.length ? `<br><small>${r.empty.length} pages had a title but no text yet, so they were left out: ${h(r.empty.join(' · '))}</small>` : ''}`;
   } catch (e) { console.error(e); toast(e.message || 'Could not read that PDF'); }
 }
-const cmtList = () => Object.values(CMT).sort((a, b) => a.section.localeCompare(b.section) || a.title.localeCompare(b.title));
+const cmtFits = x => /^[A-Z][A-Z ]+ – /.test(x.title);   // condensed versions that fit one box come first
+const cmtList = () => Object.values(CMT).sort((a, b) => a.section.localeCompare(b.section) || cmtFits(b) - cmtFits(a) || a.title.localeCompare(b.title));
 const cmtHi = s => h(s).replace(/\[([^\]]{1,80})\]/g, '<mark class="blank">[$1]</mark>').replace(/\n/g, '<br>');
 function cmtMatch(x, q, sec, ver) {
   if (sec && x.section !== sec) return false; if (ver && !(x.ver === ver || x.ver === 'both')) return false;
@@ -76,15 +77,15 @@ function cmtRender() {
   const sel = $('#cmtSec'); const cur = CMT_UI.sec; sel.innerHTML = `<option value="">All sections</option>${secs.map(s => `<option ${s === cur ? 'selected' : ''}>${h(s)}</option>`).join('')}`;
   let sec = '';
   box.innerHTML = L.map(x => {
-    const head = x.section !== sec ? `<h3 class="cmtSecH">${h(x.section)}</h3>` : ''; sec = x.section;
+    const head = x.section !== sec ? `<h3 class="cmtSecH">${h(x.section)}${x.limit ? ` <small>· this UAD 3.6 box holds ${x.limit.toLocaleString()} characters – everything you paste into it together</small>` : ''}</h3>` : ''; sec = x.section;
     if (CMT_UI.edit === x.id) return head + `<div class="cmt editing"><div class="grid2"><label>Title<input data-ce="title" value="${h(x.title)}"></label><label>Section<input data-ce="section" value="${h(x.section)}" list="cmtSecs"></label></div>
       <label>Written for<select data-ce="ver">${Object.entries(CMT_VER).map(([k, v]) => `<option value="${k}" ${k === x.ver ? 'selected' : ''}>${v}</option>`).join('')}</select></label>
       <label>Comment<textarea data-ce="text" rows="${Math.min(18, 4 + Math.round(x.text.length / 110))}">${h(x.text)}</textarea></label>
       <div class="toolrow"><button type="button" class="btn primary small" data-cact="save" data-id="${x.id}">Save</button><button type="button" class="btn ghost small" data-cact="cancel">Cancel</button><span class="grow"></span><button type="button" class="btn ghost small danger" data-cact="del" data-id="${x.id}">${CMT_UI.del === x.id ? 'Click again to delete' : 'Delete'}</button></div></div>`;
     const long = x.text.length > 420 && !CMT_UI.open[x.id];
-    return head + `<div class="cmt"><div class="cmtTop"><b>${h(x.title)}</b><span class="vtag v${x.ver.replace('.', '')}">${h(CMT_VER[x.ver] || x.ver)}</span>${x.edited ? '<span class="vtag">edited</span>' : ''}<span class="grow"></span>
+    return head + `<div class="cmt"><div class="cmtTop"><b>${h(x.title)}</b><span class="vtag v${x.ver.replace('.', '')}">${h(CMT_VER[x.ver] || x.ver)}</span>${x.edited ? '<span class="vtag">edited</span>' : ''}<small class="cmtLen${x.limit && x.text.length > x.limit ? ' over' : ''}">${x.text.length.toLocaleString()}${x.limit ? ' of ' + x.limit.toLocaleString() : ''} characters</small><span class="grow"></span>
       <button type="button" class="btn small" data-cact="copy" data-id="${x.id}">Copy</button><button type="button" class="btn ghost small" data-cact="edit" data-id="${x.id}">Edit</button></div>
-      <div class="cmtText${long ? ' clip' : ''}">${cmtHi(x.text)}</div>${long ? `<button type="button" class="linkbtn" data-cact="more" data-id="${x.id}">Show all</button>` : ''}</div>`;
+      ${x.note ? `<div class="cmtNote">${h(x.note)}</div>` : ''}<div class="cmtText${long ? ' clip' : ''}">${cmtHi(x.text)}</div>${long ? `<button type="button" class="linkbtn" data-cact="more" data-id="${x.id}">Show all</button>` : ''}</div>`;
   }).join('') + `<datalist id="cmtSecs">${secs.map(s => `<option value="${h(s)}">`).join('')}</datalist>`;
 }
 async function cmtCopy(x) {
