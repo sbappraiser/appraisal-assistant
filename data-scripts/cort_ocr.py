@@ -35,6 +35,14 @@ def lines_of(words, width):
     return rows
 
 APN = re.compile(r'^\d{3}\W?\d{3}\W?\d{2}$')
+def upright(png):
+    """A page scanned sideways or upside down is turned before reading (tesseract's page-direction check)."""
+    out = subprocess.run(['tesseract', png, '-', '--psm', '0'], capture_output=True, text=True, env={**os.environ, 'OMP_THREAD_LIMIT': '1'}).stdout
+    m = re.search(r'Rotate:\s*(\d+)', out); c = re.search(r'Orientation confidence:\s*([\d.]+)', out)
+    if not m or int(m.group(1)) == 0 or not c or float(c.group(1)) < 2: return
+    from PIL import Image
+    Image.open(png).rotate(-int(m.group(1)), expand=True).save(png)   # tesseract gives the clockwise turn; PIL turns counter-clockwise
+
 def parse_pdf(pdf):
     recs = []; tmp = tempfile.mkdtemp()
     subprocess.run(['pdftoppm', '-r', '300', '-gray', '-png', pdf, os.path.join(tmp, 'p')], check=True)
@@ -42,6 +50,7 @@ def parse_pdf(pdf):
     for png in sorted(os.listdir(tmp), key=lambda s: int(re.sub(r'\D', '', s) or 0)):
         path = os.path.join(tmp, png)
         width = int(subprocess.run(['identify', '-format', '%w', path], capture_output=True, text=True).stdout or 2550) if False else None
+        upright(path)
         words = ocr_page(path)
         if not words: continue
         width = max(w['x'] + w['w'] for w in words) * 1.0
