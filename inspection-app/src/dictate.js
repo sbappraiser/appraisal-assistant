@@ -13,7 +13,9 @@ const NUMW = { one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eig
 const ORDW = { first: '1st', second: '2nd', third: '3rd', fourth: '4th', fifth: '5th' };
 const tfOf = n => n < 1 ? 'tflt1' : n <= 5 ? 'tf1to5' : n <= 10 ? 'tf5to10' : 'tf10plus';
 const DICT_HEAR = [ // 6k: what the iPad heard → what she said (from her Oct 2026 inspection)
-  [/\s*\b(?:colin|colon)\b/g, ':'], [/\btrailer patio\b/g, 'trellis covered patio'], [/\btrellised\b/g, 'trellis'],
+  [/\s*\b(?:colin|colon)\b/g, ':'], [/\bpaper (patio|walkway|walk|driveway|path)/g, 'paver $1'], [/(^|[.\n]\s*)then\s*:/g, '$1den:'], [/\bvaulted would be\b/g, 'vaulted wood beam'],
+  [/\bfor (?:micah|mica|mika)\b(?! desk)/g, 'formica'], [/\bfrench (?:strains?|trains?|drains?)\b/g, 'french drain'], [/\bic\s*-?\s*([1-6])\b/g, 'high c$1'], [/\bcentral,? warm,? air\b/g, 'forced air'], [/\bcentral (?:heat|heating)\b/g, 'forced air'],
+  [/\bair[ -]condition(?:ing|er|ed)?\b/g, 'ac'], [/\b(curbs?)(,?\s*(?:and\s+)?)gutters?\b/g, '$1$2streetgutters'], [/\bgravel beds?\b/g, 'gravelbeds'], [/\b(?:one|1|single) level\b/g, 'stories1'], [/\btrailer patio\b/g, 'trellis covered patio'], [/\btrellised\b/g, 'trellis'],
   [/\b(?:mealie|mealy|millie|milly|miley|meili)\b/g, 'miele'], [/\bmiele(\d)/g, 'miele $1'], [/\btough sheds?\b/g, 'tuff shed'], [/\btuff sheds\b/g, 'tuff shed'], [/\bcarr\b/g, 'car'], [/\b(?:attached|detached) (?:to|too) car\b/g, m => m.split(' ')[0] + ' 2 car'], [/\b(?:to|too) car\b/g, '2 car'],
   [/\b(?:solar tubes?|solitude|sola tubes?|solatubes|solar tubs?)\b/g, 'solatube'], [/\b(?:to|two|2) pay for\b/g, 'paver'], [/\b(rear|front)\s+inside\s+yards?\b/g, '$1 and side yards'],
   [/\bwindows or\b/g, 'windows are'], [/\bwindows are insulated\b/g, 'windows are dual pane'], [/\binsulated (?:glass|windows?)\b/g, 'dual pane windows'], [/\bfloor ?plans?\b/g, 'floorplan'], [/\bhook ?ups?\b/g, 'hookups'], [/\bstorage left\b/g, 'storage loft'],
@@ -25,7 +27,7 @@ const DICT_PRE = [ // numbers, ratings, levels, counts – turned into one word 
   [/\b(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\b/g, (m, w) => String(NUMW[w])], [/\b(first|second|third|fourth|fifth)\b/g, (m, w) => ORDW[w]],
   [/\b(\d)\.5\s+bath(?:room)?s?\b/g, 'bathcount$1 halfcount1'], [/\b(\d)\s+and a half\s+bath(?:room)?s?\b/g, 'bathcount$1 halfcount1'],
   [/\b([1-9])\s+half\s+bath(?:room)?s?\b/g, dkCount('halfcount')], [/\b([1-9])\s+(?:full\s+)?bath(?:room)?s\b/g, dkCount('bathcount')], [/\b(1)\s+(?:full\s+)?bath(?:room)?\b(?=\s*(?:and|,|$|\.))/g, dkCount('bathcount')], [/\b([1-9])\s+bedrooms?\b/g, dkCount('bedcount')],
-  [/\b(?:front door|front entry|entry door|front entrance|threshold|entry)\b(?:\s+(?:is|sits|elevation|height|threshold|about|approximately|around|roughly|at))*\s+(\d+(?:\.\d+)?|a)\s*(feet|foot|ft|inches|inch)\b(?:\s+(?:above|off|from)\s+(?:the\s+)?(?:grade|ground|finished grade))?/g, (m, n, u) => 'frontelev' + Math.round((n === 'a' ? 1 : +n) * (/^in/.test(u) ? 1 : 12))],
+  [/\b(?:front door|front entry|entry door|front entrance|threshold|entry)\b(?:\s+(?:is|sits|elevation|height|threshold|about|approximately|around|roughly|at|less than|under|below|just))*\s+(\d+(?:\.\d+)?|a)(?:\s+\1)?\s*(feet|foot|ft|inches|inch)\b(?:\s+(?:above|off|from)\s+(?:the\s+)?(?:grade|ground|finished grade))?/g, (m, n, u) => 'frontelev' + Math.round((n === 'a' ? 1 : +n) * (/^in/.test(u) ? 1 : 12))],
   [/\b(\d{1,2})\s+steps?\s+(?:up\s+)?(?:to\s+)?(?:the\s+)?(?:front door|entry|front entry|threshold)\b/g, (m, n) => 'frontelev' + (+n * 7)],
   [/\b(?:front door|front entry|entry door|threshold|entry)\b(?:\s+(?:is|sits|at))*\s+(?:at\s+)?(?:ground level|grade level|grade|ground)\b/g, 'frontelev0'],
   [/\b(\d{1,2})\s*(?:foot|feet|ft)\s+(?:high\s+|tall\s+)?((?:(?:vaulted|beamed|beam|coffered|tray|open|flat|wood|tongue and groove)\s+){1,3})ceilings?\b/g, 'ceilht$1 $2ceiling'],
@@ -91,7 +93,7 @@ const DICT_SYN = [
   ['succulent', 'amenities.landFeat', 'Succulents'], ['cactus', 'amenities.landFeat', 'Succulents'], ['lawn', 'amenities.landFeat', 'Lawn'], ['grass', 'amenities.landFeat', 'Lawn'], ['artificial turf', 'amenities.landFeat', 'Artificial Turf'], ['synthetic turf', 'amenities.landFeat', 'Artificial Turf'], ['fruit tree', 'amenities.landFeat', 'Fruit Trees'], ['citrus', 'amenities.landFeat', 'Citrus Trees'], ['avocado', 'amenities.landFeat', 'Avocado Trees'], ['flower', 'amenities.landFeat', 'Flower Beds'], ['rose', 'amenities.landFeat', 'Rose Garden'], ['native plant', 'amenities.landFeat', 'Native Plants'], ['vegetable garden', 'amenities.landFeat', 'Vegetable Garden'], ['raised bed', 'amenities.landFeat', 'Raised Beds'],
   ['fire pit', 'amenities.outdoor', 'Fire Pit'], ['firepit', 'amenities.outdoor', 'Fire Pit'], ['bbq', 'amenities.outdoor', 'Built-in BBQ Area'], ['builtin bbq', 'amenities.outdoor', 'Built-in BBQ Area'], ['builtin barbecue', 'amenities.outdoor', 'Built-in BBQ Area'], ['barbecue', 'amenities.outdoor', 'Built-in BBQ Area'], ['outdoor kitchen', 'amenities.outdoor', 'Outdoor Kitchen'], ['pergola', 'amenities.outdoor', 'Pergola'], ['trellis', 'amenities.outdoor', 'Trellis'], ['gazebo', 'amenities.outdoor', 'Gazebo'],
   ['solar', 'systems.renew', 'Solar'], ['solatube', 'interior.intFeat', 'Solatubes'], ['ceiling fan', 'interior.intFeat', 'Ceiling Fans'],
-  ['streetgutter', 'street.streetFeat', 'Gutters'], ['midcentury modern', 'front.design', 'Modern'], ['midcentury', 'front.design', 'Modern'], ['lowprofile', 'front.roofStyle', 'Low Pitch'], ['lowprofile roof', 'front.roofStyle', 'Low Pitch'], ['shed roof', 'front.roofStyle', 'Shed'], ['roses', 'amenities.landFeat', 'Rose Garden'],
+  ['streetgutter', 'street.streetFeat', 'Gutters'], ['local street', 'street.streetType', 'Local'], ['local road', 'street.streetType', 'Local'], ['bar seat', 'L:kitchens.islandSeat', true], ['bar seating', 'L:kitchens.islandSeat', true], ['midcentury modern', 'front.design', 'Modern'], ['midcentury', 'front.design', 'Modern'], ['lowprofile', 'front.roofStyle', 'Low Pitch'], ['lowprofile roof', 'front.roofStyle', 'Low Pitch'], ['shed roof', 'front.roofStyle', 'Shed'], ['roses', 'amenities.landFeat', 'Rose Garden'],
   ['drywall', 'garage.garFinish', 'Finished'], ['drywall on wall', 'garage.garFinish', 'Finished'], ['builtin workbench', 'garage.garFeat', 'Workbench'], ['laundry hookup', 'interior.laundry', 'In Garage'],
   // view, topography
   ['neutral', 'site.viewImpact', 'Neutral', 'site.view'], ['beneficial', 'site.viewImpact', 'Beneficial', 'site.view'], ['adverse', 'site.viewImpact', 'Adverse', 'site.view'],
@@ -156,6 +158,7 @@ const OL_FEAT = [['covered', 'Covered'], ['partially covered', 'Partially Covere
 /* ---- words that only count with the right word in the same sentence (6k) ----
    [field, values (null = any), words one of which must be in the sentence, or the area she is in, synonyms too?] */
 const DICT_NEED = [
+  ['systems.heatFuel', ['Wood', 'Solar', 'Electric', 'Propane', 'Geothermal'], ['heat', 'heating', 'heater', 'furnace', 'fireplace', 'stove', 'fuel'], 'systems', false],
   ['systems.heat', ['Baseboard', 'Fireplace', 'Stove', 'Radiators', 'Radiant', 'PassiveSolar'], ['heat', 'heating', 'heater', 'furnace', 'warm'], 'systems', true],
   ['front.roofMat', ['Wood', 'Copper', 'Metal', 'Concrete', 'Slate', 'Clay', 'Asphalt', 'Rubber', 'Synthetic', 'CeramicTile', 'TarAndGravel'], ['roof', 'roofing', 'shingle', 'shake', 'reroof'], null, false],
   ['front.roofStyle', null, ['roof', 'roofline', 'lowprofile'], null, false],
@@ -238,11 +241,12 @@ function dkTeachApply(text) { let t = String(text || '');
   dkTeachList().slice().sort((a, b) => b.heard.length - a.heard.length).forEach(({ heard, meant }) => { const h = heard.trim(); if (!h) return;
     const rx = new RegExp((/^\w/.test(h) ? '\\b' : '') + dkRxEsc(h).replace(/\s+/g, '\\s+') + (/\w$/.test(h) ? '\\b' : ''), 'gi'); t = t.replace(rx, () => meant == null ? '' : meant); });
   return t; }
+function dkLines(text) { return String(text || '').replace(/:[ \t]*\n+\s*/g, ': ').replace(/([.!?;])?[ \t]*\n+\s*/g, (m, p) => p ? p + ' ' : '. '); }
 function dkSpoken(text) {   // her taught words first; then spoken commands: "accept" ends a sentence, "scratch that" drops the sentence it is in
   return dkTeachApply(text).replace(/[^.!?\n]*\bscratch that\b[.!,]?/gi, '').replace(/\s*\baccept\b[.,!]?/gi, '.').replace(/\.(\s*\.)+/g, '.');
 }
 function dictParse(text, ins) {
-  text = dkSpoken(text);
+  text = dkLines(dkSpoken(text));
   const IX = dictIndex(); const T = dictTokens(text); const n = T.length;
   const at = (i, ph) => { for (let j = 0; j < ph.length; j++) { const t = T[i + j]; if (!t || t.br || t.s !== ph[j]) return false; } return true; };
   const longest = (i, list) => { let best = null; list.forEach(e => { if ((!best || e.ph.length > best.ph.length) && at(i, e.ph)) best = e; }); return best; };
@@ -264,12 +268,15 @@ function dictParse(text, ins) {
     const vv = IX.vals.filter(e => at(i, e.ph)); const vlen = vv.reduce((m, e) => Math.max(m, e.ph.length), 0); const vals = vv.filter(e => e.ph.length === vlen);
     const len = x => x ? x.ph.length : 0; const L = Math.max(len(r), len(it), len(c), len(q), len(ap), len(br), vlen); if (!L) continue;
     let m;
+    if (len(r) === L && i > 0 && !T[i - 1].br && /^(as|like)$/.test(T[i - 1].s)) { let nx = T[i + L], ex = 0; if (nx && nx.s === 'number') { ex = 1; nx = T[i + L + 1]; }
+      if (nx && !nx.br && /^\d$/.test(nx.s)) { marks.push({ i, len: L + 1 + ex, kind: 'roomref', list: r.a, props: r.b, num: nx.s, tabs: [...tabs] }); i += L + ex; continue; } }
     if (len(r) === L) { m = { kind: 'room', list: r.a, props: { ...r.b } }; inside = true; tabs = ['interior']; pref = [];
       let nx = T[i + L], extra = 0; if (nx && !nx.br && nx.s === 'number' && T[i + L + 1] && /^\d$/.test(T[i + L + 1].s)) { extra = 1; nx = T[i + L + 1]; }
       if (nx && !nx.br && /^\d$/.test(nx.s)) { m.num = nx.s; marks.push({ i, len: L + 1 + extra, ...m, tabs: [...tabs] }); i += L + extra; continue; }
       if (['bedrooms', 'baths'].includes(r.a) && /s$/.test(T[i + L - 1].w)) { marks.push({ i, len: L, kind: 'none', unused: true, tabs: [...tabs] }); i += L - 1; continue; }   // "both bathrooms …" is not a new bath
       if (r.a === 'rooms' && T[i + L] && T[i + L].sl) { const r2 = longest(i + L, IX.rooms.filter(x => x.a === 'rooms')); if (r2) { const cap = w => w[0].toUpperCase() + w.slice(1); m.props.label = cap(T[i].w) + '/' + cap(T[i + L].w); marks.push({ i, len: L + r2.ph.length, ...m, tabs: [...tabs] }); i += L + r2.ph.length - 1; continue; } } }
     else if (len(it) === L) m = { kind: 'item', list: it.a, type: it.b, val: vals.find(v => v.key.startsWith('L:')) ? vals : null };
+    else if (len(c) === L && /^(street|road)$/.test(c.ph.join(' ')) && i > 0 && !T[i - 1].br && /^(from|the|to|on|of|across|down|up)$/.test(T[i - 1].s)) { i += L - 1; continue; }
     else if (len(c) === L) { tabs = c.a; pref = c.pref; inside = c.a.includes('interior') || (inside && c.a.every(x => x === 'systems')); m = { kind: 'ctx', cue: len(q) === L ? q.keys : null, tabs: c.a }; }
     else if (len(q) === L) m = { kind: 'cue', keys: q.keys };
     else if (len(ap) === L) m = { kind: 'appl', k: ap.k, q: ap.q };
@@ -302,6 +309,8 @@ function dictParse(text, ins) {
       if (tab && room === null && m.tabs[0] === tab) return true; const st = sentStems[sentOf[m.i]]; return words.some(w => st.has(w)); } return true; };
   const resolve = (m, keys) => {   // which field a word belongs to
     if (room !== null) { const L = rooms[room].list; const rk = keys.filter(k => k.startsWith('L:' + L + '.'));
+      const idx0 = marks.indexOf(m); const nxq = marks.slice(idx0 + 1, idx0 + 3).find(o => o.kind === 'cue' && sameSentence(o.i, m.i) && o.keys.some(y => y.startsWith('L:')));
+      if (rk.length && nxq && nxq.i === m.i + m.len && !m.vals.some(v => v.syn && rk.includes(v.key)) && !rk.some(k => nxq.keys.some(y => cueMatch(y, k)))) return 'unclear';
       if (rk.length) return rk.length === 1 ? rk[0] : (cueNear(m, rk) || 'unclear'); }
     const ent = k => m.vals.find(v => v.key === k) || {};
     const okPref = k => { const pr = ent(k).pref; return !pr || (m.pref || []).some(p => pr.startsWith(p) || p.startsWith(pr)) || cueNear(m, [k]) === k; };
@@ -319,11 +328,14 @@ function dictParse(text, ins) {
   let applLast = null;
   const step = (m, mi) => {
     if (m.kind === 'none') return;
+    if (m.kind === 'roomref') { if (room !== null && /\bsame\b/.test(sentW[sentOf[m.i]].map(t => t.s).join(' '))) rooms[room].copyFrom = (m.list === 'bedrooms' ? 'Bedroom ' : m.list === 'baths' ? 'Bath ' : '') + m.num; return; }
     if (m.kind === 'room') { startRoom(m); return; }
     if (m.kind === 'ctx') { if (!m.tabs.includes('interior') || room !== null) { room = null; } if (!m.tabs.includes('interior')) ctxLevel = null; return; }
     if (m.kind === 'sp') { const s = m.s, num = s.replace(/^\D+/, '');
       if (/^lvl/.test(s)) { const code = LVL_CODE[s.slice(3)]; if (room !== null && sameSentence(rooms[room].at, m.i) && rooms[room].at < m.i && !rooms[room].levelSaid) { rooms[room].level = code; rooms[room].levelSaid = true; } else { ctxLevel = code; room = null; } return; }
-      if (/^[qc]rate/.test(s)) { const back = T.slice(Math.max(0, m.i - 5), m.i).map(t => t.s); const lastOf = w => back.lastIndexOf(w);
+      if (/^[qc]rate/.test(s)) { let b0 = m.i; while (b0 > 0 && !T[b0 - 1].br && m.i - b0 < 10) b0--; const back = T.slice(b0, m.i).map(t => t.s);
+        if (!back.some(w => /^(exterior|interior|overall)$/.test(w)) && room !== null && ['kitchens', 'baths'].includes(rooms[room].list)) { const pre = T[m.i - 1]; if (pre && /^(low|high|mid|middle)$/.test(pre.s)) pre.item = true;
+          put('L:' + rooms[room].list + '.note', (s[0] === 'q' ? 'Quality ' : 'Condition ') + (pre && /^(low|high|mid|middle)$/.test(pre.s) ? pre.w + ' ' : '') + (s[0] === 'q' ? 'Q' : 'C') + num + '.', room); return; } const lastOf = w => back.lastIndexOf(w);
         const e = lastOf('exterior'), it = lastOf('interior'), ov = lastOf('overall'); const top = Math.max(e, it, ov);
         const where = top < 0 ? (room !== null || m.tabs.includes('interior') ? 'int' : m.tabs.includes('front') ? 'ext' : 'all') : top === e ? 'ext' : top === it ? 'int' : 'all';
         const key = { ext: s[0] === 'q' ? 'front.eq' : 'front.ec', int: s[0] === 'q' ? 'interior.iq' : 'interior.ic', all: s[0] === 'q' ? 'condition.oq' : 'condition.oc' }[where];
@@ -348,8 +360,9 @@ function dictParse(text, ins) {
       if (ri === null) { m.unused = true; return; }
       const r = rooms[ri]; r.appl = r.appl || {};
       if (m.kind === 'appl') { const a = r.appl[m.k] = r.appl[m.k] || {}; const prev = marks[mi - 1], prev2 = marks[mi - 2]; const bm = [prev, prev2].find(o => o && o.kind === 'brand' && m.i - o.i <= 3 && sameSentence(o.i, m.i));
-        if (bm) a.brand = bm.b; const qn = T[m.i - 1] && /^\d$/.test(T[m.i - 1].s) ? +T[m.i - 1].s : m.q; if (qn) a.qty = qn; applLast = m.k; }
-      else { const nx = marks[mi + 1]; if (!(nx && nx.kind === 'appl' && nx.i - m.i <= 3)) { r.brandsSaid = [...new Set([...(r.brandsSaid || []), m.b])]; } }
+        if (bm) a.brand = bm.b; else if (r.sentBrand && r.sentBrand.k === sentOf[m.i] && !a.brand) { a.brand = r.sentBrand.b; r.brandUsed = [...(r.brandUsed || []), r.sentBrand.b]; }   // "all appliances are Miele and include …"
+        const qn = T[m.i - 1] && /^\d$/.test(T[m.i - 1].s) ? +T[m.i - 1].s : m.q; if (qn) a.qty = qn; applLast = m.k; }
+      else { const nx = marks.slice(mi + 1, mi + 3).find(o => o.kind === 'appl' && o.i - m.i <= 3 && sameSentence(o.i, m.i)); if (!nx) { r.brandsSaid = [...new Set([...(r.brandsSaid || []), m.b])]; r.sentBrand = { b: m.b, k: sentOf[m.i] }; } }
       return; }
     if (m.kind === 'item') { if (room !== null && m.val) { const rk = m.val.filter(v => v.key.startsWith('L:' + rooms[room].list + '.')); if (rk.length) { m.asVal = true; put(rk[0].key, rk[0].v, room); if (rk[0].key.endsWith('.feat')) put('L:' + rooms[room].list + '.hasFeat', true, room); return; } }
       if (m.list === 'outbuildings') { const prevO = items.filter(o => o.list === 'outbuildings').pop(); const pv = T[m.i - 1]; if (prevO && pv && !pv.br && /^(the|that|this)$/.test(pv.s)) { m.alias = prevO; prevO.sks.push(sentOf[m.i]); return; } }   // "the shed has wood stairs" = the same shed
@@ -359,7 +372,8 @@ function dictParse(text, ins) {
       const stems = T.slice(m.i, m.i + m.len).map(t => t.s).join(' '), word = T.slice(m.i, m.i + m.len).map(t => t.w).join(' ');
       const pv = T[m.i - 1]; if (pv && !pv.br && /^(no|not|without|none|non)$/.test(pv.s)) { m.unused = true; const ss = [...new Set(keys.filter(k => !k.startsWith('L:')).map(k => k.split('.')[0]))]; if (ss.length === 1 && NOTE_KEY[ss[0]]) m.negSec = ss[0]; return; }   // "no solar": nothing ticked, the sentence goes to her notes
       if (room === null) { const nb = [marks[mi - 1], marks[mi + 1]].filter(o => o && o.kind === 'item' && Math.abs(o.i - m.i) <= 3 && sameSentence(o.i, m.i)).sort((a, b) => Math.abs(a.i - m.i) - Math.abs(b.i - m.i))[0];
-        if (nb && ITEM_WORDS.has(stems)) { m.taken = nb.alias || nb; return; } }   // "wood decking", "pebble pool"
+        const nxc = marks[mi + 1]; const cueAfter = nxc && nxc.kind === 'cue' && nxc.i === m.i + m.len && keys.some(k => nxc.keys.includes(k));
+        if (nb && ITEM_WORDS.has(stems) && !cueAfter) { m.taken = nb.alias || nb; return; } }   // "wood decking", "pebble pool"
       if (stems === 'stainles' || stems === 'stainless') { const ri = room !== null && rooms[room].list === 'kitchens' ? room : null; if (ri !== null) { rooms[ri].stainless = true; return; } }
       const key = resolve(m, keys);
       if (!key || key === 'unclear') { m.unused = true; return; }   // not sure where it goes: the sentence goes to the notes
@@ -394,7 +408,13 @@ function dictParse(text, ins) {
   if (fpMentions > 0) put('interior.fireplaces', fpMentions);
   // words around a pool / spa / deck (same sentence, up to the next comma)
   T.forEach((t, j) => { if (t.br) return; const mk = marks.find(o => j >= o.i && j < o.i + o.len); if (mk && !(mk.kind === 'val' && mk.taken)) return;
-    if (t.rep) return; const o = mk && mk.taken ? mk.taken : nearestItem(j); if (o) { o.words.push(t.w); t.item = true; } });
+    if (t.rep) return; const o = mk && mk.taken ? mk.taken : nearestItem(j); if (o) { o.words.push(t.w); (o.wd = o.wd || []).push({ s: t.s, d: Math.abs(j - o.i) }); t.item = true; } });
+  // "Bathroom 2 has the same finishes as bathroom 1": copy what was heard for that room
+  rooms.forEach((r, ri) => { if (!r.copyFrom) return; const si = rooms.findIndex(x => x.list === r.list && x.label === r.copyFrom); if (si < 0 || si === ri) return;
+    [...changes.values()].filter(c => c.room === si && c.f.t !== 'note').forEach(c => { if (!changes.has('R' + ri + ':' + c.key)) c.vals.forEach(v => put(c.key, v, ri)); }); });
+  rooms.forEach(r => { if (r.brandUsed && r.brandsSaid) r.brandsSaid = r.brandsSaid.filter(b => !r.brandUsed.includes(b)); });
+  items.forEach(m => { const nxt = marks.find(o => o.kind === 'item' && o.i > m.i); let e = m.i; while (e < n && !T[e].br && (!nxt || e < nxt.i)) e++;
+    m.pp = /personal propert|no (?:contributory )?value/.test(T.slice(m.i, e).map(t => t.w).join(' ')); });
   const out = items.map(m => dictItem(m, sentText));
   if ([...changes.values()].some(c => c.key === 'amenities.fenceMat')) put('amenities.hardscape', 'Fencing');
   // the rooms as they are in the inspection now
@@ -412,9 +432,12 @@ function dictParse(text, ins) {
       put('site.influences', 'BodyOfWater'); const wb = /ocean|beach/.test(fw) ? 'Ocean' : /lake/.test(fw) ? 'Lake' : /creek/.test(fw) ? 'Creek' : null; if (wb) put('site.water', wb); put('site.waterPrivate', true);
       if (/\bbeach\b|beachfront/.test(fw)) put('site.waterFeat', 'Beach'); if (/seawall|bulkhead/.test(fw)) put('site.waterFeat', 'SeawallOrBulkhead'); if (/riprap|rip rap/.test(fw)) put('site.waterFeat', 'Riprap'); if (/\bdock\b/.test(fw)) put('site.waterFeat', 'Dock');
       if (/\bdeeded\b/.test(fw)) put('site.waterRights', 'Deeded'); } }
+  { const fw = T.filter(t => !t.rep && !t.br).map(t => t.w).join(' ');
+    if (/\broof (?:can ?not|could ?not|cannot|is not|isnt|not) (?:be )?(?:seen|visible|observed)|roof (?:was )?not (?:visible|observable)/.test(fw)) put('front.roofObs', false);
+    else if (/\broof (?:can|could|is|was)? ?(?:only )?(?:partially |partly |mostly |fully )?(?:be )?(?:seen|visible|observed|observable)/.test(fw)) put('front.roofObs', true); }
   // her rule (Oct 2026): if she does not say a defect there is no defect → the defect questions are answered No (she can change them in the list)
   const DEFECT_RX = /\b(?:defects?|damaged?|cracks?|cracked|cracking|leaks?|leaking|rot|rotted|rotting|termites?|broken|peeling|deferred maintenance|needs? (?:repair|replacing|replacement)|water stains?|mold|mildew|missing|inoperable|not working)\b/;
-  const defectSaid = sentW.some((ws, k) => { if (report.has(k)) return false; const w = ws.map(t => t.w).join(' ').replace(/\bno (?:visible |apparent |observed |known )?(?:defects?|damage)\b/g, ''); return DEFECT_RX.test(w); });
+  const defectSaid = sentW.some((ws, k) => { if (report.has(k)) return false; const w = ws.map(t => t.w).join(' ').replace(/\bno (?:visible |apparent |observed |known )?(?:defects?|damage|deferred maintenance)\b/g, '').replace(/\b(?:deferred maintenance|defects?|damage|functional obsolescence)(?:[\s,:]+(?:and\s+)?(?:deferred maintenance|defects?|damage))*[\s,:]*(?:none|no|not observed|none observed|n\/?a)\b/g, ''); return DEFECT_RX.test(w); });
   if (!defectSaid) [['site', 'siteDefects'], ['exterior', 'extDefects'], ['interior', 'intDefects'], ['amenities', 'amenDefects'], ['garage', 'vsDefects']].forEach(([sec, k]) => {
     if (ins && ins.data[sec] && ins.data[sec][k] !== undefined) return; put(sec + '.' + k, false); const c = changes.get(sec + '.' + k); if (c) c.auto = 'You did not mention a defect'; });
   // the same rule for yes/no questions she would only mention when the answer is yes
@@ -460,7 +483,7 @@ const PHOTO_WORDS = [ // [what she says, tab, photo field (first of its set), on
   ['tennis', 'amenities', 'photoRec'], ['sport court', 'amenities', 'photoRec'], ['pickleball', 'amenities', 'photoRec'], ['putting green', 'amenities', 'photoRec'],
   ['adu', 'adu'], ['accessory dwelling', 'adu'], ['guest house', 'adu'], ['granny unit', 'adu'], ['casita', 'adu']];
 function dkPhotoTarget(text) {   // the last room or area named in the text up to where she is
-  const T = dictTokens(dkSpoken(text)); const IX = dictIndex(); const PW = PHOTO_WORDS.map(([w, sec, f, st]) => ({ ph: phraseOf(w), sec, f, st }));
+  const T = dictTokens(dkLines(dkSpoken(text))); const IX = dictIndex(); const PW = PHOTO_WORDS.map(([w, sec, f, st]) => ({ ph: phraseOf(w), sec, f, st }));
   const at = (i, ph) => ph.every((x, j) => T[i + j] && !T[i + j].br && T[i + j].s === x);
   const best = (i, list) => list.filter(e => at(i, e.ph)).sort((a, b) => b.ph.length - a.ph.length)[0];
   let last = null;
@@ -518,9 +541,12 @@ function dictItem(m, sentText) {
     if (has('attached')) it.note.push('Attached to the pool'); if (has('cover') && !it.feat.includes('Automatic Cover')) it.note.push('Has a cover');
   } else if (m.list === 'outbuildings') { it.type = m.type; it.feat = []; if (/\btuff\b/.test(m.txt || '')) it.label = 'Tuff Shed'; if (m.permitted) it.permitted = m.permitted;
     if (said.length) it.note.push(said.join(' ')); if (m.repTxt) it.note.push('Owner: ' + m.repTxt.join(' '));
+    if (m.pp) it.off = 'Personal property – not ticked; tick it if it should be in the report';
     it.note = it.note.join(' '); return it;
-  } else { it.type = m.type; const mt = ITEM_MAT.slice().sort((a, b) => b[0].length - a[0].length).find(([w]) => has(w)); if (mt) it.material = mt[1]; it.feat = OL_FEAT.filter(([w]) => has(w)).map(x => x[1]); }
-  if (extra.length && said.length) it.note.push(said.join(' '));   // she said more than there are boxes for: keep her sentence
+  } else { it.type = m.type; const dOf = w => { const f = phraseOf(w)[0]; const h = (m.wd || []).filter(x => x.s === f); return h.length ? Math.min(...h.map(x => x.d)) : 99; };
+    const mt = ITEM_MAT.filter(([w]) => has(w)).sort((a, b) => dOf(a[0]) - dOf(b[0]) || b[0].length - a[0].length)[0]; if (mt) it.material = mt[1]; it.feat = OL_FEAT.filter(([w]) => has(w)).map(x => x[1]); }
+  if (extra.length && said.length && !it.note.includes(said.join(' '))) it.note.push(said.join(' '));
+  if (m.pp) { it.off = 'Personal property – not ticked; tick it if it should be in the report'; if (!it.note.length) it.note.push(said.join(' ')); }   // she said more than there are boxes for: keep her sentence
   it.note = it.note.join('; '); return it;
 }
 
@@ -600,8 +626,8 @@ function renderDictate() {
     const notes = [...(r.notes || []), r.stainless ? 'Stainless steel appliances' : '', (r.brandsSaid || []).length ? r.brandsSaid.join(', ') + ' appliances' : ''].filter(Boolean).join('; ');
     return `<div class="dk-roomBox">${head}${R.changes.map((c, i) => c.room === ri ? changeRow(c, i, c.f.l, ex, 'dk-sub') : '').join('')}${appl ? `<div class="dk-sub dk-info">Appliances: <b>${appl}</b></div>` : ''}${notes ? `<div class="dk-sub dk-info">Note: ${esc(notes)}</div>` : ''}</div>`; }).join('') : '';
   const IT_WHERE = { waterFeatures: 'Pool, spa & water features', outdoorLiving: 'Porches, patios & decks', outbuildings: 'Outbuildings' };
-  const itemRows = R ? R.items.map((it, i) => row(P.i[i] !== false, `data-dki="${i}"`, IT_WHERE[it.list] + ' › new',
-    '<b>' + esc(it.label || labelOf(LISTS[it.list].fields[0].o, it.type) || it.type) + '</b>' + [it.permitted ? ' · permitted: ' + esc(it.permitted) : '', it.material ? ' · ' + esc(labelOf(LISTS.outdoorLiving.fields[2].o, it.material) || it.material) : '', it.mat ? ' · ' + esc(it.mat) : '', it.feat.length ? ' · ' + esc(it.feat.join(', ')) : '', it.note ? ' · ' + esc(it.note) : ''].join(''), '')).join('') : '';
+  const itemRows = R ? R.items.map((it, i) => row(P.i[i] !== undefined ? P.i[i] : !it.off, `data-dki="${i}"`, IT_WHERE[it.list] + ' › new',
+    '<b>' + esc(it.label || labelOf(LISTS[it.list].fields[0].o, it.type) || it.type) + '</b>' + [it.permitted ? ' · permitted: ' + esc(it.permitted) : '', it.material ? ' · ' + esc(labelOf(LISTS.outdoorLiving.fields[2].o, it.material) || it.material) : '', it.mat ? ' · ' + esc(it.mat) : '', it.feat.length ? ' · ' + esc(it.feat.join(', ')) : '', it.note ? ' · ' + esc(it.note) : ''].join(''), it.off || '')).join('') : '';
   const any = R && (R.changes.length || R.items.length || R.rooms.length);
   return `<section class="group open"><div class="ghead static"><span class="gtitle">Dictate your notes</span></div><div class="exp">
     <label class="dk-walk"><input type="checkbox" id="dkWalk" ${dkWalk() ? 'checked' : ''}> <b>Walk-through mode</b> – show only Dictate, Photos and Needs Attention while I walk the property</label>
@@ -741,7 +767,7 @@ function bindDictate(root) {
     const lab = document.createElement('label'); lab.className = 'dk-chip'; lab.innerHTML = `<input type="checkbox" data-dkm="${i}" value="${esc(v)}" checked>${esc(sel.options[sel.selectedIndex].text)}`; sel.before(lab); bindChip(lab.querySelector('input')); sel.options[sel.selectedIndex].remove(); sel.value = ''; tick(sel); });
   root.querySelectorAll('[data-dki]').forEach(cb => cb.onchange = () => { app.dict.pick.i[cb.dataset.dki] = cb.checked; });
   const ap = root.querySelector('#dkApply'); if (ap) ap.onclick = () => { const R = app.dict.res; const P = app.dict.pick; const pick = { c: {}, i: {}, v: P.v || {}, r: {}, mx: P.mx || {}, ma: P.ma || {} };
-    R.changes.forEach((c, i) => pick.c[i] = P.c[i] !== false && (c.room === undefined || P.r[c.room] !== false)); R.items.forEach((x, i) => pick.i[i] = P.i[i] !== false); R.rooms.forEach((x, i) => pick.r[i] = P.r[i] !== false);
+    R.changes.forEach((c, i) => pick.c[i] = P.c[i] !== false && (c.room === undefined || P.r[c.room] !== false)); R.items.forEach((x, i) => pick.i[i] = P.i[i] !== undefined ? P.i[i] : !x.off); R.rooms.forEach((x, i) => pick.r[i] = P.r[i] !== false);
     dictApply(app.ins, R, pick); app.ins.dictLog = [...(app.ins.dictLog || []), { t: Date.now(), text: app.dict.text }];
     const n = Object.values(pick.c).filter(Boolean).length + Object.values(pick.i).filter(Boolean).length;
     app.dict = blank(); app.ins.dictDraft = ''; save(); renderTab(); setTimeout(() => { const lv = document.getElementById('dkLeave'); if (lv) lv.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 150); toast(n + ' item' + (n === 1 ? '' : 's') + ' saved to the appraisal file. Check each tab for anything still marked.'); };
