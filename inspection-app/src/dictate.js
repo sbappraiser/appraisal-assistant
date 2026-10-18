@@ -14,13 +14,15 @@ const ORDW = { first: '1st', second: '2nd', third: '3rd', fourth: '4th', fifth: 
 const tfOf = n => n < 1 ? 'tflt1' : n <= 5 ? 'tf1to5' : n <= 10 ? 'tf5to10' : 'tf10plus';
 const DICT_HEAR = [ // 6k: what the iPad heard → what she said (from her Oct 2026 inspection)
   [/\s*\b(?:colin|colon)\b/g, ':'], [/\bpaper (patio|walkway|walk|driveway|path)/g, 'paver $1'], [/(^|[.\n]\s*)then\s*:/g, '$1den:'], [/\bvaulted would be\b/g, 'vaulted wood beam'],
-  [/\bfor (?:micah|mica|mika)\b(?! desk)/g, 'formica'], [/\bfrench (?:strains?|trains?|drains?)\b/g, 'french drain'], [/\bic\s*-?\s*([1-6])\b/g, 'high c$1'], [/\bcentral,? warm,? air\b/g, 'forced air'], [/\bcentral (?:heat|heating)\b/g, 'forced air'],
+  [/\bfor (?:micah|mica|mika)\b(?! desk)/g, 'formica'], [/\b(?:bolted|altered|vaulter|volted|faulted|halted)\b(?=\s+(?:wood\s+)?(?:beam|ceiling))/g, 'vaulted'], [/\bted ceilings?\b/g, 'vaulted ceilings'],
+  [/\b(?:to|too) (showerheads?|shower heads?|sinks|vanities|sliders|sliding glass doors|islands|fireplaces|water heaters|ovens)\b/g, '2 $1'], [/\bcaptain ?trees?\b/g, 'cabinetry'], [/\bcabinet tree\b/g, 'cabinetry'],
+  [/\bbedroom,? (?:floor|for|fore)\b/g, 'bedroom 4'], [/\bfrench (?:strains?|trains?|drains?)\b/g, 'french drain'], [/\bic\s*-?\s*([1-6])\b/g, 'high c$1'], [/\bcentral,? warm,? air\b/g, 'forced air'], [/\bcentral (?:heat|heating)\b/g, 'forced air'],
   [/\bair[ -]condition(?:ing|er|ed)?\b/g, 'ac'], [/\b(curbs?)(,?\s*(?:and\s+)?)gutters?\b/g, '$1$2streetgutters'], [/\bgravel beds?\b/g, 'gravelbeds'], [/\b(?:one|1|single) level\b/g, 'stories1'], [/\btrailer patio\b/g, 'trellis covered patio'], [/\btrellised\b/g, 'trellis'],
   [/\b(?:mealie|mealy|millie|milly|miley|meili)\b/g, 'miele'], [/\bmiele(\d)/g, 'miele $1'], [/\btough sheds?\b/g, 'tuff shed'], [/\btuff sheds\b/g, 'tuff shed'], [/\bcarr\b/g, 'car'], [/\b(?:attached|detached) (?:to|too) car\b/g, m => m.split(' ')[0] + ' 2 car'], [/\b(?:to|too) car\b/g, '2 car'],
   [/\b(?:solar tubes?|solitude|sola tubes?|solatubes|solar tubs?)\b/g, 'solatube'], [/\b(?:to|two|2) pay for\b/g, 'paver'], [/\b(rear|front)\s+inside\s+yards?\b/g, '$1 and side yards'],
   [/\bwindows or\b/g, 'windows are'], [/\bwindows are insulated\b/g, 'windows are dual pane'], [/\binsulated (?:glass|windows?)\b/g, 'dual pane windows'], [/\bfloor ?plans?\b/g, 'floorplan'], [/\bhook ?ups?\b/g, 'hookups'], [/\bstorage left\b/g, 'storage loft'],
   [/\bshower ?heads?\b/g, 'showerhead'], [/\bmirrored\b/g, 'mirror'], [/\bbuilt[ -]?in for (?:a |micah |mica |my )?desk\b/g, 'builtin desk'], [/\bcurbs? and gutters?\b/g, 'curbs streetgutters'],
-  [/\bhot (?:and|&) cold (?:water )?filter(?:ed)? (?:drinking )?water\b/g, 'hotwaterfilter coldwaterfilter'], [/\bmid[ -]?century\b/g, 'midcentury'], [/\blow[ -]profile\b/g, 'lowprofile'], [/\bhard ?scape\b/g, 'hardscape']];
+  [/\bhot (?:and|&) cold (?:water )?filter(?:ed)?,? (?:drinking )?water(?: tap| dispenser| faucet)?\b/g, 'hotwaterfilter coldwaterfilter'], [/\bmid[ -]?century\b/g, 'midcentury'], [/\blow[ -]profile\b/g, 'lowprofile'], [/\bhard ?scape\b/g, 'hardscape']];
 // a count only when it really is the house count – not "bedroom 2", "addition of 2 bedrooms", "bathroom 1 full bathroom"
 const dkCount = tok => (m, n, off, s) => /\b(?:of|added|addition|bedroom|bathroom|bath|number|no|both|the|these|those|new|extra|additional)\s*$/.test(s.slice(Math.max(0, off - 16), off)) ? m : tok + n;
 const DICT_PRE = [ // numbers, ratings, levels, counts – turned into one word each so they cannot be misread
@@ -118,7 +120,7 @@ const DICT_SYN = [
   ['remodeled', 'L:*.upd', 'FullyUpdated'], ['updated', 'L:*.upd', 'FullyUpdated'], ['partially remodeled', 'L:*.upd', 'PartiallyUpdated'], ['original', 'L:*.upd', 'NotUpdated'], ['dated', 'L:*.upd', 'NotUpdated'],
   ['tflt1', 'L:*.time', 'LessThanOneYear'], ['tf1to5', 'L:*.time', 'OneToFiveYears'], ['tf5to10', 'L:*.time', 'FiveToTenYears'], ['tf10plus', 'L:*.time', 'TenOrMoreYears'],
   ['like new', 'L:*.condStat', 'NewOrLikeNew'], ['wear and tear', 'L:*.condStat', 'TypicalWearAndTear'], ['typical wear', 'L:*.condStat', 'TypicalWearAndTear'],
-  ['shaker', 'L:*.cab', 'Shaker'], ['custom', 'L:*.cab', 'Custom Built'], ['custom wood', 'L:*.cab', 'Custom Built'], ['custom', 'L:*.vanMat', 'Custom Built'], ['custom wood', 'L:*.vanMat', 'Custom Built'], ['custom vanity', 'L:*.vanMat', 'Custom Built'], ['wood vanity', 'L:*.vanMat', 'Solid Wood'], ['custom cabinet', 'L:*.cab', 'Custom Built'], ['painted', 'L:*.cab', 'Painted Wood'],
+  ['shaker', 'L:*.cab', 'Shaker'], ['custom', 'L:*.cab', 'Custom Built'], ['match grain', 'L:*.cab', 'Matched Grain Laminate'], ['matched grain', 'L:*.cab', 'Matched Grain Laminate'], ['match grain wood laminate', 'L:*.cab', 'Matched Grain Laminate'], ['custom wood', 'L:*.cab', 'Custom Built'], ['custom', 'L:*.vanMat', 'Custom Built'], ['custom wood', 'L:*.vanMat', 'Custom Built'], ['custom vanity', 'L:*.vanMat', 'Custom Built'], ['wood vanity', 'L:*.vanMat', 'Solid Wood'], ['custom cabinet', 'L:*.cab', 'Custom Built'], ['painted', 'L:*.cab', 'Painted Wood'],
   ['chrome', 'L:*.finish', 'Polished Chrome'], ['black', 'L:*.finish', 'Matte Black'], ['bronze', 'L:*.finish', 'Oil-rubbed Bronze'], ['nickel', 'L:*.finish', 'Brushed Nickel'],
   ['walkin closet', 'L:bedrooms.closet', 'Walk-in'], ['reachin closet', 'L:bedrooms.closet', 'Reach-in'], ['walkin', 'L:bedrooms.closet', 'Walk-in'], ['ensuite', 'L:bedrooms.ensuite', true], ['smoke detector', 'L:bedrooms.smoke', true], ['ceiling fan', 'L:bedrooms.feat', 'Ceiling Fan'],
   ['freestanding tub', 'L:baths.tubFree', true], ['soaking tub', 'L:baths.tubFree', true], ['tub shower', 'L:baths.tubShower', true], ['shower over tub', 'L:baths.tubShower', true], ['tub and shower', 'L:baths.tubShower', true], ['tub shower combo', 'L:baths.tubShower', true], ['tub shower combination', 'L:baths.tubShower', true],
@@ -167,7 +169,7 @@ const DICT_NEED = [
   ['front.frontDoor', null, ['door', 'entry'], null, false], ['interior.intDoors', null, ['door'], null, true], ['interior.extDoors', null, ['door'], null, false],
   ['interior.atticObs', null, ['attic'], null, true], ['interior.atticAccess', null, ['attic'], null, true], ['interior.atticFinish', null, ['attic'], null, true],
   ['interior.areaSource', null, ['area', 'source', 'measured', 'record', 'assessor', 'square'], null, true],
-  ['garage.*', null, ['garage', 'carport'], 'garage', true], ['interior.laundry', ['In Garage'], ['garage'], 'garage', true],
+  ['garage.*', null, ['garage', 'carport'], 'garage', true], ['interior.laundry', ['In Garage'], ['laundry', 'washer', 'dryer', 'hookup'], null, true], ['front.foundType', ['ConcretePerimeter'], ['foundation', 'raised', 'crawlspace'], null, true],
   ['amenities.walks', null, ['walk', 'walkway', 'path', 'pathway', 'walking'], null, false], ['amenities.fenceMat', null, ['fence', 'fencing'], null, false],
   ['site.view', null, ['view', 'views', 'overlook', 'vista'], null, false], ['site.viewMore', null, ['view', 'views', 'overlook', 'vista'], null, false],
   ['street.*', null, ['street', 'road'], 'street', false], ['driveway.*', null, ['driveway', 'drive'], 'driveway', false]];
@@ -268,7 +270,7 @@ function dictParse(text, ins) {
     const vv = IX.vals.filter(e => at(i, e.ph)); const vlen = vv.reduce((m, e) => Math.max(m, e.ph.length), 0); const vals = vv.filter(e => e.ph.length === vlen);
     const len = x => x ? x.ph.length : 0; const L = Math.max(len(r), len(it), len(c), len(q), len(ap), len(br), vlen); if (!L) continue;
     let m;
-    if (len(r) === L && i > 0 && !T[i - 1].br && /^(as|like)$/.test(T[i - 1].s)) { let nx = T[i + L], ex = 0; if (nx && nx.s === 'number') { ex = 1; nx = T[i + L + 1]; }
+    if (len(r) === L && i > 0 && !T[i - 1].br && (/^(as|like)$/.test(T[i - 1].s) || T.slice(Math.max(0, i - 4), i).some((t, k, A) => t.s === 'same' && !A.slice(k).some(x => x.br)))) { let nx = T[i + L], ex = 0; if (nx && nx.s === 'number') { ex = 1; nx = T[i + L + 1]; }
       if (nx && !nx.br && /^\d$/.test(nx.s)) { marks.push({ i, len: L + 1 + ex, kind: 'roomref', list: r.a, props: r.b, num: nx.s, tabs: [...tabs] }); i += L + ex; continue; } }
     if (len(r) === L) { m = { kind: 'room', list: r.a, props: { ...r.b } }; inside = true; tabs = ['interior']; pref = [];
       let nx = T[i + L], extra = 0; if (nx && !nx.br && nx.s === 'number' && T[i + L + 1] && /^\d$/.test(T[i + L + 1].s)) { extra = 1; nx = T[i + L + 1]; }
@@ -298,6 +300,7 @@ function dictParse(text, ins) {
   const roomKey = r => r.list + '|' + (r.label || r.type || r.style || (r.num ? '#' + r.num : '')) + (r.list === 'baths' && !r.label && !r.num ? '|' + r.kind + '|' + rooms.length : '') + (r.list === 'bedrooms' && !r.label && !r.num ? '|' + rooms.length : '');
   const startRoom = m => { const r = { list: m.list, ...m.props, at: m.i }; if (m.num) { r.num = m.num; r.label = (m.list === 'bedrooms' ? 'Bedroom ' : m.list === 'baths' ? (r.kind === 'HalfBathroom' ? 'Half Bath ' : 'Bath ') : '') + m.num; }
     if (m.list === 'kitchens' && !r.style) r.label = r.label || null;
+    if (!m.num && !(m.props || {}).label && ['baths', 'bedrooms'].includes(m.list) && T[m.i + 1] && /^(quality|condition|rating)$/.test(T[m.i + 1].s)) { const last = rooms.map((x, k) => x.list === m.list ? k : -1).filter(k => k >= 0).pop(); if (last !== undefined) { room = last; return last; } }
     if (room !== null && rooms[room].list === m.list && !m.num && !(m.props || {}).label && !T.slice(rooms[room].at, m.i).some(t => t.br)) { if (m.props && m.props.kind) rooms[room].kind = m.props.kind; return room; }
     const key = roomKey(r); let idx = rooms.findIndex(x => x.key === key); if (idx >= 0) rooms[idx].at = m.i;
     if (idx < 0) { r.key = key; if (ctxLevel) r.level = ctxLevel; rooms.push(r); idx = rooms.length - 1; }
@@ -437,7 +440,7 @@ function dictParse(text, ins) {
     else if (/\broof (?:can|could|is|was)? ?(?:only )?(?:partially |partly |mostly |fully )?(?:be )?(?:seen|visible|observed|observable)/.test(fw)) put('front.roofObs', true); }
   // her rule (Oct 2026): if she does not say a defect there is no defect → the defect questions are answered No (she can change them in the list)
   const DEFECT_RX = /\b(?:defects?|damaged?|cracks?|cracked|cracking|leaks?|leaking|rot|rotted|rotting|termites?|broken|peeling|deferred maintenance|needs? (?:repair|replacing|replacement)|water stains?|mold|mildew|missing|inoperable|not working)\b/;
-  const defectSaid = sentW.some((ws, k) => { if (report.has(k)) return false; const w = ws.map(t => t.w).join(' ').replace(/\bno (?:visible |apparent |observed |known )?(?:defects?|damage|deferred maintenance)\b/g, '').replace(/\b(?:deferred maintenance|defects?|damage|functional obsolescence)(?:[\s,:]+(?:and\s+)?(?:deferred maintenance|defects?|damage))*[\s,:]*(?:none|no|not observed|none observed|n\/?a)\b/g, ''); return DEFECT_RX.test(w); });
+  const defectSaid = sentW.some((ws, k) => { if (report.has(k)) return false; const w = ws.map(t => t.w).join(' ').replace(/\bno (?:visible |apparent |observed |known )?(?:defects?|damage|deferred maintenance|deficienc(?:y|ies))(?:[\s,]+(?:or |and )?(?:defects?|damage|deficienc(?:y|ies)|deferred maintenance))*\b/g, '').replace(/\b(?:deferred maintenance|defects?|damage|functional obsolescence)(?:[\s,:]+(?:and\s+)?(?:deferred maintenance|defects?|damage))*[\s,:]*(?:none|no|not observed|none observed|n\/?a)\b/g, ''); return DEFECT_RX.test(w); });
   if (!defectSaid) [['site', 'siteDefects'], ['exterior', 'extDefects'], ['interior', 'intDefects'], ['amenities', 'amenDefects'], ['garage', 'vsDefects']].forEach(([sec, k]) => {
     if (ins && ins.data[sec] && ins.data[sec][k] !== undefined) return; put(sec + '.' + k, false); const c = changes.get(sec + '.' + k); if (c) c.auto = 'You did not mention a defect'; });
   // the same rule for yes/no questions she would only mention when the answer is yes
@@ -563,7 +566,8 @@ function dictNewItem(ins, r) {   // same starting values as "Add …" on the tab
 function dictApply(ins, res, pick) {
   const target = res.rooms.map((r, ri) => { if (pick.r[ri] === false) return null; const L = ins.lists[r.list]; let it = r.existingId ? L.find(x => x.id === r.existingId) : null;
     if (!it) it = dictNewItem(ins, r); else if (r.levelSaid && r.level) it.level = r.level;
-    if (r.appl) { it.appl = it.appl || {}; Object.entries(r.appl).forEach(([k, a]) => { it.appl[k] = { ...(it.appl[k] || {}), ...a }; if (!it.appl[k].qty && APPLIANCES.find(x => x.k === k).qty) it.appl[k].qty = 1; }); }
+    const AP = (pick.ap || {})[ri] || {}; const ak = [...new Set([...Object.keys(r.appl || {}), ...(((pick.apAdd || {})[ri]) || [])])];
+    if (ak.length) { it.appl = it.appl || {}; ak.forEach(k => { const a = { ...((r.appl || {})[k] || {}), ...(AP[k] || {}) }; if (a.off) return; delete a.off; if (!a.brand) delete a.brand; it.appl[k] = { ...(it.appl[k] || {}), ...a }; if (!it.appl[k].qty && APPLIANCES.find(x => x.k === k).qty) it.appl[k].qty = 1; }); }
     const notes = [...(r.notes || [])]; if (r.stainless) notes.push('Stainless steel appliances'); if ((r.brandsSaid || []).length) notes.push(r.brandsSaid.join(', ') + ' appliances');
     if (notes.length) it.note = [it.note, notes.join('; ')].filter(Boolean).join('. ');
     return it; });
@@ -578,7 +582,8 @@ function dictApply(ins, res, pick) {
     else d[c.f.k] = (pick.v && pick.v[i] !== undefined ? pick.v[i] : c.vals[0]); });
   if (res.changes.some((c, i) => pick.c[i] && c.key === 'driveway.driveMat')) ins.data.driveway.hasDrive = true;
   if (res.changes.some((c, i) => pick.c[i] && c.key === 'interior.fpType') && !(ins.data.interior.fireplaces > 0)) ins.data.interior.fireplaces = 1;
-  res.items.forEach((it, i) => { if (!pick.i[i]) return; const L = ins.lists[it.list]; const o = { id: uid(), type: it.type };
+  res.items.forEach((it0, i) => { if (!pick.i[i]) return; const E = (pick.it || {})[i] || {}; const it = { ...it0, ...Object.fromEntries(Object.entries(E).filter(([k, v]) => v !== undefined)) };
+    const L = ins.lists[it.list]; const o = { id: uid(), type: it.type };
     if (it.list === 'waterFeatures') { if (it.mat) o.mat = it.mat; if (it.feat.length) o.feat = it.feat; if (it.note) o.note = it.note; }
     else if (it.list === 'outbuildings') { if (it.label) o.label = it.label; if (it.permitted) o.permitted = it.permitted; if (it.note) o.note = it.note; if (it.defects === false) o.defects = false; }
     else { if (it.material) o.material = it.material; if (it.feat.length) o.feat = it.feat; if (it.note) o.note = it.note; }
@@ -622,12 +627,20 @@ function renderDictate() {
   const secRows = R ? R.changes.map((c, i) => c.room === undefined ? changeRow(c, i, (c.sec ? c.sec.title : '') + ' › ' + c.f.l, ins.data[c.sec.id]) : '').join('') : '';
   const roomRows = R ? R.rooms.map((r, ri) => { const L = ins.lists[r.list]; const ex = r.existingId ? L.find(x => x.id === r.existingId) : null;
     const head = row(P.r[ri] !== false, `data-dkr="${ri}"`, ex ? 'Update' : 'New ' + ROOM_TITLE[r.list].toLowerCase(), '<b>' + esc(ex ? r.name : roomName(r)) + '</b>' + (r.level ? ' · ' + esc(labelOf(LEVELS_ALL, r.level)) : ''), '', 'dk-room');
-    const appl = r.appl ? Object.entries(r.appl).map(([k, a]) => esc(APPLIANCES.find(x => x.k === k).l) + (a.brand ? ' – ' + esc(a.brand) : '') + (a.qty > 1 ? ' ×' + a.qty : '')).join(', ') : '';
+    const AP = (P.ap || {})[ri] || {}; const apKeys = [...Object.keys(r.appl || {}), ...(((P.apAdd || {})[ri]) || [])];
+    const brandSel = (k, b) => `<select class="txt dk-sel dk-brand" data-dkab="${ri}|${k}"><option value="">brand…</option>${BRANDS.map(x => `<option ${x === b ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select>`;
+    const appl = apKeys.length ? `<div class="dk-apl">${[...new Set(apKeys)].map(k => { const a = { ...((r.appl || {})[k] || {}), ...(AP[k] || {}) }; const A = APPLIANCES.find(x => x.k === k);
+        return `<span class="dk-ap"><label class="dk-chip"><input type="checkbox" data-dkap="${ri}|${k}" ${a.off ? '' : 'checked'}>${esc(A.l)}${a.qty > 1 ? ' ×' + a.qty : ''}</label>${A.brand ? brandSel(k, a.brand) : ''}</span>`; }).join('')}
+      <select class="txt dk-sel dk-add" data-dkaa="${ri}"><option value="">+ add appliance</option>${APPLIANCES.filter(x => !apKeys.includes(x.k)).map(x => `<option value="${x.k}">${esc(x.l)}</option>`).join('')}</select></div>` : '';
     const notes = [...(r.notes || []), r.stainless ? 'Stainless steel appliances' : '', (r.brandsSaid || []).length ? r.brandsSaid.join(', ') + ' appliances' : ''].filter(Boolean).join('; ');
-    return `<div class="dk-roomBox">${head}${R.changes.map((c, i) => c.room === ri ? changeRow(c, i, c.f.l, ex, 'dk-sub') : '').join('')}${appl ? `<div class="dk-sub dk-info">Appliances: <b>${appl}</b></div>` : ''}${notes ? `<div class="dk-sub dk-info">Note: ${esc(notes)}</div>` : ''}</div>`; }).join('') : '';
+    return `<div class="dk-roomBox">${head}${R.changes.map((c, i) => c.room === ri ? changeRow(c, i, c.f.l, ex, 'dk-sub') : '').join('')}${appl ? `<div class="dk-sub dk-info">Appliances (untick one that is wrong, pick or change the brand):${appl}</div>` : ''}${notes ? `<div class="dk-sub dk-info">Note: ${esc(notes)}</div>` : ''}</div>`; }).join('') : '';
   const IT_WHERE = { waterFeatures: 'Pool, spa & water features', outdoorLiving: 'Porches, patios & decks', outbuildings: 'Outbuildings' };
-  const itemRows = R ? R.items.map((it, i) => row(P.i[i] !== undefined ? P.i[i] : !it.off, `data-dki="${i}"`, IT_WHERE[it.list] + ' › new',
-    '<b>' + esc(it.label || labelOf(LISTS[it.list].fields[0].o, it.type) || it.type) + '</b>' + [it.permitted ? ' · permitted: ' + esc(it.permitted) : '', it.material ? ' · ' + esc(labelOf(LISTS.outdoorLiving.fields[2].o, it.material) || it.material) : '', it.mat ? ' · ' + esc(it.mat) : '', it.feat.length ? ' · ' + esc(it.feat.join(', ')) : '', it.note ? ' · ' + esc(it.note) : ''].join(''), it.off || '')).join('') : '';
+  const itemEd = (it, i) => { const E = (P.it || {})[i] || {}; const fOf = k => LISTS[it.list].fields.find(f => f.k === k); const opt = f => { try { return optsOf(f, {}, null); } catch (e) { return []; } };
+    const sel = (k, cur, blank) => { const f = fOf(k); if (!f) return ''; return `<select class="txt dk-sel" data-dkit="${i}|${k}">${blank ? `<option value="">${blank}</option>` : ''}${opt(f).map(([v, l]) => `<option value="${esc(v)}" ${v === cur ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>`; };
+    const mk = it.list === 'waterFeatures' ? 'mat' : it.list === 'outdoorLiving' ? 'material' : null; const note = E.note !== undefined ? E.note : it.note || '';
+    return `<div class="dk-ited">${sel('type', E.type || it.type)}${mk ? sel(mk, E[mk] !== undefined ? E[mk] : it[mk], 'material…') : ''}${it.list === 'outbuildings' ? sel('permitted', E.permitted !== undefined ? E.permitted : it.permitted, 'permitted?') : ''}
+      ${(it.feat || []).length ? `<small>${esc(it.feat.join(', '))}</small>` : ''}<textarea class="txt dk-edit" rows="2" data-dkit="${i}|note" placeholder="note">${esc(note)}</textarea></div>`; };
+  const itemRows = R ? R.items.map((it, i) => row(P.i[i] !== undefined ? P.i[i] : !it.off, `data-dki="${i}"`, IT_WHERE[it.list] + ' › new', itemEd(it, i), it.off || '')).join('') : '';
   const any = R && (R.changes.length || R.items.length || R.rooms.length);
   return `<section class="group open"><div class="ghead static"><span class="gtitle">Dictate your notes</span></div><div class="exp">
     <label class="dk-walk"><input type="checkbox" id="dkWalk" ${dkWalk() ? 'checked' : ''}> <b>Walk-through mode</b> – show only Dictate, Photos and Needs Attention while I walk the property</label>
@@ -766,7 +779,13 @@ function bindDictate(root) {
   root.querySelectorAll('[data-dka]').forEach(sel => sel.onchange = () => { const v = sel.value; if (!v) return; const i = sel.dataset.dka; PK().ma[i] = [...(PK().ma[i] || []), v];
     const lab = document.createElement('label'); lab.className = 'dk-chip'; lab.innerHTML = `<input type="checkbox" data-dkm="${i}" value="${esc(v)}" checked>${esc(sel.options[sel.selectedIndex].text)}`; sel.before(lab); bindChip(lab.querySelector('input')); sel.options[sel.selectedIndex].remove(); sel.value = ''; tick(sel); });
   root.querySelectorAll('[data-dki]').forEach(cb => cb.onchange = () => { app.dict.pick.i[cb.dataset.dki] = cb.checked; });
-  const ap = root.querySelector('#dkApply'); if (ap) ap.onclick = () => { const R = app.dict.res; const P = app.dict.pick; const pick = { c: {}, i: {}, v: P.v || {}, r: {}, mx: P.mx || {}, ma: P.ma || {} };
+  const PP = () => { const p = app.dict.pick; p.ap = p.ap || {}; p.apAdd = p.apAdd || {}; p.it = p.it || {}; return p; };
+  root.querySelectorAll('[data-dkit]').forEach(el => { const [i, k] = el.dataset.dkit.split('|'); const set = () => { const E = PP().it[i] = PP().it[i] || {}; E[k] = el.value; tick(el); };
+    if (el.tagName === 'TEXTAREA') el.oninput = () => { (PP().it[i] = PP().it[i] || {})[k] = el.value; }; else el.onchange = set; });
+  root.querySelectorAll('[data-dkap]').forEach(cb => cb.onchange = () => { const [ri, k] = cb.dataset.dkap.split('|'); const A = PP().ap[ri] = PP().ap[ri] || {}; A[k] = { ...(A[k] || {}), off: !cb.checked }; });
+  root.querySelectorAll('[data-dkab]').forEach(sl => sl.onchange = () => { const [ri, k] = sl.dataset.dkab.split('|'); const A = PP().ap[ri] = PP().ap[ri] || {}; A[k] = { ...(A[k] || {}), brand: sl.value || undefined, off: false }; const cb = root.querySelector(`[data-dkap="${ri}|${k}"]`); if (cb) cb.checked = true; });
+  root.querySelectorAll('[data-dkaa]').forEach(sl => sl.onchange = () => { if (!sl.value) return; const ri = sl.dataset.dkaa; PP().apAdd[ri] = [...(PP().apAdd[ri] || []), sl.value]; const y = window.scrollY; renderTab(); window.scrollTo(0, y); });
+  const ap = root.querySelector('#dkApply'); if (ap) ap.onclick = () => { const R = app.dict.res; const P = app.dict.pick; const pick = { c: {}, i: {}, v: P.v || {}, r: {}, mx: P.mx || {}, ma: P.ma || {}, ap: P.ap || {}, apAdd: P.apAdd || {}, it: P.it || {} };
     R.changes.forEach((c, i) => pick.c[i] = P.c[i] !== false && (c.room === undefined || P.r[c.room] !== false)); R.items.forEach((x, i) => pick.i[i] = P.i[i] !== undefined ? P.i[i] : !x.off); R.rooms.forEach((x, i) => pick.r[i] = P.r[i] !== false);
     dictApply(app.ins, R, pick); app.ins.dictLog = [...(app.ins.dictLog || []), { t: Date.now(), text: app.dict.text }];
     const n = Object.values(pick.c).filter(Boolean).length + Object.values(pick.i).filter(Boolean).length;
