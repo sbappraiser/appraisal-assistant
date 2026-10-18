@@ -183,6 +183,13 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
 .reqadd { margin-top: 8px; } .reqadd input:not([type]) { flex: 1; min-width: 200px; } .reqadd label.check { display: inline-flex !important; gap: 4px; align-items: center; margin: 0; }
 .mc table.facts th { width: auto; } .mc td.t, .mc th.t { white-space: nowrap; } .mc .sug { color: var(--muted); font-size: 12px; display: block; } .mc select { font-size: 13px; padding: 2px 4px; }
 .btn.danger.armed { background: var(--warn); color: #fff; border-color: var(--warn); }
+.cmtTools{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.cmtTools input[type=search]{min-width:260px}
+.cmtImp{display:flex;gap:10px;flex-wrap:wrap;align-items:center;background:#f6f8fa;border:1px solid #e3e8ee;border-radius:8px;padding:8px 12px;margin:8px 0}
+.cmtSecH{margin:18px 0 6px;font-size:15px;letter-spacing:.04em;color:#46607a;text-transform:uppercase}
+.cmt{border:1px solid #e3e8ee;border-radius:8px;padding:10px 12px;margin:6px 0;background:#fff}.cmt.editing{background:#fffdf3}
+.cmtTop{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.cmtText{margin-top:6px;line-height:1.45;font-size:14px}.cmtText.clip{max-height:7.5em;overflow:hidden;-webkit-mask-image:linear-gradient(#000 70%,transparent)}
+.vtag{font-size:11px;padding:2px 7px;border-radius:10px;background:#eef1f4;color:#4b5866}.vtag.v26{background:#fff1d6;color:#8a5a00}.vtag.v36{background:#e1f2e6;color:#226b3a}.vtag.vboth{background:#e6eefb;color:#2c4f8a}
+mark.blank{background:#fff3a8;padding:0 2px;border-radius:3px}.cmt textarea{width:100%;font:inherit;font-size:14px}.linkbtn{background:none;border:0;color:#2c5f9e;cursor:pointer;padding:2px 0;font-size:13px}
 </style>
 </head>
 <body>
@@ -194,6 +201,7 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
     <button type="button" data-tab="letter" aria-selected="false">Order</button>
     <button type="button" data-tab="market" aria-selected="false">Market</button>
     <button type="button" data-tab="contacts" aria-selected="false">Clients</button>
+    <button type="button" data-tab="comments" aria-selected="false">My comments</button>
     <button type="button" data-tab="wording" aria-selected="false">Standard wording</button>
     <button type="button" data-tab="help" aria-selected="false">Help</button>
   </nav>
@@ -449,6 +457,15 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
       <li><b>iPad</b>: items with this ticked go to the iPad as inspection to-dos (photos, measuring, inspection conduct are ticked for you). Untick any you do not want on the iPad. Ticked-done items are not sent.</li>
       <li>Then click <b>Send this order to the iPad</b> (top of the order) and open that file on the iPad – the to-dos show in the order box with check boxes.</li>
       <li><b>Read the client's letter again</b> re-reads it; your own items, your edits and your ticks are kept. <b>Copy the list</b> copies it for an email or your notes.</li></ol></details>
+    <details><summary>My comments – your comment library</summary><ol>
+      <li>Click the <b>My comments</b> tab.</li>
+      <li>First time: under <b>Import my OneNote library</b>, choose what the comments were written for (your OneNote library is <b>UAD 2.6</b>), then click <b>Choose the PDF…</b> and pick the PDF you exported from OneNote. Each page becomes one comment, sorted by its OneNote section; long comments that run onto a second page are joined back together. Pages with a title but no text yet are left out and listed.</li>
+      <li>To use one: type a word in the search box (for example <i>laser</i>, <i>ADU</i>, <i>fire</i>) or pick a section, then click <b>Copy</b> and paste it into SFREP. Blanks in square brackets, like <mark class="blank">[date]</mark>, are highlighted so you remember to fill them in.</li>
+      <li>The tag on each comment shows the form it was written for: <b>UAD 2.6</b>, <b>UAD 3.6</b> or <b>2.6 and 3.6</b>. Use the drop-down at the top to show only the ones for the form you are working on. When you have checked a 2.6 comment for 3.6, click <b>Edit</b> and change <b>Written for</b>.</li>
+      <li><b>Edit</b> changes the title, section, form or wording; <b>Delete</b> (click twice) removes it. <b>Add a comment</b> starts a new one (marked UAD 3.6).</li>
+      <li>Importing the same OneNote PDF again later adds the new comments and updates the ones you have not edited; your edited ones stay as you have them.</li>
+      <li>In the <b>Comp genie</b>, the comment boxes (sales comparison, highest and best use, reconciliation) have a <b>My comments</b> button: search, then <b>Insert</b> puts the comment where your cursor is. It uses the same list, so import it here first.</li>
+      <li>Your library is kept in this browser on this computer and in your <b>Back up</b> zip – keep backing up.</li></ol></details>
     <details><summary>Invoice, payment and the unpaid list</summary><ol>
       <li>The fee comes from <b>Total fee</b> (Fee and delivery). A rent survey fee is added when the rent survey is ticked; a retainer is taken off the balance.</li>
       <li>When you deliver the report, go to <b>Invoice and payment</b> on the order and click <b>Make the invoice</b>. It fills in the invoice number (your file number), today's date and the amount (type a different amount to change it). A new tab opens with the invoice on your letterhead: in the print window choose <b>Destination: Save as PDF</b>, then Save. Attach that PDF to your email or the AMC portal. AMC orders are billed to the AMC, with the AMC order / reference ID (for example the Document ID) on the invoice.</li>
@@ -554,6 +571,16 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
   <div class="listHead"><div><h2>Clients</h2><p class="help" id="contactCount"></p></div><input id="contactSearch" type="search" placeholder="Search name, firm, email"></div>
   <div class="tableWrap"><table><thead><tr><th>Name</th><th>Firm</th><th>Address</th><th>Phone</th><th>Email</th><th>Letters</th><th>Last letter</th><th></th></tr></thead><tbody id="contactList"></tbody></table></div>
 </section>
+<section class="panel" id="panel-comments" hidden>
+  <div class="listHead"><div><h2>My comments</h2><p class="help" id="cmtCount"></p></div>
+    <div class="cmtTools"><input id="cmtQ" type="search" placeholder="Search, e.g. laser, ADU, permit, fire"><select id="cmtSec"></select>
+      <select id="cmtVer"><option value="">2.6 and 3.6</option><option value="3.6">For UAD 3.6</option><option value="2.6">For UAD 2.6</option></select>
+      <button type="button" class="btn" id="cmtAdd">Add a comment</button></div></div>
+  <div class="cmtImp"><label>Import my OneNote library (PDF) – these comments were written for <select id="cmtImpVer"><option value="2.6">UAD 2.6</option><option value="3.6">UAD 3.6</option><option value="both">both</option></select></label>
+    <label class="btn ghost small">Choose the PDF…<input id="cmtFile" type="file" accept=".pdf,application/pdf" hidden></label><span id="cmtMsg" class="help"></span></div>
+  <p class="help">Copy puts the comment on the clipboard – paste it into SFREP and fill in the <mark class="blank">[blanks]</mark>. Kept in this browser only and in your Back up; nothing is sent anywhere. The Comp genie's comment boxes have a <b>My comments</b> button that uses this same list.</p>
+  <div id="cmtBody"></div>
+</section>
 <section class="panel" id="panel-wording" hidden>
   <div class="wording">
     <h2>Standard wording</h2>
@@ -576,7 +603,7 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
 </div>
 <div id="toast" role="status" hidden></div>
 <script>
-const BUILD='o1-1018-1935';
+const BUILD='o1-1018-2157';
 const G = (() => {
 /* ---------------- small helpers ---------------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -3319,6 +3346,116 @@ function mcMount() {
 }
 
 /* =====================================================================
+   My comments – her comment library (Oct 18 2026).
+   Imported from her OneNote export (PDF: one page per comment, title, date line, text,
+   "SECTION Page n" at the bottom; long comments run onto the next page without a title).
+   Every comment carries the UAD version it was written for: the OneNote library came from her
+   UAD 2.6 reports, so it imports as 2.6 (her rule – 2.6 wording may not fit 3.6).
+   Kept in this browser only (kv 'cmt:lib' = {id: item}); in Back up / Restore; never sent anywhere.
+   The Comp genie reads the same list for its "My comments" picker.
+   item: {id, title, section, text, ver: '2.6' | '3.6' | 'both', src, added, edited}
+   ===================================================================== */
+let CMT = {}; const CMT_UI = { q: '', sec: '', ver: '', edit: null, open: {} };
+const CMT_VER = { '2.6': 'UAD 2.6', '3.6': 'UAD 3.6', both: '2.6 and 3.6' };
+async function cmtLoad() { const r = await ODB.get('kv', 'cmt:lib'); CMT = (r && r.v) || {}; }
+async function cmtSave() { await ODB.put('kv', { id: 'cmt:lib', v: CMT }); }
+const cmtId = (sec, title, text) => { let s = 0; const t = (sec + '|' + title + '|' + String(text).slice(0, 60)).toLowerCase(); for (let i = 0; i < t.length; i++) s = (s * 31 + t.charCodeAt(i)) >>> 0; return 'c' + s.toString(36); };
+const cmtDate = /^(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday),\s+[A-Z][a-z]+\s+\d{1,2},\s+\d{4}/;
+/* a page's text as lines (pieces on the same row joined, top to bottom), with paragraph breaks where the gap is wide */
+async function cmtPdfPages(file) {
+  const lib = await loadPdfJs(); const pdf = await lib.getDocument({ data: new Uint8Array(await file.arrayBuffer()), isEvalSupported: false, wasmUrl: './wasm/', standardFontDataUrl: './standard_fonts/' }).promise;
+  const pages = [];
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const tc = await (await pdf.getPage(i)).getTextContent(); const rows = [];
+    tc.items.forEach(it => { if (!it.str) return; const y = it.transform[5], x = it.transform[4], hgt = Math.abs(it.transform[3]) || 10;
+      let r = rows.find(r => Math.abs(r.y - y) < hgt * 0.5); if (!r) { r = { y, h: hgt, parts: [] }; rows.push(r); } r.parts.push({ x, s: it.str, w: it.width || 0 }); });
+    rows.sort((a, b) => b.y - a.y);
+    const lines = rows.map(r => { r.parts.sort((a, b) => a.x - b.x); let s = '', end = null; r.parts.forEach(p => { if (end !== null && p.x - end > 1.5 && !/\s$/.test(s) && !/^\s/.test(p.s)) s += ' '; s += p.s; end = p.x + p.w; }); return { y: r.y, h: r.h, t: s.replace(/\s+/g, ' ').trim() }; }).filter(l => l.t);
+    pages.push(lines);
+  }
+  return pages;
+}
+function cmtParse(pages) {   // → { items, empty: [titles], pages }
+  const items = [], empty = []; let last = null, prevLast = '';
+  pages.forEach(L => {
+    if (!L.length) return; let foot = null; const m = L[L.length - 1].t.match(/^(.*?)\s+Page\s+\d+$/); if (m) { foot = m[1].trim(); L = L.slice(0, -1); }
+    const isNew = L.length >= 2 && cmtDate.test(L[1].t);
+    let body = isNew ? L.slice(2) : L;
+    if (!isNew && body.length && prevLast && body[0].t === prevLast) body = body.slice(1);   // OneNote repeats the last line of a page at the top of the next one
+    if (L.length) prevLast = L[L.length - 1].t;
+    // paragraphs: a gap wider than 1.6 lines starts a new one
+    let txt = ''; body.forEach((l, i) => { if (i) { const gap = body[i - 1].y - l.y; txt += gap > l.h * 1.9 ? '\n\n' : ' '; } txt += l.t; });
+    txt = txt.replace(/[ \t]+/g, ' ').replace(/ \n/g, '\n').trim();
+    if (isNew) { last = { title: L[0].t, section: foot || (last && last.section) || 'Other', text: txt }; items.push(last); }
+    else if (last && txt) last.text = (last.text + (last.text ? (/[.:!?"”)]$/.test(last.text) ? '\n\n' : ' ') : '') + txt).trim();   // mid-sentence page breaks join with a space
+  });
+  const out = items.filter(x => { if (!x.text) { empty.push(x.section + ' – ' + x.title); return false; } return !/^HOW TO USE THIS LIBRARY$/i.test(x.title); });
+  return { items: out, empty, pages: pages.length };
+}
+async function cmtImport(file, ver) {
+  try {
+    toast('Reading your comment library…', 6000);
+    const r = cmtParse(await cmtPdfPages(file)); if (!r.items.length) throw new Error('No comments found in that PDF. Export the OneNote section or notebook as PDF and try again.');
+    let added = 0, updated = 0, kept = 0; const now = new Date().toISOString().slice(0, 10);
+    r.items.forEach(x => { const id = cmtId(x.section, x.title, x.text); const have = CMT[id];
+      if (have && have.edited) { kept++; return; }
+      if (have) { have.text = x.text; updated++; } else { CMT[id] = { id, title: x.title, section: x.section, text: x.text, ver, src: file.name, added: now }; added++; } });
+    await cmtSave(); cmtRender();
+    $('#cmtMsg').innerHTML = `<b>${added} comments added</b>${updated ? `, ${updated} updated` : ''}${kept ? `, ${kept} you edited were kept as you have them` : ''} – from ${r.pages} pages, all marked <b>${h(CMT_VER[ver])}</b>.${r.empty.length ? `<br><small>${r.empty.length} pages had a title but no text yet, so they were left out: ${h(r.empty.join(' · '))}</small>` : ''}`;
+  } catch (e) { console.error(e); toast(e.message || 'Could not read that PDF'); }
+}
+const cmtList = () => Object.values(CMT).sort((a, b) => a.section.localeCompare(b.section) || a.title.localeCompare(b.title));
+const cmtHi = s => h(s).replace(/\[([^\]]{1,80})\]/g, '<mark class="blank">[$1]</mark>').replace(/\n/g, '<br>');
+function cmtMatch(x, q, sec, ver) {
+  if (sec && x.section !== sec) return false; if (ver && !(x.ver === ver || x.ver === 'both')) return false;
+  if (!q) return true; const t = (x.title + ' ' + x.section + ' ' + x.text).toLowerCase(); return q.toLowerCase().split(/\s+/).filter(Boolean).every(w => t.includes(w));
+}
+function cmtRender() {
+  const box = $('#cmtBody'); if (!box) return;
+  const all = cmtList(); const secs = [...new Set(all.map(x => x.section))].sort();
+  const L = all.filter(x => cmtMatch(x, CMT_UI.q, CMT_UI.sec, CMT_UI.ver));
+  $('#cmtCount').textContent = all.length ? `${all.length} comments · ${secs.length} sections${L.length !== all.length ? ` · ${L.length} shown` : ''}` : 'No comments yet – import your OneNote library (PDF) or add one.';
+  const sel = $('#cmtSec'); const cur = CMT_UI.sec; sel.innerHTML = `<option value="">All sections</option>${secs.map(s => `<option ${s === cur ? 'selected' : ''}>${h(s)}</option>`).join('')}`;
+  let sec = '';
+  box.innerHTML = L.map(x => {
+    const head = x.section !== sec ? `<h3 class="cmtSecH">${h(x.section)}</h3>` : ''; sec = x.section;
+    if (CMT_UI.edit === x.id) return head + `<div class="cmt editing"><div class="grid2"><label>Title<input data-ce="title" value="${h(x.title)}"></label><label>Section<input data-ce="section" value="${h(x.section)}" list="cmtSecs"></label></div>
+      <label>Written for<select data-ce="ver">${Object.entries(CMT_VER).map(([k, v]) => `<option value="${k}" ${k === x.ver ? 'selected' : ''}>${v}</option>`).join('')}</select></label>
+      <label>Comment<textarea data-ce="text" rows="${Math.min(18, 4 + Math.round(x.text.length / 110))}">${h(x.text)}</textarea></label>
+      <div class="toolrow"><button type="button" class="btn primary small" data-cact="save" data-id="${x.id}">Save</button><button type="button" class="btn ghost small" data-cact="cancel">Cancel</button><span class="grow"></span><button type="button" class="btn ghost small danger" data-cact="del" data-id="${x.id}">${CMT_UI.del === x.id ? 'Click again to delete' : 'Delete'}</button></div></div>`;
+    const long = x.text.length > 420 && !CMT_UI.open[x.id];
+    return head + `<div class="cmt"><div class="cmtTop"><b>${h(x.title)}</b><span class="vtag v${x.ver.replace('.', '')}">${h(CMT_VER[x.ver] || x.ver)}</span>${x.edited ? '<span class="vtag">edited</span>' : ''}<span class="grow"></span>
+      <button type="button" class="btn small" data-cact="copy" data-id="${x.id}">Copy</button><button type="button" class="btn ghost small" data-cact="edit" data-id="${x.id}">Edit</button></div>
+      <div class="cmtText${long ? ' clip' : ''}">${cmtHi(x.text)}</div>${long ? `<button type="button" class="linkbtn" data-cact="more" data-id="${x.id}">Show all</button>` : ''}</div>`;
+  }).join('') + `<datalist id="cmtSecs">${secs.map(s => `<option value="${h(s)}">`).join('')}</datalist>`;
+}
+async function cmtCopy(x) {
+  try { await navigator.clipboard.writeText(x.text); toast(/\[[^\]]+\]/.test(x.text) ? 'Copied – fill in the [blanks] after you paste it' : 'Copied – paste it into SFREP'); }
+  catch (e) { const t = document.createElement('textarea'); t.value = x.text; document.body.appendChild(t); t.select(); document.execCommand('copy'); t.remove(); toast('Copied'); }
+}
+function cmtInit() {
+  const p = $('#panel-comments'); if (!p) return;
+  $('#cmtQ').oninput = e => { CMT_UI.q = e.target.value; cmtRender(); };
+  $('#cmtSec').onchange = e => { CMT_UI.sec = e.target.value; cmtRender(); };
+  $('#cmtVer').onchange = e => { CMT_UI.ver = e.target.value; cmtRender(); };
+  $('#cmtFile').onchange = e => { const f = e.target.files[0]; if (f) cmtImport(f, $('#cmtImpVer').value); e.target.value = ''; };
+  $('#cmtAdd').onclick = async () => { const id = 'n' + Date.now().toString(36); CMT[id] = { id, title: 'New comment', section: CMT_UI.sec || 'My comments', text: '', ver: '3.6', src: 'typed', added: new Date().toISOString().slice(0, 10), edited: true };
+    CMT_UI.edit = id; CMT_UI.q = ''; $('#cmtQ').value = ''; await cmtSave(); cmtRender(); const t = document.querySelector('[data-ce="title"]'); if (t) { t.focus(); t.select(); } };
+  p.addEventListener('click', async e => {
+    const b = e.target.closest('[data-cact]'); if (!b) return; const x = CMT[b.dataset.id]; const a = b.dataset.cact;
+    if (a === 'copy' && x) cmtCopy(x);
+    if (a === 'edit') { CMT_UI.edit = b.dataset.id; CMT_UI.del = null; cmtRender(); }
+    if (a === 'cancel') { const y = CMT[CMT_UI.edit]; if (y && !y.text && y.title === 'New comment') { delete CMT[y.id]; await cmtSave(); } CMT_UI.edit = null; cmtRender(); }
+    if (a === 'more') { CMT_UI.open[b.dataset.id] = true; cmtRender(); }
+    if (a === 'save' && x) { const g = k => (document.querySelector(`[data-ce="${k}"]`) || {}).value; x.title = (g('title') || '').trim() || 'Untitled'; x.section = (g('section') || '').trim() || 'My comments'; x.ver = g('ver') || x.ver; x.text = (g('text') || '').trim(); x.edited = true;
+      await cmtSave(); CMT_UI.edit = null; cmtRender(); toast('Comment saved'); }
+    if (a === 'del' && x) { if (CMT_UI.del !== x.id) { CMT_UI.del = x.id; cmtRender(); setTimeout(() => { if (CMT_UI.del === x.id) { CMT_UI.del = null; cmtRender(); } }, 3000); return; }
+      delete CMT[x.id]; CMT_UI.del = null; CMT_UI.edit = null; await cmtSave(); cmtRender(); toast('Comment deleted'); }
+  });
+  cmtLoad().then(cmtRender);
+}
+
+/* =====================================================================
    Start page and the New order steps (her workflow, Oct 16 2026)
    Home: New order · Open an order · All files.
    New order: 1) file number, address, who writes the letter, purchase?, listed?
@@ -3852,7 +3989,7 @@ async function backup() {
   saveLetter(true, true); toast('Making the backup…');
   const docs = await ODB.all('docs'); const enc = new TextEncoder();
   const meta = docs.map(d => ({ id: d.id, orderId: d.orderId, name: d.name, type: d.type, size: d.size, mime: d.mime, added: d.added, note: d.note, page: d.page, pages: d.pages, preview: d.preview, file: 'documents/' + d.id + '-' + G.safeName(d.name) }));
-  const kv = {}; for (const k of ['mk:boundaries', 'mk:stats', 'mk:zillow']) { const r = await ODB.get('kv', k); if (r) kv[k] = r.v; }   // saved market areas, SBMLS monthly statistics, Zillow figures
+  const kv = {}; for (const k of ['mk:boundaries', 'mk:stats', 'mk:zillow', 'cmt:lib']) { const r = await ODB.get('kv', k); if (r) kv[k] = r.v; }   // saved market areas, SBMLS monthly statistics, Zillow figures, her comment library
   const data = { app: 'appraisal-assistant', version: 1, saved: new Date().toISOString(), contacts, letters, aiText, rates: store.get('rates', {}), docs: meta, kv };
   const entries = [{ name: 'orders.json', data: enc.encode(JSON.stringify(data, null, 1)) }];
   for (const d of docs) entries.push({ name: meta.find(m => m.id === d.id).file, data: new Uint8Array(await d.blob.arrayBuffer()) });
@@ -3875,7 +4012,7 @@ async function restore(file) {
     let na = 0; if (d.kv) { for (const [k, v] of Object.entries(d.kv)) { const have = ((await ODB.get('kv', k)) || {}).v;
         if (k === 'mk:boundaries') { const list = Array.isArray(have) ? have.slice() : []; (v || []).forEach(b => { if (!list.some(x => x.name === b.name)) { list.push(b); na++; } }); list.sort((a, b) => a.name.localeCompare(b.name)); await ODB.put('kv', { id: k, v: list }); }
         else await ODB.put('kv', { id: k, v: { ...(v || {}), ...(have || {}) } }); }
-      if (typeof mkLoad === 'function') await mkLoad(); }
+      if (typeof mkLoad === 'function') await mkLoad(); if (typeof cmtLoad === 'function') { await cmtLoad(); cmtRender(); } }
     if (files && d.docs) { const have = new Set((await ODB.all('docs')).map(x => x.id));
       for (const m of d.docs) { if (have.has(m.id)) continue; const u8 = files.get(m.file); if (!u8) continue; const { file: _f, ...rest } = m; await ODB.put('docs', { ...rest, blob: new Blob([u8], { type: m.mime || '' }) }); nd++; } }
     contacts.sort((a, b) => (a.name || a.company || '').localeCompare(b.name || b.company || ''));
@@ -3899,6 +4036,7 @@ async function start() {
     + Object.keys(TYPES).filter(k => !listed.has(k)).map(k => `<option value="${k}">${hesc(TYPES[k].label)}</option>`).join('');
   $('#f_propType').innerHTML = PROPERTY_TYPES.map(p => `<option value="${p[0]}">${hesc(p[1])}</option>`).join('');
   document.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => showTab(b.dataset.tab));
+  cmtInit();
   $('#letterForm').addEventListener('input', update); ['#f_otherUsers', '#f_userText'].forEach(id => $(id).addEventListener('input', syncVisibility)); $('#letterForm').addEventListener('change', update);
   $('#letterForm').addEventListener('submit', e => e.preventDefault());
   $('#f_reportForm').addEventListener('change', () => { if (cur) cur.formPicked = true; syncVisibility(); });

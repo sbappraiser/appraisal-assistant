@@ -183,6 +183,13 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
 .reqadd { margin-top: 8px; } .reqadd input:not([type]) { flex: 1; min-width: 200px; } .reqadd label.check { display: inline-flex !important; gap: 4px; align-items: center; margin: 0; }
 .mc table.facts th { width: auto; } .mc td.t, .mc th.t { white-space: nowrap; } .mc .sug { color: var(--muted); font-size: 12px; display: block; } .mc select { font-size: 13px; padding: 2px 4px; }
 .btn.danger.armed { background: var(--warn); color: #fff; border-color: var(--warn); }
+.cmtTools{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.cmtTools input[type=search]{min-width:260px}
+.cmtImp{display:flex;gap:10px;flex-wrap:wrap;align-items:center;background:#f6f8fa;border:1px solid #e3e8ee;border-radius:8px;padding:8px 12px;margin:8px 0}
+.cmtSecH{margin:18px 0 6px;font-size:15px;letter-spacing:.04em;color:#46607a;text-transform:uppercase}
+.cmt{border:1px solid #e3e8ee;border-radius:8px;padding:10px 12px;margin:6px 0;background:#fff}.cmt.editing{background:#fffdf3}
+.cmtTop{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.cmtText{margin-top:6px;line-height:1.45;font-size:14px}.cmtText.clip{max-height:7.5em;overflow:hidden;-webkit-mask-image:linear-gradient(#000 70%,transparent)}
+.vtag{font-size:11px;padding:2px 7px;border-radius:10px;background:#eef1f4;color:#4b5866}.vtag.v26{background:#fff1d6;color:#8a5a00}.vtag.v36{background:#e1f2e6;color:#226b3a}.vtag.vboth{background:#e6eefb;color:#2c4f8a}
+mark.blank{background:#fff3a8;padding:0 2px;border-radius:3px}.cmt textarea{width:100%;font:inherit;font-size:14px}.linkbtn{background:none;border:0;color:#2c5f9e;cursor:pointer;padding:2px 0;font-size:13px}
 </style>
 </head>
 <body>
@@ -194,6 +201,7 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
     <button type="button" data-tab="letter" aria-selected="false">Order</button>
     <button type="button" data-tab="market" aria-selected="false">Market</button>
     <button type="button" data-tab="contacts" aria-selected="false">Clients</button>
+    <button type="button" data-tab="comments" aria-selected="false">My comments</button>
     <button type="button" data-tab="wording" aria-selected="false">Standard wording</button>
     <button type="button" data-tab="help" aria-selected="false">Help</button>
   </nav>
@@ -449,6 +457,15 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
       <li><b>iPad</b>: items with this ticked go to the iPad as inspection to-dos (photos, measuring, inspection conduct are ticked for you). Untick any you do not want on the iPad. Ticked-done items are not sent.</li>
       <li>Then click <b>Send this order to the iPad</b> (top of the order) and open that file on the iPad – the to-dos show in the order box with check boxes.</li>
       <li><b>Read the client's letter again</b> re-reads it; your own items, your edits and your ticks are kept. <b>Copy the list</b> copies it for an email or your notes.</li></ol></details>
+    <details><summary>My comments – your comment library</summary><ol>
+      <li>Click the <b>My comments</b> tab.</li>
+      <li>First time: under <b>Import my OneNote library</b>, choose what the comments were written for (your OneNote library is <b>UAD 2.6</b>), then click <b>Choose the PDF…</b> and pick the PDF you exported from OneNote. Each page becomes one comment, sorted by its OneNote section; long comments that run onto a second page are joined back together. Pages with a title but no text yet are left out and listed.</li>
+      <li>To use one: type a word in the search box (for example <i>laser</i>, <i>ADU</i>, <i>fire</i>) or pick a section, then click <b>Copy</b> and paste it into SFREP. Blanks in square brackets, like <mark class="blank">[date]</mark>, are highlighted so you remember to fill them in.</li>
+      <li>The tag on each comment shows the form it was written for: <b>UAD 2.6</b>, <b>UAD 3.6</b> or <b>2.6 and 3.6</b>. Use the drop-down at the top to show only the ones for the form you are working on. When you have checked a 2.6 comment for 3.6, click <b>Edit</b> and change <b>Written for</b>.</li>
+      <li><b>Edit</b> changes the title, section, form or wording; <b>Delete</b> (click twice) removes it. <b>Add a comment</b> starts a new one (marked UAD 3.6).</li>
+      <li>Importing the same OneNote PDF again later adds the new comments and updates the ones you have not edited; your edited ones stay as you have them.</li>
+      <li>In the <b>Comp genie</b>, the comment boxes (sales comparison, highest and best use, reconciliation) have a <b>My comments</b> button: search, then <b>Insert</b> puts the comment where your cursor is. It uses the same list, so import it here first.</li>
+      <li>Your library is kept in this browser on this computer and in your <b>Back up</b> zip – keep backing up.</li></ol></details>
     <details><summary>Invoice, payment and the unpaid list</summary><ol>
       <li>The fee comes from <b>Total fee</b> (Fee and delivery). A rent survey fee is added when the rent survey is ticked; a retainer is taken off the balance.</li>
       <li>When you deliver the report, go to <b>Invoice and payment</b> on the order and click <b>Make the invoice</b>. It fills in the invoice number (your file number), today's date and the amount (type a different amount to change it). A new tab opens with the invoice on your letterhead: in the print window choose <b>Destination: Save as PDF</b>, then Save. Attach that PDF to your email or the AMC portal. AMC orders are billed to the AMC, with the AMC order / reference ID (for example the Document ID) on the invoice.</li>
@@ -553,6 +570,16 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
 <section class="panel" id="panel-contacts" hidden>
   <div class="listHead"><div><h2>Clients</h2><p class="help" id="contactCount"></p></div><input id="contactSearch" type="search" placeholder="Search name, firm, email"></div>
   <div class="tableWrap"><table><thead><tr><th>Name</th><th>Firm</th><th>Address</th><th>Phone</th><th>Email</th><th>Letters</th><th>Last letter</th><th></th></tr></thead><tbody id="contactList"></tbody></table></div>
+</section>
+<section class="panel" id="panel-comments" hidden>
+  <div class="listHead"><div><h2>My comments</h2><p class="help" id="cmtCount"></p></div>
+    <div class="cmtTools"><input id="cmtQ" type="search" placeholder="Search, e.g. laser, ADU, permit, fire"><select id="cmtSec"></select>
+      <select id="cmtVer"><option value="">2.6 and 3.6</option><option value="3.6">For UAD 3.6</option><option value="2.6">For UAD 2.6</option></select>
+      <button type="button" class="btn" id="cmtAdd">Add a comment</button></div></div>
+  <div class="cmtImp"><label>Import my OneNote library (PDF) – these comments were written for <select id="cmtImpVer"><option value="2.6">UAD 2.6</option><option value="3.6">UAD 3.6</option><option value="both">both</option></select></label>
+    <label class="btn ghost small">Choose the PDF…<input id="cmtFile" type="file" accept=".pdf,application/pdf" hidden></label><span id="cmtMsg" class="help"></span></div>
+  <p class="help">Copy puts the comment on the clipboard – paste it into SFREP and fill in the <mark class="blank">[blanks]</mark>. Kept in this browser only and in your Back up; nothing is sent anywhere. The Comp genie's comment boxes have a <b>My comments</b> button that uses this same list.</p>
+  <div id="cmtBody"></div>
 </section>
 <section class="panel" id="panel-wording" hidden>
   <div class="wording">
