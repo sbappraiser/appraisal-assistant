@@ -52,6 +52,7 @@ const FIELDS = [
   { k: 'viewRating', l: 'View rating', g: 'Location and site', kind: 'site', t: 'text' },
   { k: 'viewTypes', l: 'View', g: 'Location and site', kind: 'site', t: 'text' },
   { k: 'viewRange', l: 'View range', g: 'Location and site', kind: 'site', t: 'text' },
+  { k: 'landscaping', l: 'Landscaping (your scale)', g: 'Location and site', kind: 'site', t: 'text' },
   { k: 'fema', l: 'Flood zone (CRS)', g: 'Location and site', kind: 'site', t: 'text' },
   { k: 'hoa', l: 'Association fee ($/month)', g: 'Location and site', kind: 'site', t: 'money' },
   // Improvements

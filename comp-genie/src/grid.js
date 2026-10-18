@@ -20,7 +20,8 @@ const ADJ_ROWS = [
   ['nbhd', 'Neighborhood name', 'Site', 'NeighborhoodName'],
   ['loc', 'Site influence (location)', 'Site', 'SiteInfluence'],
   ['view', 'View', 'Site', 'View'],
-  ['usable', 'Usable Lot Area/Utility', 'Site', 'OTHER', 'usableAc'],
+  ['usable', 'Usable Lot Area/Utility', 'Site', 'OTHER', 'usableAc', 'Usable Lot Area/Utility'],
+  ['land', 'Landscaping', 'Site', 'OTHER', null, 'Landscaping'],   // her SFREP template needs an Add Other row named exactly "Landscaping"
   ['topo', 'Topography', 'Site', 'Topography'],
   ['year', 'Year built', 'Dwelling', 'YearBuilt'],
   ['style', 'Design (style)', 'Dwelling', 'DwellingStyle'],
@@ -49,7 +50,7 @@ const acOf = sf => sf ? Math.round(sf / 43560 * 100) / 100 : null;
 function subjFacts(J) {
   const I = J.subject.insp || {}, T = G0(J).subj, crs = J.subject.crs || {};
   const f = { price: '', ppsf: '', src: 'Inspection ' + (I.inspDate ? showDate(I.inspDate) : ''), prox: '', terms: '', conc: '', contract: '', sale: '', dom: '',
-    site: I.siteSf || num(crs.lotSf) || null, usable: I.usableAc ?? null, loc: I.loc || '', view: I.view || '', topo: I.topo || '', nbhd: I.nbhd || '',
+    site: I.siteSf || num(crs.lotSf) || null, usable: I.usableAc ?? null, loc: I.loc || '', view: I.view || '', topo: I.topo || '', nbhd: I.nbhd || '', land: I.land || '',
     style: I.style || '', year: I.year || num(crs.yearBuilt) || null, q: I.q || '', c: I.c || '', beds: I.beds ?? null, full: I.full ?? null, half: I.half ?? null,
     gla: I.gla ?? null, bsmt: I.bsmt ?? null, garage: I.garage ?? null, energy: I.energy || '', pool: I.pool || '', porch: I.porch || '', adu: I.adu || '', other: I.other || '' };
   Object.entries(T).forEach(([k, v]) => { if (!blank(v)) f[k] = v; });
@@ -60,7 +61,7 @@ function compFacts(c, J) {
   return { price: num(g('salePrice')), src: g('mls') ? 'MLS ' + g('mls') : (c.src.cort.length ? 'CORT' : c.src.arch.length ? 'Your archive' : ''), prox: px ? px.mi.toFixed(2) + ' mi ' + px.dir.replace(/([a-z])([A-Z])/, '$1 $2') : '',
     terms: g('financing') || '', conc: num(g('concessions')), contract: g('contractDate') || '', sale: g('saleDate') || '', dom: g('dom'),
     site: num(g('siteSf')), usable: acOf(num(g('usableSf'))), loc: [g('locRating'), g('locFactors')].filter(Boolean).join(': '), view: [g('viewRating'), g('viewTypes')].filter(Boolean).join(': '),
-    topo: g('topo') || '', nbhd: g('nbhd') || '', style: g('style') || '', year: num(g('yearBuilt')), q: g('quality') || '', c: g('condition') || '',
+    topo: g('topo') || '', nbhd: g('nbhd') || '', land: g('landscaping') || '', style: g('style') || '', year: num(g('yearBuilt')), q: g('quality') || '', c: g('condition') || '',
     beds: num(g('beds')), full: num(g('full')), half: num(g('half')), gla: num(g('gla')), bsmt: num(g('bsmtFin')), garage: num(g('garage')), energy: g('energy') || '',
     pool: [yes(g('pool')) ? 'Pool' : '', yes(g('spa')) ? 'Spa' : ''].filter(Boolean).join(', '), porch: g('porch') || '', adu: [g('adu'), g('guest'), g('accessory')].filter(Boolean).join('; '),
     other: [yes(g('tennis')) ? 'Tennis' : '', yes(g('sport')) ? 'Sport court' : '', g('horse') || ''].filter(Boolean).join(', ') };
@@ -125,14 +126,88 @@ function gridHTML(J) {
     <p class="help">${inspNote} Type an amount in any cell (minus for a downward adjustment). Or type a rate once beside a line; cells without your own amount then use it (shown in grey). Clear a cell to go back to the rate. Usable Lot Area/Utility comes only from your archive or your measurement – blank comps say <span class="measure">Measure it</span>.</p>
     <div class="tablewrap"><table class="grid"><thead><tr><th></th><th>Subject<br><small>${esc(J.subject.addr || '')}</small></th>${used.map(c => `<th>Comp ${c.use}<br><small>${esc(compTitle(c))}</small></th>`).join('')}</tr></thead>
     <tbody>${rows}
-    ${sumRow('Net adjustment', t => `${t.net >= 0 ? '+' : '−'}${money(Math.abs(t.net))} <small>${t.netPct.toFixed(1)}%</small>`)}
-    ${sumRow('Gross adjustment', t => `${money(t.gross)} <small class="${t.grossPct > 25 ? 'over' : ''}">${t.grossPct.toFixed(1)}%</small>`)}
+    ${sumRow('Net adjustment', t => `${t.net >= 0 ? '+' : '−'}${money(Math.abs(t.net))} <small class="${Math.abs(t.netPct) > GRID_LIMITS.net ? 'over' : ''}">${t.netPct.toFixed(1)}%</small>`)}
+    ${sumRow('Gross adjustment', t => `${money(t.gross)} <small class="${t.grossPct > GRID_LIMITS.gross ? 'over' : ''}">${t.grossPct.toFixed(1)}%</small>`)}
     ${sumRow('Adjusted sale price', t => `<b>${money(t.adj)}</b>${t.adjPsf ? `<br><small>${money(t.adjPsf)} / sq ft</small>` : ''}`, 'big')}
     ${sumRow('Weight in reconciliation', (t, c) => `<select data-gweight="${c.id}"><option value="">–</option>${[['Most', 'Most weight'], ['Less', 'Less weight'], ['NoWeight', 'No weight']].map(([v, l]) => `<option value="${v}" ${G.weights[c.id] === v ? 'selected' : ''}>${l}</option>`).join('')}</select>`)}
     </tbody></table></div>
     <div class="gsum"><div><span>Adjusted range</span><b>${adjs.length ? money(lo) + ' – ' + money(hi) : '–'}</b></div><div><span>Spread</span><b>${adjs.length > 1 ? money(hi - lo) + ' (' + ((hi - lo) / lo * 100).toFixed(1) + '%)' : '–'}</b></div><div><span>Median</span><b>${med ? money(med) : '–'}</b></div>
       <label><span>Your indicated value (sales comparison)</span><input class="txt" data-gvalue="1" value="${esc(blank(G.value) ? '' : G.value)}" placeholder="$" inputmode="decimal"></label></div>
-    <label class="fld"><span>Sales comparison comment (your words)</span><textarea class="txt" rows="3" data-gnote="1">${esc(G.note || '')}</textarea></label>`;
+    <label class="fld"><span>Sales comparison comment (your words)</span><textarea class="txt" rows="3" data-gnote="1">${esc(G.note || '')}</textarea></label>
+    ${reviewHTML(J)}`;
+}
+
+/* text for an Add Other row (subject or comp) */
+function otherDesc(r, F) {
+  if (r[0] === 'usable') return blank(F.usable) ? '' : (+F.usable).toFixed(2) + ' ac';
+  return String(F[r[0]] || '').trim();
+}
+
+/* ---------------- review: direction, math, consistency, missing, bracketing, limits (Oct 2026) ----------------
+   Every flag can be marked OK with her reason; nothing is changed for her. */
+const LAND_SCALE = ['none', 'minimal', 'fair', 'avg-fair', 'average', 'avg-good', 'good', 'very good', 'excellent'];
+const GRID_LIMITS = { gross: 25, net: 15, line: 10 };
+const LIMIT_TEXT = 'Adjustments for some comparables exceed typical guidelines (25% gross, 15% net, 10% for a single line). This is expected given the lack of more similar sales and the non-conforming nature of this market segment; the comparables used are the most similar sales available and were weighted accordingly.';
+function goodness(k, F) {   // a number where higher = better, or null when it cannot be told
+  const n = v => blank(v) || v === '' ? null : num(v);
+  const rating = v => { const m = String(v || '').match(/(\d)/); return m ? -(+m[1]) : null; };   // Q2 is better than Q4
+  switch (k) {
+    case 'gla': case 'bsmt': case 'site': case 'beds': case 'garage': return n(F[k]);
+    case 'usable': return n(F.usable);
+    case 'baths': return blank(F.full) ? null : (+F.full) + (+F.half || 0) / 2;
+    case 'q': return rating(F.q); case 'c': return rating(F.c);
+    case 'view': { const t = String(F.view || '').toLowerCase(); return /adverse/.test(t) ? 0 : /beneficial/.test(t) ? 2 : /neutral/.test(t) ? 1 : null; }
+    case 'land': { const t = String(F.land || '').toLowerCase().replace(/\bv(ery)?[-. ]?good\b/, 'very good').replace(/average[- ]good|avg[- ]good/, 'avg-good').replace(/average[- ]fair|avg[- ]fair/, 'avg-fair').replace(/^avg$/, 'average');
+      const i = LAND_SCALE.findIndex(x => t.startsWith(x)); return i < 0 ? null : i; }
+    case 'pool': case 'adu': { const t = String(F[k] || '').trim(); if (!t) return null; return /^(no|none)$/i.test(t) ? 0 : 1; }
+    default: return null;
+  }
+}
+const REVIEW_ROWS = { gla: 'sq ft', bsmt: 'sq ft', usable: 'acre', beds: 'bedroom', baths: 'bath', garage: 'space', q: 'quality step', c: 'condition step', view: 'view tier', land: 'landscaping step', pool: '', adu: '', site: 'sq ft' };
+const SMALL = { gla: 100, bsmt: 100, usable: 0.05, site: 2000 };   // differences this small are often not adjusted
+const sgn = a => (a < 0 ? '−' : '+') + money(Math.abs(a));
+const factText = (id, F) => id === 'baths' ? (blank(F.full) ? '?' : F.full + '/' + (F.half || 0)) : (showFact(id, F[id]) || '?');
+function gridReview(J) {
+  const used = usedComps(J); const S = subjFacts(J); const G = G0(J); const out = []; const add = (key, sev, msg, extra) => out.push({ key, sev, msg, ok: G.ok && G.ok[key], ...(extra || {}) });
+  const rowOf = id => ADJ_ROWS.find(r => r[0] === id);
+  Object.keys(REVIEW_ROWS).forEach(id => { const row = rowOf(id); if (!row) return; const per = [];
+    used.forEach(c => { const C = compFacts(c, J); const gs = goodness(id, S), gc = goodness(id, C); const a = cellAmount(J, c, row).v; const name = 'Comp ' + c.use;
+      if (gs === null || gc === null) { if (a) per.push(null); return; }
+      const d = gs - gc;   // > 0: the subject is better, so the comp is adjusted up (+)
+      if (d > 0 && a < 0) add(`dir:${c.id}:${id}`, 'Direction', `${name} – ${row[1]}: the comp is inferior to the subject, so the adjustment is usually plus (+), but it is ${sgn(a)}.`);
+      else if (d < 0 && a > 0) add(`dir:${c.id}:${id}`, 'Direction', `${name} – ${row[1]}: the comp is superior to the subject, so the adjustment is usually minus (−), but it is +${money(a)}.`);
+      const small = SMALL[id] !== undefined && Math.abs(d) < SMALL[id];
+      if (d !== 0 && !small && !a && id !== 'site') add(`miss:${c.id}:${id}`, 'Not adjusted', `${name} – ${row[1]}: the comp differs from the subject (${factText(id, S)} vs ${factText(id, C)}) but has no adjustment.`);
+      if (d === 0 && a && ['gla', 'beds', 'baths', 'garage', 'q', 'c', 'land', 'usable'].includes(id)) add(`eq:${c.id}:${id}`, 'Check', `${name} – ${row[1]}: same as the subject, but adjusted ${sgn(a)}.`);
+      if (d !== 0 && a && REVIEW_ROWS[id]) per.push({ name, rate: a / d });
+      // math: her own amount against the rate she set
+      const own = cellAmount(J, c, row).own; if (own && row[4]) { const ra = rateAmount(row, S, C, J); if (ra !== null && Math.abs(ra - a) > Math.max(1000, Math.abs(ra) * 0.05)) add(`math:${c.id}:${id}`, 'Math', `${name} – ${row[1]}: you typed ${sgn(a)}; your rate × the difference gives ${sgn(ra)}.`); }
+    });
+    const rs = per.filter(Boolean); if (rs.length > 1) { const v = rs.map(x => Math.abs(x.rate)); const lo = Math.min(...v), hi = Math.max(...v);
+      if (lo > 0 && hi / lo > 1.5) add(`cons:${id}`, 'Consistency', `${row[1]}: the amount per ${REVIEW_ROWS[id]} differs between comps (${rs.map(x => x.name + ' ' + money(Math.abs(x.rate))).join(', ')}). Fine if the comps differ in a way that explains it – say why.`); }
+  });
+  // bracketing on the main features
+  [['gla', 'living area'], ['usable', 'usable lot area'], ['q', 'quality'], ['view', 'view'], ['land', 'landscaping']].forEach(([id, l]) => {
+    const gs = goodness(id, S); if (gs === null) return; const gc = used.map(c => goodness(id, compFacts(c, J))).filter(x => x !== null); if (gc.length < 2) return;
+    if (gs > Math.max(...gc)) add(`br:${id}`, 'Bracketing', `The subject's ${l} is better than every comp – none bracket it from above.`);
+    if (gs < Math.min(...gc)) add(`br:${id}`, 'Bracketing', `The subject's ${l} is below every comp – none bracket it from below.`);
+  });
+  // limits: 25% gross, 15% net, 10% a line
+  used.forEach(c => { const t = compTotals(J, c); const name = 'Comp ' + c.use; if (!t.price) return;
+    if (t.grossPct > GRID_LIMITS.gross) add(`lim:g:${c.id}`, 'Limit', `${name}: gross adjustment ${t.grossPct.toFixed(1)}% is over ${GRID_LIMITS.gross}%.`, { limit: true });
+    if (Math.abs(t.netPct) > GRID_LIMITS.net) add(`lim:n:${c.id}`, 'Limit', `${name}: net adjustment ${t.netPct.toFixed(1)}% is over ${GRID_LIMITS.net}%.`, { limit: true });
+    ADJ_ROWS.filter(r => r[3]).forEach(r => { const a = cellAmount(J, c, r).v; if (a && Math.abs(a) / t.price * 100 > GRID_LIMITS.line) add(`lim:l:${c.id}:${r[0]}`, 'Limit', `${name} – ${r[1]}: ${money(Math.abs(a))} is ${(Math.abs(a) / t.price * 100).toFixed(1)}% of the sale price (over ${GRID_LIMITS.line}%).`, { limit: true }); });
+  });
+  return out;
+}
+function reviewHTML(J) {
+  if (!usedComps(J).length) return ''; const F = gridReview(J); const open = F.filter(f => !f.ok); const G = G0(J);
+  const anyLimit = F.some(f => f.limit); const noted = (G.note || '').includes(LIMIT_TEXT.slice(0, 60));
+  return `<div class="review"><h3>Review <small>${F.length ? `${open.length} to check · ${F.length - open.length} marked OK` : 'nothing to flag'}</small></h3>
+    <p class="help">Checks your grid for direction (+/−), math, consistency, missing adjustments, bracketing and the 25% gross / 15% net / 10% line guidelines. Nothing is changed for you – mark a flag OK and say why; your reason goes in the workfile.</p>
+    ${F.map(f => `<div class="rv ${f.ok ? 'ok' : ''}"><span class="rvs rv-${f.sev.replace(/\s/g, '')}">${esc(f.sev)}</span><span class="rvm">${esc(f.msg)}</span>
+      <input class="txt sm" data-gok="${esc(f.key)}" value="${esc(f.ok || '')}" placeholder="OK because…">${f.limit && !f.ok ? `<button class="btn sm" data-gokstd="${esc(f.key)}">Use my standard reason</button>` : ''}</div>`).join('')}
+    ${anyLimit && !noted ? `<div class="row"><button class="btn" data-glimnote="1">Add the guideline explanation to the sales comparison comment</button></div><p class="help"><i>${esc(LIMIT_TEXT)}</i></p>` : ''}</div>`;
 }
 
 /* ---------------- the subject from her iPad workfile package ---------------- */
@@ -163,7 +238,7 @@ function gridAdjustXML(CMP, c, job) {
   const G = job.grid; if (!G) return null; const box = X(CMP, 'COMPARABLE_ADJUSTMENTS'); const C = compFacts(c, job); let any = false;
   // order as on the 3.6 grid (D-1 sample): Add Other rows first, then site, dwelling, units, quality/condition, amenities
   ADJ_ROWS.filter(r => r[3]).sort((x, y) => (y[3] === 'OTHER') - (x[3] === 'OTHER')).forEach(r => { const a = cellAmount(job, c, r).v;
-    if (r[3] === 'OTHER') { if (blank(C.usable) && !a) return; const e = X(box, 'COMPARABLE_ADJUSTMENT'); XV(e, 'AdditionalComparisonLineItemDescription', blank(C.usable) ? null : (+C.usable).toFixed(2) + ' ac'); XV(e, 'AdditionalComparisonLineItemIdentifier', LOT_UTILITY); XV(e, 'ComparableAdjustmentAmount', a || 0); XV(e, 'ComparableAdjustmentType', 'SalesComparableAdditionalAdjustableComparisonItem'); any = true; return; }
+    if (r[3] === 'OTHER') { const desc = otherDesc(r, C); if (!desc && !a) return; const e = X(box, 'COMPARABLE_ADJUSTMENT'); XV(e, 'AdditionalComparisonLineItemDescription', desc || null); XV(e, 'AdditionalComparisonLineItemIdentifier', r[5]); XV(e, 'ComparableAdjustmentAmount', a || 0); XV(e, 'ComparableAdjustmentType', 'SalesComparableAdditionalAdjustableComparisonItem'); any = true; return; }
     if (a === null || a === undefined) return; const e = X(box, 'COMPARABLE_ADJUSTMENT'); XV(e, 'ComparableAdjustmentAmount', Math.round(a)); XV(e, 'ComparableAdjustmentType', r[3]); any = true; });
   if (!any) CMP.kids = CMP.kids.filter(k => k !== box);
   return compTotals(job, c);
@@ -193,8 +268,8 @@ async function exportFullReport() {
   if (!RL.children.length) RL.remove();
   // subject's Usable Lot Area/Utility row
   const S = subjFacts(J);
-  if (!blank(S.usable)) { const CM = child(SUBJ, 'COMPARABLE'); const AS = child(CM, 'COMPARABLE_ADJUSTMENTS'); const a = sub.createElementNS(NS, 'COMPARABLE_ADJUSTMENT'); AS.appendChild(a);
-    leaf(a, 'AdditionalComparisonLineItemDescription', (+S.usable).toFixed(2) + ' ac'); leaf(a, 'AdditionalComparisonLineItemIdentifier', LOT_UTILITY); leaf(a, 'ComparableAdjustmentType', 'SalesComparableAdditionalAdjustableComparisonItem'); }
+  ADJ_ROWS.filter(r => r[3] === 'OTHER').forEach(r => { const desc = otherDesc(r, S); if (!desc) return; const CM = child(SUBJ, 'COMPARABLE'); const AS = child(CM, 'COMPARABLE_ADJUSTMENTS'); const a = sub.createElementNS(NS, 'COMPARABLE_ADJUSTMENT'); AS.appendChild(a);
+    leaf(a, 'AdditionalComparisonLineItemDescription', desc); leaf(a, 'AdditionalComparisonLineItemIdentifier', r[5]); leaf(a, 'ComparableAdjustmentType', 'SalesComparableAdditionalAdjustableComparisonItem'); });
   // value and comment
   const G = G0(J); const VR = child(VA, 'VALUATION_REPORT');
   if (!blank(G.value) || G.note) { const sca = child(child(VR, 'APPROACH_TO_VALUE'), 'SALES_COMPARISON_APPROACH'); const det = child(sca, 'SALES_COMPARISON_APPROACH_DETAIL');
