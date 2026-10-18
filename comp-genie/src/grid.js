@@ -19,9 +19,9 @@ const ADJ_ROWS = [
   ['site', 'Site size', 'Site', 'SiteSize'],
   ['nbhd', 'Neighborhood name', 'Site', 'NeighborhoodName'],
   ['loc', 'Site influence (location)', 'Site', 'SiteInfluence'],
-  ['view', 'View', 'Site', 'View'],
+  ['view', 'View', 'Site', 'View', ['viewStep', 'viewPct']],
   ['usable', 'Usable Lot Area/Utility', 'Site', 'OTHER', 'usableAc', 'Usable Lot Area/Utility'],
-  ['land', 'Landscaping', 'Site', 'OTHER', null, 'Landscaping'],   // her SFREP template needs an Add Other row named exactly "Landscaping"
+  ['land', 'Landscaping', 'Site', 'OTHER', ['landStep'], 'Landscaping'],   // her SFREP template needs an Add Other row named exactly "Landscaping"
   ['topo', 'Topography', 'Site', 'Topography'],
   ['year', 'Year built', 'Dwelling', 'YearBuilt'],
   ['style', 'Design (style)', 'Dwelling', 'DwellingStyle'],
@@ -30,12 +30,12 @@ const ADJ_ROWS = [
   ['baths', 'Baths (full / half)', 'Dwelling', 'LivingUnitBathroomCount', 'bath'],
   ['gla', 'Living area above grade (sq ft)', 'Dwelling', 'LivingUnitStandardFinishedAreaAboveGrade', 'gla'],
   ['bsmt', 'Below grade finished (sq ft)', 'Dwelling', 'LivingUnitStandardFinishedAreaBelowGrade'],
-  ['q', 'Overall quality', 'Dwelling', 'OverallQualityRating'],
-  ['c', 'Overall condition', 'Dwelling', 'OverallConditionRating'],
+  ['q', 'Overall quality', 'Dwelling', 'OverallQualityRating', ['qStep', 'qPct']],
+  ['c', 'Overall condition', 'Dwelling', 'OverallConditionRating', ['cStep', 'cPct']],
   ['porch', 'Porch / patio / deck', 'Amenities', 'OutdoorLivingAmenity'],
   ['pool', 'Water features (pool / spa / pond / lake)', 'Amenities', 'WaterFeaturesAmenity', ['pool', 'spa', 'pond', 'lake']],
   ['courts', 'Tennis / sport court', 'Amenities', 'OutdoorAccessoryAmenity', ['tennis', 'sport']],
-  ['adu', 'ADU / guest house / outbuildings', 'Amenities', 'Outbuilding'],
+  ['adu', 'ADU / guest house / outbuildings', 'Amenities', 'Outbuilding', ['aduSf', 'aduBath']],
   ['other', 'Other amenities', 'Amenities', 'MiscellaneousAmenity'],
   ['garage', 'Vehicle storage', 'Amenities', 'VehicleStorage', 'space'],
 ];
@@ -43,6 +43,19 @@ const LOT_UTILITY = 'Usable Lot Area/Utility';      // her exact SFREP template 
 const RATES = { gla: ['$ per sq ft', 'subject − comp sq ft × rate'], usableAc: ['$ per usable acre', 'subject − comp usable acres × rate'], bed: ['$ per bedroom', 'bedroom difference × rate'],
   bath: ['$ per full bath', 'full-bath difference × rate (half baths at half the rate)'], space: ['$ per garage space', 'space difference × rate'], timePct: ['% per month', 'months from sale to effective date × % × price'],
   pool: ['$ pool', 'has / has not'], spa: ['$ spa', 'has / has not'], pond: ['$ pond', 'has / has not'], lake: ['$ lake', 'has / has not'], tennis: ['$ tennis court', 'has / has not'], sport: ['$ sport court', 'has / has not'] };
+Object.assign(RATES, { qStep: ['$ per quality step', 'whole steps, thirds for low / mid / high'], qPct: ['% of price per quality step', 'whole steps, thirds for low / mid / high'],
+  cStep: ['$ per condition step', 'whole steps, thirds for low / mid / high'], cPct: ['% of price per condition step', 'whole steps, thirds for low / mid / high'],
+  viewStep: ['$ per view tier', 'adverse · neutral · beneficial limited · average · excellent / panoramic'], viewPct: ['% of price per view tier', 'adverse · neutral · beneficial limited · average · excellent / panoramic'],
+  landStep: ['$ per landscaping step', 'minimal · fair · avg-fair · average · avg-good · good · very good · excellent'],
+  aduSf: ['$ per ADU / guest sq ft', 'finished ADU, guest house and other living outbuildings (not storage)'], aduBath: ['$ per ADU / guest bath', 'baths in the ADU / guest house / outbuildings – set it for this property'] });
+const FINE = { low: -1 / 3, mid: 0, high: 1 / 3 };
+const fineOf = (J, who, k) => ((G0(J).fine || {})[who] || {})[k] || 'mid';
+const ratingPos = (v, fine) => { const m = String(v || '').match(/(\d)/); return m ? -(+m[1]) + (FINE[fine] || 0) : null; };   // higher = better; Q2 > Q4; high C3 > low C3
+const viewTier = v => { const t = String(v || '').toLowerCase(); if (!t.trim()) return null; if (/adverse/.test(t)) return -1; if (/neutral/.test(t)) return 0;
+  if (/beneficial|ocean|mountain|city|lake|golf|canyon|panoram/.test(t)) return /panoram|excellent/.test(t) ? 3 : /limited/.test(t) ? 1 : 2; return null; };
+const aduNums = F => { if (F.aduSf !== undefined && F.aduSf !== null && F.aduSf !== '') return { sf: +F.aduSf || 0, baths: +F.aduBaths || 0 };
+  const t = String(F.adu || ''); if (!t.trim() || /^(no|none)$/i.test(t.trim())) return { sf: 0, baths: 0 };
+  const sf = t.match(/([\d,]{2,})\s*(?:sf|sq|square)/i), ba = t.match(/(\d+(?:\.\d)?)\s*(?:full\s*)?ba/i); return { sf: sf ? +sf[1].replace(/,/g, '') : null, baths: ba ? +ba[1] : 0 }; };
 RATES.bed = ['$ per bedroom (up to 3)', 'bedrooms above + below grade; a difference counts only up to 3 – buyers pay for a 3rd bedroom, not for more (living area covers the rest)'];
 const BED_CAP = 3;
 const capBeds = v => blank(v) ? null : Math.min(+v, BED_CAP);
@@ -61,6 +74,7 @@ function subjFacts(J) {
     style: I.style || '', year: I.year || num(crs.yearBuilt) || null, q: I.q || '', c: I.c || '', beds: I.beds ?? null, full: I.full ?? null, half: I.half ?? null,
     gla: I.gla ?? null, bsmt: I.bsmt ?? null, garage: I.garage ?? null, energy: I.energy || '', pool: I.pool || '', courts: I.courts || '', porch: I.porch || '', adu: I.adu || '', other: I.other || '' };
   Object.entries(T).forEach(([k, v]) => { if (!blank(v)) f[k] = v; });
+  f._fine = { q: fineOf(J, 'subj', 'q'), c: fineOf(J, 'subj', 'c') };
   return f;
 }
 function compFacts(c, J) {
@@ -71,7 +85,10 @@ function compFacts(c, J) {
     topo: g('topo') || '', nbhd: g('nbhd') || '', land: g('landscaping') || '', style: g('style') || '', year: num(g('yearBuilt')), q: g('quality') || '', c: g('condition') || '',
     beds: num(g('beds')), full: num(g('full')), half: num(g('half')), gla: num(g('gla')), bsmt: num(g('bsmtFin')), garage: num(g('garage')), energy: g('energy') || '',
     pool: [yes(g('pool')) ? 'Pool' : '', yes(g('spa')) ? 'Spa' : ''].filter(Boolean).join(', ') || (g('pool') && !yes(g('pool')) ? 'None' : ''), courts: [yes(g('tennis')) ? 'Tennis court' : '', yes(g('sport')) ? 'Sport court' : ''].filter(Boolean).join(', '), porch: g('porch') || '', adu: [g('adu'), g('guest'), g('accessory')].filter(Boolean).join('; '),
-    other: [g('horse') ? 'Horse facilities' : ''].filter(Boolean).join(', ') };
+    other: [g('horse') ? 'Horse facilities' : ''].filter(Boolean).join(', '), _id: c.id, aduSf: g('aduSf'), aduBaths: g('aduBaths') };
+  F0._fine = { q: fineOf(J, c.id, 'q'), c: fineOf(J, c.id, 'c') };
+  if (g('viewRange') && F0.view && !/limited|panoram/i.test(F0.view)) F0.view += ' – ' + g('viewRange');
+  if (!blank(F0.aduSf) && F0.aduSf > 0) F0.adu = [F0.adu && F0.adu !== 'None' ? F0.adu : 'Living outbuilding', int(F0.aduSf) + ' sf', F0.aduBaths ? F0.aduBaths + ' bath' : ''].filter(Boolean).join(', ');
   F0.beds = blank(F0.beds) ? null : (+F0.beds) + (+(g('bgBeds') || 0)); F0.bedsBg = +(g('bgBeds') || 0); return F0;
 }
 function showFact(k, v) {
@@ -86,7 +103,13 @@ function showFact(k, v) {
 /* the amount the rate gives, or null */
 function rateAmount(row, S, C, J) {
   const R = G0(J).rates; const key = row[4];
-  if (Array.isArray(key)) { let tot = 0, any = false; key.forEach(k => { const r = num(R[k]); if (!r) return; const a = hasFeat(S, k), b = hasFeat(C, k); if (a === null || b === null) return; tot += (a - b) * r; any = true; }); return any ? Math.round(tot / 500) * 500 : null; }
+  if (Array.isArray(key)) { let tot = 0, any = false; key.forEach(k => { const r = num(R[k]); if (!r) return; let x = null;
+      if (['pool', 'spa', 'pond', 'lake', 'tennis', 'sport'].includes(k)) { const a = hasFeat(S, k), b = hasFeat(C, k); if (a !== null && b !== null) x = (a - b) * r; }
+      else if (k === 'qStep' || k === 'qPct' || k === 'cStep' || k === 'cPct') { const f = k[0]; const a = ratingPos(S[f], fineOf(J, 'subj', f)), b = ratingPos(C[f], fineOf(J, C._id, f)); if (a !== null && b !== null) x = (a - b) * (k.endsWith('Pct') ? r / 100 * (C.price || 0) : r); }
+      else if (k === 'viewStep' || k === 'viewPct') { const a = viewTier(S.view), b = viewTier(C.view); if (a !== null && b !== null) x = (a - b) * (k === 'viewPct' ? r / 100 * (C.price || 0) : r); }
+      else if (k === 'landStep') { const a = goodness('land', S), b = goodness('land', C); if (a !== null && b !== null) x = (a - b) * r; }
+      else if (k === 'aduSf' || k === 'aduBath') { const a = aduNums(S), b = aduNums(C); const v = k === 'aduSf' ? [a.sf, b.sf] : [a.baths, b.baths]; if (v[0] !== null && v[1] !== null) x = (v[0] - v[1]) * r; }
+      if (x !== null) { tot += x; any = true; } }); return any ? Math.round(tot / 500) * 500 : null; }
   const r = num(R[key]); if (!key || !r) return null;
   const d = (a, b) => (blank(a) || blank(b)) ? null : (+a) - (+b);
   let x = null;
@@ -119,10 +142,11 @@ function gridHTML(J) {
     const [id, label, section, type] = row; const head = section !== sec ? `<tr class="grp"><th colspan="${2 + used.length}">${esc(section)}</th></tr>` : ''; sec = section;
     const sv = id === 'baths' ? [S.full, S.half].every(blank) ? '' : `${S.full ?? '–'} / ${S.half ?? 0}` : showFact(id, S[id]);
     const subjCell = ['price', 'ppsf', 'src', 'prox', 'dom', 'terms', 'conc', 'contract', 'sale'].includes(id) ? `<td class="subj">${esc(sv)}</td>`
-      : `<td class="subj"><input class="txt sm" data-gsubj="${id}" value="${esc(blank(G.subj[id]) ? '' : G.subj[id])}" placeholder="${esc(sv || (id === 'usable' ? 'Measure it' : ''))}"></td>`;
+      : `<td class="subj"><input class="txt sm" data-gsubj="${id}" value="${esc(blank(G.subj[id]) ? '' : G.subj[id])}" placeholder="${esc(sv || (id === 'usable' ? 'Measure it' : id === 'adu' ? 'e.g. Guest house 450 sf 1 bath' : ''))}">${id === 'q' || id === 'c' ? fineSel('subj', id, J) : ''}</td>`;
     const cells = used.map(c => { const C = compFacts(c, J);
       let shown = id === 'beds' && C.bedsBg ? `${C.beds} (${C.bedsBg} below grade)` : id === 'baths' ? ([C.full, C.half].every(blank) ? '' : `${C.full ?? '–'} / ${C.half ?? 0}`) : id === 'ppsf' ? (C.price && C.gla ? money(C.price / C.gla) : '') : showFact(id, C[id]);
       if (id === 'usable' && blank(C.usable)) shown = '<span class="measure">Measure it</span>'; else shown = esc(shown);
+      if (id === 'q' || id === 'c') shown += fineSel(c.id, id, J);
       if (!type) return `<td>${shown}</td>`;
       const a = cellAmount(J, c, row);
       return `<td><div class="gval">${shown}</div><input class="txt sm adj ${a.own ? 'own' : a.v !== null ? 'auto' : ''}" data-gadj="${c.id}|${id}" value="${a.own ? a.v : ''}" placeholder="${a.v !== null && !a.own ? (a.v >= 0 ? '+' : '') + a.v.toLocaleString() : '$ adj'}" inputmode="decimal" title="${a.own ? 'Your amount – clear it to use the rate' : a.v !== null ? 'From your rate – type to override' : 'Type the adjustment'}"></td>`; }).join('');
@@ -144,8 +168,16 @@ function gridHTML(J) {
     <div class="gsum"><div><span>Adjusted range</span><b>${adjs.length ? money(lo) + ' – ' + money(hi) : '–'}</b></div><div><span>Spread</span><b>${adjs.length > 1 ? money(hi - lo) + ' (' + ((hi - lo) / lo * 100).toFixed(1) + '%)' : '–'}</b></div><div><span>Median</span><b>${med ? money(med) : '–'}</b></div>
       <label><span>Your indicated value (sales comparison)</span><input class="txt" data-gvalue="1" value="${esc(blank(G.value) ? '' : G.value)}" placeholder="$" inputmode="decimal"></label></div>
     <label class="fld"><span>Sales comparison comment (your words)</span><textarea class="txt" rows="3" data-gnote="1">${esc(G.note || '')}</textarea></label>
+    <div class="row"><button class="btn sm" data-gtiers="1">Add the low / mid / high rating tiers to the comment</button></div>
     ${reviewHTML(J)}`;
 }
+
+/* low / mid / high within a UAD rating – on her grid and in her comments, never in the UAD fields */
+function fineSel(who, k, J) { const v = fineOf(J, who, k); return ` <select class="fine" data-gfine="${who}|${k}" title="Where it sits within the UAD rating">${['low', 'mid', 'high'].map(x => `<option value="${x}" ${x === v ? 'selected' : ''}>${x}</option>`).join('')}</select>`; }
+function tiersText(J) { const S = subjFacts(J); const one = (F, who) => ['q', 'c'].filter(k => F[k]).map(k => `${fineOf(J, who, k)} ${String(F[k]).match(/[QC]\d/i) ? String(F[k]).match(/[QC]\d/i)[0].toUpperCase() : F[k]}`).join(' / ');
+  const parts = usedComps(J).map(c => { const t = one(compFacts(c, J), c.id); return t ? `Comparable ${c.use} ${t}` : ''; }).filter(Boolean);
+  const st = one(S, 'subj'); if (!st && !parts.length) return '';
+  return `Within the UAD quality and condition ratings, the subject is rated ${st || 'as shown'}${parts.length ? '; ' + parts.join('; ') : ''}. Quality and condition adjustments reflect these positions within each rating.`; }
 
 /* text for an Add Other row (subject or comp) */
 function otherDesc(r, F) {
@@ -166,13 +198,13 @@ function goodness(k, F) {   // a number where higher = better, or null when it c
     case 'beds': return capBeds(F.beds);   // up to 3: more bedrooms are covered by living area
     case 'usable': return n(F.usable);
     case 'baths': return blank(F.full) ? null : (+F.full) + (+F.half || 0) / 2;
-    case 'q': return rating(F.q); case 'c': return rating(F.c);
-    case 'view': { const t = String(F.view || '').toLowerCase(); return /adverse/.test(t) ? 0 : /beneficial/.test(t) ? 2 : /neutral/.test(t) ? 1 : null; }
+    case 'q': return ratingPos(F.q, F._fine ? F._fine.q : 'mid'); case 'c': return ratingPos(F.c, F._fine ? F._fine.c : 'mid');
+    case 'view': return viewTier(F.view);
     case 'land': { const t = String(F.land || '').toLowerCase().replace(/\bv(ery)?[-. ]?good\b/, 'very good').replace(/average[- ]good|avg[- ]good/, 'avg-good').replace(/average[- ]fair|avg[- ]fair/, 'avg-fair').replace(/^avg$/, 'average');
       const i = LAND_SCALE.findIndex(x => t.startsWith(x)); return i < 0 ? null : i; }
     case 'pool': { const v = ['pool', 'spa', 'pond', 'lake'].map(x => hasFeat(F, x)); return v.every(x => x === null) ? null : v.reduce((a, b) => a + (b || 0), 0); }
     case 'courts': { const v = ['tennis', 'sport'].map(x => hasFeat(F, x)); return v.every(x => x === null) ? null : v.reduce((a, b) => a + (b || 0), 0); }
-    case 'adu': { const t = String(F[k] || '').trim(); if (!t) return null; return /^(no|none)$/i.test(t) ? 0 : 1; }
+    case 'adu': { const A = aduNums(F); if (A.sf) return A.sf + A.baths * 200; const t = String(F[k] || '').trim(); if (!t) return null; return /^(no|none)$/i.test(t) ? 0 : 1; }
     default: return null;
   }
 }
