@@ -25,6 +25,7 @@ const ADJ_ROWS = [
   ['topo', 'Topography', 'Site', 'Topography'],
   ['year', 'Year built', 'Dwelling', 'YearBuilt'],
   ['style', 'Design (style)', 'Dwelling', 'DwellingStyle'],
+  ['attach', 'Attached / detached', 'Dwelling', 'AttachedOrDetached', 'attach'],
   ['energy', 'Energy efficient features', 'Dwelling', 'EnergyEfficientAndGreenFeatures'],
   ['beds', 'Bedrooms', 'Dwelling', 'LivingUnitBedroomCount', 'bed'],
   ['baths', 'Baths (full / half)', 'Dwelling', 'LivingUnitBathroomCount', 'bath'],
@@ -35,7 +36,7 @@ const ADJ_ROWS = [
   ['porch', 'Porch / patio / deck', 'Amenities', 'OutdoorLivingAmenity'],
   ['pool', 'Water features (pool / spa / pond / lake)', 'Amenities', 'WaterFeaturesAmenity', ['pool', 'spa', 'pond', 'lake']],
   ['courts', 'Tennis / sport court', 'Amenities', 'OutdoorAccessoryAmenity', ['tennis', 'sport']],
-  ['adu', 'ADU / guest house / outbuildings', 'Amenities', 'Outbuilding', ['aduSf', 'aduBath']],
+  ['adu', 'ADU / guest house / outbuildings', 'Amenities', 'Outbuilding', ['aduSf', 'aduBath', 'aduHalf']],
   ['other', 'Other amenities', 'Amenities', 'MiscellaneousAmenity'],
   ['garage', 'Vehicle storage', 'Amenities', 'VehicleStorage', 'space'],
 ];
@@ -80,36 +81,40 @@ const STARTS_DEFAULT = {
   lowBelow: 3000000, highFrom: 10000000,
   usableAc: { 'Montecito': 1500000, 'Hope Ranch': 1250000, 'Santa Barbara / Goleta': 1000000 },
   tiers: {
-    high: { bath: 100000, halfBath: 50000, pool: 200000, spa: 50000, tennis: 250000, sport: 100000 },
-    middle: { bath: 50000, halfBath: 25000, pool: 125000, spa: 25000, tennis: 200000, sport: 50000 },
-    low: { bath: 40000, halfBath: 20000, pool: 85000, spa: 25000, tennis: null, sport: 50000 } },
+    high: { bath: 100000, halfBath: 50000, pool: 200000, spa: 50000, tennis: 250000, sport: 100000, aduSf: 500, aduBath: 50000, aduHalf: 25000, attach: null },
+    middle: { bath: 50000, halfBath: 25000, pool: 125000, spa: 25000, tennis: 200000, sport: 50000, aduSf: 400, aduBath: 25000, aduHalf: 12500, attach: null },
+    low: { bath: 40000, halfBath: 20000, pool: 85000, spa: 25000, tennis: null, sport: 50000, aduSf: 350, aduBath: 15000, aduHalf: 7500, attach: null },
+    condo: { bath: 30000, halfBath: 15000, pool: null, spa: null, tennis: null, sport: null, aduSf: null, aduBath: null, aduHalf: null, attach: 30000 } },   // her condo column (Oct 19 2026): no pool/spa/courts (common area), no usable acre, no ADU
   notes: 'Bedroom: you choose it on each property (the grid asks when a comp has fewer than 3 bedrooms). Quality, design and view: set on each property, usually a % of the sale price across the grid.' };
-const ST_KEYS = [['bath', 'Full bath'], ['halfBath', 'Half bath'], ['pool', 'Pool'], ['spa', 'Spa'], ['tennis', 'Tennis court'], ['sport', 'Sport court']];
+const ST_KEYS = [['bath', 'Full bath'], ['halfBath', 'Half bath'], ['attach', 'Detached over attached'], ['pool', 'Pool'], ['spa', 'Spa'], ['tennis', 'Tennis court'], ['sport', 'Sport court'], ['aduSf', 'ADU $ per sq ft'], ['aduBath', 'ADU full bath'], ['aduHalf', 'ADU half bath']];
+const ST_TIERS = ['high', 'middle', 'low', 'condo'];
 let STARTS = null; DB.get('kv', 'starts').then(r => { STARTS = (r && r.v) || JSON.parse(JSON.stringify(STARTS_DEFAULT));
   if (STARTS.usableAc && STARTS.usableAc['Hope Ranch'] === 1275000) STARTS.usableAc['Hope Ranch'] = 1250000;   // her correction Oct 18
+  STARTS.tiers = STARTS.tiers || {}; Object.entries(STARTS_DEFAULT.tiers).forEach(([t, d]) => { STARTS.tiers[t] = { ...d, ...(STARTS.tiers[t] || {}) }; Object.keys(d).forEach(k => { if (!(k in (STARTS.tiers[t] || {}))) STARTS.tiers[t][k] = d[k]; }); });   /* her new lines and the condo column join a saved list */
   Object.values(STARTS.tiers || {}).forEach(t => { delete t.bed; }); STARTS.notes = STARTS_DEFAULT.notes; }).catch(() => { STARTS = JSON.parse(JSON.stringify(STARTS_DEFAULT)); });
 const startsNow = () => STARTS || STARTS_DEFAULT;
 function segGuess(J) { const S = subjFacts(J); const t = [J.subject.addr, J.subject.city, J.subject.zip, S.nbhd, J.name].join(' ');
   return /93108|montecito/i.test(t) ? 'Montecito' : /hope ranch/i.test(t) ? 'Hope Ranch' : 'Santa Barbara / Goleta'; }
-function tierGuess(J) { const G = G0(J); const P = startsNow(); let v = num(G.value); if (!v) { const ps = usedComps(J).map(c => compFacts(c, J).price).filter(Boolean).sort((a, b) => a - b); v = ps.length ? ps[Math.floor((ps.length - 1) / 2)] : null; }
+function tierGuess(J) { const G = G0(J); const P = startsNow(); { const o = typeof orderOf === 'function' ? orderOf(J) : null; if ((o && /condo/i.test(String(o.propType || ''))) || (J.subject && J.subject.unit)) return 'condo'; } let v = num(G.value); if (!v) { const ps = usedComps(J).map(c => compFacts(c, J).price).filter(Boolean).sort((a, b) => a - b); v = ps.length ? ps[Math.floor((ps.length - 1) / 2)] : null; }
   return v === null ? 'middle' : v >= P.highFrom ? 'high' : v < P.lowBelow ? 'low' : 'middle'; }
-function startsFor(J) { const G = G0(J); const P = startsNow(); const seg = G.seg || segGuess(J), tier = G.tier || tierGuess(J); const out = { ...(P.tiers[tier] || {}) }; out.usableAc = (P.usableAc || {})[seg]; return { seg, tier, rates: out }; }
-function startsBar(J) { const G = G0(J); const st = startsFor(J); const P = startsNow(); const tl = { high: `High (from ${money(P.highFrom)})`, middle: 'Middle', low: `Low (under ${money(P.lowBelow)})` };
+function startsFor(J) { const G = G0(J); const P = startsNow(); const seg = G.seg || segGuess(J), tier = G.tier || tierGuess(J); const out = { ...(P.tiers[tier] || {}) }; out.usableAc = tier === 'condo' ? null : (P.usableAc || {})[seg]; return { seg, tier, rates: out }; }
+function startsBar(J) { const G = G0(J); const st = startsFor(J); const P = startsNow(); const tl = { high: `High (from ${money(P.highFrom)})`, middle: 'Middle', low: `Low (under ${money(P.lowBelow)})`, condo: 'Condo' };
   return `<div class="starts"><b>My starting points</b>
     <select data-gseg="1">${Object.keys(P.usableAc).map(s => `<option ${s === st.seg ? 'selected' : ''}>${esc(s)}</option>`).join('')}</select>
-    <select data-gtier="1">${['high', 'middle', 'low'].map(t => `<option value="${t}" ${t === st.tier ? 'selected' : ''}>${esc(tl[t])}</option>`).join('')}</select>
+    <select data-gtier="1">${ST_TIERS.map(t => `<option value="${t}" ${t === st.tier ? 'selected' : ''}>${esc(tl[t])}</option>`).join('')}</select>
     <button class="btn sm primary" data-act="starts-use">Use my starting points</button> <button class="btn sm" data-act="starts-edit">${app.startsEdit ? 'Close' : 'Edit my starting points'}</button>
     <small>Fills only the rates you have not typed. ${esc(P.notes || '')}</small>${app.startsEdit ? startsEditor() : ''}</div>`; }
 function startsEditor() { const P = startsNow(); const inp = (path, v) => `<input class="txt xs" data-st="${path}" value="${blank(v) ? '' : v}" inputmode="decimal">`;
   return `<div class="stedit"><table><tr><th>$ per usable acre</th>${Object.keys(P.usableAc).map(s => `<td>${esc(s)}<br>${inp('usableAc.' + s, P.usableAc[s])}</td>`).join('')}</tr></table>
-    <table><tr><th></th><th>High (from ${inp('highFrom', P.highFrom)})</th><th>Middle</th><th>Low (under ${inp('lowBelow', P.lowBelow)})</th></tr>
-    ${ST_KEYS.map(([k, l]) => `<tr><th>${esc(l)}</th>${['high', 'middle', 'low'].map(t => `<td>${inp('tiers.' + t + '.' + k, P.tiers[t][k])}</td>`).join('')}</tr>`).join('')}</table>
+    <table><tr><th></th><th>High (from ${inp('highFrom', P.highFrom)})</th><th>Middle</th><th>Low (under ${inp('lowBelow', P.lowBelow)})</th><th>Condo<br><small>no usable acre</small></th></tr>
+    ${ST_KEYS.map(([k, l]) => `<tr><th>${esc(l)}</th>${ST_TIERS.map(t => `<td>${inp('tiers.' + t + '.' + k, (P.tiers[t] || {})[k])}</td>`).join('')}</tr>`).join('')}</table>
     <label class="fld"><span>Notes</span><textarea class="txt" rows="2" data-st="notes">${esc(P.notes || '')}</textarea></label>
     <div class="row"><button class="btn sm" data-act="starts-file">Save my starting points to a file</button> <label class="btn sm">Load from a file<input type="file" accept=".json" data-act="starts-load" hidden></label> <button class="btn sm" data-act="starts-reset">Back to the original list</button></div></div>`; }
 function startsUse(J) { const G = G0(J); const st = startsFor(J); G.rateFrom = G.rateFrom || {}; let n = 0;
   Object.entries(st.rates).forEach(([k, v]) => { if (blank(v) || !blank(G.rates[k])) return; G.rates[k] = v; G.rateFrom[k] = `${st.seg} · ${st.tier}`; n++; });
   return n; }
 
+RATES.aduHalf = ['$ per ADU / guest half bath', 'half baths in the ADU / guest house (1.5 baths = 1 full + 1 half)']; RATES.attach = ['$ detached over attached', 'a detached unit is one step above an attached one'];
 RATES.bed = ['$ per bedroom (up to 3)', 'bedrooms above + below grade; a difference counts only up to 3 – buyers pay for a 3rd bedroom, not for more (living area covers the rest)'];
 const BED_CAP = 3;
 const capBeds = v => blank(v) ? null : Math.min(+v, BED_CAP);
@@ -125,7 +130,7 @@ function subjFacts(J) {
   const I = J.subject.insp || {}, T = G0(J).subj, crs = J.subject.crs || {};
   const f = { price: '', ppsf: '', src: 'Inspection ' + (I.inspDate ? showDate(I.inspDate) : ''), prox: '', terms: '', conc: '', contract: '', sale: '', dom: '',
     site: I.siteSf || num(crs.lotSf) || null, usable: I.usableAc ?? null, loc: I.loc || '', view: I.view || '', topo: I.topo || '', nbhd: I.nbhd || '', land: I.land || '',
-    style: I.style || '', year: I.year || num(crs.yearBuilt) || null, q: I.q || '', c: I.c || '', rooms: I.rooms ?? null, beds: I.beds ?? null, full: I.full ?? null, half: I.half ?? null,
+    style: I.style || '', attach: I.attach || '', year: I.year || num(crs.yearBuilt) || null, q: I.q || '', c: I.c || '', rooms: I.rooms ?? null, beds: I.beds ?? null, full: I.full ?? null, half: I.half ?? null,
     gla: I.gla ?? null, bsmt: I.bsmt ?? null, garage: I.garage ?? null, energy: I.energy || '', pool: I.pool || '', courts: I.courts || '', porch: I.porch || '', adu: I.adu || '', other: I.other || '' };
   Object.entries(T).forEach(([k, v]) => { if (!blank(v)) f[k] = v; });
   f._fine = { q: fineOf(J, 'subj', 'q'), c: fineOf(J, 'subj', 'c') };
@@ -136,7 +141,7 @@ function compFacts(c, J) {
   const F0 = { price: num(g('salePrice')), src: g('mls') ? 'MLS ' + g('mls') : (c.src.cort.length ? 'CORT' : c.src.arch.length ? 'Your archive' : ''), prox: px ? px.mi.toFixed(2) + ' mi ' + px.dir.replace(/([a-z])([A-Z])/, '$1 $2') : '',
     terms: g('financing') || '', conc: num(g('concessions')), contract: g('contractDate') || '', sale: g('saleDate') || '', dom: g('dom'),
     site: num(g('siteSf')), usable: acOf(num(g('usableSf'))), loc: [g('locRating'), g('locFactors')].filter(Boolean).join(': '), view: [g('viewRating'), g('viewTypes')].filter(Boolean).join(': '),
-    topo: g('topo') || '', nbhd: g('nbhd') || '', land: g('landscaping') || '', style: g('style') || '', year: num(g('yearBuilt')), q: g('quality') || '', c: g('condition') || '',
+    topo: g('topo') || '', nbhd: g('nbhd') || '', land: g('landscaping') || '', style: g('style') || '', attach: g('attach') || '', year: num(g('yearBuilt')), q: g('quality') || '', c: g('condition') || '',
     rooms: num(g('rooms')), beds: num(g('beds')), full: num(g('full')), half: num(g('half')), gla: num(g('gla')), bsmt: num(g('bsmtFin')), garage: num(g('garage')), energy: g('energy') || '',
     pool: [yes(g('pool')) ? 'Pool' : '', yes(g('spa')) ? 'Spa' : ''].filter(Boolean).join(', ') || (g('pool') && !yes(g('pool')) ? 'None' : ''), courts: [yes(g('tennis')) ? 'Tennis court' : '', yes(g('sport')) ? 'Sport court' : ''].filter(Boolean).join(', '), porch: g('porch') || '', adu: [g('adu'), g('guest'), g('accessory')].filter(Boolean).join('; '),
     other: [g('horse') ? 'Horse facilities' : ''].filter(Boolean).join(', '), _id: c.id, aduSf: g('aduSf'), aduBaths: g('aduBaths') };
@@ -162,7 +167,7 @@ function rateAmount(row, S, C, J) {
       else if (k === 'qStep' || k === 'qPct' || k === 'cStep' || k === 'cPct') { const f = k[0]; const a = ratingPos(S[f], fineOf(J, 'subj', f)), b = ratingPos(C[f], fineOf(J, C._id, f)); if (a !== null && b !== null) x = (a - b) * (k.endsWith('Pct') ? r / 100 * (C.price || 0) : r); }
       else if (k === 'viewStep' || k === 'viewPct') { const a = vtOf(J, 'subj', S.view), b = vtOf(J, C._id, C.view); if (a !== null && b !== null) x = (a - b) * (k === 'viewPct' ? r / 100 * (C.price || 0) : r); }
       else if (k === 'landStep') { const a = goodness('land', S), b = goodness('land', C); if (a !== null && b !== null) x = (a - b) * r; }
-      else if (k === 'aduSf' || k === 'aduBath') { const a = aduNums(S), b = aduNums(C); const v = k === 'aduSf' ? [a.sf, b.sf] : [a.baths, b.baths]; if (v[0] !== null && v[1] !== null) x = (v[0] - v[1]) * r; }
+      else if (k === 'aduSf' || k === 'aduBath' || k === 'aduHalf') { const a = aduNums(S), b = aduNums(C); const fb = n => n === null ? null : Math.floor(+n), hb = n => n === null ? null : ((+n) - Math.floor(+n) >= 0.5 ? 1 : 0); const v = k === 'aduSf' ? [a.sf, b.sf] : k === 'aduBath' ? [fb(a.baths), fb(b.baths)] : [hb(a.baths), hb(b.baths)]; if (v[0] !== null && v[1] !== null) x = (v[0] - v[1]) * r; }
       if (x !== null) { tot += x; any = true; } }); return any ? Math.round(tot / 500) * 500 : null; }
   const r = num(R[key]); if (!key || !r) return null;
   const d = (a, b) => (blank(a) || blank(b)) ? null : (+a) - (+b);
@@ -171,6 +176,7 @@ function rateAmount(row, S, C, J) {
   if (key === 'usableAc') { const dd = d(S.usable, C.usable); x = dd === null ? null : dd * r; }
   if (key === 'bed') { const dd = d(capBeds(S.beds), capBeds(C.beds)); x = dd === null ? null : dd * r; }
   if (key === 'bath') { const df = d(S.full, C.full), dh = d(S.half || 0, C.half || 0); const rh = num(R.halfBath); x = df === null ? null : df * r + (dh || 0) * (rh || r / 2); }
+  if (key === 'attach') { const a = goodness('attach', S), b = goodness('attach', C); x = a === null || b === null ? null : (a - b) * r; }
   if (key === 'space') { const dd = d(S.garage, C.garage); x = dd === null ? null : dd * r; }
   if (key === 'timePct') { const eff = J.subject.eff; if (!C.sale || !eff || !C.price) return null; const m = monthsBetween(C.sale, eff); x = m === null ? null : C.price * r / 100 * m; }
   return x === null ? null : Math.round(x / 500) * 500;
@@ -303,6 +309,7 @@ function goodness(k, F) {   // a number where higher = better, or null when it c
     case 'gla': case 'bsmt': case 'site': case 'garage': return n(F[k]);
     case 'beds': return capBeds(F.beds);   // up to 3: more bedrooms are covered by living area
     case 'usable': return n(F.usable);
+    case 'attach': { const t = String(F.attach || ''); if (!t.trim()) return null; return /detach/i.test(t) ? 1 : /attach|row|semi|town/i.test(t) ? 0 : null; }
     case 'baths': return blank(F.full) ? null : (+F.full) + (+F.half || 0) / 2;
     case 'q': return ratingPos(F.q, F._fine ? F._fine.q : 'mid'); case 'c': return ratingPos(F.c, F._fine ? F._fine.c : 'mid');
     case 'view': return viewTier(F.view);

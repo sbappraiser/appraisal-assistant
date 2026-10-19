@@ -47,7 +47,7 @@ function wbFactText(id, F) {
   const v = F[id]; return blank(v) ? '' : String(v);
 }
 const WB_EDIT = { price: 'salePrice', sale: 'saleDate', contract: 'contractDate', conc: 'concessions', terms: 'financing', dom: 'dom', site: 'siteSf', topo: 'topo', nbhd: 'nbhd',
-  land: 'landscaping', style: 'style', year: 'yearBuilt', gla: 'gla', bsmt: 'bsmtFin', garage: 'garage', energy: 'energy', porch: 'porch', other: 'other', rooms: 'rooms' };
+  land: 'landscaping', style: 'style', year: 'yearBuilt', gla: 'gla', bsmt: 'bsmtFin', garage: 'garage', energy: 'energy', porch: 'porch', other: 'other', rooms: 'rooms', attach: 'attach' };
 /* write a typed (or copied) entry into the comp – her own values, kept apart from the sources like any edit */
 function wbFactSet(J, c, id, text) {
   const E = c.edit = c.edit || {}; const t = String(text || '').trim(); const n = s => num(String(s).replace(/[$,\s]/g, ''));
