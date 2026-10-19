@@ -16,8 +16,8 @@ function tsSegment(J) {
   if (seg === 'Montecito') return { name: 'Montecito (93108)', test: r => r.zip === '93108', acres: true };
   if (seg === 'Hope Ranch') return { name: 'Hope Ranch', test: r => /^hope ranch(?!\s*annex)/.test(nbhdNorm(r.nbhd)) && !/annex/.test(nbhdNorm(r.nbhd)), acres: true };
   const nb = nbhdNorm(S.nbhd || J.subject.nbhd || ''); const zip = (String(J.subject.zip || J.subject.addr || '').match(/\b93\d{3}\b/) || [])[0];
-  if (nb) return { name: 'Neighborhood: ' + (S.nbhd || J.subject.nbhd), test: r => nbhdNorm(r.nbhd) === nb, acres: false, zip };
-  if (zip) return { name: 'ZIP ' + zip + ' (no neighborhood entered for the subject)', test: r => r.zip === zip, acres: false };
+  if (nb) return { name: 'Market area: ' + (S.nbhd || J.subject.nbhd), test: r => nbhdNorm(r.nbhd) === nb, acres: false, zip };
+  if (zip) return { name: 'ZIP ' + zip + ' (no market area entered for the subject)', test: r => r.zip === zip, acres: false };
   return null;
 }
 const LOT_BANDS_AC = [0.5, 1.5, 3, 10], LOT_BANDS_SF = [5000, 8500, 14000, 20000, 43560, 65340, 130680, 435600];
@@ -111,7 +111,7 @@ function readOrderKv(id) { return new Promise(res => { let r; try { r = indexedD
 async function tsRun(J) {
   const { seg, rows, skipped, job } = tsSales(J); const P = 12;
   const res = { at: Date.now(), seg: seg && seg.name, n: rows.length, skipped, job };
-  if (!seg) { res.err = 'Enter the subject address (and neighborhood) first.'; return res; }
+  if (!seg) { res.err = 'Enter the subject address (and market area) first.'; return res; }
   if (!ARCH.loaded) { res.err = 'Load your comp archive first (top of the page).'; return res; }
   const fit = tsFit(rows, P); res.all = fit && { ...tsRates(fit), ci: tsBoot(rows, P), per: fit.per, cntP: fit.cntP, n: fit.n, groups: fit.groups };
   // the subject's price tier: groups are put in a tier by their typical price, so a sale never leaves its tier by selling higher

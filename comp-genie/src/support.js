@@ -48,7 +48,7 @@ function supSolve(rows, xk, drop) {   // within-group least squares: price ~ gro
 }
 function supRun(J) {
   const { seg, rows, skipped, job } = tsSales(J); const res = { at: Date.now(), seg: seg && seg.name, n: rows.length, job, lines: [] };
-  if (!seg) { res.err = 'Enter the subject address (and neighborhood) first.'; return res; }
+  if (!seg) { res.err = 'Enter the subject address (and market area) first.'; return res; }
   if (!ARCH.loaded) { res.err = 'Load your comp archive first (top of the page).'; return res; }
   const tr = tsRates(tsFit(rows, 12)); const mo = tr ? (tr.m12 !== null ? tr.m12 : tr.m24) : null;
   rows.forEach(r => { r.adj = mo !== null ? r.price * Math.pow(1 + mo / 100, r.back) : r.price; });   // brought to the effective date with the segment's measured rate

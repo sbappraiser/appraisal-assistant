@@ -21,7 +21,7 @@ function drComp(J, c, t) {
   const s = []; const addr = compTitle(c);
   s.push(`${addr} is ${listing ? `${/pending|contingent/i.test(st) ? 'a pending sale' : 'an active listing'}, and it is ` : ''}${drOverall(t)}.`);
   const loc = A('loc'); if (loc) s.push(`${dir(loc)} adjustment of ${$m(Math.abs(loc))} was made for its ${sup(loc)} location.`);
-  const nb = A('nbhd'); if (nb) s.push(`${dir(nb)} adjustment of ${$m(Math.abs(nb))} was made for the ${sup(nb)} neighborhood.`);
+  const nb = A('nbhd'); if (nb) s.push(`${dir(nb)} adjustment of ${$m(Math.abs(nb))} was made for the ${sup(nb)} market area.`);
   const us = A('usable'), vw = A('view'); const site = A('site');
   const part = [];
   if (us) part.push(`${part.length ? dir(us).toLowerCase() : dir(us)} adjustment of ${$m(Math.abs(us))} was made for the ${sup(us)} lot utility${blank(C.usable) ? '' : ` (${C.usable} usable acres)`}`);

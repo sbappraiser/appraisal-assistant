@@ -1,6 +1,6 @@
 /* =====================================================================
    Her reference databases, shared by the Comp genie and the cost approach (her rule, Oct 19 2026)
-   · Land sales  – her workbook "Land Sales by Neighborhood.xlsx" (her reports + CORT vacant land + her own)
+   · Land sales  – her workbook "Land Sales by Market Area.xlsx" (older copies with a Neighborhood column still read) (her reports + CORT vacant land + her own)
    · Construction costs – her Construction_Cost_Database.xlsx (32 local contractor budgets, CCCI-indexed)
    Both are dropped on the Comp genie page once and kept in this browser (kv 'landSales', 'costDb'),
    like the archive and the CORT table. Nothing is uploaded anywhere.
@@ -25,7 +25,7 @@ async function readXlsx(file) {
 const xlDate = v => typeof v === 'number' && v > 20000 && v < 80000 ? new Date(Math.round((v - 25569) * 864e5)).toISOString().slice(0, 10) : (v || '');
 
 /* ---- land sales ---- */
-const LAND_HEAD = { 'Neighborhood': 'nbhd', 'Address': 'addr', 'Unit': 'unit', 'APN': 'apn', 'Sale date (YYYY-MM)': 'ym', 'Sale price ($)': 'price', 'Site size (sq ft)': 'site', 'Usable area (sq ft)': 'usable', 'Zoning': 'zoning', 'View': 'view', 'Topography': 'topo', 'Utilities / water': 'util', 'Improvements at sale': 'impr', 'Source': 'source', 'Your notes': 'note', 'Check': 'check' };
+const LAND_HEAD = { 'Market area': 'nbhd', 'Neighborhood': 'nbhd', 'Address': 'addr', 'Unit': 'unit', 'APN': 'apn', 'Sale date (YYYY-MM)': 'ym', 'Sale price ($)': 'price', 'Site size (sq ft)': 'site', 'Usable area (sq ft)': 'usable', 'Zoning': 'zoning', 'View': 'view', 'Topography': 'topo', 'Utilities / water': 'util', 'Improvements at sale': 'impr', 'Source': 'source', 'Your notes': 'note', 'Check': 'check' };
 function ingestLandWorkbook(sheets, name) {
   const out = [];
   sheets.forEach(sh => { const H = (sh.rows[0] || []).map(x => LAND_HEAD[String(x || '').trim()]); if (!H.includes('price')) return;
@@ -66,14 +66,14 @@ function refAreaGuess(J) { const t = [J.subject.addr, J.subject.city, J.subject.
 function refHTML(J) {
   const L = app.land || [], C = app.costDb; const R = app.ref = app.ref || { tab: 'land', area: null, q: '', newOnly: true };
   if (R.area === null || R.job !== J.id) { R.area = refAreaGuess(J); R.job = J.id; }
-  if (!L.length && !C) return `<h2>Land sales and construction costs</h2><p class="help">Drop your <b>Land Sales by Neighborhood.xlsx</b> and your <b>Construction_Cost_Database.xlsx</b> on this page once. They are kept in this browser and shared with the cost approach.</p>`;
+  if (!L.length && !C) return `<h2>Land sales and construction costs</h2><p class="help">Drop your <b>Land Sales by Market Area.xlsx</b> and your <b>Construction_Cost_Database.xlsx</b> on this page once. They are kept in this browser and shared with the cost approach.</p>`;
   const areas = [...new Set(L.map(x => x.area))].sort();
   let body = '';
   if (R.tab === 'land') { const q = R.q.toLowerCase(); const rows = L.filter(x => (!R.area || x.area === R.area) && (!q || [x.nbhd, x.addr, x.apn, x.zoning, x.note].join(' ').toLowerCase().includes(q))).sort((a, b) => String(b.ym).localeCompare(String(a.ym)));
     const pua = rows.map(x => x.usable ? x.price / (x.usable / 43560) : null), psf = rows.map(x => x.site ? x.price / x.site : null);
-    body = `<div class="row"><label>Area <select data-refarea="1"><option value="">All areas</option>${areas.map(a => `<option ${a === R.area ? 'selected' : ''}>${esc(a)}</option>`).join('')}</select></label><input class="txt" data-refq="1" value="${esc(R.q)}" placeholder="neighborhood, street, APN, zoning…" style="width:22em">
+    body = `<div class="row"><label>Area <select data-refarea="1"><option value="">All areas</option>${areas.map(a => `<option ${a === R.area ? 'selected' : ''}>${esc(a)}</option>`).join('')}</select></label><input class="txt" data-refq="1" value="${esc(R.q)}" placeholder="market area, street, APN, zoning…" style="width:22em">
       <span class="help">${rows.length} sale${rows.length === 1 ? '' : 's'}${median(pua) ? ' · median ' + money(median(pua)) + ' per usable acre' : ''}${median(psf) ? ' · median ' + money(median(psf)) + ' per site sq ft' : ''}</span></div>
-      <div class="tablewrap" style="max-height:420px;overflow:auto"><table class="tbl"><thead><tr><th>Neighborhood</th><th>Address</th><th>APN</th><th>Sold</th><th class="r">Price</th><th class="r">Site</th><th class="r">Usable</th><th class="r">$/site sf</th><th class="r">$/usable ac</th><th>Zoning</th><th>Source</th><th>Check</th></tr></thead><tbody>
+      <div class="tablewrap" style="max-height:420px;overflow:auto"><table class="tbl"><thead><tr><th>Market area</th><th>Address</th><th>APN</th><th>Sold</th><th class="r">Price</th><th class="r">Site</th><th class="r">Usable</th><th class="r">$/site sf</th><th class="r">$/usable ac</th><th>Zoning</th><th>Source</th><th>Check</th></tr></thead><tbody>
       ${rows.map(x => `<tr><td>${esc(x.nbhd || '')}</td><td>${esc(x.addr || '')}</td><td>${esc(x.apn || '')}</td><td>${esc(x.ym || '')}</td><td class="r">${money(x.price)}</td><td class="r">${x.site ? int(x.site) + ' sf' : ''}</td><td class="r">${x.usable ? (x.usable / 43560).toFixed(2) + ' ac' : ''}</td><td class="r">${x.site ? money(x.price / x.site) : ''}</td><td class="r">${x.usable ? money(x.price / (x.usable / 43560)) : ''}</td><td>${esc(x.zoning || '')}</td><td><small>${esc(String(x.source || '').slice(0, 40))}</small></td><td><small>${esc(x.check || '')}</small></td></tr>`).join('')}</tbody></table></div>`; }
   else if (C) { const ps = C.projects.filter(p => !R.newOnly || !isRemodel(p));
     const v = (p, k) => num(p.s[k]); const rows = ps.map(p => ({ p, bd: v(p, 'Building direct $/SF GLA – indexed'), tot: v(p, 'Total budget – indexed') && num(p.f['GLA (SF) – appraisal']) ? v(p, 'Total budget – indexed') / num(p.f['GLA (SF) – appraisal']) : null, ex: v(p, 'Existing-site basis $/SF GLA – indexed'), gar: v(p, 'Garage – $/SF garage'), pool: v(p, 'Pool & spa'), land: v(p, 'Landscaping & irrigation') })).sort((a, b) => (b.bd || 0) - (a.bd || 0));

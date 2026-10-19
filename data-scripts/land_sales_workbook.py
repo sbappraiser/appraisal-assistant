@@ -39,7 +39,7 @@ for r in csv.DictReader(open('/home/claude/aa/data/cort/cort_all.csv')):
       'site_sf':site,'usable_sf':None,'view_rating':None,'view_types':None,'topography':None,'from_report':'CORT '+(r.get('report_date') or '')+' inst. '+(r.get('instno') or '')+(' – '+rem if rem else ''),'property_type_id':'cort'})
 order=AREAS+['Other']
 wb=openpyxl.Workbook(); F='Arial'; ws=wb.active; ws.title='How to use'
-txt=["Land sales by neighborhood – Jennifer Heath, LLC","",
+txt=["Land sales by market area – Jennifer Heath, LLC","",
 "One sheet per area; each row is one land sale. The rows already filled in are the land sales from your own earlier reports (your appraisal archive) – please check them; some are missing a sale date or site size.",
 "Add your other land sales at the bottom of the sheet for their area, one per row. Keep the columns as they are; leave a cell blank if you do not know it.",
 "Yellow cells are yours to fill in. The grey columns (acres, price per site sq ft, price per usable acre) are worked out from your entries – do not type in them.",
@@ -52,7 +52,7 @@ for i,t in enumerate(txt,1):
     cc=ws.cell(i,1,t); cc.font=Font(name=F,size=14 if i==1 else 11,bold=(i==1)); cc.alignment=Alignment(wrap_text=True,vertical='top')
 ws.column_dimensions['A'].width=125
 for i,a in enumerate(order): ws.cell(len(txt)+1+i,1,f"{sheetname(a)}: {len(groups.get(a,[]))} sale(s)").font=Font(name=F,size=11)
-HEAD=['Neighborhood','Address','Unit','APN','Sale date (YYYY-MM)','Sale price ($)','Site size (sq ft)','Usable area (sq ft)','Acres','Price per site sq ft ($)','Price per usable acre ($)','Zoning','View','Topography','Utilities / water','Improvements at sale','Source','Your notes','Check']
+HEAD=['Market area','Address','Unit','APN','Sale date (YYYY-MM)','Sale price ($)','Site size (sq ft)','Usable area (sq ft)','Acres','Price per site sq ft ($)','Price per usable acre ($)','Zoning','View','Topography','Utilities / water','Improvements at sale','Source','Your notes','Check']
 W=[24,26,7,13,12,13,13,13,8,12,14,10,16,14,18,20,22,30,26]
 yellow=PatternFill('solid',fgColor='FFF2CC'); grey=PatternFill('solid',fgColor='EDEDED'); head=PatternFill('solid',fgColor='FFDCB5'); thin=Side(style='thin',color='C9D1DA')
 for a in order:
@@ -77,5 +77,5 @@ for a in order:
         sh.cell(R,11,f'=IF(AND(F{R}>0,H{R}>0),F{R}/(H{R}/43560),"")').number_format='$#,##0'
         for col,fmt in ((6,'$#,##0'),(7,'#,##0'),(8,'#,##0')): sh.cell(R,col).number_format=fmt
     sh.cell(1,11).comment=Comment('Price ÷ usable acres. Blank until you enter the usable area.','Appraisal Assistant')
-out='/tmp/claude-0/-home-claude/42748c0a-62f2-5f4a-bc48-7275f362e257/scratchpad/send/Land Sales by Neighborhood.xlsx'
+out='/tmp/claude-0/-home-claude/42748c0a-62f2-5f4a-bc48-7275f362e257/scratchpad/send/Land Sales by Market Area.xlsx'
 wb.save(out); print(len(data), sum(1 for g in groups.values() for r in g if isinstance(r,dict)), {sheetname(a):len(groups.get(a,[])) for a in order})

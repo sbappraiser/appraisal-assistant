@@ -38,7 +38,7 @@ function mcCompute() {
     else { const ch = key === 'stl' ? y - x : x === 0 ? (y > 0 ? 100 : 0) : (y / x - 1) * 100; const lim = 5; t = ch > lim ? 'Increasing' : ch < -lim ? 'Declining' : 'Stable'; why = key === 'stl' ? (ch >= 0 ? '+' : '') + Math.round(ch * 10) / 10 + ' points' : (ch >= 0 ? '+' : '') + Math.round(ch) + '%'; }
     if (nBase < 3) why = (why ? why + ' · ' : '') + 'few – your call';
     trend[key] = { t: t || 'Stable', why, few: nBase < 3 || x == null || y == null }; });
-  // the 2.6 one-liners (Neighborhood / top of the Sales Comparison Approach): actives on the effective date, sales in the past 12 months
+  // the 2.6 one-liners (market area / top of the Sales Comparison Approach): actives on the effective date, sales in the past 12 months
   const act = rows.filter(r => statusAt(r, eff) === 'active' && r.listPrice), sold12 = rows.filter(r => r.saleDate && r.saleDate > isoAddMonths(eff, -12) && r.saleDate <= eff && r.salePrice);
   const allS = per.reduce((s, p) => s + p.nS, 0), conc = per.reduce((s, p) => s + p.conc, 0), concKnown = per.reduce((s, p) => s + p.concKnown, 0), reo = per.reduce((s, p) => s + p.reo, 0);
   return { eff, per, trend, act, sold12, allS, conc, concKnown, reo, file: src.file || '', micro: src === MI() };
@@ -46,8 +46,8 @@ function mcCompute() {
 const mcFmt = (v, t) => v == null ? '—' : t === '$' ? $m(v) : t === '%' ? (Math.round(v * 10) / 10) + '%' : t === 'r' ? (Math.round(v * 100) / 100).toFixed(2) : String(Math.round(v));
 function mcLines(C) {
   const lo = a => a.length ? Math.min(...a) : null, hi = a => a.length ? Math.max(...a) : null; const lp = C.act.map(r => r.listPrice), sp = C.sold12.map(r => r.salePrice);
-  return [`There are ${C.act.length} comparable propert${C.act.length === 1 ? 'y' : 'ies'} currently offered for sale in the subject neighborhood` + (C.act.length ? ` ranging in price from ${$m(lo(lp))} to ${$m(hi(lp))}.` : '.'),
-    `There are ${C.sold12.length} comparable sale${C.sold12.length === 1 ? '' : 's'} in the subject neighborhood within the past twelve months` + (C.sold12.length ? ` ranging in sale price from ${$m(lo(sp))} to ${$m(hi(sp))}.` : '.')];
+  return [`There are ${C.act.length} comparable propert${C.act.length === 1 ? 'y' : 'ies'} currently offered for sale in the subject market area` + (C.act.length ? ` ranging in price from ${$m(lo(lp))} to ${$m(hi(lp))}.` : '.'),
+    `There are ${C.sold12.length} comparable sale${C.sold12.length === 1 ? '' : 's'} in the subject market area within the past twelve months` + (C.sold12.length ? ` ranging in sale price from ${$m(lo(sp))} to ${$m(hi(sp))}.` : '.')];
 }
 function mcSummaryDraft(C) {
   const m = M(), [a, , c] = C.per, pick = k => (m.mc && m.mc.trend && m.mc.trend[k]) || C.trend[k].t; const out = [];

@@ -42,7 +42,7 @@ const FIELDS = [
   { k: 'apn', l: 'APN', g: 'Location and site', kind: 'id', t: 'text' },
   { k: 'lat', l: 'Latitude', g: 'Location and site', kind: 'geo', t: 'num6' },
   { k: 'lon', l: 'Longitude', g: 'Location and site', kind: 'geo', t: 'num6' },
-  { k: 'nbhd', l: 'Neighborhood', g: 'Location and site', kind: 'site', t: 'text' },
+  { k: 'nbhd', l: 'Market area', g: 'Location and site', kind: 'site', t: 'text' },
   { k: 'locRating', l: 'Location rating', g: 'Location and site', kind: 'site', t: 'text' },
   { k: 'locFactors', l: 'Location factors', g: 'Location and site', kind: 'site', t: 'text' },
   { k: 'siteSf', l: 'Site size', g: 'Location and site', kind: 'site', t: 'site' },

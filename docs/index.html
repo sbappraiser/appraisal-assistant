@@ -557,8 +557,9 @@ mark.blank{background:#fff3a8;padding:0 2px;border-radius:3px}.cmt textarea{widt
       <li>Change the AI paragraph on <b>Standard wording</b>.</li></ol></details>
     <details><summary>Market conditions</summary><ol>
       <li>Open the order, then the <b>Market</b> tab.</li>
+      <li><b>Terms.</b> <b>Market area</b> (macro) = everything inside your Market Area Boundary – UAD 3.6 uses “market area” where 2.6 said “neighborhood”; it is the same field. <b>Competitive market area</b> (micro) = the similar properties within the market area that compete with the subject. <b>Location</b> is a separate item for things within the market area: busy street, flood zone, adjacent to a school or park, shared driveway, waterfront, residential.</li>
       <li>Box 1 · <b>Market Area Boundary</b> (macro): in Flexmls search all residential listings inside your boundaries (actives, pendings and sales for the look-back period), export the CSV and drop it here. It is background for the Market Commentary and price trend.</li>
-      <li>Box 2 · <b>Search Criteria</b> (micro): your search of the comparable properties within the boundaries – the same one you use for the 1004MC and, in a 2.6 report, the comparable listings and sales line at the top of the Sales Comparison Approach. Its results fill the UAD 3.6 <b>Search Result Metrics</b> (17.005–17.016), Demand/Supply and Marketing Time.</li>
+      <li>Box 2 · <b>Search Criteria</b> (micro – competitive market area): your search of the similar, competing properties within the market area – the same one you use for the 1004MC and, in a 2.6 report, the comparable listings and sales line at the top of the Sales Comparison Approach. Its results fill the UAD 3.6 <b>Search Result Metrics</b> (17.005–17.016), Demand/Supply and Marketing Time.</li>
       <li>In either table, untick a listing that does not belong (two units on one lot, a different market); click a column heading (List price, Sale price, $ / sq ft, DOM, Sq ft, dates) to sort, and again to reverse.</li>
       <li>Check the UAD 3.6 Market section in box 3. Pick Demand/Supply, Marketing Time and Distressed Market Competition (suggestions are shown). Type or pick the Market Area Boundary; <b>Save this area</b> to reuse it.</li>
       <li>Edit the search criteria and price trend comment, then <b>Copy</b> into SFREP.</li><li>Save each graph with <b>Save picture</b> for the report.</li>
@@ -594,7 +595,8 @@ mark.blank{background:#fff3a8;padding:0 2px;border-radius:3px}.cmt textarea{widt
       <li>Market: comes from the order's <b>Market</b> tab here in the Appraisal Assistant: box 1 Market Area Boundary search (macro), box 2 Search Criteria search (micro – the Search Result Metrics), and once a month the SBMLS statistics PDF. Check the boundary, search criteria and Price Trend Analysis Commentary, then go back to the Comp genie.</li>
       <li>The sales contract answers come from the document reader (Read on the purchase contract).</li>
       <li>Type your opinion of market value, the value condition, the exposure time and a reconciliation comment. Then click <b>Full report for SFREP</b>.</li>
-      <li>The usable lot area also goes into the Site Features comment as "Usable Lot Area/Utility: 0.18 ac." – it is not a site influence.</li></ol></details>
+      <li>The usable lot area also goes into the Site Features comment as "Usable Lot Area/Utility: 0.18 ac." – it is not a site influence.</li>
+      <li>Grid rows <b>Market area name</b> (the UAD Neighborhood Name field, same as the 2.6 neighborhood) and <b>Location (site influence)</b> are separate: location covers things within the market area – busy street, flood zone, school, shared driveway, park, waterfront.</li></ol></details>
     <details><summary>iPad: send orders, start an inspection, floor plan</summary><ol>
       <li>On the computer: <b>Orders → Send active orders to the iPad</b>. "Active Orders.json" saves to Downloads. Move it into your OneDrive folder.</li>
       <li>On the iPad: open the inspection app from its Home Screen icon, tap <b>Get orders</b>, pick Files → OneDrive → Active Orders.json.</li>
@@ -663,7 +665,7 @@ mark.blank{background:#fff3a8;padding:0 2px;border-radius:3px}.cmt textarea{widt
 </div>
 <div id="toast" role="status" hidden></div>
 <script>
-const BUILD='o1-1019-0759';
+const BUILD='o1-1019-1422';
 const G = (() => {
 /* ---------------- small helpers ---------------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -2313,8 +2315,9 @@ function emailPage(E, name) {   // what opens when she clicks the email in Docum
 
 /* =====================================================================
    Market conditions (UAD 3.6 section 17, Fannie Mae Appendix A-1)
-   MICRO: her SBMLS market-area search (CSV export) → counts, prices, DOM, supply, trend.
-   MACRO: the monthly SBMLS statistics PDF (+ Zillow figures she types) → context for the comment.
+   Her terms (Oct 19 2026): MACRO = the market area (Market Area Boundary 17.003; the same field as the 2.6 neighborhood).
+   MICRO = the competitive market area: similar properties within the macro market area (Search Criteria 17.004).
+   Location (busy street, flood zone, school, shared driveway, park, waterfront…) is a separate item within the market area.
    Everything is computed here, no AI, so it works on "No AI" jobs. She reviews every choice and draft.
    A-1 notes: 17.006 median DOM is of the ACTIVE listings; 17.018 one data source per entry, 33 chars;
    17.003 / 17.004 1,250 chars; 17.019 2,500 chars. Data source wording: "SBMLS".
@@ -2648,13 +2651,13 @@ function mkRender(redraft) {
       <label>Look back<select data-mk="lookback">${[3, 6, 12, 18, 24, 36].map(n => `<option value="${n}"${+m.lookback === n ? ' selected' : ''}>${n} months</option>`).join('')}</select></label>
       <label>Property types${typesAll.length ? `<span class="types">${typesAll.map(t => `<label class="check"><input type="checkbox" data-mktype="${h(t)}" ${!m.types || m.types.includes(t) ? 'checked' : ''}>${h(t)}</label>`).join('')}</span>` : '<input disabled value="from the search">'}</label></div>
     <p class="help">The effective date comes from the order (inspection date, or the date of death for retrospective work). Change it on the Order &amp; letter tab.</p>
-    <div class="drop" id="mkDrop"><div><span class="eyebrow">Market Area Boundary search (macro)</span><p class="help">In Flexmls, search all residential listings inside your market area boundaries (actives, pendings and sales for the look-back period), export the CSV and drop it here.${m.file ? ' Loaded: <b>' + h(m.file) + '</b>' : ''}</p></div>
+    <div class="drop" id="mkDrop"><div><span class="eyebrow">Market Area Boundary search (macro market area)</span><p class="help">In Flexmls, search all residential listings inside your market area boundaries (actives, pendings and sales for the look-back period), export the CSV and drop it here.${m.file ? ' Loaded: <b>' + h(m.file) + '</b>' : ''}</p></div>
       <label class="btn" for="mkFile">Choose CSV<input type="file" id="mkFile" accept=".csv,text/csv"></label></div>
     ${(cur.docs || []).some(d => d.type === 'marketSearch' && /\.csv$/i.test(d.name)) && !m.rows.length ? '<p><button type="button" class="btn small" id="mkFromDocs">Use the market search in this order’s documents</button></p>' : ''}
     ${m.rows.length ? mkTable(RA, m, 'macro') + '<p class="help">Untick a listing that is not competitive with the subject (wrong property type, two units on one lot, a different market). It is left out of every number below. Click a column heading to sort.</p>' : ''}
   </section>
   <section class="mkcard"><h3>2 · Search Criteria (17.004) – the comparable properties within the boundaries <small>fills the UAD 3.6 Search Result Metrics (17.005–17.016)</small></h3>
-    <div class="drop" id="mkDrop2"><div><span class="eyebrow">Search Criteria search (micro)</span><p class="help">Your Flexmls search of the properties within the boundaries that compete with the subject (the same one you use for the 1004MC and, in a 2.6 report, the comparable listings and sales line at the top of the Sales Comparison Approach). Export the CSV and drop it here. Its results are the 3.6 Search Result Metrics, Demand/Supply and Marketing Time. Until it is loaded, the boundary search above is used.${MI().file ? ' Loaded: <b>' + h(MI().file) + '</b>' : ''}</p></div>
+    <div class="drop" id="mkDrop2"><div><span class="eyebrow">Search Criteria search (micro – competitive market area)</span><p class="help">Your Flexmls search of the similar properties within the macro market area that compete with the subject (the same one you use for the 1004MC and, in a 2.6 report, the comparable listings and sales line at the top of the Sales Comparison Approach). Export the CSV and drop it here. Its results are the 3.6 Search Result Metrics, Demand/Supply and Marketing Time. Until it is loaded, the boundary search above is used.${MI().file ? ' Loaded: <b>' + h(MI().file) + '</b>' : ''}</p></div>
       <label class="btn" for="mkFile2">Choose CSV<input type="file" id="mkFile2" accept=".csv,text/csv"></label></div>
     ${MI().rows.length ? (() => { const Q = R; const ppsf = Q.S.filter(r => r.salePrice && r.gla).map(r => r.salePrice / r.gla), stl = Q.S.filter(r => r.salePrice && r.listPrice).map(r => r.salePrice / r.listPrice);
       return `<table class="facts uad mkmini"><tr><th>Sales in the look-back</th><td>${Q.salesN}${Q.salesN ? ` · ${$m(Q.saleLow)} / ${$m(Q.saleMed)} / ${$m(Q.saleHigh)} (low / median / high)` : ''}</td></tr>
@@ -2663,7 +2666,7 @@ function mkRender(redraft) {
         <tr><th>Price trend</th><td>${Q.salesN < MK_MIN_SALES ? 'not enough competing sales to measure (' + Q.salesN + ') – the comment uses the broader market' : Q.salesN + ' competing sales'}</td></tr></table>` + mkTable(Q, MI(), 'micro'); })() : ''}
   </section>
   <section class="mkcard"><h3>3 · UAD 3.6 Market section</h3><p class="help">${MI().rows.length ? 'Search Result Metrics from the Search Criteria search (box 2).' : '<b class="warnTxt">Box 2 is empty</b> – these metrics use the Market Area Boundary search (box 1) for now.'}</p>
-    <table class="facts uad"><tr><th>17.003 Market Area Boundary</th><td><textarea data-mk="boundary" rows="3" maxlength="1250" placeholder="e.g. Samarkand neighborhood: bounded by De la Vina St, State St, Las Positas Rd and Highway 101">${h(m.boundary || '')}</textarea>${cnt('boundary', 1250)}
+    <table class="facts uad"><tr><th>17.003 Market Area Boundary</th><td><textarea data-mk="boundary" rows="3" maxlength="1250" placeholder="e.g. Samarkand market area: bounded by De la Vina St, State St, Las Positas Rd and Highway 101">${h(m.boundary || '')}</textarea>${cnt('boundary', 1250)}
       <div class="row"><select id="mkBndPick"><option value="">Use a saved area…</option>${MK.boundaries.map((b, i) => `<option value="${i}">${h(b.name)}</option>`).join('')}</select><button type="button" class="btn ghost small" id="mkBndSave">Save this area</button><button type="button" class="btn ghost small" data-copy="boundary">Copy</button></div></td></tr>
     <tr><th>17.004 Search Criteria Description</th><td><textarea data-mk="criteria" rows="3" maxlength="1250">${h(m.criteria || '')}</textarea>${cnt('criteria', 1250)}<div class="row"><button type="button" class="btn ghost small" data-redraft="criteria">Draft again</button><button type="button" class="btn ghost small" data-copy="criteria">Copy</button></div></td></tr>
     <tr><th>17.011 Sales in Past ___ Months (look-back)</th><td>${R.L}</td></tr>
@@ -3751,7 +3754,7 @@ function mcCompute() {
     else { const ch = key === 'stl' ? y - x : x === 0 ? (y > 0 ? 100 : 0) : (y / x - 1) * 100; const lim = 5; t = ch > lim ? 'Increasing' : ch < -lim ? 'Declining' : 'Stable'; why = key === 'stl' ? (ch >= 0 ? '+' : '') + Math.round(ch * 10) / 10 + ' points' : (ch >= 0 ? '+' : '') + Math.round(ch) + '%'; }
     if (nBase < 3) why = (why ? why + ' · ' : '') + 'few – your call';
     trend[key] = { t: t || 'Stable', why, few: nBase < 3 || x == null || y == null }; });
-  // the 2.6 one-liners (Neighborhood / top of the Sales Comparison Approach): actives on the effective date, sales in the past 12 months
+  // the 2.6 one-liners (market area / top of the Sales Comparison Approach): actives on the effective date, sales in the past 12 months
   const act = rows.filter(r => statusAt(r, eff) === 'active' && r.listPrice), sold12 = rows.filter(r => r.saleDate && r.saleDate > isoAddMonths(eff, -12) && r.saleDate <= eff && r.salePrice);
   const allS = per.reduce((s, p) => s + p.nS, 0), conc = per.reduce((s, p) => s + p.conc, 0), concKnown = per.reduce((s, p) => s + p.concKnown, 0), reo = per.reduce((s, p) => s + p.reo, 0);
   return { eff, per, trend, act, sold12, allS, conc, concKnown, reo, file: src.file || '', micro: src === MI() };
@@ -3759,8 +3762,8 @@ function mcCompute() {
 const mcFmt = (v, t) => v == null ? '—' : t === '$' ? $m(v) : t === '%' ? (Math.round(v * 10) / 10) + '%' : t === 'r' ? (Math.round(v * 100) / 100).toFixed(2) : String(Math.round(v));
 function mcLines(C) {
   const lo = a => a.length ? Math.min(...a) : null, hi = a => a.length ? Math.max(...a) : null; const lp = C.act.map(r => r.listPrice), sp = C.sold12.map(r => r.salePrice);
-  return [`There are ${C.act.length} comparable propert${C.act.length === 1 ? 'y' : 'ies'} currently offered for sale in the subject neighborhood` + (C.act.length ? ` ranging in price from ${$m(lo(lp))} to ${$m(hi(lp))}.` : '.'),
-    `There are ${C.sold12.length} comparable sale${C.sold12.length === 1 ? '' : 's'} in the subject neighborhood within the past twelve months` + (C.sold12.length ? ` ranging in sale price from ${$m(lo(sp))} to ${$m(hi(sp))}.` : '.')];
+  return [`There are ${C.act.length} comparable propert${C.act.length === 1 ? 'y' : 'ies'} currently offered for sale in the subject market area` + (C.act.length ? ` ranging in price from ${$m(lo(lp))} to ${$m(hi(lp))}.` : '.'),
+    `There are ${C.sold12.length} comparable sale${C.sold12.length === 1 ? '' : 's'} in the subject market area within the past twelve months` + (C.sold12.length ? ` ranging in sale price from ${$m(lo(sp))} to ${$m(hi(sp))}.` : '.')];
 }
 function mcSummaryDraft(C) {
   const m = M(), [a, , c] = C.per, pick = k => (m.mc && m.mc.trend && m.mc.trend[k]) || C.trend[k].t; const out = [];

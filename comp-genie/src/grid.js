@@ -27,8 +27,8 @@ const ADJ_ROWS = [
   ['hoaAmen', 'HOA amenities (common area)', 'Project (HOA)', 'ProjectInformation'],
   ['landCommon', 'Site owned in common (no land owned)', 'Site', 'LandOwnedInCommon'],
   ['site', 'Site size', 'Site', 'SiteSize'],
-  ['nbhd', 'Neighborhood name', 'Site', 'NeighborhoodName'],
-  ['loc', 'Site influence (location)', 'Site', 'SiteInfluence'],
+  ['nbhd', 'Market area name', 'Site', 'NeighborhoodName'],
+  ['loc', 'Location (site influence)', 'Site', 'SiteInfluence'],
   ['view', 'View', 'Site', 'View', ['viewStep', 'viewPct']],
   ['usable', 'Usable Lot Area/Utility', 'Site', 'OTHER', 'usableAc', 'Usable Lot Area/Utility'],
   ['land', 'Landscaping', 'Site', 'OTHER', ['landStep'], 'Landscaping'],   // her SFREP template needs an Add Other row named exactly "Landscaping"
@@ -131,7 +131,7 @@ function startsUse(J) { const G = G0(J); const st = startsFor(J); G.rateFrom = G
 RATES.aduHalf = ['$ per ADU / guest half bath', 'half baths in the ADU / guest house (1.5 baths = 1 full + 1 half)']; RATES.attach = ['$ detached over attached', 'a detached unit is one step above an attached one'];
 RATES.unitPos = ['$ corner / end unit over interior', 'a corner or end unit is one step above an interior unit'];
 /* ---- property type of the grid (her request, Oct 19 2026): condo and PUD lines; info lines she checks before UAD 3.6 is filled ---- */
-const GRID_INFO = { status: 'UAD 3.6', listPrice: 'UAD 3.6', dom: 'UAD 3.6', origList: 'not in UAD 3.6 – for your check', listDate: 'not in UAD 3.6 – for your check', lastRed: 'not in UAD 3.6 – for your check', cdom: 'not in UAD 3.6 – for your check', project: 'UAD 3.6', hoa: 'UAD 3.6 (monthly fee)' };
+const GRID_INFO = { status: 'UAD 3.6', listPrice: 'UAD 3.6', dom: 'UAD 3.6', origList: 'not in UAD 3.6 – for your check', listDate: 'not in UAD 3.6 – for your check', lastRed: 'not in UAD 3.6 – for your check', cdom: 'not in UAD 3.6 – for your check', project: 'UAD 3.6', hoa: 'UAD 3.6 (monthly fee)', nbhd: 'UAD 3.6 Neighborhood Name – the same field as the 2.6 neighborhood', loc: 'within the market area: busy street, flood zone, school, shared driveway, park, waterfront…' };
 const STRUCTURES = ['Low-rise', 'Mid-rise', 'High-rise', 'Townhouse / rowhouse', 'Semi-detached'];
 function gridMode(J) { const G = G0(J); if (G.mode) return G.mode; const o = typeof orderOf === 'function' ? orderOf(J) : null; const pt = String((o && o.propType) || '');
   if (/condo/i.test(pt)) return 'condo'; if (/pud/i.test(pt)) return 'pud'; if (G.tier === 'condo' || (J.subject && J.subject.unit)) return 'condo'; return 'house'; }
@@ -290,7 +290,7 @@ function tiersText(J) { const S = subjFacts(J); const one = (F, who) => ['q', 'c
 /* ---------------- analyzed – not used (UAD 22.17) and her comp database ---------------- */
 const NOTUSED_REASONS = [['AccessoryDwellingUnit', 'ADU'], ['Age', 'Age'], ['Amenities', 'Amenities'], ['AreaBelowGrade', 'Below-grade area'], ['BathroomCount', 'Baths'], ['BedroomCount', 'Bedrooms'], ['Condition', 'Condition'], ['DatedSale', 'Dated sale'],
   ['DesignOrStyleVariance', 'Design / style'], ['GrossBuildingArea', 'Gross building area'], ['GrossLivingArea', 'Living area'], ['LotSize', 'Lot size / usable area'], ['Outbuildings', 'Outbuildings'], ['Proximity', 'Proximity'], ['Quality', 'Quality'],
-  ['SaleOrTransferType', 'Sale / transfer type'], ['SiteInfluence', 'Site influence / location'], ['Other', 'Other']];
+  ['SaleOrTransferType', 'Sale / transfer type'], ['SiteInfluence', 'Location (site influence)'], ['Other', 'Other']];
 const markNotUsed = c => { c.notUsed = c.notUsed || { reasons: [], text: '', report: true }; c.use = null; };
 function notUsedHTML(J) { const L = J.comps.filter(c => c.notUsed && !c.use); if (!L.length && !app.nuAsk) return '';
   const ask = app.nuAsk && J.comps.find(c => c.id === app.nuAsk);
