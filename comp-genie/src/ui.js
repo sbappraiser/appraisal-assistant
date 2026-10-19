@@ -309,7 +309,7 @@ function render() {
   <section class="card" id="reportCard">${reportHTML(J)}</section>
   <section class="card" id="exportCard"><h2>Export</h2>${exportHTML(J)}</section>
   <footer class="foot">Comp Genie · your data stays on this computer · build ${typeof BUILD !== 'undefined' ? BUILD : ''}</footer>`;
-  fillImages();
+  fillImages(); { const t = document.querySelector('.top'); if (t) document.documentElement.style.setProperty('--toph', t.offsetHeight + 'px'); }   // the comp's sticky header sits under the top bar
 }
 /* Redraw after a field changes without losing your place: Tab moves on first, then the page is
    redrawn and the cursor is put back in the field you tabbed (or clicked) into. */
@@ -374,15 +374,20 @@ function compsTable(J) {
       <td>${app.confirm === 'rm:' + c.id ? `<span class="rmask">Keep it as analyzed – not used? <button class="btn sm primary" data-rmnu="${c.id}">Keep as not used</button><button class="btn sm" data-rmdb="${c.id}">Save to my comp database, then remove</button><button class="btn danger solid sm" data-rmyes="${c.id}">Remove</button><button class="btn sm" data-act="cancel">Cancel</button></span>` : `<button class="btn sm" data-rm="${c.id}" title="Remove from this list">✕</button>`}</td></tr>`; }).join('')}
   </tbody></table></div>`;
 }
+const DETAIL_ALWAYS = ['quality', 'condition', 'rooms', 'beds', 'full', 'half', 'garage', 'carport'];   // her lines, always there to fill in
+const PR_FROM_MLS = { yearBuilt: 'assessorYB', gla: 'assessorSf', full: 'bathsTotal' };   // public-record figures the MLS export carries
 function cellHTML(c, f, s, S, using) {
-  const v = S[s] ? S[s][f.k] : null; if (blank(v)) return `<td class="srccell empty"></td>`;
+  const v = S[s] ? S[s][f.k] : null;
+  if (blank(v) && s === 'crs' && S.mls && PR_FROM_MLS[f.k] && !blank(S.mls[PR_FROM_MLS[f.k]])) { const pv = S.mls[PR_FROM_MLS[f.k]];
+    return `<td class="srccell prmls" title="The public-record figure shown in the MLS export – type it in Your value to use it">${esc(f.k === 'full' ? pv + ' baths in all' : fmt(f, pv))} <small class="muted">public record (MLS)</small></td>`; }
+  if (blank(v)) return `<td class="srccell empty"></td>`;
   const on = using.src === s;
   return `<td class="srccell ${on ? 'on' : ''}" data-pick="${s}" data-field="${f.k}" title="Use the ${esc(SRC[s].name)} value">${esc(fmt(f, v))}</td>`;
 }
 /* MLS listing link (her request): a link pattern she sets up once from one of her own MLS listing pages – nothing is fetched by the Comp genie */
 let MLSLINK = ''; DB.get('kv', 'mlsLink').then(r => { MLSLINK = (r && r.v) || ''; }).catch(() => {});
 function mlsLinkHTML(c) { const n = String(V(c, 'mls')).trim();
-  return `<p class="mlsrow"><b>MLS ${esc(n)}</b> <button class="btn sm" data-act="mlscopy" data-n="${esc(n)}" title="Copy the MLS number, then paste it in the MLS search box">Copy MLS #</button>${MLSLINK ? ` <a class="btn sm primary" href="${esc(MLSLINK.replace('{mls}', encodeURIComponent(n)).replace('{mlsnodash}', encodeURIComponent(n.replace(/-/g, ''))))}" target="mls-listing" rel="noopener" title="Opens the listing in your MLS (you need to be logged in)">Open in MLS ↗</a> <button class="lnk" data-act="mlsset">change the MLS link</button>` : ' <button class="lnk" data-act="mlsset">Set up “Open in MLS”</button>'}</p>
+  return `<p class="mlsrow"><b>MLS ${esc(n)}</b> <button class="btn sm" data-act="mlscopy" data-n="${esc(n)}" title="Copy the MLS number, then paste it in the MLS search box">Copy MLS #</button>${MLSLINK ? ` <button class="btn sm primary" data-act="mlswin" data-u="${esc(MLSLINK.replace('{mls}', encodeURIComponent(n)).replace('{mlsnodash}', encodeURIComponent(n.replace(/-/g, ''))))}" title="Opens the listing in your MLS in a window you can move to another screen (you need to be logged in)">Open in MLS ↗</button> <button class="lnk" data-act="mlsset">change the MLS link</button>` : ' <button class="lnk" data-act="mlsset">Set up “Open in MLS”</button>'}</p>
   ${app.mlsSet ? `<div class="card notice"><b>Set up “Open in MLS” once.</b> In your MLS, open any listing. Click Chrome's address bar, copy the whole address (Ctrl+C) and paste it here, then type that listing's MLS number.
     <div class="row"><input class="txt" id="mlsUrl" placeholder="paste the address of one listing" style="flex:2"><input class="txt" id="mlsNo" placeholder="its MLS #, e.g. 26-1714" style="width:12em"><button class="btn primary" data-act="mlssave">Save</button><button class="btn" data-act="mlscancel">Cancel</button></div>
     <small>If the address does not contain the MLS number, your MLS cannot be opened at one listing from a link – use <b>Copy MLS #</b> and paste it in the MLS search.</small></div>` : ''}`; }
@@ -392,7 +397,8 @@ function detailHTML(c) {
   const cols = SRC_ORDER.filter(s => ['arch', 'mls', 'crs'].includes(s) || (s === 'cort' ? c.src.cort.length : c.src[s]));   // her three always side by side, even when empty
   let lastG = '';
   const rows = FIELDS.map(f => {
-    const u = val(c, f.k); const any = cols.some(s => S[s] && !blank(S[s][f.k])) || !blank(c.edit[f.k]); if (!any && !app.showAll && !['quality', 'condition'].includes(f.k)) return '';   // her own Q and C ratings always have a row
+    const u = val(c, f.k); const any = cols.some(s => S[s] && !blank(S[s][f.k])) || !blank(c.edit[f.k]); if (f.k === 'bathsTotal') return '';   // shown in the public-record column of Full baths instead
+    if (!any && !app.showAll && !DETAIL_ALWAYS.includes(f.k)) return '';   // her own Q and C ratings always have a row
     const head = f.g !== lastG ? `<tr class="grp"><th colspan="${3 + cols.length}">${esc(f.g)}</th></tr>` : ''; lastG = f.g;
     const dis = disagree(c, f.k);
     return head + `<tr><th>${esc(f.l)}${dis ? ' <span class="diff" title="Sources disagree">≠</span>' : ''}</th>
@@ -404,16 +410,16 @@ function detailHTML(c) {
   const cortSel = c.src.cort.length > 1 ? `<select data-cortpick="${c.id}">${c.src.cort.map((t, i) => `<option value="${i}" ${(c.cortPick || 0) === i ? 'selected' : ''}>${esc(showDate(t.saleDate) + ' ' + money(t.salePrice))}</option>`).join('')}</select>` : '';
   const p = c.src.pdf, m = c.src.mls;
   return `<section class="card detail" id="det-${c.id}">
-    <div class="dhead"><div>${fr ? `<img class="hero" data-photo="${fr.id}" data-view="${fr.id}" alt="Front photo" title="Click to look at the photos full size">` : ''}</div>
+    <div class="dstick"><div class="dhead"><div>${fr ? `<img class="hero" data-photo="${fr.id}" data-view="${fr.id}" alt="Front photo" title="Click to look at the photos full size">` : ''}</div>
       <div><h2>${esc(compTitle(c))} <small>${esc([V(c, 'city'), V(c, 'zip')].filter(Boolean).join(' '))}</small></h2>
       <p class="big">${esc(V(c, 'status') || '')} · ${money(V(c, 'salePrice') || V(c, 'listPrice'))} · ${esc(showDate(V(c, 'saleDate') || V(c, 'contractDate')))}${px ? ` · ${px.mi.toFixed(2)} mi ${esc(px.dir)}` : ''}</p>
       <p><label>Use as comp # <select data-use="${c.id}"><option value="">–</option>${Array.from({ length: Math.max(9, J.comps.length) }, (_, i) => `<option ${c.use === i + 1 ? 'selected' : ''}>${i + 1}</option>`).join('')}</select></label>
          ${CPOP ? '' : `<button class="btn sm" data-act="cpop" data-id="${c.id}" title="Open this comp in a window of its own – drag it to another screen and make it bigger">Pop out ↗</button>`}<button class="btn sm" data-act="close">Close</button></p>
       ${V(c, 'mls') ? mlsLinkHTML(c) : ''}
       ${fl.length ? `<ul class="flags">${fl.map(x => `<li class="${x.sev}">${esc(x.t)}</li>`).join('')}</ul>` : '<p class="help">No flags.</p>'}</div></div>
-    ${ps.length ? `<div class="strip">${ps.map(ph => `<button class="ph ${fr && ph.id === fr.id ? 'on' : ''}" data-view="${ph.id}" title="Click to look at it full size"><img data-photo="${ph.id}" alt="Photo ${ph.n}"></button>`).join('')}</div><p class="help">Click a photo to see it full size and page through them. The outlined one is the front photo; change it in the viewer.</p>` : (V(c, 'mls') ? '<p class="help">No photos yet – drop the MLS photos zip.</p>' : '')}
+    ${ps.length ? `<div class="strip">${ps.map(ph => `<button class="ph ${fr && ph.id === fr.id ? 'on' : ''}" data-view="${ph.id}" title="Click to look at it full size"><img data-photo="${ph.id}" alt="Photo ${ph.n}"></button>`).join('')}</div><p class="help">Click a photo to see it full size and page through them. The outlined one is the front photo; change it in the viewer.</p>` : (V(c, 'mls') ? '<p class="help">No photos yet – drop the MLS photos zip.</p>' : '')}</div>
     <h3>Field by field <small>click any source value to use it, or type your own</small></h3>
-    <div class="tablewrap"><table class="cmp"><colgroup><col style="width:200px"><col style="width:190px"><col style="width:120px">${cols.map(() => '<col>').join('')}</colgroup><thead><tr><th>Field</th><th>Using</th><th>Your value</th>${cols.map(s => `<th>${esc(SRC[s].name)}${s === 'arch' ? '<br>' + (c.src.arch.length ? archSel : '<small class="muted">not in your database</small>') : s === 'cort' ? '<br>' + cortSel : s === 'mls' && !c.src.mls ? '<br><small class="muted">drop the MLS export</small>' : s === 'crs' && !c.src.crs ? '<br><small class="muted">drop its CRS PDF on the page</small>' : ''}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table></div>
+    <div class="tablewrap"><table class="cmp"><colgroup><col style="width:200px"><col style="width:190px"><col style="width:120px">${cols.map(() => '<col>').join('')}</colgroup><thead><tr><th>Field</th><th>Using</th><th>Your value</th>${cols.map(s => `<th>${esc(SRC[s].name)}${s === 'arch' ? '<br>' + (c.src.arch.length ? archSel : '<small class="muted">not in your database</small>') : s === 'cort' ? '<br>' + cortSel : s === 'mls' && !c.src.mls ? '<br><small class="muted">drop the MLS export</small>' : s === 'crs' ? (c.src.crs ? '' : '<br><small class="muted">no CRS PDF yet – public-record figures from the MLS show here</small>') : ''}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table></div>
     <p><label><input type="checkbox" data-act="showall" ${app.showAll ? 'checked' : ''}> Show empty fields too</label></p>
     <h3>Prior sales and transfers</h3>
     ${prior.length ? `<table class="mini"><tr><th>Date</th><th class="r">Price</th><th>Type</th><th>Before this sale</th><th>From</th></tr>${prior.map(s => `<tr class="${s.monthsBefore > 0 && s.monthsBefore <= 12 ? 'hot' : ''}"><td>${esc(showDate(s.date))}</td><td class="r">${money(s.price)}</td><td>${esc(s.inst || s.type || '')}</td><td>${s.monthsBefore != null ? Math.round(s.monthsBefore) + ' mo' : ''}</td><td><small>${esc(s.src)}</small></td></tr>`).join('')}</table>` : '<p class="help">None found in the sources you have loaded.</p>'}
@@ -496,7 +502,7 @@ document.addEventListener('click', async e => {
     save(); renderKeepFocus(); toast('Added to the sales comparison comment – read it over'); return; }
   const su = e.target.closest('[data-sensuse]');
   if (su) { const G = G0(app.job); const k = su.dataset.sensuse, v = +su.dataset.v; G.rates[k] = v; G.rateFrom = G.rateFrom || {}; G.rateFrom[k] = 'sensitivity (tightest adjusted range, ' + usedComps(app.job).length + ' comps)'; save(); app.sens = { job: app.job.id, res: sensRun(app.job) }; renderKeepFocus(); toast((SENS_LABEL[k] || k) + ': ' + sensFmt(k, v) + ' – every comp is recalculated'); return; }
-  const wp = e.target.closest('[data-wbpop],[data-wbmv],[data-wbpage],[data-wbcol]');
+  const wp = e.target.closest('[data-act]') && e.target.closest('[data-wbcol]') ? null : e.target.closest('[data-wbpop],[data-wbmv],[data-wbpage],[data-wbcol]');   // a button inside a column header (MLS link) is its own click
   if (wp) { const d = wp.dataset;
     if (d.wbpop) { const [a, b] = d.wbpop.split('|'); await saveNow(); window.open(`${location.pathname}?pop=grid&from=${a}&to=${b}&job=${encodeURIComponent(app.job.id)}`, 'genie-grid-' + a, 'width=1000,height=1100'); return; }
     if (d.wbmv) { const [id, to] = d.wbmv.split('|'); wbMove(app.job, id, +to); save(); renderKeepFocus(); return; }
@@ -543,6 +549,7 @@ document.addEventListener('click', async e => {
       window.parent.postMessage({ type: 'aa-make-order', jobId: j.id, name: j.name, fileNo: j.fileNo || '', subject: { addr: S.addr || '', unit: S.unit || '', city: S.city || '', zip: S.zip || '', apn: S.apn || '', lat: S.lat || '', lon: S.lon || '', eff: S.eff || '' } }, location.origin); break; }
     case 'cpop': { const w = window.open(`?pop=comp&id=${encodeURIComponent(t.dataset.id)}&job=${encodeURIComponent(app.job.id)}`, 'genie-comp-' + t.dataset.id, 'width=1100,height=900'); if (!w) toast('Chrome blocked the window – allow pop-ups for this page', 6000); break; }
     case 'mlscopy': try { await navigator.clipboard.writeText(t.dataset.n); toast('Copied MLS ' + t.dataset.n + ' – paste it in the MLS search box'); } catch (e) { toast('Could not copy'); } break;
+    case 'mlswin': { const w = window.open(t.dataset.u, 'mls-listing', 'width=1200,height=950'); if (!w) toast('Chrome blocked the window – allow pop-ups for this page', 6000); break; }   
     case 'mlsset': app.mlsSet = true; render(); break;
     case 'mlscancel': app.mlsSet = false; render(); break;
     case 'mlssave': { const u = ($('#mlsUrl').value || '').trim(), n = ($('#mlsNo').value || '').trim(); if (!/^https?:\/\//i.test(u) || !n) { toast('Paste the address and type its MLS number'); break; }

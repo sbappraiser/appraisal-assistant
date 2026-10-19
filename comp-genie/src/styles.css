@@ -120,3 +120,13 @@ h1,h2{font-family:"Newsreader",Georgia,"Times New Roman",serif;font-weight:600;c
 .card{border-radius:14px;box-shadow:0 1px 2px rgba(20,32,45,.08),0 8px 24px rgba(20,32,45,.06)}
 a{color:var(--teal-d)}
 body.embed .top h1{display:none}body.embed #app{padding-top:0}body.embed .top{padding:8px 0}
+.detail .dstick{position:sticky;top:var(--toph,64px);z-index:4;background:var(--card);margin:-16px -16px 10px;padding:12px 16px 6px;border-bottom:1px solid var(--line);border-radius:14px 14px 0 0}
+.detail .dstick .hero{max-height:150px;width:auto}.detail .dstick .strip img{max-height:56px}
+td.srccell.prmls{background:#f3f5f7;cursor:default}
+/* all 8+ comps across one screen, the line names stay put when the grid scrolls sideways (her request, Oct 19 2026) */
+table.grid input.fact{width:112px;margin-bottom:3px;background:#fffef6}
+table.grid thead th{min-width:128px}table.grid input.adj{width:112px}
+table.grid tbody th:first-child,table.grid thead th:first-child{position:sticky;left:0;z-index:3;background:var(--card);box-shadow:1px 0 0 var(--line)}
+table.grid thead th:first-child{z-index:5}table.grid tr.grp th:first-child{background:var(--teal-l)}
+table.grid td input.txt{width:112px;min-width:0;box-sizing:border-box}table.grid td select.fine{max-width:100%}table.grid thead th[data-wbcol]{min-width:118px;width:130px}
+table.grid.wb input.fact{width:112px;min-width:0}table.grid td select.fine{width:112px}

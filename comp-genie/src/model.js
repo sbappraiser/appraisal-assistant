@@ -6,7 +6,7 @@ const SRC = {
   arch: { name: 'My database', short: 'My DB' },
   mls: { name: 'MLS export', short: 'MLS' },
   pdf: { name: 'MLS printout', short: 'Printout' },
-  crs: { name: 'CRS report', short: 'CRS' },
+  crs: { name: 'CRS report / public record', short: 'CRS' },
   cort: { name: 'CORT', short: 'CORT' },
 };
 const SRC_ORDER = ['arch', 'mls', 'pdf', 'crs', 'cort'];

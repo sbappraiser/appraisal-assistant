@@ -654,7 +654,7 @@ mark.blank{background:#fff3a8;padding:0 2px;border-radius:3px}.cmt textarea{widt
 </div>
 <div id="toast" role="status" hidden></div>
 <script>
-const BUILD='o1-1019-0043';
+const BUILD='o1-1019-0059';
 const G = (() => {
 /* ---------------- small helpers ---------------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -3224,7 +3224,7 @@ const pbDocs = () => ((cur && cur.docs) || []).filter(d => PB_TYPES.includes(d.t
 
 function redactText(t) {
   const terms = sensitiveTerms(); String(cur.redactNames || '').split(',').forEach(w => { w = w.trim().toLowerCase(); if (w.length >= 3) terms.add(w); });
-  return String(t || '').replace(/[\w.+-]+@[\w-]+\.[\w.]+|\(?\b\d{3}\)?[\s.-]?\d{3}[\s.-]\d{4}\b|\b(?:loan|escrow|account|acct)\s*(?:no\.?|number|#)?:?\s*[\w-]*\d[\w-]{3,}/gi, '[removed]')   // permit and case numbers stay: they are the point.replace(/[A-Za-z0-9@.'’-]{3,}/g, w => terms.has(w.replace(/[.'’]+$/, '').toLowerCase()) ? '[removed]' : w);
+  return String(t || '').replace(/[\w.+-]+@[\w-]+\.[\w.]+|\(?\b\d{3}\)?[\s.-]?\d{3}[\s.-]\d{4}\b|\b(?:loan|escrow|account|acct)\s*(?:no\.?|number|#)?:?\s*[\w-]*\d[\w-]{3,}/gi, '[removed]') /* permit and case numbers stay: they are the point */ .replace(/[A-Za-z0-9@.'’-]{3,}/g, w => terms.has(w.replace(/[.'’]+$/, '').toLowerCase()) ? '[removed]' : w);
 }
 async function pbPageJpeg(pdf, n) {
   const pg = await pdf.getPage(n); const v0 = pg.getViewport({ scale: 1 }); const vp = pg.getViewport({ scale: Math.min(2, 1400 / Math.max(v0.width, v0.height)) });

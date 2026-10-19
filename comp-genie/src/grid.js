@@ -26,6 +26,7 @@ const ADJ_ROWS = [
   ['year', 'Year built', 'Dwelling', 'YearBuilt'],
   ['style', 'Design (style)', 'Dwelling', 'DwellingStyle'],
   ['energy', 'Energy efficient features', 'Dwelling', 'EnergyEfficientAndGreenFeatures'],
+  ['rooms', 'Total rooms (above grade)', 'Dwelling', null],   // her own check; UAD 3.6 has no room count for the dwelling, so it is not exported
   ['beds', 'Bedrooms', 'Dwelling', 'LivingUnitBedroomCount', 'bed'],
   ['baths', 'Baths (full / half)', 'Dwelling', 'LivingUnitBathroomCount', 'bath'],
   ['gla', 'Living area above grade (sq ft)', 'Dwelling', 'LivingUnitStandardFinishedAreaAboveGrade', 'gla'],
@@ -125,7 +126,7 @@ function subjFacts(J) {
   const I = J.subject.insp || {}, T = G0(J).subj, crs = J.subject.crs || {};
   const f = { price: '', ppsf: '', src: 'Inspection ' + (I.inspDate ? showDate(I.inspDate) : ''), prox: '', terms: '', conc: '', contract: '', sale: '', dom: '',
     site: I.siteSf || num(crs.lotSf) || null, usable: I.usableAc ?? null, loc: I.loc || '', view: I.view || '', topo: I.topo || '', nbhd: I.nbhd || '', land: I.land || '',
-    style: I.style || '', year: I.year || num(crs.yearBuilt) || null, q: I.q || '', c: I.c || '', beds: I.beds ?? null, full: I.full ?? null, half: I.half ?? null,
+    style: I.style || '', year: I.year || num(crs.yearBuilt) || null, q: I.q || '', c: I.c || '', rooms: I.rooms ?? null, beds: I.beds ?? null, full: I.full ?? null, half: I.half ?? null,
     gla: I.gla ?? null, bsmt: I.bsmt ?? null, garage: I.garage ?? null, energy: I.energy || '', pool: I.pool || '', courts: I.courts || '', porch: I.porch || '', adu: I.adu || '', other: I.other || '' };
   Object.entries(T).forEach(([k, v]) => { if (!blank(v)) f[k] = v; });
   f._fine = { q: fineOf(J, 'subj', 'q'), c: fineOf(J, 'subj', 'c') };
@@ -137,7 +138,7 @@ function compFacts(c, J) {
     terms: g('financing') || '', conc: num(g('concessions')), contract: g('contractDate') || '', sale: g('saleDate') || '', dom: g('dom'),
     site: num(g('siteSf')), usable: acOf(num(g('usableSf'))), loc: [g('locRating'), g('locFactors')].filter(Boolean).join(': '), view: [g('viewRating'), g('viewTypes')].filter(Boolean).join(': '),
     topo: g('topo') || '', nbhd: g('nbhd') || '', land: g('landscaping') || '', style: g('style') || '', year: num(g('yearBuilt')), q: g('quality') || '', c: g('condition') || '',
-    beds: num(g('beds')), full: num(g('full')), half: num(g('half')), gla: num(g('gla')), bsmt: num(g('bsmtFin')), garage: num(g('garage')), energy: g('energy') || '',
+    rooms: num(g('rooms')), beds: num(g('beds')), full: num(g('full')), half: num(g('half')), gla: num(g('gla')), bsmt: num(g('bsmtFin')), garage: num(g('garage')), energy: g('energy') || '',
     pool: [yes(g('pool')) ? 'Pool' : '', yes(g('spa')) ? 'Spa' : ''].filter(Boolean).join(', ') || (g('pool') && !yes(g('pool')) ? 'None' : ''), courts: [yes(g('tennis')) ? 'Tennis court' : '', yes(g('sport')) ? 'Sport court' : ''].filter(Boolean).join(', '), porch: g('porch') || '', adu: [g('adu'), g('guest'), g('accessory')].filter(Boolean).join('; '),
     other: [g('horse') ? 'Horse facilities' : ''].filter(Boolean).join(', '), _id: c.id, aduSf: g('aduSf'), aduBaths: g('aduBaths') };
   F0._fine = { q: fineOf(J, c.id, 'q'), c: fineOf(J, c.id, 'c') };
@@ -200,7 +201,7 @@ function gridHTML(J) {
       : `<td class="subj"><input class="txt sm" data-gsubj="${id}" value="${esc(blank(G.subj[id]) ? '' : G.subj[id])}" placeholder="${esc(sv || (id === 'usable' ? 'Measure it' : id === 'adu' ? 'e.g. Guest house 450 sf 1 bath' : ''))}">${id === 'q' || id === 'c' ? fineSel('subj', id, J) : id === 'view' ? vtSel('subj', J, S.view) : ''}</td>`;
     const cells = used.map(c => { const C = compFacts(c, J);
       let shown = id === 'beds' && C.bedsBg ? `${C.beds} (${C.bedsBg} below grade)` : id === 'baths' ? ([C.full, C.half].every(blank) ? '' : `${C.full ?? '–'} / ${C.half ?? 0}`) : id === 'ppsf' ? (C.price && C.gla ? money(C.price / C.gla) : '') : showFact(id, C[id]);
-      if (lean && !WB_NOEDIT.includes(id)) { const raw = id === 'usable' ? (blank(C.usable) ? '' : String(C.usable)) : wbFactText(id, C);
+      if (!WB_NOEDIT.includes(id)) { /* she can change any comp fact right on the grid (Oct 19 2026), not only in Workbook view */ const raw = id === 'usable' ? (blank(C.usable) ? '' : String(C.usable)) : wbFactText(id, C);
         shown = `<input class="txt sm fact" data-gfact="${c.id}|${id}" value="${esc(raw)}" placeholder="${id === 'usable' ? 'Measure it (ac)' : ''}" title="Type the comp's entry · = copies the subject · =2 copies comp 2">`; }
       else if (id === 'usable' && blank(C.usable)) shown = '<span class="measure">Measure it</span>'; else shown = esc(shown);
       if (id === 'q' || id === 'c') shown += fineSel(c.id, id, J); if (id === 'view') shown += vtSel(c.id, J, C.view);
@@ -215,14 +216,14 @@ function gridHTML(J) {
   const sumRow = (label, fn, cls = '') => `<tr class="tot ${cls}"><th>${label}</th><td></td>${used.map((c, i) => `<td>${fn(tot[i], c)}</td>`).join('')}</tr>`;
   const adjs = totAll.map(t => t.adj).filter(Boolean); const lo = Math.min(...adjs), hi = Math.max(...adjs);
   const med = adjs.length ? [...adjs].sort((a, b) => a - b)[Math.floor((adjs.length - 1) / 2)] : null;
-  if (POP) return `<div class="tablewrap"><table class="grid${lean ? ' wb' : ''}"><thead><tr><th></th><th>Subject<br><small>${esc(J.subject.addr || '')}</small></th>${used.map(c => `<th data-wbcol="${c.id}" class="${WB.cur === c.id ? 'cur' : ''}">Comp ${c.use}<br><small>${esc(compTitle(c))}</small></th>`).join('')}</thead><tbody>${rows}
+  if (POP) return `<div class="tablewrap"><table class="grid${lean ? ' wb' : ''}"><thead><tr><th></th><th>Subject<br><small>${esc(J.subject.addr || '')}</small></th>${used.map(c => `<th data-wbcol="${c.id}" class="${WB.cur === c.id ? 'cur' : ''}">Comp ${c.use}<br><small>${esc(compTitle(c))}</small>${gridMlsLink(c)}</th>`).join('')}</thead><tbody>${rows}
     ${sumRow('Net adjustment', t => `${t.net >= 0 ? '+' : '−'}${money(Math.abs(t.net))} <small class="${Math.abs(t.netPct) > GRID_LIMITS.net ? 'over' : ''}">${t.netPct.toFixed(1)}%</small>`)}
     ${sumRow('Gross adjustment', t => `${money(t.gross)} <small class="${t.grossPct > GRID_LIMITS.gross ? 'over' : ''}">${t.grossPct.toFixed(1)}%</small>`)}
     ${sumRow('Adjusted sale price', t => `<b>${money(t.adj)}</b>${t.adjPsf ? `<br><small>${money(t.adjPsf)} / sq ft</small>` : ''}`, 'big')}</tbody></table></div>
     <div class="gsum"><div><span>Adjusted range (all comps)</span><b>${adjs.length ? money(lo) + ' – ' + money(hi) : '–'}</b></div><div><span>Median</span><b>${med ? money(med) : '–'}</b></div><div><span>Your value</span><b>${blank(G.value) ? '–' : money(G.value)}</b></div></div>`;
   return `<h2>Adjustment grid <small>UAD 3.6 lines · your amounts</small></h2>${startsBar(J)}${wbBar(J, usedAll)}
     <p class="help">${inspNote} Type an amount in any cell (minus for a downward adjustment). Or type a rate once beside a line; cells without your own amount then use it (shown in grey). Clear a cell to go back to the rate. Usable Lot Area/Utility comes only from your archive or your measurement – blank comps say <span class="measure">Measure it</span>.</p>
-    <div class="tablewrap"><table class="grid${lean ? ' wb' : ''}"><thead><tr><th></th><th>Subject<br><small>${esc(J.subject.addr || '')}</small></th>${used.map(c => `<th data-wbcol="${c.id}" class="${WB.cur === c.id ? 'cur' : ''}" title="Click to pick this comp for Ctrl+Shift+number or Ctrl+Z">Comp ${c.use}<br><small>${esc(compTitle(c))}</small></th>`).join('')}</tr></thead>
+    <div class="tablewrap"><table class="grid${lean ? ' wb' : ''}"><thead><tr><th></th><th>Subject<br><small>${esc(J.subject.addr || '')}</small></th>${used.map(c => `<th data-wbcol="${c.id}" class="${WB.cur === c.id ? 'cur' : ''}" title="Click to pick this comp for Ctrl+Shift+number or Ctrl+Z">Comp ${c.use}<br><small>${esc(compTitle(c))}</small>${gridMlsLink(c)}</th>`).join('')}</tr></thead>
     <tbody>${rows}
     ${sumRow('Net adjustment', t => `${t.net >= 0 ? '+' : '−'}${money(Math.abs(t.net))} <small class="${Math.abs(t.netPct) > GRID_LIMITS.net ? 'over' : ''}">${t.netPct.toFixed(1)}%</small>`)}
     ${sumRow('Gross adjustment', t => `${money(t.gross)} <small class="${t.grossPct > GRID_LIMITS.gross ? 'over' : ''}">${t.grossPct.toFixed(1)}%</small>`)}
@@ -239,6 +240,10 @@ function gridHTML(J) {
 
 const scCount = t => { const n = String(t || '').length; return `${n.toLocaleString()} of 10,000 characters (UAD 3.6 limit)${n > 10000 ? ` – <b class="over">${(n - 10000).toLocaleString()} over</b>` : ''}`; };
 /* low / mid / high within a UAD rating – on her grid and in her comments, never in the UAD fields */
+function gridMlsLink(c) { const n = String(V(c, 'mls') || '').trim(); if (!n) return '';   /* the MLS listing in a window of its own (her logged-in MLS) */
+  if (typeof MLSLINK === 'undefined' || !MLSLINK) return `<br><button class="lnk sm" data-act="mlscopy" data-n="${esc(n)}" title="Copy the MLS number for the MLS search (set up Open in MLS on any comp's detail)">MLS ${esc(n)} ⧉</button>`;
+  const u = MLSLINK.replace('{mls}', encodeURIComponent(n)).replace('{mlsnodash}', encodeURIComponent(n.replace(/-/g, '')));
+  return `<br><button class="lnk sm" data-act="mlswin" data-u="${esc(u)}" title="Open MLS ${esc(n)} in a window you can move to another screen">MLS ${esc(n)} ↗</button>`; }
 function fineSel(who, k, J) { const v = fineOf(J, who, k); const set = ((G0(J).fine || {})[who] || {})[k], fromA = !set && fineArch(J, who, k); return ` <select class="fine${fromA ? ' arch' : ''}" data-gfine="${who}|${k}" title="${fromA ? 'From your archive note – change it if you see it differently' : 'Where it sits within the UAD rating'}">${['low', 'mid', 'high'].map(x => `<option value="${x}" ${x === v ? 'selected' : ''}>${x}</option>`).join('')}</select>`; }
 function tiersText(J) { const S = subjFacts(J); const one = (F, who) => ['q', 'c'].filter(k => F[k]).map(k => `${fineOf(J, who, k)} ${String(F[k]).match(/[QC]\d/i) ? String(F[k]).match(/[QC]\d/i)[0].toUpperCase() : F[k]}`).join(' / ');
   const parts = usedComps(J).map(c => { const t = one(compFacts(c, J), c.id); return t ? `Comparable ${c.use} ${t}` : ''; }).filter(Boolean);
