@@ -35,6 +35,7 @@ header.top { border-top: 5px solid var(--accent-fill);  display: flex; flex-wrap
 nav.tabs { max-width: 100%; overflow-x: auto; display: flex; gap: 4px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 4px; }
 nav.tabs button { border: 0; background: transparent; color: var(--muted); font: 600 14px var(--ui); padding: 8px 14px; border-radius: 7px; cursor: pointer; }
 nav.tabs button[aria-selected="true"] { background: var(--accent-soft); color: var(--ink); }
+nav.tabs .tabck { display: inline-grid; place-items: center; width: 1.2em; height: 1.2em; margin-left: 3px; border-radius: 50%; background: var(--go); color: #fff; font-weight: 900; font-size: .8em; line-height: 1; vertical-align: .05em; }
 .toolrow { display: flex; gap: 8px; flex-wrap: wrap; }
 main { max-width: 1480px; margin: 0 auto; }
 .desk { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; align-items: start; }
@@ -555,6 +556,12 @@ mark.blank{background:#fff3a8;padding:0 2px;border-radius:3px}.cmt textarea{widt
       <li>The order saves itself while you type; “✓ Order saved” and the time show at the top and at the bottom.</li>
       <li>When the client sends their own engagement letter, drop it in Documents. It is checked for AI and confidentiality wording, and it shows on the left instead of your letter (My letter is set to “Not needed – client’s letter”). Click <b>Read and list requirements</b> to note the form, addenda, photo rules, due date, fee and inspection to-dos. <b>Write my own letter instead</b> switches back.</li>
       <li>Change the AI paragraph on <b>Standard wording</b>.</li></ol></details>
+    <details><summary>Green check marks on the tabs</summary><ol>
+      <li>With an order open, <b>Order</b>, <b>Market</b>, <b>Comp genie</b> and <b>Bookkeeping</b> get a green ✓ when that section is not missing anything. Hold the mouse over a tab without a ✓ to see what is still needed.</li>
+      <li><b>Order</b>: the main fields (AI use, client name, address, fee, and the dates the assignment type needs); the engagement letter signed (My letter = Signed, or Not needed – client’s letter); every client requirement ticked; no document with suggestions still to accept or reject; no scanned document with report facts (deed, prelim, CRS, permits, contract, MLS…) left unread.</li>
+      <li><b>Market</b>: box 1 and box 2 searches loaded; the Market Area Boundary and Search Criteria descriptions; Distressed Market Competition, Demand/Supply and Marketing Time; your price-trend conclusion; the commentary.</li>
+      <li><b>Comp genie</b>: its grid pre-check finds nothing – at least 3 comps, every comp with sale price, date, living area and whole Q and C ratings, a weight for each, your indicated value, the comment, every grid review flag marked OK, a reason for each considered-not-used sale. (A value outside the adjusted range does not hold back the ✓ – explain it in the comment.) It updates each time the Comp genie saves.</li>
+      <li><b>Bookkeeping</b>: invoice made and payment marked (a cancelled order counts as done).</li></ol></details>
     <details><summary>Market conditions</summary><ol>
       <li>Open the order, then the <b>Market</b> tab.</li>
       <li><b>Terms.</b> <b>Market area</b> (macro) = everything inside your Market Area Boundary – UAD 3.6 uses “market area” where 2.6 said “neighborhood”; it is the same field. <b>Competitive market area</b> (micro) = the similar properties within the market area that compete with the subject. <b>Location</b> is a separate item for things within the market area: busy street, flood zone, adjacent to a school or park, shared driveway, waterfront, residential.</li>

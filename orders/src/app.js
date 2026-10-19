@@ -139,16 +139,7 @@ function render() {
   if (theirs) renderClientView(f); else if (!mine) renderOrderSummary(f);
   $('#sheet').innerHTML = previewHTML(buildLetter(f));
   $('#fileName').textContent = mine ? 'Your letter downloads as: ' + fileName(f) : '';
-  const missing = [];
-  if (!f.aiUse) missing.push('AI use');
-  if (!(f.clients[0].name || '').trim()) missing.push('client name');
-  if (!f.address.trim()) missing.push('property address');
-  if (!String(f.fee).trim()) missing.push('fee');
-  const DL = TYPES[f.type].dateLabels || ['decedent', 'date of death'];
-  if (TYPES[f.type].retro && !f.decedent.trim() && !['divorceRetro', 'otherRetro', 'taxAppeal'].includes(f.type)) missing.push(DL[0].toLowerCase());
-  if (TYPES[f.type].retro && !f.dod) missing.push(DL[1].toLowerCase());
-  if (TYPES[f.type].purpose && !f.purpose.trim()) missing.push('purpose');
-  if (['prospective', 'both'].includes(f.premise) && TYPES[f.type].premise && !f.completion) missing.push('completion date');
+  const missing = orderMissing(f);
   $('#missing').textContent = missing.length ? 'Still blank: ' + missing.join(', ') + '. Blanks print as lines to fill by hand.' : 'Every main field is filled in.';
   $('#missing').className = missing.length ? 'missing warn' : 'missing ok';
   if (hasContent(f)) { clearTimeout(autoT); autoT = setTimeout(() => saveLetter(true, true), 700); }
@@ -188,7 +179,7 @@ function saveLetter(quiet, auto) { // auto = the quiet save while typing (client
   ODB.put('orders', f).then(() => { const t = new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }); document.querySelectorAll('[data-saved]').forEach(el => el.textContent = '✓ Order saved ' + t);
     if (!quiet) toast('Order saved' + (added ? ' · ' + added + ' new client' + (added > 1 ? 's' : '') + ' added' : '')); })
     .catch(e => toast('Could not save in this browser (' + (e.message || e) + ') – use Back up to keep a copy'));
-  renderLetters();
+  renderLetters(); tabMarks();
 }
 function downloadDocx() {
   const f = readForm();
@@ -377,7 +368,7 @@ function showTab(t) { CUR_TAB = t;
   document.querySelectorAll('.panel').forEach(p => { p.hidden = p.id !== 'panel-' + t; });
   if (t === 'home') renderHome();
   if (t === 'letter') setTimeout(() => document.querySelectorAll('textarea[data-rqtext]').forEach(x => { x.style.height = 'auto'; x.style.height = (x.scrollHeight + 2) + 'px'; }), 0);
-  syncGenieTop();
+  syncGenieTop(); tabMarks();
   if (t === 'genie') { const on = cur && hasContent(cur); if (on) saveLetter(true, true); const nm = on ? [cur.fileNo, street(cur)].filter(Boolean).join(' ') : '';
     $('#gnTitle').textContent = 'Comp genie' + (nm ? ' – ' + nm : ''); $('#gnOwn').href = on ? genieURL(cur) : '../comp-genie/';
     const fr = $('#genieFrame'); const want = on ? cur.id : '';

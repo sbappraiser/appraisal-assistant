@@ -98,7 +98,13 @@ async function newJob(name) {
 }
 let saveT = null;
 function save() { clearTimeout(saveT); saveT = setTimeout(saveNow, 300); }
-async function saveNow() { if (!app.job) return; app.job.updated = Date.now(); await DB.put('jobs', app.job); if (!POP && !CPOP) await DB.put('kv', { id: 'lastJob', v: app.job.id }); wbNotify(); }
+function jobStatus(J) {   // for the green check on the Appraisal Assistant's Comp genie tab: what the grid pre-check still finds
+  let n; try { n = precheckGrid(J).filter(x => !/outside the adjusted range/.test(x.msg)).map(x => x.msg); } catch (e) { n = ['the grid could not be checked']; }
+  return { n, at: Date.now() };
+}
+async function saveNow() { if (!app.job) return; app.job.updated = Date.now(); app.job.status = jobStatus(app.job);
+  if (app.job.orderId && window.parent !== window) { try { window.parent.postMessage({ type: 'aa-genie-status', order: app.job.orderId, n: app.job.status.n }, location.origin); } catch (e) {} }
+  await DB.put('jobs', app.job); if (!POP && !CPOP) await DB.put('kv', { id: 'lastJob', v: app.job.id }); wbNotify(); }
 
 /* ---------------- photos ---------------- */
 app.photos = []; // [{id, mls, n, name}] for this job (blobs stay in storage)

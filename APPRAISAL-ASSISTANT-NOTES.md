@@ -423,3 +423,11 @@ Her ask: dictate the whole inspection and have it land in each room, interior, e
 - MACRO = market area (Market Area Boundary 17.003). MICRO = competitive market area: similar properties within the macro market area (Search Criteria 17.004).
 - Location is separate (grid row "Location (site influence)", SiteInfluence): busy street, flood zone, adjacent to school/park, shared driveway, waterfront, residential – things within the market area.
 - Builds o1-1019-1422, g2-1019-1422.
+
+## Tab check marks (Oct 19 2026, her request)
+- orders/src/status.js: green ✓ on Order / Market / Comp genie / Bookkeeping for the open order when nothing is missing; tab tooltip = "still needed: …". tabMarks() runs on showTab and every saveLetter.
+- Order: orderMissing (moved from render) + My letter Signed or Client letter + all reqs ticked + no docs with new suggestions + no unread scans of fact documents (SCAN_MATTERS).
+- Market: box 1 + box 2 rows, boundary, criteria, uad distress/supply/mktime, trendConcl, comment.
+- Comp genie: genie saveNow stores job.status = precheckGrid messages (minus "outside the adjusted range") and posts aa-genie-status to the hub; the hub also reads the genie's IndexedDB 'appraisal-assistant' jobs read-only (orderId → status). Job without status = "open it once".
+- Bookkeeping: invNo + invDate + paidDate (Cancelled = done).
+- Builds o1-1019-1426, g2-1019-1425.

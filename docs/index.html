@@ -35,6 +35,7 @@ header.top { border-top: 5px solid var(--accent-fill);  display: flex; flex-wrap
 nav.tabs { max-width: 100%; overflow-x: auto; display: flex; gap: 4px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 4px; }
 nav.tabs button { border: 0; background: transparent; color: var(--muted); font: 600 14px var(--ui); padding: 8px 14px; border-radius: 7px; cursor: pointer; }
 nav.tabs button[aria-selected="true"] { background: var(--accent-soft); color: var(--ink); }
+nav.tabs .tabck { display: inline-grid; place-items: center; width: 1.2em; height: 1.2em; margin-left: 3px; border-radius: 50%; background: var(--go); color: #fff; font-weight: 900; font-size: .8em; line-height: 1; vertical-align: .05em; }
 .toolrow { display: flex; gap: 8px; flex-wrap: wrap; }
 main { max-width: 1480px; margin: 0 auto; }
 .desk { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; align-items: start; }
@@ -555,6 +556,12 @@ mark.blank{background:#fff3a8;padding:0 2px;border-radius:3px}.cmt textarea{widt
       <li>The order saves itself while you type; “✓ Order saved” and the time show at the top and at the bottom.</li>
       <li>When the client sends their own engagement letter, drop it in Documents. It is checked for AI and confidentiality wording, and it shows on the left instead of your letter (My letter is set to “Not needed – client’s letter”). Click <b>Read and list requirements</b> to note the form, addenda, photo rules, due date, fee and inspection to-dos. <b>Write my own letter instead</b> switches back.</li>
       <li>Change the AI paragraph on <b>Standard wording</b>.</li></ol></details>
+    <details><summary>Green check marks on the tabs</summary><ol>
+      <li>With an order open, <b>Order</b>, <b>Market</b>, <b>Comp genie</b> and <b>Bookkeeping</b> get a green ✓ when that section is not missing anything. Hold the mouse over a tab without a ✓ to see what is still needed.</li>
+      <li><b>Order</b>: the main fields (AI use, client name, address, fee, and the dates the assignment type needs); the engagement letter signed (My letter = Signed, or Not needed – client’s letter); every client requirement ticked; no document with suggestions still to accept or reject; no scanned document with report facts (deed, prelim, CRS, permits, contract, MLS…) left unread.</li>
+      <li><b>Market</b>: box 1 and box 2 searches loaded; the Market Area Boundary and Search Criteria descriptions; Distressed Market Competition, Demand/Supply and Marketing Time; your price-trend conclusion; the commentary.</li>
+      <li><b>Comp genie</b>: its grid pre-check finds nothing – at least 3 comps, every comp with sale price, date, living area and whole Q and C ratings, a weight for each, your indicated value, the comment, every grid review flag marked OK, a reason for each considered-not-used sale. (A value outside the adjusted range does not hold back the ✓ – explain it in the comment.) It updates each time the Comp genie saves.</li>
+      <li><b>Bookkeeping</b>: invoice made and payment marked (a cancelled order counts as done).</li></ol></details>
     <details><summary>Market conditions</summary><ol>
       <li>Open the order, then the <b>Market</b> tab.</li>
       <li><b>Terms.</b> <b>Market area</b> (macro) = everything inside your Market Area Boundary – UAD 3.6 uses “market area” where 2.6 said “neighborhood”; it is the same field. <b>Competitive market area</b> (micro) = the similar properties within the market area that compete with the subject. <b>Location</b> is a separate item for things within the market area: busy street, flood zone, adjacent to a school or park, shared driveway, waterfront, residential.</li>
@@ -665,7 +672,7 @@ mark.blank{background:#fff3a8;padding:0 2px;border-radius:3px}.cmt textarea{widt
 </div>
 <div id="toast" role="status" hidden></div>
 <script>
-const BUILD='o1-1019-1422';
+const BUILD='o1-1019-1426';
 const G = (() => {
 /* ---------------- small helpers ---------------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -4089,6 +4096,83 @@ function suggestFileNo(address) {
   return base + '-' + (n + 1);
 }
 
+/* =====================================================================
+   Section check marks on the tabs (her request, Oct 19 2026): a green ✓ on
+   Order, Market, Comp genie and Bookkeeping when that section of the open
+   order is not missing anything. Hover a tab to see what is still needed.
+   ===================================================================== */
+function orderMissing(f) {   // the letter's main fields (also shown under the letter as "Still blank: …")
+  const missing = [];
+  if (!f.aiUse) missing.push('AI use');
+  if (!((f.clients || [])[0] || {}).name || !String(f.clients[0].name).trim()) missing.push('client name');
+  if (!String(f.address || '').trim()) missing.push('property address');
+  if (!String(f.fee ?? '').trim()) missing.push('fee');
+  const T = TYPES[f.type] || {}; const DL = T.dateLabels || ['decedent', 'date of death'];
+  if (T.retro && !String(f.decedent || '').trim() && !['divorceRetro', 'otherRetro', 'taxAppeal'].includes(f.type)) missing.push(DL[0].toLowerCase());
+  if (T.retro && !f.dod) missing.push(DL[1].toLowerCase());
+  if (T.purpose && !String(f.purpose || '').trim()) missing.push('purpose');
+  if (['prospective', 'both'].includes(f.premise) && T.premise && !f.completion) missing.push('completion date');
+  return missing;
+}
+const SCAN_MATTERS = ['clientLetter', 'crs', 'permitsCounty', 'permitsPdf', 'legal', 'deed', 'prelim', 'mls', 'contract', 'counter', 'addendum', 'condoQ', 'budget'];   // scans that hold facts for the report
+function needOrder(o) {
+  const n = orderMissing(o).map(x => 'the ' + x);
+  if (!['Signed', 'Client letter'].includes(o.status)) n.push('the signed engagement letter (My letter is ' + (o.status || 'Drafted') + ')');
+  const open = (o.reqs || []).filter(x => !x.done).length; if (open) n.push(open + ' client requirement' + (open === 1 ? '' : 's') + ' not ticked');
+  const docs = o.docs || []; let pend = 0, scans = 0;
+  docs.forEach(d => { const S = ((o.review || {})[d.id] || {}).sugg || []; if (S.some(x => x.state === 'new')) pend++;
+    const read = S.length || (o.facts || []).some(f => f.docId === d.id) || (o.aiLog || []).some(l => l.doc === d.name) || ((o.permitTimeline || {}).files || []).includes(d.name);
+    if (d.textState === 'scan' && SCAN_MATTERS.includes(d.type) && !read) scans++; });
+  if (pend) n.push(pend + ' document' + (pend === 1 ? '' : 's') + ' with suggestions to accept or reject');
+  if (scans) n.push(scans + ' scanned document' + (scans === 1 ? '' : 's') + ' not read yet (Claude or Acrobat)');
+  return n;
+}
+function needMarket(o) {
+  const m = o.market || {}; const U = m.uad || {}; const n = [];
+  if (!(m.rows || []).length) n.push('the Market Area Boundary search (box 1)');
+  if (!((m.micro || {}).rows || []).length) n.push('the Search Criteria search (box 2)');
+  if (!String(m.boundary || '').trim()) n.push('the Market Area Boundary description');
+  if (!String(m.criteria || '').trim()) n.push('the Search Criteria Description');
+  if (!U.distress) n.push('Distressed Market Competition'); if (!U.supply) n.push('Demand/Supply'); if (!U.mktime) n.push('Marketing Time');
+  if (!m.trendConcl) n.push('your price-trend conclusion');
+  if (!String(m.comment || '').trim()) n.push('the Price Trend Analysis Commentary');
+  return n;
+}
+function needBooks(o) {
+  if (o.stage === 'Cancelled') return [];
+  const n = []; if (!String(o.invNo || '').trim() || !o.invDate) n.push('the invoice (Make the invoice)'); if (!o.paidDate) n.push('the payment (Mark paid)'); return n;
+}
+/* the Comp genie keeps its own storage on the same site; its grid pre-check for this order is read here (read-only) */
+let GENIE_ST = {};   // orderId → { n: [what is still needed], at }
+function readGenieJobs() {
+  return new Promise(res => { let r; try { r = indexedDB.open('appraisal-assistant'); } catch (e) { res([]); return; }
+    r.onupgradeneeded = () => { try { r.transaction.abort(); } catch (e) {} }; r.onerror = () => res([]); r.onblocked = () => res([]);
+    r.onsuccess = () => { const d = r.result; if (!d.objectStoreNames.contains('jobs')) { d.close(); res([]); return; }
+      const q = d.transaction('jobs').objectStore('jobs').getAll(); q.onsuccess = () => { d.close(); res(q.result || []); }; q.onerror = () => { d.close(); res([]); }; }; });
+}
+let genieReadT = 0;
+async function refreshGenieStatus() {
+  try { if (indexedDB.databases) { const l = await indexedDB.databases(); if (!l.some(d => d.name === 'appraisal-assistant')) return; } } catch (e) {}
+  const jobs = await readGenieJobs(); const st = {};
+  jobs.filter(j => j.orderId).sort((a, b) => (a.updated || 0) - (b.updated || 0)).forEach(j => { st[j.orderId] = j.status || { n: ['open this order in the Comp genie once so it can be checked'] }; });
+  GENIE_ST = st; tabMarks(true);
+}
+function needGenie(o) {
+  const s = GENIE_ST[o.id]; if (!s) return ['not started in the Comp genie yet']; return s.n || [];
+}
+function tabMarks(noRead) {
+  if (!noRead && Date.now() - genieReadT > 4000) { genieReadT = Date.now(); refreshGenieStatus(); }
+  const o = (typeof cur !== 'undefined' && cur && hasContent(cur)) ? cur : null;
+  const W = { letter: needOrder, market: needMarket, genie: needGenie, books: needBooks };
+  Object.entries(W).forEach(([t, fn]) => { const b = document.querySelector(`nav.tabs [data-tab="${t}"]`); if (!b) return;
+    if (!b.dataset.label) b.dataset.label = b.textContent.trim();
+    let n = null; if (o) { try { n = fn(o); } catch (e) { n = null; } }
+    const done = !!(n && !n.length);
+    b.innerHTML = h(b.dataset.label) + (done ? ' <span class="tabck" aria-label="complete">✓</span>' : '');
+    b.title = !o ? '' : done ? b.dataset.label + ' – complete for this order' : n ? b.dataset.label + ' – still needed: ' + n.join('; ') : ''; });
+}
+window.addEventListener('message', e => { if (e.origin === location.origin && e.data && e.data.type === 'aa-genie-status') { if (e.data.order) { GENIE_ST[e.data.order] = { n: e.data.n || [], at: Date.now() }; tabMarks(true); } } });
+
 /* Appraisal Assistant – orders: intake form, documents, engagement letter, clients, hand-off to the other modules.
    Forked from the Engagement Letter Writer; the letter wording still comes from engagement-letter-writer/src. */
 const $ = s => document.querySelector(s);
@@ -4230,16 +4314,7 @@ function render() {
   if (theirs) renderClientView(f); else if (!mine) renderOrderSummary(f);
   $('#sheet').innerHTML = previewHTML(buildLetter(f));
   $('#fileName').textContent = mine ? 'Your letter downloads as: ' + fileName(f) : '';
-  const missing = [];
-  if (!f.aiUse) missing.push('AI use');
-  if (!(f.clients[0].name || '').trim()) missing.push('client name');
-  if (!f.address.trim()) missing.push('property address');
-  if (!String(f.fee).trim()) missing.push('fee');
-  const DL = TYPES[f.type].dateLabels || ['decedent', 'date of death'];
-  if (TYPES[f.type].retro && !f.decedent.trim() && !['divorceRetro', 'otherRetro', 'taxAppeal'].includes(f.type)) missing.push(DL[0].toLowerCase());
-  if (TYPES[f.type].retro && !f.dod) missing.push(DL[1].toLowerCase());
-  if (TYPES[f.type].purpose && !f.purpose.trim()) missing.push('purpose');
-  if (['prospective', 'both'].includes(f.premise) && TYPES[f.type].premise && !f.completion) missing.push('completion date');
+  const missing = orderMissing(f);
   $('#missing').textContent = missing.length ? 'Still blank: ' + missing.join(', ') + '. Blanks print as lines to fill by hand.' : 'Every main field is filled in.';
   $('#missing').className = missing.length ? 'missing warn' : 'missing ok';
   if (hasContent(f)) { clearTimeout(autoT); autoT = setTimeout(() => saveLetter(true, true), 700); }
@@ -4279,7 +4354,7 @@ function saveLetter(quiet, auto) { // auto = the quiet save while typing (client
   ODB.put('orders', f).then(() => { const t = new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }); document.querySelectorAll('[data-saved]').forEach(el => el.textContent = '✓ Order saved ' + t);
     if (!quiet) toast('Order saved' + (added ? ' · ' + added + ' new client' + (added > 1 ? 's' : '') + ' added' : '')); })
     .catch(e => toast('Could not save in this browser (' + (e.message || e) + ') – use Back up to keep a copy'));
-  renderLetters();
+  renderLetters(); tabMarks();
 }
 function downloadDocx() {
   const f = readForm();
@@ -4468,7 +4543,7 @@ function showTab(t) { CUR_TAB = t;
   document.querySelectorAll('.panel').forEach(p => { p.hidden = p.id !== 'panel-' + t; });
   if (t === 'home') renderHome();
   if (t === 'letter') setTimeout(() => document.querySelectorAll('textarea[data-rqtext]').forEach(x => { x.style.height = 'auto'; x.style.height = (x.scrollHeight + 2) + 'px'; }), 0);
-  syncGenieTop();
+  syncGenieTop(); tabMarks();
   if (t === 'genie') { const on = cur && hasContent(cur); if (on) saveLetter(true, true); const nm = on ? [cur.fileNo, street(cur)].filter(Boolean).join(' ') : '';
     $('#gnTitle').textContent = 'Comp genie' + (nm ? ' – ' + nm : ''); $('#gnOwn').href = on ? genieURL(cur) : '../comp-genie/';
     const fr = $('#genieFrame'); const want = on ? cur.id : '';
