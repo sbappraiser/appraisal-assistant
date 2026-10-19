@@ -11,11 +11,21 @@ const ADJ_ROWS = [
   ['ppsf', 'Price per sq ft (living area)', 'Sales and listing', null],
   ['src', 'Data source', 'Sales and listing', null],
   ['prox', 'Proximity to subject', 'Sales and listing', null],
+  ['status', 'Listing status', 'Sales and listing', null],
+  ['listPrice', 'List price (final)', 'Sales and listing', null],
+  ['origList', 'Original list price', 'Sales and listing', null],
+  ['listDate', 'Listing date', 'Sales and listing', null],
+  ['lastRed', 'Last price reduction', 'Sales and listing', null],
   ['terms', 'Transfer terms (financing)', 'Sales and listing', 'FinancingMethod'],
   ['conc', 'Known sales concessions', 'Sales and listing', 'SalesConcessions'],
   ['contract', 'Contract date', 'Sales and listing', 'ContractDate'],
   ['sale', 'Sale date (market conditions)', 'Sales and listing', 'SaleDate', 'timePct'],
   ['dom', 'Days on market', 'Sales and listing', null],
+  ['cdom', 'Cumulative days on market', 'Sales and listing', null],
+  ['project', 'Project name', 'Project (HOA)', null],
+  ['hoa', 'HOA fee ($ / month)', 'Project (HOA)', null],
+  ['hoaAmen', 'HOA amenities (common area)', 'Project (HOA)', 'ProjectInformation'],
+  ['landCommon', 'Site owned in common (no land owned)', 'Site', 'LandOwnedInCommon'],
   ['site', 'Site size', 'Site', 'SiteSize'],
   ['nbhd', 'Neighborhood name', 'Site', 'NeighborhoodName'],
   ['loc', 'Site influence (location)', 'Site', 'SiteInfluence'],
@@ -26,6 +36,9 @@ const ADJ_ROWS = [
   ['year', 'Year built', 'Dwelling', 'YearBuilt'],
   ['style', 'Design (style)', 'Dwelling', 'DwellingStyle'],
   ['attach', 'Attached / detached', 'Dwelling', 'AttachedOrDetached', 'attach'],
+  ['structure', 'Structure (low-rise, mid-rise, townhouse…)', 'Dwelling', null],
+  ['unitPos', 'Unit location (interior / corner / end)', 'Dwelling', 'CornerUnit', 'unitPos'],
+  ['floor', 'Floor (unit level)', 'Dwelling', 'LivingUnitFloorNumber'],
   ['energy', 'Energy efficient features', 'Dwelling', 'EnergyEfficientAndGreenFeatures'],
   ['beds', 'Bedrooms', 'Dwelling', 'LivingUnitBedroomCount', 'bed'],
   ['baths', 'Baths (full / half)', 'Dwelling', 'LivingUnitBathroomCount', 'bath'],
@@ -99,7 +112,8 @@ function tierGuess(J) { const G = G0(J); const P = startsNow(); { const o = type
   return v === null ? 'middle' : v >= P.highFrom ? 'high' : v < P.lowBelow ? 'low' : 'middle'; }
 function startsFor(J) { const G = G0(J); const P = startsNow(); const seg = G.seg || segGuess(J), tier = G.tier || tierGuess(J); const out = { ...(P.tiers[tier] || {}) }; out.usableAc = tier === 'condo' ? null : (P.usableAc || {})[seg]; return { seg, tier, rates: out }; }
 function startsBar(J) { const G = G0(J); const st = startsFor(J); const P = startsNow(); const tl = { high: `High (from ${money(P.highFrom)})`, middle: 'Middle', low: `Low (under ${money(P.lowBelow)})`, condo: 'Condo' };
-  return `<div class="starts"><b>My starting points</b>
+  const gm = gridMode(J);
+  return `<div class="starts"><label><b>Property type</b> <select data-gmode="1">${[['house', 'House'], ['condo', 'Condo'], ['pud', 'PUD']].map(([v, l]) => `<option value="${v}" ${v === gm ? 'selected' : ''}>${l}</option>`).join('')}</select></label> <b>My starting points</b>
     <select data-gseg="1">${Object.keys(P.usableAc).map(s => `<option ${s === st.seg ? 'selected' : ''}>${esc(s)}</option>`).join('')}</select>
     <select data-gtier="1">${ST_TIERS.map(t => `<option value="${t}" ${t === st.tier ? 'selected' : ''}>${esc(tl[t])}</option>`).join('')}</select>
     <button class="btn sm primary" data-act="starts-use">Use my starting points</button> <button class="btn sm" data-act="starts-edit">${app.startsEdit ? 'Close' : 'Edit my starting points'}</button>
@@ -115,6 +129,20 @@ function startsUse(J) { const G = G0(J); const st = startsFor(J); G.rateFrom = G
   return n; }
 
 RATES.aduHalf = ['$ per ADU / guest half bath', 'half baths in the ADU / guest house (1.5 baths = 1 full + 1 half)']; RATES.attach = ['$ detached over attached', 'a detached unit is one step above an attached one'];
+RATES.unitPos = ['$ corner / end unit over interior', 'a corner or end unit is one step above an interior unit'];
+/* ---- property type of the grid (her request, Oct 19 2026): condo and PUD lines; info lines she checks before UAD 3.6 is filled ---- */
+const GRID_INFO = { status: 'UAD 3.6', listPrice: 'UAD 3.6', dom: 'UAD 3.6', origList: 'not in UAD 3.6 – for your check', listDate: 'not in UAD 3.6 – for your check', lastRed: 'not in UAD 3.6 – for your check', cdom: 'not in UAD 3.6 – for your check', project: 'UAD 3.6', hoa: 'UAD 3.6 (monthly fee)' };
+const STRUCTURES = ['Low-rise', 'Mid-rise', 'High-rise', 'Townhouse / rowhouse', 'Semi-detached'];
+function gridMode(J) { const G = G0(J); if (G.mode) return G.mode; const o = typeof orderOf === 'function' ? orderOf(J) : null; const pt = String((o && o.propType) || '');
+  if (/condo/i.test(pt)) return 'condo'; if (/pud/i.test(pt)) return 'pud'; if (G.tier === 'condo' || (J.subject && J.subject.unit)) return 'condo'; return 'house'; }
+const landOwned = (J, F) => { const v = String(F.landCommon || '').trim(); if (v) return /^n/i.test(v); return gridMode(J) !== 'condo'; };   /* condo: site owned in common unless she says the unit owns land */
+function rowShown(row, J) { const id = row[0], m = gridMode(J);
+  if (['project', 'hoa', 'hoaAmen'].includes(id)) return m !== 'house';
+  if (id === 'landCommon') return m !== 'house';
+  if (['structure', 'unitPos', 'floor'].includes(id)) return m === 'condo';
+  if (m === 'condo') { if (['topo', 'pool', 'courts', 'adu', 'land'].includes(id)) return false;
+    if (['usable', 'site'].includes(id)) { const all = [subjFacts(J), ...usedComps(J).map(c => compFacts(c, J))]; return all.some(F => landOwned(J, F)); } }
+  return true; }
 RATES.bed = ['$ per bedroom (up to 3)', 'bedrooms above + below grade; a difference counts only up to 3 – buyers pay for a 3rd bedroom, not for more (living area covers the rest)'];
 const BED_CAP = 3;
 const capBeds = v => blank(v) ? null : Math.min(+v, BED_CAP);
@@ -130,10 +158,11 @@ function subjFacts(J) {
   const I = J.subject.insp || {}, T = G0(J).subj, crs = J.subject.crs || {};
   const f = { price: '', ppsf: '', src: 'Inspection ' + (I.inspDate ? showDate(I.inspDate) : ''), prox: '', terms: '', conc: '', contract: '', sale: '', dom: '',
     site: I.siteSf || num(crs.lotSf) || null, usable: I.usableAc ?? null, loc: I.loc || '', view: I.view || '', topo: I.topo || '', nbhd: I.nbhd || '', land: I.land || '',
-    style: I.style || '', attach: I.attach || '', year: I.year || num(crs.yearBuilt) || null, q: I.q || '', c: I.c || '', rooms: I.rooms ?? null, beds: I.beds ?? null, full: I.full ?? null, half: I.half ?? null,
+    style: I.style || '', attach: I.attach || '', status: '', listPrice: '', origList: '', listDate: '', lastRed: '', cdom: '', project: I.project || '', hoa: I.hoa ?? null, hoaAmen: I.hoaAmen || '', landCommon: '', structure: I.structure || '', unitPos: I.unitPos || '', floor: I.floor ?? null, year: I.year || num(crs.yearBuilt) || null, q: I.q || '', c: I.c || '', rooms: I.rooms ?? null, beds: I.beds ?? null, full: I.full ?? null, half: I.half ?? null,
     gla: I.gla ?? null, bsmt: I.bsmt ?? null, garage: I.garage ?? null, energy: I.energy || '', pool: I.pool || '', courts: I.courts || '', porch: I.porch || '', adu: I.adu || '', other: I.other || '' };
   Object.entries(T).forEach(([k, v]) => { if (!blank(v)) f[k] = v; });
   f._fine = { q: fineOf(J, 'subj', 'q'), c: fineOf(J, 'subj', 'c') };
+  f._own = landOwned(J, f); if (blank(f.landCommon)) f.landCommon = f._own ? 'No' : 'Yes';
   return f;
 }
 function compFacts(c, J) {
@@ -141,19 +170,21 @@ function compFacts(c, J) {
   const F0 = { price: num(g('salePrice')), src: g('mls') ? 'MLS ' + g('mls') : (c.src.cort.length ? 'CORT' : c.src.arch.length ? 'Your archive' : ''), prox: px ? px.mi.toFixed(2) + ' mi ' + px.dir.replace(/([a-z])([A-Z])/, '$1 $2') : '',
     terms: g('financing') || '', conc: num(g('concessions')), contract: g('contractDate') || '', sale: g('saleDate') || '', dom: g('dom'),
     site: num(g('siteSf')), usable: acOf(num(g('usableSf'))), loc: [g('locRating'), g('locFactors')].filter(Boolean).join(': '), view: [g('viewRating'), g('viewTypes')].filter(Boolean).join(': '),
-    topo: g('topo') || '', nbhd: g('nbhd') || '', land: g('landscaping') || '', style: g('style') || '', attach: g('attach') || '', year: num(g('yearBuilt')), q: g('quality') || '', c: g('condition') || '',
+    topo: g('topo') || '', nbhd: g('nbhd') || '', land: g('landscaping') || '', style: g('style') || '', attach: g('attach') || '', status: g('status') || '', listPrice: num(g('listPrice')), origList: num(g('origList')), listDate: g('listDate') || '', lastRed: g('lastRed') || g('lpcDate') || ((g('priceChanges') || []).slice(-1)[0] || {}).date || '', cdom: num(g('cdom')), project: g('project') || '', hoa: num(g('hoa')), hoaAmen: g('hoaAmen') || '', landCommon: g('landCommon') || '', structure: g('structure') || '', unitPos: g('unitPos') || '', floor: g('floor') ?? null, year: num(g('yearBuilt')), q: g('quality') || '', c: g('condition') || '',
     rooms: num(g('rooms')), beds: num(g('beds')), full: num(g('full')), half: num(g('half')), gla: num(g('gla')), bsmt: num(g('bsmtFin')), garage: num(g('garage')), energy: g('energy') || '',
     pool: [yes(g('pool')) ? 'Pool' : '', yes(g('spa')) ? 'Spa' : ''].filter(Boolean).join(', ') || (g('pool') && !yes(g('pool')) ? 'None' : ''), courts: [yes(g('tennis')) ? 'Tennis court' : '', yes(g('sport')) ? 'Sport court' : ''].filter(Boolean).join(', '), porch: g('porch') || '', adu: [g('adu'), g('guest'), g('accessory')].filter(Boolean).join('; '),
     other: [g('horse') ? 'Horse facilities' : ''].filter(Boolean).join(', '), _id: c.id, aduSf: g('aduSf'), aduBaths: g('aduBaths') };
   F0._fine = { q: fineOf(J, c.id, 'q'), c: fineOf(J, c.id, 'c') };
   if (g('viewRange') && F0.view && !/limited|panoram/i.test(F0.view)) F0.view += ' – ' + g('viewRange');
   if (!blank(F0.aduSf) && F0.aduSf > 0) F0.adu = [F0.adu && F0.adu !== 'None' ? F0.adu : 'Living outbuilding', int(F0.aduSf) + ' sf', F0.aduBaths ? F0.aduBaths + ' bath' : ''].filter(Boolean).join(', ');
-  F0.beds = blank(F0.beds) ? null : (+F0.beds) + (+(g('bgBeds') || 0)); F0.bedsBg = +(g('bgBeds') || 0); return F0;
+  F0.beds = blank(F0.beds) ? null : (+F0.beds) + (+(g('bgBeds') || 0)); F0.bedsBg = +(g('bgBeds') || 0);
+  F0._own = landOwned(J, F0); if (blank(F0.landCommon)) F0.landCommon = F0._own ? 'No' : 'Yes';
+  return F0;
 }
 function showFact(k, v) {
   if (blank(v) || v === '') return '';
-  if (['price', 'conc'].includes(k)) return money(v);
-  if (['contract', 'sale'].includes(k)) return showDate(v);
+  if (['price', 'conc', 'listPrice', 'origList', 'hoa'].includes(k)) return money(v);
+  if (['contract', 'sale', 'listDate', 'lastRed'].includes(k)) return showDate(v);
   if (k === 'site') return fmt(FIELD.siteSf, v);
   if (k === 'usable') return (+v).toFixed(2) + ' ac';
   if (['gla', 'bsmt'].includes(k)) return int(v);
@@ -176,6 +207,7 @@ function rateAmount(row, S, C, J) {
   if (key === 'usableAc') { const dd = d(S.usable, C.usable); x = dd === null ? null : dd * r; }
   if (key === 'bed') { const dd = d(capBeds(S.beds), capBeds(C.beds)); x = dd === null ? null : dd * r; }
   if (key === 'bath') { const df = d(S.full, C.full), dh = d(S.half || 0, C.half || 0); const rh = num(R.halfBath); x = df === null ? null : df * r + (dh || 0) * (rh || r / 2); }
+  if (key === 'unitPos') { const a = goodness('unitPos', S), b = goodness('unitPos', C); x = a === null || b === null ? null : (a - b) * r; }
   if (key === 'attach') { const a = goodness('attach', S), b = goodness('attach', C); x = a === null || b === null ? null : (a - b) * r; }
   if (key === 'space') { const dd = d(S.garage, C.garage); x = dd === null ? null : dd * r; }
   if (key === 'timePct') { const eff = J.subject.eff; if (!C.sale || !eff || !C.price) return null; const m = monthsBetween(C.sale, eff); x = m === null ? null : C.price * r / 100 * m; }
@@ -188,7 +220,7 @@ function cellAmount(J, c, row) {
 function compTotals(J, c) {
   const C = compFacts(c, J); let net = 0, gross = 0, lines = 0;
   // order as on the 3.6 grid (D-1 sample): Add Other rows first, then site, dwelling, units, quality/condition, amenities
-  ADJ_ROWS.filter(r => r[3]).sort((x, y) => (y[3] === 'OTHER') - (x[3] === 'OTHER')).forEach(r => { const a = cellAmount(J, c, r).v; if (a) { net += a; gross += Math.abs(a); lines++; } });
+  ADJ_ROWS.filter(r => r[3] && rowShown(r, J)).sort((x, y) => (y[3] === 'OTHER') - (x[3] === 'OTHER')).forEach(r => { const a = cellAmount(J, c, r).v; if (a) { net += a; gross += Math.abs(a); lines++; } });
   const price = C.price || 0; return { price, net, gross, lines, adj: price + net, netPct: price ? net / price * 100 : 0, grossPct: price ? gross / price * 100 : 0, adjPsf: C.gla ? (price + net) / C.gla : null };
 }
 
@@ -199,10 +231,10 @@ function gridHTML(J) {
   const G = G0(J), S = subjFacts(J); const tot = used.map(c => compTotals(J, c)); const totAll = usedAll.map(c => compTotals(J, c));
   const inspNote = J.subject.insp ? `Subject from your inspection (${esc(J.subject.insp.file || 'workfile')}).` : 'Subject: drop your iPad <b>Workfile package</b> (.zip) on this page to fill the subject column from your inspection, or type the subject values in the grid.';
   let sec = '';
-  const rows = ADJ_ROWS.filter(WB_ROWS).map(row => {
+  const rows = ADJ_ROWS.filter(WB_ROWS).filter(r => rowShown(r, J)).map(row => {
     const [id, label, section, type] = row; const head = section !== sec ? `<tr class="grp"><th colspan="${2 + used.length}">${esc(section)}</th></tr>` : ''; sec = section;
     const sv = id === 'baths' ? [S.full, S.half].every(blank) ? '' : `${S.full ?? '–'} / ${S.half ?? 0}` : showFact(id, S[id]);
-    const subjCell = ['price', 'ppsf', 'src', 'prox', 'dom', 'terms', 'conc', 'contract', 'sale'].includes(id) ? `<td class="subj">${esc(sv)}</td>`
+    const subjCell = ['price', 'ppsf', 'src', 'prox', 'dom', 'terms', 'conc', 'contract', 'sale', 'status', 'listPrice', 'origList', 'listDate', 'lastRed', 'cdom'].includes(id) ? `<td class="subj">${esc(sv)}</td>`
       : `<td class="subj"><input class="txt sm" data-gsubj="${id}" value="${esc(blank(G.subj[id]) ? '' : G.subj[id])}" placeholder="${esc(sv || (id === 'usable' ? 'Measure it' : id === 'adu' ? 'e.g. Guest house 450 sf 1 bath' : ''))}">${id === 'q' || id === 'c' ? fineSel('subj', id, J) : id === 'view' ? vtSel('subj', J, S.view) : ''}</td>`;
     const cells = used.map(c => { const C = compFacts(c, J);
       let shown = id === 'beds' && C.bedsBg ? `${C.beds} (${C.bedsBg} below grade)` : id === 'baths' ? ([C.full, C.half].every(blank) ? '' : `${C.full ?? '–'} / ${C.half ?? 0}`) : id === 'ppsf' ? (C.price && C.gla ? money(C.price / C.gla) : '') : showFact(id, C[id]);
@@ -216,7 +248,7 @@ function gridHTML(J) {
     const bedAsk = id === 'beds' && blank(G.rates.bed) ? used.filter(c => { const C = compFacts(c, J); const a = capBeds(S.beds), b = capBeds(C.beds); return a !== null && b !== null && a !== b && blank((G.cells[c.id] || {}).beds); }) : [];
     const rk = row[4]; const rate = rk ? [].concat(rk === 'bath' ? ['bath', 'halfBath'] : rk).map(k => `<div class="grate"><label title="${esc(RATES[k][1])}">${esc(RATES[k][0])} <input class="txt xs" data-grate="${k}" value="${esc(blank(G.rates[k]) ? '' : G.rates[k])}" inputmode="decimal"></label>${G.rateFrom && G.rateFrom[k] && !blank(G.rates[k]) ? `<small class="from">${/ · /.test(G.rateFrom[k]) ? `from your starting points (${esc(G.rateFrom[k])})` : 'from ' + esc(G.rateFrom[k])}</small>` : ''}</div>`).join('') : '';
     const ask = bedAsk.length ? `<div class="bedask">${bedAsk.map(c => `Comp ${c.use} has ${compFacts(c, J).beds} bedroom${compFacts(c, J).beds === 1 ? '' : 's'}`).join(', ')} – what bedroom adjustment do you want? Type it per bedroom above, or in the comp's box.</div>` : '';
-    return head + `<tr${ask ? ' class="asking"' : ''}><th>${esc(label)}${rate}${ask}</th>${subjCell}${cells}</tr>`;
+    return head + `<tr${ask ? ' class="asking"' : ''}${GRID_INFO[id] ? ' class="info"' : ''}><th>${esc(label)}${GRID_INFO[id] ? `<br><small class="muted">${esc(GRID_INFO[id])}</small>` : ''}${id === 'structure' ? '<br><small class="muted">' + STRUCTURES.join(' · ') + '</small>' : id === 'unitPos' ? '<br><small class="muted">Interior · Corner · End</small>' : id === 'landCommon' ? '<br><small class="muted">Yes = no land owned · No = the unit owns land</small>' : ''}${rate}${ask}</th>${subjCell}${cells}</tr>`;
   }).join('');
   const sumRow = (label, fn, cls = '') => `<tr class="tot ${cls}"><th>${label}</th><td></td>${used.map((c, i) => `<td>${fn(tot[i], c)}</td>`).join('')}</tr>`;
   const adjs = totAll.map(t => t.adj).filter(Boolean); const lo = Math.min(...adjs), hi = Math.max(...adjs);
@@ -309,6 +341,8 @@ function goodness(k, F) {   // a number where higher = better, or null when it c
     case 'gla': case 'bsmt': case 'site': case 'garage': return n(F[k]);
     case 'beds': return capBeds(F.beds);   // up to 3: more bedrooms are covered by living area
     case 'usable': return n(F.usable);
+    case 'landCommon': return F._own === undefined ? null : (F._own ? 1 : 0);   /* owned land is one step above land in common */
+    case 'unitPos': { const t = String(F.unitPos || ''); if (!t.trim()) return null; return /corner|end/i.test(t) ? 1 : /interior|inside|middle/i.test(t) ? 0 : null; }
     case 'attach': { const t = String(F.attach || ''); if (!t.trim()) return null; return /detach/i.test(t) ? 1 : /attach|row|semi|town/i.test(t) ? 0 : null; }
     case 'baths': return blank(F.full) ? null : (+F.full) + (+F.half || 0) / 2;
     case 'q': return ratingPos(F.q, F._fine ? F._fine.q : 'mid'); case 'c': return ratingPos(F.c, F._fine ? F._fine.c : 'mid');
@@ -345,6 +379,8 @@ function gridReview(J) {
     const rs = per.filter(Boolean); if (rs.length > 1) { const v = rs.map(x => Math.abs(x.rate)); const lo = Math.min(...v), hi = Math.max(...v);
       if (lo > 0 && hi / lo > 1.5) add(`cons:${id}`, 'Consistency', `${row[1]}: the amount per ${REVIEW_ROWS[id]} differs between comps (${rs.map(x => x.name + ' ' + money(Math.abs(x.rate))).join(', ')}). Fine if the comps differ in a way that explains it – say why.`); }
   });
+  if (gridMode(J) === 'condo' && blank(G.subj.landCommon)) add('condo:land', 'Check', 'Condo: the subject is set as site owned in common (no land owned), as for almost all condos here. If this unit owns land, type No on the "Site owned in common" line – the site size and usable lot lines then show.');
+  if (gridMode(J) === 'condo') [['subj', 'Subject', S], ...used.map(c => [c.id, 'Comp ' + c.use, compFacts(c, J)])].forEach(([who, name, F]) => { if (/attach/i.test(String(F.attach || '')) && !/detach/i.test(String(F.attach || '')) && blank(F.structure)) add(`struct:${who}`, 'Check', `${name}: attached – type its structure (low-rise, mid-rise, high-rise, townhouse or semi-detached). UAD 3.6 asks for it on attached units.`); });
   // view: a tier only read from the words (her ACI archive and UAD 2.6 have no view grade) – she decides the degree of view
   [['subj', 'Subject', S.view], ...used.map(c => [c.id, 'Comp ' + c.use, compFacts(c, J).view])].forEach(([who, name, v]) => { if (blank(v)) return; const I = vtInfo(J, who, v);
     if (I.src === null || (I.src === 'read' && I.t > 0)) add(`vt:${who}`, 'View tier', `${name} – view "${v}": the degree of view is only ${I.src === null ? 'unknown' : 'read from the words (' + (VIEW_TIERS.find(x => x[0] === I.t) || [, ''])[1] + ')'}. Decide it (limited, average or excellent/panoramic) and pick it in the box under View – it is kept for this address next time.`); });
@@ -399,9 +435,9 @@ async function ingestInspection(files, name) {
 function gridAdjustXML(CMP, c, job) {
   const G = job.grid; if (!G) return null; const box = X(CMP, 'COMPARABLE_ADJUSTMENTS'); const C = compFacts(c, job); let any = false;
   // order as on the 3.6 grid (D-1 sample): Add Other rows first, then site, dwelling, units, quality/condition, amenities
-  ADJ_ROWS.filter(r => r[3]).sort((x, y) => (y[3] === 'OTHER') - (x[3] === 'OTHER')).forEach(r => { const a = cellAmount(job, c, r).v;
+  ADJ_ROWS.filter(r => r[3] && rowShown(r, job)).sort((x, y) => (y[3] === 'OTHER') - (x[3] === 'OTHER')).forEach(r => { const a = cellAmount(job, c, r).v;
     if (r[3] === 'OTHER') { const desc = otherDesc(r, C); if (!desc && !a) return; const e = X(box, 'COMPARABLE_ADJUSTMENT'); XV(e, 'AdditionalComparisonLineItemDescription', desc || null); XV(e, 'AdditionalComparisonLineItemIdentifier', r[5]); XV(e, 'ComparableAdjustmentAmount', a || 0); XV(e, 'ComparableAdjustmentType', 'SalesComparableAdditionalAdjustableComparisonItem'); any = true; return; }
-    if (a === null || a === undefined) return; const e = X(box, 'COMPARABLE_ADJUSTMENT'); XV(e, 'ComparableAdjustmentAmount', Math.round(a)); XV(e, 'ComparableAdjustmentType', r[3]); any = true; });
+    if (a === null || a === undefined) return; const e = X(box, 'COMPARABLE_ADJUSTMENT'); XV(e, 'ComparableAdjustmentAmount', Math.round(a)); XV(e, 'ComparableAdjustmentType', r[0] === 'unitPos' && /town|row/i.test(String(C.structure || '') + String(subjFacts(job).structure || '')) ? 'RowhouseTownhouseEndUnit' : r[3]); any = true; });
   if (!any) CMP.kids = CMP.kids.filter(k => k !== box);
   return compTotals(job, c);
 }

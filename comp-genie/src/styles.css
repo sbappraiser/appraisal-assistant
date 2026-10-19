@@ -130,3 +130,8 @@ table.grid tbody th:first-child,table.grid thead th:first-child{position:sticky;
 table.grid thead th:first-child{z-index:5}table.grid tr.grp th:first-child{background:var(--teal-l)}
 table.grid td input.txt{width:112px;min-width:0;box-sizing:border-box}table.grid td select.fine{max-width:100%}table.grid thead th[data-wbcol]{min-width:118px;width:130px}
 table.grid.wb input.fact{width:112px;min-width:0}table.grid td select.fine{width:112px}
+/* vertical lines between the comps (her request, Oct 19 2026) */
+table.grid td+td,table.grid th+th{border-left:1px solid #c9d1da}table.grid td.subj{border-right:2px solid #c9d1da}
+table.grid tr.info th,table.grid tr.info td{background:#fafbfc}
+table.grid tbody th:first-child,table.grid thead th:first-child{width:230px;max-width:250px;white-space:normal}
+table.grid{min-width:0;width:auto}table.grid td.subj{width:140px}

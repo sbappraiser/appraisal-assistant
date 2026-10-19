@@ -17,6 +17,10 @@ const has = (s, re) => re.test(String(s || ''));
 
 /* ---- value maps to UAD 3.6 enumerations ---- */
 function uadStatus(s) { s = String(s || ''); return /Closed|Sold/i.test(s) ? 'SettledSale' : /Pending|Under Contract|Contingent/i.test(s) ? 'Pending' : /Active/i.test(s) ? 'Active' : s ? 'OffMarket' : ''; }
+function uadStructure(s) { s = String(s || ''); return /town|row/i.test(s) ? 'RowhouseTownhouse' : /semi/i.test(s) ? 'SemiDetached' : /high/i.test(s) ? 'Highrise' : /mid/i.test(s) ? 'Midrise' : /low|garden|flat/i.test(s) ? 'Lowrise' : s ? 'Other' : null; }
+function uadProjAmen(s) { const out = []; const add = (t, other) => { if (!out.some(x => x.t === t && x.other === other)) out.push({ t, other }); };
+  String(s || '').split(/[;,]/).map(x => x.trim()).filter(Boolean).forEach(x => { const M = [[/spa|hot ?tub|jacuzzi/i, 'IngroundSpa'], [/pool/i, 'IngroundPool'], [/tennis|pickle|sport|court/i, 'SportsCourt'], [/club ?house/i, 'Clubhouse'], [/gym|fitness|exercise/i, 'FitnessArea'], [/gate/i, 'GatedCommunity'], [/elevator/i, 'Elevator'], [/laundry/i, 'SharedLaundryFacilities'], [/play/i, 'Playground'], [/storage/i, 'UnitStorage'], [/sauna/i, 'Sauna'], [/beach/i, 'Beach'], [/recreat|rec room/i, 'RecreationArea'], [/ev charg/i, 'ElectricVehicleChargingStation'], [/grounds|landscap/i, 'GroundsMaintenance'], [/trash/i, 'TrashRemoval'], [/^none$/i, 'None']].find(([re]) => re.test(x));
+    if (M) add(M[1]); else add('Other', x.slice(0, 33)); }); return out; }
 function uadSaleType(s) { return ({ ArmLth: 'TypicallyMotivated', Listing: 'TypicallyMotivated', REO: 'REOSale', Short: 'ShortSale', Estate: 'EstateSale', CrtOrd: 'CourtOrderedNonForeclosureSale', NonArm: 'SaleBetweenRelatedParties', Relo: 'RelocationSale', Trust: 'EstateSale' })[s] || (s ? 'Other' : 'TypicallyMotivated'); }
 function uadFinancing(s) {
   s = String(s || ''); if (!s) return {};
@@ -85,6 +89,8 @@ function buildCompXML(PROPS, RELS, DSS, c, n, job) {
   const en = String(g('energy') || ''); if (/solar|photovolt|geotherm|wind\s*(turbine|power|generator|mill)/i.test(en)) { const e = X(P, 'ENERGY_EFFICIENCY_AND_GREEN'); XV(X(e, 'ENERGY_EFFICIENCY_AND_GREEN_DETAIL'), 'RenewableEnergyComponentExistsIndicator', 'true'); XV(X(X(e, 'RENEWABLE_ENERGY_COMPONENTS'), 'RENEWABLE_ENERGY_COMPONENT'), 'RenewableEnergyComponentType', /geotherm/i.test(en) ? 'Geothermal' : /wind\s*(turbine|power|generator|mill)/i.test(en) ? 'WindTurbine' : 'Solar'); }
   // HAZARD (from CRS flood zone) goes in SITE below
   // IMPROVEMENTS
+  const mode = gridMode(job), CF = compFacts(c, job);   /* condo / PUD facts from her grid */
+  if (mode !== 'house' && num(CF.hoa)) { const d = X(X(X(X(P, 'HOMEOWNERS_ASSOCIATIONS'), 'HOMEOWNERS_ASSOCIATION'), 'ASSOCIATION_CHARGES'), 'ASSOCIATION_CHARGE'); const dd = X(d, 'ASSOCIATION_CHARGE_DETAIL'); XV(dd, 'AssociationChargeAmount', Math.round(num(CF.hoa))); XV(dd, 'AssociationChargeType', 'AssociationDues'); }
   const imp = X(X(P, 'IMPROVEMENTS'), 'IMPROVEMENT'); const idt = X(imp, 'IMPROVEMENT_DETAIL'); const cool = uadCool(g('heatCool'));
   if (cool) XV(idt, 'CoolingSystemExistsIndicator', cool.exists ? 'true' : 'false');
   XV(idt, 'ImprovementType', 'Dwelling'); XV(idt, 'PropertyStructureBuiltYear', g('yearBuilt')); if (g('yearBuilt')) XV(idt, 'PropertyStructureBuiltYearEstimatedIndicator', 'false');
@@ -92,9 +98,12 @@ function buildCompXML(PROPS, RELS, DSS, c, n, job) {
   const ar = X(pu, 'PROPERTY_UNIT_AREA'); const bs = num(g('bsmtSf')), bf = num(g('bsmtFin'));
   if (bs && bs > (bf || 0)) XV(ar, 'UnitBelowGradeUnfinishedAreaMeasure', bs - (bf || 0), SQFT);
   XV(ar, 'UnitStandardAboveGradeFinishedAreaMeasure', gla, SQFT); XV(ar, 'UnitStandardBelowGradeFinishedAreaMeasure', bs ? (bf || 0) : (gla ? 0 : null), SQFT);
-  const ud = X(pu, 'PROPERTY_UNIT_DETAIL'); XV(ud, 'AccessoryDwellingUnitIndicator', 'false'); XV(ud, 'BedroomCount', g('beds')); XV(ud, 'FullBathroomCount', g('full')); XV(ud, 'HalfBathroomCount', g('half'));
+  const ud = X(pu, 'PROPERTY_UNIT_DETAIL'); XV(ud, 'AccessoryDwellingUnitIndicator', 'false'); XV(ud, 'BedroomCount', g('beds'));
+  const stru = uadStructure(CF.structure), isAtt = /attach/i.test(String(g('attach') || '')) && !/detach/i.test(String(g('attach') || ''));
+  if (mode === 'condo' && /rise/.test(stru || '') && !blank(CF.unitPos)) XV(ud, 'CornerUnitIndicator', /corner|end/i.test(CF.unitPos) ? 'true' : 'false'); if (mode === 'condo' && !blank(CF.floor)) XV(ud, 'FloorIdentifier', String(CF.floor).slice(0, 10)); XV(ud, 'FullBathroomCount', g('full')); XV(ud, 'HalfBathroomCount', g('half'));
   const st = X(imp, 'STRUCTURE'); const sty = uadStyle(g('style')); if (sty) { const a = X(st, 'ARCHITECTURAL_DESIGN'); XV(a, 'ArchitecturalDesignCategoryType', sty.t); if (sty.other) XV(a, 'ArchitecturalDesignCategoryTypeOtherDescription', sty.other); }
-  XV(X(st, 'STRUCTURE_DETAIL'), 'LivingUnitCount', 1);
+  if (isAtt && stru) { const a = st.kids.find(k => k.tag === 'ARCHITECTURAL_DESIGN') || X(st, 'ARCHITECTURAL_DESIGN'); XV(a, 'StructuralDesignType', stru); }
+  { const sd = X(st, 'STRUCTURE_DETAIL'); XV(sd, 'LivingUnitCount', 1); if (stru === 'RowhouseTownhouse' && !blank(CF.unitPos)) XV(sd, 'RowhouseTownhouseEndUnitIndicator', /end|corner/i.test(CF.unitPos) ? 'true' : 'false'); }
   const heats = uadHeat(g('heatCool')); if (heats.length || cool) { const sy = X(imp, 'SYSTEM');
     if (cool && cool.exists) XV(X(X(sy, 'COOLING_SYSTEMS'), 'COOLING_SYSTEM'), 'CoolingSystemType', cool.type);
     if (heats.length) { const hs = X(sy, 'HEATING_SYSTEMS'); heats.forEach(h => { const e = X(hs, 'HEATING_SYSTEM'); XV(e, 'HeatingFuelType', uadFuel(g('heatCool')) || null); XV(e, 'HeatingSystemType', h); if (h === 'Other') XV(e, 'HeatingSystemTypeOtherDescription', 'Wall furnace'); }); } }
@@ -111,6 +120,7 @@ function buildCompXML(PROPS, RELS, DSS, c, n, job) {
   if (yes(g('tennis')) || yes(g('sport'))) addA('OutdoorAccessories', 'SportsCourt'); if (yes(g('horse'))) addA('OutdoorAccessories', 'OutdoorRidingRing');
   const por = String(g('porch') || ''); [['Patio', /patio|terrace|loggia|lgga|trrc/i], ['Porch', /porch/i], ['Deck', /deck/i], ['Balcony', /balcon/i], ['Gazebo', /gazebo/i]].forEach(([t, re]) => { if (re.test(por)) addA('OutdoorLiving', t); });
   const catKeys = Object.keys(cats);
+  if (mode !== 'house' && (CF.project || CF.hoaAmen)) { const PJ = X(P, 'PROJECT'); const am = uadProjAmen(CF.hoaAmen); if (am.length) { const PA = X(PJ, 'PROJECT_AMENITIES'); am.forEach(a => { const e = X(PA, 'PROJECT_AMENITY'); XV(e, 'AmenityType', a.t); if (a.other) XV(e, 'AmenityTypeOtherDescription', a.other); }); } if (CF.project) XV(X(PJ, 'PROJECT_DETAIL'), 'ProjectName', String(CF.project).slice(0, 100)); }
   if (catKeys.length) { const AC = X(X(P, 'PROPERTY_AMENITY'), 'AMENITY_CATEGORIES'); catKeys.forEach(k => { const cat = X(AC, 'AMENITY_CATEGORY'); const A = X(cat, 'AMENITIES'); cats[k].forEach(t => XV(X(X(A, 'AMENITY'), 'AMENITY_DETAIL'), 'AmenityType', t)); XV(X(cat, 'AMENITY_CATEGORY_DETAIL'), 'AmenityCategoryType', k); }); }
   // PROPERTY_DETAIL
   const pd = X(P, 'PROPERTY_DETAIL'); const aduTxt = String(g('adu') || ''); const aduN = /2 ADUs/.test(aduTxt) ? 2 : /^ADU/i.test(aduTxt) ? 1 : 0;
@@ -120,7 +130,7 @@ function buildCompXML(PROPS, RELS, DSS, c, n, job) {
   XV(pd, 'OverallConditionRatingCode', cond && cond[0]); XV(pd, 'OverallQualityRatingCode', qual && qual[0]);
   const prior = priorSales(c).filter(s => s.monthsBefore > 0 && s.monthsBefore <= 12 && s.type === 'Sale');
   XV(pd, 'PriorSalesOrTransfersIndicator', prior.length ? 'true' : 'false'); XV(pd, 'PropertyAmenityExistsIndicator', catKeys.length ? 'true' : 'false');
-  const inProj = !blank(g('hoa')) && +g('hoa') > 0; XV(pd, 'PropertyEstateType', 'FeeSimple'); XV(pd, 'PropertyInProjectIndicator', inProj ? 'true' : 'false'); XV(pd, 'PUDIndicator', inProj && /detach/i.test(g('attach') || '') ? 'true' : 'false');
+  const inProj = !blank(g('hoa')) && +g('hoa') > 0; XV(pd, 'PropertyEstateType', 'FeeSimple'); XV(pd, 'PropertyInProjectIndicator', inProj || mode !== 'house' ? 'true' : 'false'); XV(pd, 'PUDIndicator', inProj && /detach/i.test(g('attach') || '') ? 'true' : 'false');
   // SALES_CONTRACTS
   const sc = X(X(X(P, 'SALES_CONTRACTS'), 'SALES_CONTRACT'), 'SALES_CONTRACT_DETAIL'); const conc = num(g('concessions'));
   if (status === 'SettledSale') { if (conc !== null) { XV(sc, 'SalesConcessionAmountKnownIndicator', 'true'); XV(sc, 'SalesConcessionIndicator', conc > 0 ? 'true' : 'false'); } else if (/^yes/i.test(g('concessionsYN') || '')) { XV(sc, 'SalesConcessionAmountKnownIndicator', 'false'); XV(sc, 'SalesConcessionIndicator', 'true'); } }
@@ -134,7 +144,7 @@ function buildCompXML(PROPS, RELS, DSS, c, n, job) {
   // SITE
   const SI = X(P, 'SITE'); const fz = String(V(c, 'fema') || '');
   if (fz) XV(X(X(SI, 'HAZARD_ZONES'), 'HAZARD_ZONE'), 'HazardZoneType', /^(A|V)/.test(fz) ? 'FEMASpecialFloodHazardArea' : 'None');
-  XV(X(SI, 'SITE_DETAIL'), 'LandOwnedInCommonIndicator', 'false');
+  XV(X(SI, 'SITE_DETAIL'), 'LandOwnedInCommonIndicator', CF._own ? 'false' : 'true');
   const infl = uadInfluences(g('locFactors')); if (infl.length) { const S = X(SI, 'SITE_INFLUENCES'); infl.forEach(i => { const d = X(X(S, 'SITE_INFLUENCE'), 'SITE_INFLUENCE_DETAIL'); XV(d, 'SiteInfluenceType', i.t); if (i.other) XV(d, 'SiteInfluenceTypeOtherDescription', i.other); }); }
   const site = num(g('siteSf')); if (site) XV(X(SI, 'SITE_SIZE_LAYOUT'), 'LotSizeAreaMeasure', site >= 43560 ? (site / 43560).toFixed(2) : Math.round(site), { AreaUnitOfMeasureType: site >= 43560 ? 'Acres' : 'SquareFeet' });
   const views = uadViews(g('viewTypes')); if (views.length) { const SV = X(SI, 'SITE_VIEWS'); const rng = /limited|partial/i.test(g('viewRange') || '') ? 'Partial' : /panoramic|full/i.test(g('viewRange') || '') ? 'Full' : null; views.forEach(v => { const e = X(SV, 'SITE_VIEW'); XV(e, 'ViewRangeType', rng); XV(e, 'ViewType', v.t); if (v.other) XV(e, 'ViewTypeOtherDescription', v.other); }); }

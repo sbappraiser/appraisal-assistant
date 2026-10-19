@@ -113,7 +113,7 @@ function mlsCanon(raw, G, g) {
   return {
     _src: 'mls', mls: g('Listing Number'), addr: [g('Street #'), titleCase(g('Street Name'))].filter(Boolean).join(' '), unit: g('Unit/Space #'), zip: g('Postal Code'), apn: g('Parcel Number'),
     city: g('City') ? titleCase(g('City')) : '',
-    status, listPrice: num(g('Price')), origList: num(g('Original List Price')), listDate: isoDate(g('Begin Date')),
+    status, listPrice: num(g('Price')), origList: num(g('Original List Price')), listDate: isoDate(g('Begin Date')), lastRed: isoDate(g('Price Change Date', 'Last Price Change Date', 'Price Change Timestamp')) || '',
     contractDate: isoDate(g('Under Contract Date')), saleDate: isoDate(g('Sold Date', 'COE')), salePrice: num(g('Sold Price')),
     dom: num(g('Days On Market')), cdom: num(g('Cumulative DOM')), financing: g('Financing'), concessions: num(g('Seller Concessions')),
     saleType, saleTypeNote: saleTypeTxt.join('; '),
@@ -138,6 +138,9 @@ function mlsCanon(raw, G, g) {
     tennis: has('Grounds/Landscaping', /Tennis/) ? 'Yes' : 'No', sport: has('Grounds/Landscaping', /Pickleball|Sport/) ? 'Yes' : 'No',
     porch: list('Patio and Porch Features'), accessory: list('Other Buildings'),
     hoa: num(g('Condo/CO-OP/PUD: Association Fee', 'Association Fee', 'HOA Fee')),
+    unitPos: has('Condo/CO-OP/PUD', /End Unit/i) ? 'End' : has('Condo/CO-OP/PUD', /Corner/i) ? 'Corner' : has('Condo/CO-OP/PUD', /Interior|Inside/i) ? 'Interior' : '',
+    hoaAmen: (G['Condo/CO-OP/PUD'] || []).filter(x => !/^(Attached|Detached|End Unit|Corner.*|Interior.*|Association Fee.*|\d.*)$/i.test(x)).join('; '),
+    project: g('Complex Name', 'Complex', 'Project Name', 'Condo/CO-OP/PUD: Complex Name'),
     lat: num(g('Geo Lat', 'Latitude')), lon: num(g('Geo Lon', 'Longitude')),
     remarks: g('Public Remarks'), privateRemarks: g('Private Remarks'), water: list('Water/Sewer'), roof: list('Roof'), foundation: list('Foundation'),
     remodel: [has('Amenities', /Remodeled Kitchen/) ? 'Remodeled kitchen' : '', has('Amenities', /Remodeled Bath/) ? 'Remodeled bath' : '', has('Condition', /Updated|Remodeled/) ? 'Updated/Remodeled' : ''].filter(Boolean).join('; '),

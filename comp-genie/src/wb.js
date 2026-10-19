@@ -38,7 +38,7 @@ function wbSlice(all) {
   const pages = Math.max(1, Math.ceil(all.length / WB.per)); if (WB.page >= pages) WB.page = pages - 1; if (WB.page < 0) WB.page = 0;
   return all.slice(WB.page * WB.per, WB.page * WB.per + WB.per);
 }
-const WB_ROWS = row => !wbLean() || row[3] || ['price', 'prox'].includes(row[0]);
+const WB_ROWS = row => !wbLean() || row[3] || ['price', 'prox'].includes(row[0]) || !!GRID_INFO[row[0]] || row[0] === 'structure';   /* her listing lines and HOA facts show in Workbook view too */
 const WB_NOEDIT = ['ppsf', 'src', 'prox'];
 /* a line's entry as text, for the subject or a comp (what "=" / "=2" copies) */
 function wbFactText(id, F) {
@@ -47,7 +47,7 @@ function wbFactText(id, F) {
   const v = F[id]; return blank(v) ? '' : String(v);
 }
 const WB_EDIT = { price: 'salePrice', sale: 'saleDate', contract: 'contractDate', conc: 'concessions', terms: 'financing', dom: 'dom', site: 'siteSf', topo: 'topo', nbhd: 'nbhd',
-  land: 'landscaping', style: 'style', year: 'yearBuilt', gla: 'gla', bsmt: 'bsmtFin', garage: 'garage', energy: 'energy', porch: 'porch', other: 'other', rooms: 'rooms', attach: 'attach' };
+  land: 'landscaping', style: 'style', year: 'yearBuilt', gla: 'gla', bsmt: 'bsmtFin', garage: 'garage', energy: 'energy', porch: 'porch', other: 'other', rooms: 'rooms', attach: 'attach', status: 'status', listPrice: 'listPrice', origList: 'origList', listDate: 'listDate', lastRed: 'lastRed', cdom: 'cdom', project: 'project', hoa: 'hoa', hoaAmen: 'hoaAmen', landCommon: 'landCommon', structure: 'structure', unitPos: 'unitPos', floor: 'floor' };
 /* write a typed (or copied) entry into the comp – her own values, kept apart from the sources like any edit */
 function wbFactSet(J, c, id, text) {
   const E = c.edit = c.edit || {}; const t = String(text || '').trim(); const n = s => num(String(s).replace(/[$,\s]/g, ''));
@@ -64,7 +64,7 @@ function wbFactSet(J, c, id, text) {
     case 'adu': { put('adu', t || null); const sf = t.match(/(\d[\d,]*)\s*(sf|sq)/i), ba = t.match(/(\d+(\.\d)?)\s*bath/i); put('aduSf', t === '' ? null : sf ? n(sf[1]) : (/^(no|none)$/i.test(t) ? 0 : null)); put('aduBaths', t === '' ? null : ba ? +ba[1] : 0); return; }
   }
   const k = WB_EDIT[id]; if (!k) return;
-  const f = FIELD[k] || {}; put(k, t === '' ? null : ['int', 'num', 'money'].includes(f.t) || ['siteSf', 'yearBuilt', 'gla', 'bsmtFin', 'garage', 'salePrice', 'concessions', 'dom'].includes(k) ? n(t) : t);
+  const f = FIELD[k] || {}; put(k, t === '' ? null : ['int', 'num', 'money'].includes(f.t) || ['siteSf', 'yearBuilt', 'gla', 'bsmtFin', 'garage', 'salePrice', 'concessions', 'dom', 'cdom', 'listPrice', 'origList', 'hoa'].includes(k) ? n(t) : ['listDate', 'lastRed'].includes(k) ? (isoDate(t) || t) : t);
 }
 /* "=" and "=N" in a comp's cell */
 function wbEquals(J, cid, rowId, v, isFact) {
