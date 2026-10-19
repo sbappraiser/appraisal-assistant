@@ -87,8 +87,14 @@ async function detectDocType(file) {
 
 /* ---------- add, retype, open, remove ---------- */
 let docBusy = false;
+/* a Windows shortcut (.lnk – Windows hides the extension) or an empty item is not a document: say so instead of keeping it (her "permits" shortcut, Oct 19 2026) */
+async function isShortcut(f) { if (/\.(lnk|url)$/i.test(f.name)) return true; if (f.size === 0) return true; if (f.size > 20000 || /\.[a-z0-9]{2,5}$/i.test(f.name)) return false;
+  try { const b = new Uint8Array(await f.slice(0, 4).arrayBuffer()); return b[0] === 0x4C && b[1] === 0 && b[2] === 0 && b[3] === 0; } catch (e) { return false; } }
 async function addDocs(fileList, forcedType) {
-  const files = [...fileList]; if (!files.length) return;
+  let files = [...fileList]; if (!files.length) return;
+  { const sc = []; for (const f of files) if (await isShortcut(f)) sc.push(f.name); if (sc.length) { files = files.filter(f => !sc.includes(f.name));
+      toast(`${sc.join(', ')}: ${sc.length === 1 ? 'this is a shortcut to a folder, not a document' : 'these are shortcuts, not documents'} – nothing was added for it. Open the folder itself, select its files (Ctrl+A) and drag them in, or use Choose a folder.`, 9000); }
+    if (!files.length) return; }
   if (docBusy) { toast('Still reading the last files…'); return; }
   docBusy = true; const said = [];
   try {
