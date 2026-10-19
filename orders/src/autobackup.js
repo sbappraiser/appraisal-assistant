@@ -30,7 +30,7 @@ async function abAllow() {
 async function abRun(force) {
   if (!AB.dir || AB.busy) return; if (AB.perm !== 'granted') { AB.perm = await AB.dir.queryPermission({ mode: 'readwrite' }).catch(() => 'prompt'); if (AB.perm !== 'granted') { abRender(); return; } }
   const today = todayISO(); if (!force && !AB.dirty && AB.last && AB.last.date === today) return;
-  if (!letters.some(realOrder) && !force) return;   // never write an empty backup over a good one
+  if (!letters.some(realOrder)) { if (force) toast('Nothing to back up yet – the first backup is saved as soon as you have an order.', 6000); abRender(); return; }   // never write an empty backup over a good one
   AB.busy = true;
   try {
     const B = await buildBackup();
@@ -56,15 +56,18 @@ async function abRestoreNewest() {
     if (!d) { if (!abSupported()) { $('#restoreFile').click(); return; } d = await window.showDirectoryPicker({ id: 'aa-backup', mode: 'readwrite', startIn: 'documents' }); }
     const names = []; for await (const [n, h] of d.entries()) if (h.kind === 'file' && /^Appraisal Assistant backup .*\.zip$/i.test(n)) names.push(n);
     if (!names.length) { toast('No "Appraisal Assistant backup" files in that folder.', 6000); return; }
-    names.sort().reverse(); const f = await (await d.getFileHandle(names[0])).getFile();
+    names.sort().reverse(); let f = null, nm = '';
+    for (const n of names) { const fl = await (await d.getFileHandle(n)).getFile();   // the newest backup that has orders in it (an empty one is skipped)
+      try { const z = await G.readZip(fl); const j = z.get('orders.json'); const o = j && JSON.parse(new TextDecoder().decode(j)); if (o && (o.letters || []).some(realOrder)) { f = fl; nm = n; break; } } catch (e) {} }
+    if (!f) { toast('The backups in that folder have no orders in them yet.', 6000); return; }
     AB.dir = d; await ODB.put('kv', { id: 'ab:dir', v: d }); AB.perm = await d.queryPermission({ mode: 'readwrite' }).catch(() => 'prompt');
-    toast('Restoring ' + names[0] + '…'); await restore(f); abRender();
+    toast('Restoring ' + nm + '…'); await restore(f); abRender();
   } catch (e) { if (e && e.name !== 'AbortError') toast('Could not restore: ' + (e.message || e), 6000); }
 }
 /* the card on the Home page */
 function abCardHTML() {
   const empty = !letters.some(realOrder);
-  const last = AB.last ? `Last backup <b>${h(longDate(AB.last.date))}</b> at ${h(new Date(AB.last.at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }))} – ${AB.last.orders} orders, ${AB.last.docs} documents${AB.last.jobs ? ', ' + AB.last.jobs + ' Comp genie assignments' : ''}` : '';
+  const last = AB.last && AB.last.orders ? `Last backup <b>${h(longDate(AB.last.date))}</b> at ${h(new Date(AB.last.at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }))} – ${AB.last.orders} orders, ${AB.last.docs} documents${AB.last.jobs ? ', ' + AB.last.jobs + ' Comp genie assignments' : ''}` : '';
   let body;
   if (!abSupported()) body = `<p class="help">Automatic backup works in Chrome or Edge on a computer. Use <b>Back up</b> at the top instead.</p>`;
   else if (!AB.dir) body = `<p class="help warnTxt"><b>Automatic backup is off.</b> Your orders live only in this browser – if Chrome clears its site data they are gone. Pick a folder once (a folder in <b>OneDrive</b> is best, so it is also off this computer) and a backup is saved there by itself every day you work.</p><div class="row"><button type="button" class="btn primary" id="abChoose">Choose a backup folder…</button></div>`;
