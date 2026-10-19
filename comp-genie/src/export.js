@@ -150,12 +150,14 @@ function buildCompXML(PROPS, RELS, DSS, c, n, job) {
   const site = num(g('siteSf')); if (site) XV(X(SI, 'SITE_SIZE_LAYOUT'), 'LotSizeAreaMeasure', site >= 43560 ? (site / 43560).toFixed(2) : Math.round(site), { AreaUnitOfMeasureType: site >= 43560 ? 'Acres' : 'SquareFeet' });
   const views = uadViews(g('viewTypes')); if (views.length) { const SV = X(SI, 'SITE_VIEWS'); const rng = /limited|partial/i.test(g('viewRange') || '') ? 'Partial' : /panoramic|full/i.test(g('viewRange') || '') ? 'Full' : null; views.forEach(v => { const e = X(SV, 'SITE_VIEW'); XV(e, 'ViewRangeType', rng); XV(e, 'ViewType', v.t); if (v.other) XV(e, 'ViewTypeOtherDescription', v.other); }); }
   // DATA_SOURCES
-  const ds = (type, id) => { const l = `DATA_SOURCE_${type}SalesComp${n}`; const e = X(DSS, 'DATA_SOURCE', { 'xlink:label': l }); XV(e, 'DataSourceIdentifier', id); XV(e, 'DataSourceType', type); X(RELS, 'RELATIONSHIP', { 'xlink:arcrole': 'urn:fdc:mismo.org:2009:residential/DATA_SOURCE_IsDataSourceFor_PROPERTY', 'xlink:from': l, 'xlink:to': lab }).selfClose = true; };
+  const ds = (type, id) => { const l = `DATA_SOURCE_${type}SalesComp${n}`; const e = X(DSS, 'DATA_SOURCE', { 'xlink:label': l }); XV(e, 'DataSourceName', DS_NAME[type] || type); XV(e, 'DataSourceIdentifier', id); XV(e, 'DataSourceType', type); X(RELS, 'RELATIONSHIP', { 'xlink:arcrole': 'urn:fdc:mismo.org:2009:residential/DATA_SOURCE_IsDataSourceFor_PROPERTY', 'xlink:from': l, 'xlink:to': lab }).selfClose = true; };
   if (g('mls') && (c.src.mls || c.src.pdf || /MLS/i.test(g('verification') || ''))) ds('MLS', g('mls'));
   if (c.src.crs) ds('AssessorRecord', null);
   if (c.src.cort.length) ds('Deed', c.src.cort[c.cortPick || 0].doc || null);
   if (c.src.arch.length) ds('PreviousAppraisalFile', null);
 }
+/* A-1: DataSourceName is required (33 characters) */
+const DS_NAME = { MLS: 'Santa Barbara MLS (Flexmls)', AssessorRecord: 'CRS Data', Deed: 'CORT recorded deeds', PreviousAppraisalFile: 'Appraiser files' };
 function buildCompsMISMO(job, comps) {
   const root = X(null, 'MESSAGE', { 'xmlns:xlink': 'http://www.w3.org/1999/xlink', xmlns: 'http://www.mismo.org/residential/2009/schemas', 'xmlns:gse': 'http://www.datamodelextension.org', MISMOReferenceModelIdentifier: '3.6.0366' });
   const doc = X(X(X(X(root, 'DOCUMENT_SETS'), 'DOCUMENT_SET'), 'DOCUMENTS'), 'DOCUMENT');

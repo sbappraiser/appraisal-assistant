@@ -88,7 +88,7 @@ function buildMISMO(ins, imgName) {
   const isProj = IS_PROJ(ins), isHoa = IS_HOA(ins), isCoop = IS_COOP(ins), PJ = d.project || {};
   if (isProj && (PJ.dataSrc || []).length) {
     const DSS = X(va, 'DATA_SOURCES');
-    PJ.dataSrc.forEach(t => { const lab = 'DATA_SOURCE_PROJECT_' + t; const e = X(DSS, 'DATA_SOURCE', { 'xlink:label': lab }); V(e, 'DataSourceType', t); if (t === 'Other') V(e, 'DataSourceTypeOtherDescription', (PJ.dataSrcOther || 'Other').slice(0, 33));
+    PJ.dataSrc.forEach(t => { const lab = 'DATA_SOURCE_PROJECT_' + t; const e = X(DSS, 'DATA_SOURCE', { 'xlink:label': lab }); V(e, 'DataSourceName', (t === 'Other' ? (PJ.dataSrcOther || 'Other') : t.replace(/([a-z])([A-Z])/g, '$1 $2')).slice(0, 33)); /* A-1: required */ V(e, 'DataSourceType', t); if (t === 'Other') V(e, 'DataSourceTypeOtherDescription', (PJ.dataSrcOther || 'Other').slice(0, 33));
       X(RELS, 'RELATIONSHIP', { 'xlink:arcrole': 'urn:fdc:mismo.org:2009:residential/DATA_SOURCE_IsDataSourceFor_PROJECT', 'xlink:from': lab, 'xlink:to': 'PROJECT_SUBJECT' }).selfClose = true; });
   }
   const P = X(X(va, 'PROPERTIES'), 'PROPERTY', { ValuationUseType: 'SubjectProperty' });

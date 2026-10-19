@@ -27,10 +27,34 @@ function reportFrom(J) {
     client: c0.company || c0.name || '', clientAddr1: c0.addr1 || '', clientAddr2: c0.addr2 || '',
     lender: o.lenderDiff ? (o.lenderCo || '') : '', lenderAddr1: o.lenderDiff ? o.lenderAddr1 || '' : '', lenderAddr2: o.lenderDiff ? o.lenderAddr2 || '' : '',
     amc: o.amcUsed ? (o.amcCo || '') : '', amcAddr1: o.amcUsed ? o.amcAddr1 || '' : '', amcAddr2: o.amcUsed ? o.amcAddr2 || '' : '',
-    insp: I.inspType || 'InteriorAndExterior', market: (o.market && o.market.uad) || null, contract: o.uad || null, hasOrder: !!o.id };
+    insp: I.inspType || 'InteriorAndExterior', market: (o.market && o.market.uad) || null, contract: o.uad || null, hasOrder: !!o.id,
+    sowCost: o.id ? !!o.apCost : undefined, sowIncome: o.id ? !!o.apIncome : undefined, sowRent: o.id ? !!o.rent : undefined, sowAddlUser: o.id ? !!String(o.otherUsers || '').trim() : undefined,
+    listedYear: o.listing === 'listed' || o.listing === 'contract' ? true : undefined, priorHits: priorHits(J, o.effDate || o.inspDate || o.dod || J.subject.eff || '') };
 }
 const rv = (J, k) => { const R = R0(J), F = reportFrom(J); return blank(R[k]) ? F[k] : R[k]; };
 
+/* her exposure-time rule (Oct 19 2026): count only the days a comp was on the market at a reasonable price – from its last price
+   reduction to the pending / contingent date; a comp that was never reduced counts its days on market */
+function expRows(J) {
+  return usedComps(J).map(c => { const C = compFacts(c, J); const d = redDaysOf(C); const dom = num(C.dom);
+    return { c, title: compTitle(c), use: c.use, lastRed: C.lastRed, days: d !== null ? d : dom, from: d !== null ? 'since the last price reduction' : 'days on market (no reduction)', dom }; }).filter(r => r.days !== null && r.days !== undefined && !isNaN(r.days));
+}
+function expHelpHTML(J) {
+  const L = expRows(J); if (!L.length) return '<p class="help">Your comps’ days on market at a reasonable price show here once the grid has comps (last price reduction from the MLS printout).</p>';
+  const ds = L.map(r => r.days).sort((a, b) => a - b); const lo = ds[0], hi = ds[ds.length - 1], med = ds[Math.floor((ds.length - 1) / 2)];
+  return `<div class="exphelp"><p class="help"><b>Days on the market at a reasonable price</b> (your rule: an overpriced period does not count – from the last price reduction to pending; no reduction = days on market)</p>
+    <table class="mini"><tr><th>Comp</th><th>Last price reduction</th><th class="r">Days</th><th></th></tr>${L.map(r => `<tr><td>${r.use}. ${esc(r.title)}</td><td>${r.lastRed ? esc(showDate(r.lastRed)) : '–'}</td><td class="r">${r.days}</td><td><small class="muted">${esc(r.from)}${r.lastRed && r.dom ? ' · ' + r.dom + ' total' : ''}</small></td></tr>`).join('')}</table>
+    <p>Range <b>${lo}–${hi} days</b> · median ${med} <button class="btn sm" data-act="exp-use" data-lo="${lo}" data-hi="${hi}">Use ${lo} to ${hi}</button></p></div>`;
+}
+/* prior services: her archive (subject records) and her orders for the same address in the 3 years before the effective date */
+function priorHits(J, eff0) {
+  const out = []; const eff = isoDate((J.report || {}).eff || eff0) || todayISO(); const from = (+eff.slice(0, 4) - 3) + eff.slice(4);
+  const a = J.subject.addr || ''; if (!a) return out; const p = splitAddr(a); const key = addrKey(p.no, p.street, J.subject.unit || p.unit);
+  try { if (ARCH.loaded) archiveFind({ apn: J.subject.apn, key }).forEach(r => { const d = String(r.entered_date || ''); if (r.record_role === 'subject' && d >= from && d < eff) out.push(`appraised (subject of ${r.from_report || 'a report'}, entered ${showDate(d)})`); }); } catch (e) {}
+  (app.orders || []).forEach(o => { if (o.id === J.orderId) return; const s = String(o.address || '').split(',')[0]; const q = splitAddr(s); if (!s || addrKey(q.no, q.street, q.unit) !== key) return;
+    const d = String(o.effective || o.inspDate || o.orderDate || o.created || '').slice(0, 10); if (d && d >= from && d < eff) out.push(`order ${o.fileNo || ''} (${showDate(d)}${o.stage ? ', ' + o.stage : ''})`.replace('order  (', 'order (')); });
+  return out;
+}
 function reportHTML(J) {
   const R = R0(J), F = reportFrom(J), G = G0(J), H = R.hbu;
   const inp = (k, ph, w) => `<input class="txt" data-rpt="${k}" value="${esc(R[k] ?? '')}" placeholder="${esc(F[k] || ph || '')}"${w ? ` style="width:${w}"` : ''}>`;
@@ -64,10 +88,28 @@ function reportHTML(J) {
       <label class="fld"><span>Is the highest and best use as improved the present use?</span>${yn('hbuPresent')}</label>
       <div class="row"><button class="btn small" data-act="hbu-all">All four tests met · present use</button><button class="btn ghost small" data-act="hbu-draft">Draft the comment</button></div>
       <label class="fld"><span>Highest and best use comment ${cmtBtn('textarea[data-rpt="hbuNote"]')}</span><textarea class="txt" rows="4" data-rpt="hbuNote" placeholder="Your comment">${esc(R.hbuNote || '')}</textarea></label></section>
+    <section><h3>Scope of work <small>UAD 3.6 – every answer is required</small></h3>
+      <label class="fld"><span>Cost approach developed?</span>${yn('sowCost', F.sowCost)}</label>
+      <label class="fld"><span>Income approach developed?</span>${yn('sowIncome', F.sowIncome)}</label>
+      <label class="fld"><span>Rent schedule (1007) included?</span>${yn('sowRent', F.sowRent)}</label>
+      <label class="fld"><span>Government agency appraisal (FHA, VA, USDA)?</span>${yn('sowGov', false)}${R.sowGov === 'true' ? ` ${sel('govType', [['FHA', 'FHA'], ['VA', 'VA'], ['USDA', 'USDA']], '')}` : ''}</label>
+      <label class="fld"><span>Intended users besides the client?</span>${yn('sowAddlUser', F.sowAddlUser)}</label>
+      <label class="fld"><span>Additional scope of work (beyond the standard)?</span>${yn('sowAddlScope', false)}</label>
+      <label class="fld"><span>Scope of work comment <small class="muted">(2,500 characters)</small></span><textarea class="txt" rows="2" maxlength="2500" data-rpt="sowNote">${esc(R.sowNote || '')}</textarea></label></section>
+    <section><h3>Prior services and certifications</h3>
+      <label class="fld"><span>Prior services: have you performed any services on this property in the three years before accepting the assignment?</span>${yn('priorSvc')}</label>
+      ${F.priorHits.length ? `<p class="help warnTxt">Your records show: ${F.priorHits.map(esc).join(' · ')}</p>` : '<p class="help">Nothing in your archive or your orders for this address in the three years before the effective date.</p>'}
+      <label class="fld"><span>Describe the prior services <small class="muted">(only when Yes; 1,250 characters)</small></span><textarea class="txt" rows="2" maxlength="1250" data-rpt="priorSvcText" placeholder="e.g. I appraised the subject property for a refinance in May 2024.">${esc(R.priorSvcText || '')}</textarea></label>
+      <label class="fld"><span>Additional certifications by you?</span>${yn('addlCert', false)}</label>
+      <label class="fld"><span>Is this a reconsideration of value?</span>${yn('reconsider', false)}</label>
+      <label class="fld"><span>Subject listed for sale in the past year?</span>${yn('listedYear', F.listedYear)}</label></section>
     <section><h3>Value and reconciliation</h3>
       <label class="fld"><span>Opinion of market value</span>${inp('opinion', !blank(G.value) ? money(G.value) + ' (sales comparison)' : '$')}</label>
       <label class="fld"><span>Market value condition</span>${sel('vcond', VCOND, 'AsIs', 'usual')}</label>
       <label class="fld"><span>Reasonable exposure time (days)</span>${inp('expLow', 'from', '6em')} to ${inp('expHigh', 'to', '6em')}</label>
+      ${expHelpHTML(J)}
+      <label class="fld"><span>Additional client-requested conditions?</span>${yn('addlCond', false)}</label>
+      ${R.addlCond === 'true' ? `<label class="fld"><span>Describe them <small class="muted">(2,500 characters)</small></span><textarea class="txt" rows="2" maxlength="2500" data-rpt="addlCondText">${esc(R.addlCondText || '')}</textarea></label>` : ''}
       <label class="fld"><span>Reconciliation comment ${cmtBtn('textarea[data-rpt="reconNote"]')}</span><textarea class="txt" rows="3" data-rpt="reconNote">${esc(R.reconNote || '')}</textarea></label></section>
     <section><h3>Market <small>from the hub's Market tab</small></h3>
       ${M ? `<table class="mini"><tr><th>Look back</th><td>${esc(M.L)} months</td></tr><tr><th>Actives</th><td>${esc(M.activeN)}${M.activeN ? ` · ${money(M.activeLow)} / ${money(M.activeMed)} / ${money(M.activeHigh)} · median DOM ${esc(Math.round(M.activeDom))}` : ''}</td></tr>
@@ -89,16 +131,21 @@ document.addEventListener('change', e => {
   const t = e.target; if (!app.job) return; const R = R0(app.job);
   if (t.dataset.rpt) { const k = t.dataset.rpt, v = t.value.trim(); if (v === '') delete R[k]; else R[k] = k === 'zone' ? v.toUpperCase() : t.tagName === 'TEXTAREA' ? t.value : v;
     if (k === 'zoneDesc' && v) { const code = rv(app.job, 'zone').toUpperCase(); if (code) { zoneTable()[code] = v; DB.put('kv', { id: 'zoneDesc', v: app.zoneDesc }); } }
-    save(); if (['assign', 'zone', 'allRights', 'rightsType'].includes(k)) { const c = $('#reportCard'); if (c) c.innerHTML = reportHTML(app.job); } return; }
+    save(); if (['assign', 'zone', 'allRights', 'rightsType', 'sowGov', 'addlCond'].includes(k)) { const c = $('#reportCard'); if (c) c.innerHTML = reportHTML(app.job); } return; }
   if (t.dataset.hbu) { R.hbu[t.dataset.hbu] = t.checked; save(); }
 });
 document.addEventListener('click', e => {
-  const b = e.target.closest('[data-act="hbu-all"],[data-act="hbu-draft"]'); if (!b || !app.job) return; const R = R0(app.job);
+  const b = e.target.closest('[data-act="hbu-all"],[data-act="hbu-draft"],[data-act="exp-use"]'); if (!b || !app.job) return; const R = R0(app.job);
+  if (b.dataset.act === 'exp-use') { R.expLow = b.dataset.lo; R.expHigh = b.dataset.hi; }
   if (b.dataset.act === 'hbu-all') { HBU_TESTS.forEach(([k]) => R.hbu[k] = true); R.hbuPresent = 'true'; }
   if (b.dataset.act === 'hbu-draft') { if (R.hbuNote && !confirm('Replace your comment with a new draft?')) return; R.hbuNote = hbuDraft(app.job); }
   save(); const c = $('#reportCard'); if (c) c.innerHTML = reportHTML(app.job);
 });
 
+/* element order for the items added Oct 19 2026 that the D-1 sample does not show (A-1 order: alphabetical within the container) */
+{ const ins = (p, tag, after) => { const L = D1_ORDER[p]; if (!L || L.includes(tag)) return; const i = after ? L.indexOf(after) : -1; if (after && i >= 0) L.splice(i + 1, 0, tag); else L.unshift(tag); };
+  ins('SCOPE_OF_WORK_DETAIL', 'GovernmentAgencyAppraisalType', 'GovernmentAgencyAppraisalIndicator'); ins('SCOPE_OF_WORK_DETAIL', 'ValuationAssignmentTypeOtherDescription', 'ValuationAssignmentType'); ins('SCOPE_OF_WORK_DETAIL', 'ValuationScopeOfWorkDescription', 'ValuationAssignmentTypeOtherDescription');
+  ins('VALUATION_RECONCILIATION_DETAIL', 'AdditionalClientRequestedConditionsCommentDescription'); ins('VALUATION_REPORT_DETAIL', 'AppraiserPriorServicesPerformedDescription', 'AppraiserFileIdentifier'); }
 /* rights not included (A-1 0100.0035–0037, sort 1350–1352: after PROPERTY_VALUATIONS, before SALES_CONTRACTS) */
 if (D1_ORDER.PROPERTY && !D1_ORDER.PROPERTY.includes('REAL_PROPERTY_INTERESTS')) D1_ORDER.PROPERTY.splice(D1_ORDER.PROPERTY.indexOf('SALES_CONTRACTS'), 0, 'REAL_PROPERTY_INTERESTS');
 D1_ORDER.REAL_PROPERTY_INTERESTS = D1_ORDER.REAL_PROPERTY_INTERESTS || ['REAL_PROPERTY_INTEREST'];
@@ -129,6 +176,17 @@ function writeReportXML(doc, NS, J, SUBJ, VA, SVC) {
   const rd = path(VR, 'VALUATION_REPORT_DETAIL');
   set(rd, 'AppraiserFileIdentifier', rv(J, 'fileNo')); set(rd, 'PropertyDataReportIndicator', tf('pdr', 'false'));
   set(rd, 'SketchExistsIndicator', 'true'); set(rd, 'ValuationReportInspectionCertificationType', F.insp);
+  { const fb = (k, def) => tf(k, def === true ? 'true' : def === false ? 'false' : undefined);   // the order's answer when she has not chosen
+    set(sow, 'CostApproachIndicator', fb('sowCost', F.sowCost)); set(sow, 'IncomeApproachIndicator', fb('sowIncome', F.sowIncome)); set(sow, 'RentScheduleIndicator', fb('sowRent', F.sowRent));
+    set(sow, 'GovernmentAgencyAppraisalIndicator', fb('sowGov', false)); if (R.sowGov === 'true' && R.govType) set(sow, 'GovernmentAgencyAppraisalType', R.govType);
+    set(sow, 'ValuationAdditionalIntendedUserIndicator', fb('sowAddlUser', F.sowAddlUser)); set(sow, 'ValuationAdditionalScopeOfWorkIndicator', fb('sowAddlScope', false));
+    if (R.sowNote) set(sow, 'ValuationScopeOfWorkDescription', R.sowNote.slice(0, 2500));
+    set(rd, 'AppraiserAdditionalCertificationIndicator', fb('addlCert', false)); set(rd, 'ReconsiderationOfValueIndicator', fb('reconsider', false));
+    set(rd, 'AppraiserPriorServicesPerformedIndicator', tf('priorSvc')); if (R.priorSvc === 'true' && R.priorSvcText) set(rd, 'AppraiserPriorServicesPerformedDescription', R.priorSvcText.slice(0, 1250));
+    set(child(SUBJ, 'LISTING_INFORMATION_SUMMARY'), 'ListedWithinPreviousYearIndicator', fb('listedYear', F.listedYear));
+    if (SVC) set(child(SVC, 'SERVICE_DETAIL'), 'ServiceType', 'Valuation');
+    const rdet = path(VR, 'VALUATION_RECONCILIATION', 'VALUATION_RECONCILIATION_DETAIL'); set(rdet, 'AdditionalClientRequestedConditionsIndicator', fb('addlCond', false));
+    if (R.addlCond === 'true' && R.addlCondText) set(rdet, 'AdditionalClientRequestedConditionsCommentDescription', R.addlCondText.slice(0, 2500)); }
   set(path(SUBJ, 'PROPERTY_VALUATIONS', 'PROPERTY_VALUATION', 'PROPERTY_VALUATION_DETAIL'), 'PropertyValuationMethodType', R.vmethod || 'TraditionalAppraisal');
   // reconciliation
   const rs = path(VR, 'VALUATION_RECONCILIATION', 'VALUATION_RECONCILIATION_SUMMARY');

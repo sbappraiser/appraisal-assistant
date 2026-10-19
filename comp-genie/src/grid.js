@@ -15,14 +15,13 @@ const ADJ_ROWS = [
   ['listPrice', 'List price (final)', 'Sales and listing', null],
   ['origList', 'Original list price', 'Sales and listing', null],
   ['listDate', 'Listing date', 'Sales and listing', null],
-  ['lastRed', 'Last price reduction', 'Sales and listing', null],
-  ['redDays', 'Days from last price reduction to contract', 'Sales and listing', null],
   ['terms', 'Transfer terms (financing)', 'Sales and listing', 'FinancingMethod'],
   ['conc', 'Known sales concessions', 'Sales and listing', 'SalesConcessions'],
   ['contract', 'Contract date', 'Sales and listing', 'ContractDate'],
   ['sale', 'Sale date (market conditions)', 'Sales and listing', 'SaleDate', 'timePct'],
   ['dom', 'Days on market', 'Sales and listing', null],
   ['cdom', 'Cumulative days on market', 'Sales and listing', null],
+  ['lastRed', 'Last price reduction', 'Sales and listing', null],
   ['project', 'Project name', 'Project (HOA)', null],
   ['hoa', 'HOA fee ($ / month)', 'Project (HOA)', null],
   ['hoaAmen', 'HOA amenities (common area)', 'Project (HOA)', 'ProjectInformation'],
@@ -132,7 +131,7 @@ function startsUse(J) { const G = G0(J); const st = startsFor(J); G.rateFrom = G
 RATES.aduHalf = ['$ per ADU / guest half bath', 'half baths in the ADU / guest house (1.5 baths = 1 full + 1 half)']; RATES.attach = ['$ detached over attached', 'a detached unit is one step above an attached one'];
 RATES.unitPos = ['$ corner / end unit over interior', 'a corner or end unit is one step above an interior unit'];
 /* ---- property type of the grid (her request, Oct 19 2026): condo and PUD lines; info lines she checks before UAD 3.6 is filled ---- */
-const GRID_INFO = { status: 'UAD 3.6', listPrice: 'UAD 3.6', dom: 'UAD 3.6', origList: 'not in UAD 3.6 – for your check', listDate: 'not in UAD 3.6 – for your check', lastRed: 'not in UAD 3.6 – for your check · from the MLS printout History (the CSV has no price-change date)', redDays: 'not in UAD 3.6 – for your check', cdom: 'not in UAD 3.6 – for your check', project: 'UAD 3.6', hoa: 'UAD 3.6 (monthly fee)', nbhd: 'UAD 3.6 Neighborhood Name – the same field as the 2.6 neighborhood', loc: 'within the market area: busy street, flood zone, school, shared driveway, park, waterfront…' };
+const GRID_INFO = { status: 'UAD 3.6', listPrice: 'UAD 3.6', dom: 'UAD 3.6', origList: 'not in UAD 3.6 – for your check', listDate: 'not in UAD 3.6 – for your check', lastRed: 'not in UAD 3.6 – for your exposure time · from the MLS printout History · days to pending below the date', cdom: 'not in UAD 3.6 – for your check', project: 'UAD 3.6', hoa: 'UAD 3.6 (monthly fee)', nbhd: 'UAD 3.6 Neighborhood Name – the same field as the 2.6 neighborhood', loc: 'within the market area: busy street, flood zone, school, shared driveway, park, waterfront…' };
 const STRUCTURES = ['Low-rise', 'Mid-rise', 'High-rise', 'Townhouse / rowhouse', 'Semi-detached'];
 function gridMode(J) { const G = G0(J); if (G.mode) return G.mode; const o = typeof orderOf === 'function' ? orderOf(J) : null; const pt = String((o && o.propType) || '');
   if (/condo/i.test(pt)) return 'condo'; if (/pud/i.test(pt)) return 'pud'; if (G.tier === 'condo' || (J.subject && J.subject.unit)) return 'condo'; return 'house'; }
@@ -150,6 +149,8 @@ const capBeds = v => blank(v) ? null : Math.min(+v, BED_CAP);
 const hasFeat = (F, k) => { const t = k === 'tennis' || k === 'sport' ? String(F.courts || '') : String(F.pool || ''); const rx = { pool: /pool/i, spa: /spa|hot ?tub|jacuzzi/i, pond: /pond/i, lake: /lake/i, tennis: /tennis/i, sport: /sport|pickleball|basketball|court(?!.*tennis)/i }[k];
   if (!t.trim() || /^(no|none)$/i.test(t.trim())) return 0; return rx.test(t) ? 1 : 0; };   // nothing entered = none (her rule)
 
+/* days from the last price reduction to the contract (pending / contingent) date – her exposure-time measure */
+const redDaysOf = C => { const a = isoDate(C.lastRed), b = isoDate(C.contract); return a && b && b >= a ? Math.round((Date.parse(b) - Date.parse(a)) / 864e5) : null; };
 const G0 = J => { J.grid = J.grid || { rates: {}, cells: {}, weights: {}, subj: {}, value: null, note: '' }; return J.grid; };
 const usedComps = J => J.comps.filter(c => c.use).sort((a, b) => a.use - b.use);
 const acOf = sf => sf ? Math.round(sf / 43560 * 100) / 100 : null;
@@ -171,7 +172,7 @@ function compFacts(c, J) {
   const F0 = { price: num(g('salePrice')), src: g('mls') ? 'MLS ' + g('mls') : (c.src.cort.length ? 'CORT' : c.src.arch.length ? 'Your archive' : ''), prox: px ? px.mi.toFixed(2) + ' mi ' + px.dir.replace(/([a-z])([A-Z])/, '$1 $2') : '',
     terms: g('financing') || '', conc: num(g('concessions')), contract: g('contractDate') || '', sale: g('saleDate') || '', dom: g('dom'),
     site: num(g('siteSf')), usable: acOf(num(g('usableSf'))), loc: [g('locRating'), g('locFactors')].filter(Boolean).join(': '), view: [g('viewRating'), g('viewTypes')].filter(Boolean).join(': '),
-    topo: g('topo') || '', nbhd: g('nbhd') || '', land: g('landscaping') || '', style: g('style') || '', attach: g('attach') || '', status: g('status') || '', listPrice: num(g('listPrice')), origList: num(g('origList')), listDate: g('listDate') || '', lastRed: g('lastRed') || '', redDays: g('redDays') ?? '', cdom: num(g('cdom')), project: g('project') || '', hoa: num(g('hoa')), hoaAmen: g('hoaAmen') || '', landCommon: g('landCommon') || '', structure: g('structure') || '', unitPos: g('unitPos') || '', floor: g('floor') ?? null, year: num(g('yearBuilt')), q: g('quality') || '', c: g('condition') || '',
+    topo: g('topo') || '', nbhd: g('nbhd') || '', land: g('landscaping') || '', style: g('style') || '', attach: g('attach') || '', status: g('status') || '', listPrice: num(g('listPrice')), origList: num(g('origList')), listDate: g('listDate') || '', lastRed: g('lastRed') || '', cdom: num(g('cdom')), project: g('project') || '', hoa: num(g('hoa')), hoaAmen: g('hoaAmen') || '', landCommon: g('landCommon') || '', structure: g('structure') || '', unitPos: g('unitPos') || '', floor: g('floor') ?? null, year: num(g('yearBuilt')), q: g('quality') || '', c: g('condition') || '',
     rooms: num(g('rooms')), beds: num(g('beds')), full: num(g('full')), half: num(g('half')), gla: num(g('gla')), bsmt: num(g('bsmtFin')), garage: num(g('garage')), energy: g('energy') || '',
     pool: [yes(g('pool')) ? 'Pool' : '', yes(g('spa')) ? 'Spa' : ''].filter(Boolean).join(', ') || (g('pool') && !yes(g('pool')) ? 'None' : ''), courts: [yes(g('tennis')) ? 'Tennis court' : '', yes(g('sport')) ? 'Sport court' : ''].filter(Boolean).join(', '), porch: g('porch') || '', adu: [g('adu'), g('guest'), g('accessory')].filter(Boolean).join('; '),
     other: [g('horse') ? 'Horse facilities' : ''].filter(Boolean).join(', '), _id: c.id, aduSf: g('aduSf'), aduBaths: g('aduBaths') };
@@ -242,6 +243,7 @@ function gridHTML(J) {
       if (!WB_NOEDIT.includes(id)) { /* she can change any comp fact right on the grid (Oct 19 2026), not only in Workbook view */ const raw = id === 'usable' ? (blank(C.usable) ? '' : String(C.usable)) : wbFactText(id, C);
         shown = `<input class="txt sm fact" data-gfact="${c.id}|${id}" value="${esc(raw)}" placeholder="${id === 'usable' ? 'Measure it (ac)' : ''}" title="Type the comp's entry · = copies the subject · =2 copies comp 2">`; }
       else if (id === 'usable' && blank(C.usable)) shown = '<span class="measure">Measure it</span>'; else shown = esc(shown);
+      if (id === 'lastRed') { const d = redDaysOf(C); shown += d !== null ? `<small class="muted rdays">${d} day${d === 1 ? '' : 's'} to pending</small>` : (C.lastRed ? '<small class="muted rdays">no contract date</small>' : ''); }
       if (id === 'q' || id === 'c') shown += fineSel(c.id, id, J); if (id === 'view') shown += vtSel(c.id, J, C.view);
       if (!type) return `<td>${shown}</td>`;
       const a = cellAmount(J, c, row);
