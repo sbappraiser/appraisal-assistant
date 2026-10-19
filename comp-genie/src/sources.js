@@ -222,7 +222,7 @@ function pdfCanon(p) {
 
 /* ---------------- 4. CRS Data property report (PDF) ---------------- */
 function crsCanon(c) {
-  const sales = (c.sales || []).map(s => ({ date: isoDate(s.date), recorded: isoDate(s.recorded), price: num(s.amount), src: 'CRS ' + (s.instrument || 'deed'), type: num(s.amount) ? 'Sale' : 'Transfer', inst: s.instrument || '', buyer: s.buyer || '', seller: s.seller || '', doc: s.doc || '' }));
+  const sales = (c.sales || []).map(s => ({ date: isoDate(s.recorded) || isoDate(s.date), docDate: isoDate(s.docDate || s.date), recorded: isoDate(s.recorded),   /* closing = Date Recorded (her rule) */ price: num(s.amount), src: 'CRS ' + (s.instrument || 'deed'), type: num(s.amount) ? 'Sale' : 'Transfer', inst: s.instrument || '', buyer: s.buyer || '', seller: s.seller || '', doc: s.doc || '' }));
   return {
     _src: 'crs', addr: titleCase(c.addr || ''), city: titleCase(c.city || ''), zip: c.zip || '', apn: c.apn || '',
     beds: num(c.beds), bathsTotal: num(c.baths), gla: num(c.sqftAssessor), yearBuilt: num(c.yearBuilt), rooms: num(c.rooms),

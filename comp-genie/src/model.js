@@ -147,7 +147,7 @@ function currentSale(c) {
   const m = c.src.mls, p = c.src.pdf;
   for (const s of [m, p]) if (s && (s.saleDate || s.contractDate || /Pending|Active/i.test(s.status || ''))) return { date: s.saleDate || s.contractDate || s.listDate || '', price: s.salePrice || null, from: s._src, status: s.status };
   const t = c.src.cort[c.cortPick || 0]; if (t && t.saleDate) return { date: t.saleDate, price: t.salePrice, from: 'cort', status: 'Closed' };
-  const r = c.src.crs && c.src.crs.lastSale; if (r && r.date && monthsBetween(r.date, todayISO()) < 24) return { date: r.date, price: r.price, from: 'crs', status: 'Closed' };
+  const r = c.src.crs && c.src.crs.lastSale; const rd = r && (r.recorded || r.date); if (r && rd && monthsBetween(rd, todayISO()) < 24) return { date: rd, price: r.price, from: 'crs', status: 'Closed' };
   const a = c.src.arch.find(x => x.v.salePrice); if (a) return { date: a.v.saleDate, price: a.v.salePrice, from: 'arch', status: 'Closed' };
   return null;
 }
@@ -167,7 +167,9 @@ function srcVals(c) { // canonical values per source for this comp
   const a = archChosen(c);
   // show the CRS recorded price beside the others when its last sale is this sale
   let crs = c.src.crs; const sale = currentSale(c);
-  if (crs && crs.lastSale && sale && sale.date && Math.abs(monthsBetween(crs.lastSale.date, sale.date)) <= 2) crs = { ...crs, salePrice: crs.lastSale.price, saleDate: crs.lastSale.date };
+  /* her rule (Oct 19 2026): in CRS Data the closing (sale) date is the Date Recorded, not the Date column */
+  const crsRec = crs && crs.lastSale ? (crs.lastSale.recorded || crs.lastSale.date) : '';
+  if (crs && crs.lastSale && sale && sale.date && Math.abs(monthsBetween(crsRec, sale.date)) <= 2) crs = { ...crs, salePrice: crs.lastSale.price, saleDate: crsRec };
   if (crs && crs.salePrice) { const fin = crsFinancing(crs); if (fin) crs = { ...crs, financing: fin }; }
   const finFix = o => o && /^\s*\d+\s*$/.test(String(o.financing || '')) ? { ...o, financing: 'MLS code ' + String(o.financing).trim() + ' – what does it mean?' } : o;
   return { arch: a ? a.v : null, mls: finFix(c.src.mls), pdf: lastRedOf(finFix(c.src.pdf)), crs, cort: c.src.cort[c.cortPick || 0] || null };
@@ -230,7 +232,7 @@ function priorSales(c) {
   const out = []; const sale = currentSale(c);
   const add = s => { if (!s || !s.date) return; out.push(s); };
   (c.src.pdf ? c.src.pdf.priorSales : []).forEach(add);
-  (c.src.crs ? c.src.crs.priorSales : []).forEach(add);
+  (c.src.crs ? c.src.crs.priorSales : []).forEach(s => add(s && s.recorded ? { ...s, date: s.recorded } : s));   // CRS: the recording date is the closing date
   c.src.cort.forEach(t => add({ date: t.saleDate, price: t.salePrice, src: 'CORT ' + (t.period || ''), type: t.salePrice ? 'Sale' : 'Transfer' }));
   c.src.arch.forEach(a => {
     // "02/25/2026 | 0 | CRS - Intrafamily" = a $0 deed transfer; "10/07/2024 | 0 | CRS - No Transfers" = the date you searched, not a sale

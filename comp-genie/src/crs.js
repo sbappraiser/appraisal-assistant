@@ -50,6 +50,8 @@ function parseCRS(lines) {
   if (si >= 0) for (let j = si + 1; j < (ti > si ? ti : lines.length); j++) {
     const cs = cells(lines[j]); if (!/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(cs[0])) continue;
     const row = { date: cs[0], recorded: /^\d{1,2}\/\d{1,2}\/\d{4}/.test(cs[1] || '') ? cs[1].split(' ')[0] : '' };
+    /* her rule (Oct 19 2026): the closing (sale / transfer) date is the Date Recorded – the Date column is the document date */
+    if (row.recorded) { row.docDate = row.date; row.date = row.recorded; }
     const amt = lines[j].match(/\$[\d,]+/); if (amt) row.amount = amt[0];
     // The seller's name can run into the deed type in one cell ("Funk Brian & Estate Of Grant Deed"): split it off.
     const INST = /(Grant Deed|Trustee'?s Deed|Quit ?claim Deed|Intrafamily Transfer|Interspousal (Transfer|Deed)|Correction Deed|Affidavit Of Death|Executor'?s Deed|Administrator'?s Deed|Gift Deed|Warranty Deed|Foreclosure|Transfer On Death Deed|Deed Of Distribution|Sheriff'?s Deed|Deed)\s*(\d{4}-)?$/i;
