@@ -85,11 +85,14 @@ async function pbSend() {
   } catch (e) { console.error(e); toast('Not sent or not read: ' + (e.message || e), 7000); say('Try again'); }
   PB.busy = false;
 }
+/* newest permit first (her request, Oct 19 2026): by the latest of final, issued and applied dates; undated ones last */
+const pbDateKey = x => { x = String(x || '').trim(); let m = x.match(/^(\d{4})-(\d{2})-(\d{2})/); if (m) return m[1] + m[2] + m[3]; m = x.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})/); if (m) { const y = m[3].length === 2 ? (+m[3] > 50 ? '19' : '20') + m[3] : m[3]; return y + m[1].padStart(2, '0') + m[2].padStart(2, '0'); } m = x.match(/(\d{4})/); return m ? m[1] + '0000' : ''; };
+const pbSorted = L => [...(L || [])].sort((a, b) => { const ka = [a.finaled, a.issued, a.applied].map(pbDateKey).sort().pop() || '', kb = [b.finaled, b.issued, b.applied].map(pbDateKey).sort().pop() || ''; return kb.localeCompare(ka); });
 function pbTimelineHTML(T) {
   const d = x => x ? h(G.showDate ? G.showDate(x) : x) : '';
   return `<h4>Permit timeline <span class="opt">read by Claude ${h(new Date(T.at).toLocaleDateString())} from ${T.files.length} file${T.files.length === 1 ? '' : 's'}${T.mode === 'redacted' ? ' (redacted)' : ''} – check it against the records</span></h4>
     <div class="tableWrap"><table class="facts pbt"><tr><th>Permit</th><th>Work</th><th>Sq. ft.</th><th>Applied</th><th>Issued</th><th>Final</th><th>Status</th><th>Where</th></tr>
-    ${T.permits.map(p => `<tr class="${/no final|expired/i.test(p.status || '') ? 'warnRow' : ''}"><td>${h(p.number || '')}<br><small class="muted">${h([p.kind, p.agency].filter(Boolean).join(' · '))}</small></td><td>${h(p.work || '')}</td><td>${h(p.sqft || '')}</td><td>${d(p.applied)}</td><td>${d(p.issued)}</td><td>${d(p.finaled)}</td><td>${h(p.status || '')}</td><td><small>${h(p.file || '')}${p.page ? ', p. ' + h(p.page) : ''}</small></td></tr>`).join('')}</table></div>
+    ${pbSorted(T.permits).map(p => `<tr class="${/no final|expired/i.test(p.status || '') ? 'warnRow' : ''}"><td>${h(p.number || '')}<br><small class="muted">${h([p.kind, p.agency].filter(Boolean).join(' · '))}</small></td><td>${h(p.work || '')}</td><td>${h(p.sqft || '')}</td><td>${d(p.applied)}</td><td>${d(p.issued)}</td><td>${d(p.finaled)}</td><td>${h(p.status || '')}</td><td><small>${h(p.file || '')}${p.page ? ', p. ' + h(p.page) : ''}</small></td></tr>`).join('')}</table></div>
     ${T.flags.length ? `<h4>To check</h4><ul>${T.flags.map(f => `<li>${h(f.text)}${f.file ? ` <small class="muted">${h(f.file)}${f.page ? ', p. ' + h(f.page) : ''}</small>` : ''}</li>`).join('')}</ul>` : ''}
     ${T.comment ? `<label>Draft permit comment <span class="opt">Claude's wording – read and edit it before you use it; ${T.comment.length.toLocaleString()} characters</span><textarea id="pbComment" rows="5">${h(T.comment)}</textarea></label>` : ''}
     <div class="row"><button type="button" class="btn ghost small" id="pbCopy">Copy the timeline</button>${T.comment ? '<button type="button" class="btn ghost small" id="pbCopyC">Copy the comment</button>' : ''}<button type="button" class="btn ghost small" id="pbHide">Hide</button></div>`;
@@ -125,7 +128,7 @@ async function renderPermBatch() {
   const cc = $('#pbCancel'); if (cc) cc.onclick = () => { PB.plan = null; renderPermBatch(); };
   const go = $('#pbGo'); if (go) go.onclick = () => pbSend();
   const ta = $('#pbComment'); if (ta) ta.onchange = () => { cur.permitTimeline.comment = ta.value; saveLetter(true, true); };
-  const cp = $('#pbCopy'); if (cp) cp.onclick = async () => { const t = T.permits.map(p => [p.number, p.work, p.sqft && p.sqft + ' sq. ft.', p.applied && 'applied ' + p.applied, p.issued && 'issued ' + p.issued, p.finaled && 'final ' + p.finaled, p.status].filter(Boolean).join(' · ')).join('\n') + (T.flags.length ? '\n\nTo check:\n' + T.flags.map(f => '- ' + f.text).join('\n') : ''); try { await navigator.clipboard.writeText(t); toast('Copied'); } catch (e) { toast('Could not copy'); } };
+  const cp = $('#pbCopy'); if (cp) cp.onclick = async () => { const t = pbSorted(T.permits).map(p => [p.number, p.work, p.sqft && p.sqft + ' sq. ft.', p.applied && 'applied ' + p.applied, p.issued && 'issued ' + p.issued, p.finaled && 'final ' + p.finaled, p.status].filter(Boolean).join(' · ')).join('\n') + (T.flags.length ? '\n\nTo check:\n' + T.flags.map(f => '- ' + f.text).join('\n') : ''); try { await navigator.clipboard.writeText(t); toast('Copied'); } catch (e) { toast('Could not copy'); } };
   const c2 = $('#pbCopyC'); if (c2) c2.onclick = async () => { try { await navigator.clipboard.writeText($('#pbComment').value); toast('Copied'); } catch (e) { toast('Could not copy'); } };
   // the pictures she is about to send, small, so she sees them first
   const th = $('#pbThumbs'); if (th && PB.plan) { const pdfjs = await loadPdfJs(); let shown = 0;
