@@ -445,6 +445,16 @@ async function start() {
     const m = String(a.getAttribute('href') || '').match(/[?&]order=([^&]+)/); const id = m && decodeURIComponent(m[1]);
     if (id && (!cur || cur.id !== id) && letters.some(x => x.id === id)) openLetter(id); else if (cur && hasContent(cur)) saveLetter(true);
     setTimeout(() => { showTab('genie'); window.scrollTo(0, 0); }, 30); });
+  window.addEventListener('message', async e => {   // the Comp genie tab asks for an order for an assignment that has none (her Encina assignment, Oct 19 2026)
+    if (e.origin !== location.origin || !e.data || e.data.type !== 'aa-make-order') return; const S = e.data.subject || {};
+    const o = blankLetter(); const nm = String(e.data.fileNo || e.data.name || '').trim();
+    o.fileNo = nm && nm !== 'New assignment' ? nm : street({ address: S.addr || '' });
+    o.address = [S.addr, S.city, ['CA', S.zip].filter(Boolean).join(' ')].filter(Boolean).join(', '); o.unit = S.unit || ''; o.apn = S.apn || ''; o.lat = S.lat || ''; o.lon = S.lon || '';
+    if (S.eff) { o.effDate = S.eff; o.inspDate = S.eff; } o.stage = 'Inspected'; o.notes = 'Made from the Comp genie assignment "' + (e.data.name || '') + '" – fill in the client, type and fee.';
+    o.saved = new Date().toISOString(); o.effective = effectiveDate(o); letters.unshift(o);
+    try { await ODB.put('orders', o); } catch (err) { toast('Could not save the order: ' + (err.message || err)); return; }
+    renderLetters(); e.source.postMessage({ type: 'aa-order-made', jobId: e.data.jobId, orderId: o.id, fileNo: o.fileNo }, location.origin);
+    toast('Order ' + o.fileNo + ' made from the Comp genie – open it to fill in the client, type and fee', 6000); });
   document.addEventListener('click', e => { const b = e.target.closest('[data-gotab]'); if (b) { e.preventDefault(); showTab(b.dataset.gotab); window.scrollTo(0, 0); } });
   $('#f_signDate').addEventListener('change', () => { const d = $('#f_signDate').value; if (d && !$('#f_invDate').value) $('#f_invDate').value = d; if (d && !$('#f_invNo').value.trim()) $('#f_invNo').value = invNoOf($('#f_fileNo').value); update(); renderBooks(); });
   $('#letterForm').addEventListener('input', update); ['#f_otherUsers', '#f_userText'].forEach(id => $(id).addEventListener('input', syncVisibility)); $('#letterForm').addEventListener('change', update);
