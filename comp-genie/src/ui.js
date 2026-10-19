@@ -375,11 +375,11 @@ function compsTable(J) {
   </tbody></table></div>`;
 }
 const DETAIL_ALWAYS = ['quality', 'condition', 'beds', 'full', 'half', 'garage', 'carport'];   // her lines, always there to fill in
-const PR_FROM_MLS = { yearBuilt: 'assessorYB', gla: 'assessorSf', full: 'bathsTotal' };   // public-record figures the MLS export carries
+const PR_FROM_MLS = { yearBuilt: 'assessorYB', gla: 'assessorSf' };   // public-record figures the MLS export carries (never its total baths – she uses full and half baths only)
 function cellHTML(c, f, s, S, using) {
   const v = S[s] ? S[s][f.k] : null;
   if (blank(v) && s === 'crs' && S.mls && PR_FROM_MLS[f.k] && !blank(S.mls[PR_FROM_MLS[f.k]])) { const pv = S.mls[PR_FROM_MLS[f.k]];
-    return `<td class="srccell prmls" title="The public-record figure shown in the MLS export – type it in Your value to use it">${esc(f.k === 'full' ? pv + ' baths in all' : fmt(f, pv))} <small class="muted">public record (MLS)</small></td>`; }
+    return `<td class="srccell prmls" title="The public-record figure shown in the MLS export – type it in Your value to use it">${esc(fmt(f, pv))} <small class="muted">public record (MLS)</small></td>`; }
   if (blank(v)) return `<td class="srccell empty"></td>`;
   const on = using.src === s;
   return `<td class="srccell ${on ? 'on' : ''}" data-pick="${s}" data-field="${f.k}" title="Use the ${esc(SRC[s].name)} value">${esc(fmt(f, v))}</td>`;
@@ -406,7 +406,7 @@ function detailHTML(c) {
   const cols = SRC_ORDER.filter(s => ['arch', 'mls', 'crs'].includes(s) || (s === 'cort' ? c.src.cort.length : c.src[s]));   // her three always side by side, even when empty
   let lastG = '';
   const rows = FIELDS.map(f => {
-    const u = val(c, f.k); const any = cols.some(s => S[s] && !blank(S[s][f.k])) || !blank(c.edit[f.k]); if (f.k === 'bathsTotal') return '';   // shown in the public-record column of Full baths instead
+    const u = val(c, f.k); const any = cols.some(s => S[s] && !blank(S[s][f.k])) || !blank(c.edit[f.k]); if (f.k === 'bathsTotal') return '';   // not used: full and half baths only (her rule, Oct 19 2026)
     if (!any && !app.showAll && !DETAIL_ALWAYS.includes(f.k)) return '';   // her own Q and C ratings always have a row
     const head = f.g !== lastG ? `<tr class="grp"><th colspan="${3 + cols.length}">${esc(f.g)}</th></tr>` : ''; lastG = f.g;
     const dis = disagree(c, f.k);
