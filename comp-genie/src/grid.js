@@ -26,7 +26,6 @@ const ADJ_ROWS = [
   ['year', 'Year built', 'Dwelling', 'YearBuilt'],
   ['style', 'Design (style)', 'Dwelling', 'DwellingStyle'],
   ['energy', 'Energy efficient features', 'Dwelling', 'EnergyEfficientAndGreenFeatures'],
-  ['rooms', 'Total rooms (above grade)', 'Dwelling', null],   // her own check; UAD 3.6 has no room count for the dwelling, so it is not exported
   ['beds', 'Bedrooms', 'Dwelling', 'LivingUnitBedroomCount', 'bed'],
   ['baths', 'Baths (full / half)', 'Dwelling', 'LivingUnitBathroomCount', 'bath'],
   ['gla', 'Living area above grade (sq ft)', 'Dwelling', 'LivingUnitStandardFinishedAreaAboveGrade', 'gla'],

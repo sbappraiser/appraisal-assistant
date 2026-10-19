@@ -374,7 +374,7 @@ function compsTable(J) {
       <td>${app.confirm === 'rm:' + c.id ? `<span class="rmask">Keep it as analyzed – not used? <button class="btn sm primary" data-rmnu="${c.id}">Keep as not used</button><button class="btn sm" data-rmdb="${c.id}">Save to my comp database, then remove</button><button class="btn danger solid sm" data-rmyes="${c.id}">Remove</button><button class="btn sm" data-act="cancel">Cancel</button></span>` : `<button class="btn sm" data-rm="${c.id}" title="Remove from this list">✕</button>`}</td></tr>`; }).join('')}
   </tbody></table></div>`;
 }
-const DETAIL_ALWAYS = ['quality', 'condition', 'rooms', 'beds', 'full', 'half', 'garage', 'carport'];   // her lines, always there to fill in
+const DETAIL_ALWAYS = ['quality', 'condition', 'beds', 'full', 'half', 'garage', 'carport'];   // her lines, always there to fill in
 const PR_FROM_MLS = { yearBuilt: 'assessorYB', gla: 'assessorSf', full: 'bathsTotal' };   // public-record figures the MLS export carries
 function cellHTML(c, f, s, S, using) {
   const v = S[s] ? S[s][f.k] : null;
