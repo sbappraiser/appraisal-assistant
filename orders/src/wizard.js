@@ -51,6 +51,9 @@ function startNewOrder() {
   if (cur && hasContent(readForm())) saveLetter(true);
   cur = blankLetter(); cur.wizard = { letter: '', purchase: '', listed: '' }; writeForm(cur); render(); WZ.step = 1; showTab('new'); renderWizard(); setTimeout(() => $('#wzFile') && $('#wzFile').focus(), 50);
 }
+document.addEventListener('click', e => { const b = e.target.closest('[data-wzdel]'); if (!b) return; e.preventDefault();   // remove a file right in the new-order steps (her request, Oct 19 2026)
+  if (!b.dataset.armed) { b.dataset.armed = '1'; const t = b.textContent; b.textContent = 'Click again to remove'; setTimeout(() => { if (b.isConnected) { delete b.dataset.armed; b.textContent = t; } }, 3000); return; }
+  removeDoc(b.dataset.wzdel).then(() => { if (typeof renderWizard === 'function' && document.getElementById('newBody') && !document.getElementById('newBody').closest('[hidden]')) renderWizard(); }); });
 const SLOTS = [
   ['clientLetter', 'Client’s engagement letter or order', 'Read for the client, loan, due date, fee, form and AI wording.', w => w.letter === 'client'],
   ['crs', 'CRS Data property report', 'Fills the APN, owner, location and public-record facts (never beds, baths or square feet).', () => true],
@@ -59,6 +62,7 @@ const SLOTS = [
   ['mls', 'MLS listing with its history', 'The subject’s listing and listing history (CSV export or printout).', w => w.listed === 'yes'],
   ['contract', 'Purchase contract, counter offers and addenda', 'Add every file – packets often come in several PDFs.', w => w.purchase === 'yes'],
   ['prelim', 'Preliminary title report', 'Easements, CC&R’s and the legal description are read from it.', () => true],
+  ['deed', 'Deed (grant deed, trust transfer, quitclaim)', 'Vesting, the legal description and any rights not appraised (oil, gas, minerals) are read from it.', () => true],
   ['other', 'Other documents', 'Plans, permits, HOA documents, disclosures, leaseback, plat map … each is sorted by kind.', () => true],
 ];
 function renderWizard() {
@@ -93,7 +97,7 @@ function renderWizard() {
     box.innerHTML = head + `<section class="mkcard"><h3>${h([f.fileNo, street(f)].filter(Boolean).join(' – ') || 'New order')}</h3>
       <div class="drop big wzAll" id="wzAll"><div><span class="eyebrow">Drop everything here</span><p class="help">You do not need a box for each file: drop them all at once and each one is sorted by what its first page says. The boxes below are your checklist – each shows what arrived. Everything is kept in this browser on this computer.</p></div><label class="btn primary">Choose files<input type="file" multiple id="wzAllFile" hidden></label></div>
       <div class="slots">${SLOTS.filter(([, , , show]) => show(w)).map(([k, title, help]) => { const mine = docs.filter(d => k === 'other' ? !SLOTS.some(s => s[0] !== 'other' && s[0] === d.type) : d.type === k);
-        return `<div class="slot" data-slot="${k}"><div><b>${h(title)}</b><small>${h(help)}</small>${mine.length ? `<ul>${mine.map(d => `<li>${h(d.name)}${d.note ? ' – ' + h(d.note) : ''}${d.warn ? ` <span class="warnTxt">⚠ ${h(d.warn)}</span>` : ''}</li>`).join('')}</ul>` : ''}</div>
+        return `<div class="slot" data-slot="${k}"><div><b>${h(title)}</b><small>${h(help)}</small>${mine.length ? `<ul>${mine.map(d => `<li>${h(d.name)}${d.note ? ' – ' + h(d.note) : ''}${d.warn ? ` <span class="warnTxt">⚠ ${h(d.warn)}</span>` : ''} <button type="button" class="lnk danger" data-wzdel="${d.id}" title="Take this file out of the order">Remove</button></li>`).join('')}</ul>` : ''}</div>
           <label class="btn small">${mine.length ? 'Add more' : 'Choose files'}<input type="file" multiple data-slotfile="${k}" hidden></label></div>`; }).join('')}</div>
       <p class="help pre" id="wzStatus"></p>
       <div class="row"><button type="button" class="btn ghost" id="wzBack2">← Back</button><button type="button" class="btn primary" id="wzNext2">Next: check what was filled in →</button></div></section>`;
@@ -111,7 +115,7 @@ function renderWizard() {
   const fill = f.letterFill || []; const al = [];
   const V = { stop: ['No AI on this job', 'The client’s letter restricts AI (for example “no AI without prior authorization”), so this order is set to <b>No AI</b>. Nothing will be sent anywhere.'], look: ['AI only with confidential information removed', 'The letter limits sharing confidential or personal information but does not ban AI, so this order is set to <b>Yes – only with confidential information removed</b>.'], clear: ['AI allowed', 'Nothing in the letter limits AI or sharing of information, so this order is set to <b>Yes – no restriction</b>.'] };
   if (f.orderDoc && f.orderDoc.verdict) { const v = V[f.orderDoc.verdict]; al.push(`<div class="alert ${f.orderDoc.verdict}"><b>${v[0]}</b><p>${v[1]} Check the marked paragraphs on the order page; you can change the setting there.</p></div>`); }
-  (f.docs || []).filter(d => d.warn).forEach(d => al.push(`<div class="alert stop"><b>Check the property</b><p>${h(d.name)}: ${h(d.warn)}</p></div>`));
+  (f.docs || []).filter(d => d.warn).forEach(d => al.push(`<div class="alert stop"><b>Check the property</b><p>${h(d.name)}: ${h(d.warn)}</p><p><button type="button" class="btn small danger" data-wzdel="${d.id}">Remove this file from the order</button> <small>if it belongs to another property or was added by mistake</small></p></div>`));
   const facts = [['File number', f.fileNo], ['Property', f.address], ['APN', f.apn], ['Owner of record', f.owner], ['Client', ((f.clients || [])[0] || {}).company || ((f.clients || [])[0] || {}).name], ['Assignment type', (TYPES[f.type] || {}).label], ['Report due', f.dueDate && longDate(f.dueDate)], ['Fee', f.fee && '$' + f.fee], ['Loan number', f.loanNo], ['Borrower', f.borrower]].filter(r => r[1]);
   const need = []; if (!f.address) need.push('the property address'); if (w.letter === 'client' && !(f.docs || []).some(d => d.type === 'clientLetter')) need.push('the client’s engagement letter');
   if (!(f.docs || []).some(d => d.type === 'crs')) need.push('the CRS report'); if (w.purchase === 'yes' && !(f.docs || []).some(d => d.type === 'contract')) need.push('the purchase contract'); if (w.listed === 'yes' && !(f.docs || []).some(d => d.type === 'mls')) need.push('the MLS listing with history');
