@@ -81,8 +81,36 @@ function refHTML(J) {
       <span class="help">${rows.length} project${rows.length === 1 ? '' : 's'} · median building direct ${money(median(rows.map(r => r.bd)))} / sf · existing-site basis ${money(median(rows.map(r => r.ex)))} / sf · indexed with the CCCI${C.indexNote ? ' (' + esc(C.indexNote) + ')' : ''}</span></div>
       <div class="tablewrap" style="max-height:420px;overflow:auto"><table class="tbl"><thead><tr><th>Project</th><th>Type</th><th>Budget</th><th>Submarket</th><th>Quality</th><th class="r">GLA</th><th class="r">Building direct $/sf</th><th class="r">Existing-site basis $/sf</th><th class="r">Total budget $/sf</th><th class="r">Garage $/sf</th><th class="r">Pool & spa</th><th class="r">Landscaping</th></tr></thead><tbody>
       ${rows.map(({ p, bd, ex, tot, gar, pool, land }) => `<tr${isRemodel(p) ? ' class="muted"' : ''}><td><b>${esc(p.id)}</b></td><td><small>${esc(String(p.f['Project type'] || ''))}</small></td><td>${esc(String(p.f['Budget date'] || '').slice(0, 7))}</td><td><small>${esc(String(p.f['Submarket'] || ''))}</small></td><td>${esc(String(p.f['Quality rating'] || ''))}</td><td class="r">${int(num(p.f['GLA (SF) – appraisal']))}</td><td class="r">${bd ? money(bd) : ''}</td><td class="r">${ex ? money(ex) : ''}</td><td class="r">${tot ? money(tot) : ''}</td><td class="r">${gar ? money(gar) : ''}</td><td class="r">${pool ? money(pool) : ''}</td><td class="r">${land ? money(land) : ''}</td></tr>`).join('')}</tbody></table></div>
+      ${boeHTML(J)}
       <p class="help">From ${esc(C.file)}, your local contractor budgets. Figures are brought to today with the California Construction Cost Index; you noted local costs rose faster, so older budgets read as floors. Your 135 review decisions are not in yet – figures use the suggested handling.</p>`; }
   else body = '<p class="help">Drop your <b>Construction_Cost_Database.xlsx</b> on this page.</p>';
   return `<h2>Land sales and construction costs <small>your own databases, shared with the cost approach</small></h2>
     <div class="row"><button class="btn sm${R.tab === 'land' ? ' primary' : ''}" data-reftab="land">Land sales (${L.length})</button><button class="btn sm${R.tab === 'cost' ? ' primary' : ''}" data-reftab="cost">Construction costs (${C ? C.projects.length + ' projects' : 'not loaded'})</button></div>${body}`;
+}
+
+/* ---- BOE Assessors' Handbook 531 (2026) as her check beside her own budgets ---- */
+function boeTables(type) { return BOE2026.tables.filter(t => /Single-family/.test(t.part) && t.type === type && t.construction === 'D'); }
+function boeRate(type, shape, cls, sf) {   // $/sf at this size, straight line between the handbook's size columns
+  const t = boeTables(type).find(x => x.shape === 'SHAPE ' + shape); if (!t || !t.rows[cls]) return null; const A = t.areas, V = t.rows[cls];
+  const pts = A.map((a, i) => [a, V[i]]).filter(p => p[1] !== null && p[1] !== undefined); if (!pts.length) return null;
+  if (sf <= pts[0][0]) return { rate: pts[0][1], t, note: 'smallest size in the table' }; if (sf >= pts[pts.length - 1][0]) return { rate: pts[pts.length - 1][1], t, note: 'largest size in the table (' + int(pts[pts.length - 1][0]) + ' sf)' };
+  for (let i = 1; i < pts.length; i++) if (sf <= pts[i][0]) { const [a0, v0] = pts[i - 1], [a1, v1] = pts[i]; return { rate: v0 + (v1 - v0) * (sf - a0) / (a1 - a0), t, note: '' }; }
+  return null; }
+function boePercentGood(life, age) { const T = BOE2026.percentGood[life] || BOE2026.percentGood[String(life)]; if (!T) return null; const ages = Object.keys(T).map(Number).sort((a, b) => a - b);
+  if (age <= 0) return 100; let lo = ages[0]; for (const a of ages) { if (a <= age) lo = a; } const hi = ages.find(a => a >= age); if (hi === undefined) return T[ages[ages.length - 1]]; if (hi === lo) return T[lo]; return Math.round(T[lo] + (T[hi] - T[lo]) * (age - lo) / (hi - lo)); }
+function boeHTML(J) {
+  const B = app.boe = app.boe || {}; const S = subjFacts(J); const sf = num(B.sf) || num(S.gla) || null; const type = B.type || 'Modern, post-1990', shape = B.shape || 'A', cls = B.cls || '';
+  const loc = 1.40; const classes = (boeTables(type)[0] || { rows: {} }); const r = cls && sf ? boeRate(type, shape, cls, sf) : null;
+  const age = num(B.age) ?? (S.year ? new Date().getFullYear() - num(S.year) : null); const life = 60; const pg = age !== null ? boePercentGood(life, age) : null;
+  const myMed = app.costDb ? median(app.costDb.projects.filter(p => !isRemodel(p)).map(p => num(p.s['Building direct $/SF GLA – indexed']))) : null;
+  return `<div class="card notice" style="margin-top:12px"><b>Check against the BOE Assessors' Handbook 531 (2026)</b> <small class="muted">your occasional check – your own budgets come first</small>
+    <div class="row" style="margin-top:6px"><label>Type <select data-boe="type">${['Conventional', 'Modern, pre-1990', 'Modern, post-1990'].map(t => `<option ${t === type ? 'selected' : ''}>${t}</option>`).join('')}</select></label>
+      <label>Shape <select data-boe="shape">${['A', 'B', 'C', 'D'].map(s => `<option ${s === shape ? 'selected' : ''}>${s}</option>`).join('')}</select></label>
+      <label>Class <select data-boe="cls"><option value="">pick (AH 531A)</option>${Object.keys(classes.rows).map(c => `<option ${c === cls ? 'selected' : ''}>${c}</option>`).join('')}</select></label>
+      <label>Living area <input class="txt xs" data-boe="sf" value="${sf || ''}" style="width:6em"></label>
+      <label>Age (years) <input class="txt xs" data-boe="age" value="${age ?? ''}" style="width:4em"></label></div>
+    ${r ? `<p><b>${money(r.rate)}</b> / sf (D construction, shape ${esc(shape)}, ${esc(cls)}, ${int(sf)} sf${r.note ? ' – ' + esc(r.note) : ''}; AH 531 p. ${r.t.pages.join(', ')}) × <b>${loc.toFixed(2)}</b> Santa Barbara south-zone location factor (p. 6) = <b>${money(r.rate * loc)}</b> / sf · ${money(r.rate * loc * sf)} for ${int(sf)} sf.
+      ${myMed ? ` Your local new-construction budgets: median building direct <b>${money(myMed)}</b> / sf.` : ''}</p>` : '<p class="help">Pick the class (AH 531A describes each one) to see the handbook cost.</p>'}
+    ${pg !== null ? `<p>BOE normal percent good, ${life}-year life (single-family, classes 6–10), age ${age}: <b>${pg}%</b> (AH 531 p. 83–84) – physical wear only; your effective age and any functional or external obsolescence are yours.</p>` : ''}
+    <p class="help">What each class includes is described in AH 531A (a separate BOE publication). The handbook lists extraordinary permits and fees and climate-zone requirements as additional adjustments (p. 6) and asks appraisers to research local costs – your budgets are that research. Pools per the handbook: concrete $94–$173 / sf (typical 440 sf pool $113–$161 / sf), p. 63.</p></div>`;
 }
