@@ -228,7 +228,7 @@ function crsCanon(c) {
     beds: num(c.beds), bathsTotal: num(c.baths), gla: num(c.sqftAssessor), yearBuilt: num(c.yearBuilt), rooms: num(c.rooms),
     siteSf: num(c.lotSf) || (num(c.acres) ? Math.round(num(c.acres) * 43560) : null), acres: num(c.acres),
     lat: num(c.lat), lon: num(c.lng), zoning: c.zoning || '', landUse: c.landUse || '', fema: [c.fema, c.femaPanel, c.femaDate].filter(Boolean).join(' · '), owner: c.owner || '',
-    priorSales: sales, loans: c.loans || [],
+    priorSales: sales, loans: c.loans || [], loansRead: !!c.loansRead,
     lastSale: sales.find(s => s.price) || null,
   };
 }

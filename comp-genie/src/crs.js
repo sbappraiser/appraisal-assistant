@@ -62,7 +62,7 @@ function parseCRS(lines) {
     c.sales.push(row);
   }
   // Mortgage history rows: "MM/DD/YYYY | $amount | borrower | lender | doc"
-  const mi = lines.findIndex(l => l.startsWith('MORTGAGE HISTORY')); c.loans = [];
+  const mi = lines.findIndex(l => l.startsWith('MORTGAGE HISTORY')); c.loans = []; c.loansRead = mi >= 0;
   if (mi >= 0) for (let j = mi + 1; j < lines.length && !/^FORECLOSURE|^PROPERTY CHARACTERISTICS/.test(lines[j]); j++) {
     const cs = cells(lines[j]); if (!/^\d{2}\/\d{2}\/\d{4}$/.test(cs[0]) || !/^\$/.test(cs[1] || '')) continue;
     c.loans.push({ date: cs[0], amount: cs[1], borrower: cs[2] || '', lender: cs[3] || '', doc: cs[4] || '' });

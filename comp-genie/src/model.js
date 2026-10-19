@@ -168,13 +168,35 @@ function srcVals(c) { // canonical values per source for this comp
   // show the CRS recorded price beside the others when its last sale is this sale
   let crs = c.src.crs; const sale = currentSale(c);
   if (crs && crs.lastSale && sale && sale.date && Math.abs(monthsBetween(crs.lastSale.date, sale.date)) <= 2) crs = { ...crs, salePrice: crs.lastSale.price, saleDate: crs.lastSale.date };
-  return { arch: a ? a.v : null, mls: c.src.mls, pdf: c.src.pdf, crs, cort: c.src.cort[c.cortPick || 0] || null };
+  if (crs && crs.salePrice) { const fin = crsFinancing(crs); if (fin) crs = { ...crs, financing: fin }; }
+  const finFix = o => o && /^\s*\d+\s*$/.test(String(o.financing || '')) ? { ...o, financing: 'MLS code ' + String(o.financing).trim() + ' – what does it mean?' } : o;
+  return { arch: a ? a.v : null, mls: finFix(c.src.mls), pdf: lastRedOf(finFix(c.src.pdf)), crs, cort: c.src.cort[c.cortPick || 0] || null };
+}
+/* her note (Oct 19 2026): the CRS Mortgage History shows the buyer's loan – a loan recorded near the sale's recording date with the buyer as borrower */
+function crsFinancing(crs) {
+  const L = crs.loans || []; const s = crs.lastSale; if (!s || (!L.length && !crs.loansRead)) return '';
+  const when = s.recorded || s.date; if (!when) return '';
+  const words = t => String(t || '').toLowerCase().replace(/[^a-z ]/g, ' ').split(/\s+/).filter(w => w.length >= 3 && !['and', 'the', 'trust', 'family', 'living', 'revocable', 'llc', 'inc'].includes(w));
+  const buyer = new Set(words(s.buyer));
+  const near = L.filter(l => { const d = isoDate(l.date); return d && Math.abs(Date.parse(d) - Date.parse(when)) <= 45 * 864e5; });
+  const pick = near.find(l => !buyer.size || words(l.borrower).some(w => buyer.has(w))) || null;
+  if (pick) return 'Loan: ' + (pick.lender || 'lender not named') + (num(pick.amount) ? ' ' + money(num(pick.amount)) : '') + ' (CRS mortgage history)';
+  return 'No loan near the sale in the CRS mortgage history (cash?)';
+}
+/* her note (Oct 19 2026): the last price reduction is in the MLS printout History – the newest price change on or before the contract (pending) date */
+function lastRedOf(p) {
+  if (!p || !(p.priceChanges || []).length) return p;
+  const cd = p.contractDate || p.lpcDate || '';
+  const pc = p.priceChanges.filter(x => x.date && (!cd || x.date <= cd) && !(num(x.pct) > 0)).sort((a, b) => String(b.date).localeCompare(String(a.date)))[0];
+  if (!pc) return p;
+  return { ...p, lastRed: p.lastRed || pc.date, redDays: cd ? Math.round((Date.parse(cd) - Date.parse(pc.date)) / 864e5) : null };
 }
 function defaultOrder(c, f) {
   const a = archChosen(c), sale = currentSale(c); const matched = a && archMatches(a, sale);
   const recent = a && (matched || (a.v.saleDate && sale && sale.date && Math.abs(monthsBetween(a.v.saleDate, sale.date)) <= 24) || (!a.v.saleDate && a.entered && monthsBetween(a.entered, todayISO()) <= 24));
   switch (f.kind) {
-    case 'sale': return matched ? ['arch', 'mls', 'pdf', 'cort', 'crs'] : ['mls', 'pdf', 'cort'];
+    case 'sale': if (f.k === 'financing') return matched ? ['arch', 'crs', 'cort', 'mls', 'pdf'] : ['crs', 'cort', 'mls', 'pdf'];   // her note: the recorded loan (CRS mortgage history, CORT lender) shows the financing
+      return matched ? ['arch', 'mls', 'pdf', 'cort', 'crs'] : ['mls', 'pdf', 'cort'];
     case 'listing': return ['pdf', 'mls', ...(matched ? ['arch'] : []), ...(sale && sale.from === 'arch' ? ['arch'] : [])];
     case 'phys': return recent ? ['arch', 'mls', 'pdf', 'crs', 'cort'] : ['mls', 'pdf', 'arch', 'crs', 'cort'];
     case 'geo': return ['mls', 'pdf', 'crs'];
@@ -186,13 +208,15 @@ function val(c, k) { // → { v, src, auto }
   if (c.edit && k in c.edit && !blank(c.edit[k])) return { v: c.edit[k], src: 'edit' };
   const S = srcVals(c);
   if (c.pick && c.pick[k] && S[c.pick[k]] && !blank(S[c.pick[k]][k])) return { v: S[c.pick[k]][k], src: c.pick[k] };
+  let codeOnly = null;
   for (const s of defaultOrder(c, f)) if (S[s] && !blank(S[s][k])) {
     let v = S[s][k];
+    if (k === 'financing' && /^MLS code/.test(v)) { codeOnly = codeOnly || { v, src: s, auto: true }; continue; }   // a Flexmls number, not the financing – another source wins
     // your archive keeps sale dates as month/year: take the exact day from another source when it is the same month
     if (f.t === 'date' && String(v).length === 7) { const exact = SRC_ORDER.map(x => S[x] && S[x][k]).find(x => x && String(x).length === 10 && String(x).startsWith(v)); if (exact) v = exact; }
     return { v, src: s, auto: true };
   }
-  return { v: null, src: null };
+  return codeOnly || { v: null, src: null };
 }
 const V = (c, k) => val(c, k).v;
 function disagree(c, k) {

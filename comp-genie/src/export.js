@@ -24,11 +24,12 @@ function uadProjAmen(s) { const out = []; const add = (t, other) => { if (!out.s
 function uadSaleType(s) { return ({ ArmLth: 'TypicallyMotivated', Listing: 'TypicallyMotivated', REO: 'REOSale', Short: 'ShortSale', Estate: 'EstateSale', CrtOrd: 'CourtOrderedNonForeclosureSale', NonArm: 'SaleBetweenRelatedParties', Relo: 'RelocationSale', Trust: 'EstateSale' })[s] || (s ? 'Other' : 'TypicallyMotivated'); }
 function uadFinancing(s) {
   s = String(s || ''); if (!s) return {};
+  if (/\(cash\?\)|^MLS code/i.test(s)) return {};   // not confirmed – she types what it was
   if (/cash|no loan/i.test(s)) return { none: true };
   if (/conv/i.test(s)) return { type: 'Conventional' }; if (/FHA/i.test(s)) return { type: 'FHA' }; if (/\bVA\b/i.test(s)) return { type: 'VA' };
   if (/USDA|rural/i.test(s)) return { type: 'USDARuralDevelopment' }; if (/private|seller/i.test(s)) return { type: 'Private' };
   if (/loan:/i.test(s)) return { type: 'Conventional' };
-  if (/unknown/i.test(s)) return {};
+  if (/unknown|^MLS code/i.test(s)) return {};
   return { type: 'Other', other: s.slice(0, 33) };
 }
 const STYLE_MAP = [[/spanish|hacienda/i, 'Spanish'], [/mediterr/i, 'Mediterranean'], [/mid.?century|modern/i, 'Modern'], [/contemp/i, 'Contemporary'], [/ranch/i, 'Ranch'], [/craftsman/i, 'Craftsman'], [/cottage/i, 'Cottage'], [/bungalow/i, 'Bungalow'], [/cape ?cod/i, 'CapeCod'], [/colonial/i, 'Colonial'], [/tudor/i, 'Tudor'], [/victorian/i, 'Victorian'], [/farm/i, 'Farmhouse'], [/traditional/i, 'Traditional'], [/french|normand/i, 'Other'], [/adobe|southwest/i, 'Southwest'], [/georgian/i, 'Georgian']];
