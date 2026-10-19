@@ -345,7 +345,7 @@ function markFilled(f, type, key, v) {   // what an accepted entry filled in on 
 }
 function factToOrder(key, v) {   // an accepted legal description goes into the order's Legal description box (the Comp genie and SFREP use it)
   if (!v) return;
-  if (key === 'legal') { const el = $('#f_legal'); if (!el) return; el.value = String(v).replace(/\bS(\d{2})(?= (?:FEET|FT)\b)/gi, '5$1');   // a scan's "S00 FEET" is 500 feet cur = readForm(); toast('Legal description is on the order now'); return 'Legal description'; }
+  if (key === 'legal') { const el = $('#f_legal'); if (!el) return; el.value = String(v).replace(/\bS(\d{2})(?= (?:FEET|FT)\b)/gi, '5$1'); /* a scan's "S00 FEET" is 500 feet */ cur = readForm(); toast('Legal description is on the order now'); return 'Legal description'; }
   if (key === 'reserve') { const el = $('#f_rightsNot'); if (!el) return; const t = rightsNotText(v);
     el.value = el.value.trim() && !el.value.includes(t) ? (el.value.trim() + ' ' + t).slice(0, 540) : t; cur = readForm(); toast('Added to "Rights not appraised" on the order. You decide in the Comp genie whether all rights are included.'); return 'Rights not appraised'; }
 }

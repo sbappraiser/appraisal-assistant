@@ -203,13 +203,14 @@ mark.blank{background:#fff3a8;padding:0 2px;border-radius:3px}.cmt textarea{widt
     <button type="button" data-tab="saved" aria-selected="false">All files</button>
     <button type="button" data-tab="letter" aria-selected="false">Order</button>
     <button type="button" data-tab="market" aria-selected="false">Market</button>
+    <button type="button" data-tab="genie" aria-selected="false">Comp genie</button>
     <button type="button" data-tab="books" aria-selected="false">Bookkeeping</button>
     <button type="button" data-tab="contacts" aria-selected="false">Clients</button>
     <button type="button" data-tab="comments" aria-selected="false">My comments</button>
     <button type="button" data-tab="wording" aria-selected="false">Standard wording</button>
     <button type="button" data-tab="help" aria-selected="false">Help</button>
   </nav>
-  <div class="toolrow"><a class="btn ghost" id="genieTop" href="../comp-genie/" target="aa-genie">Comp genie</a><button type="button" class="btn ghost" id="btnBackup">Back up</button><label class="btn ghost" for="restoreFile">Restore<input type="file" id="restoreFile" accept=".json,application/json"></label></div>
+  <div class="toolrow"><button type="button" class="btn ghost" id="btnBackup">Back up</button><label class="btn ghost" for="restoreFile">Restore<input type="file" id="restoreFile" accept=".json,application/json"></label></div>
 </header>
 <main>
 <section class="panel" id="panel-home" hidden><div id="homeBody"></div></section>
@@ -400,6 +401,11 @@ mark.blank{background:#fff3a8;padding:0 2px;border-radius:3px}.cmt textarea{widt
   <div class="listHead"><div><h2 id="mkTitle">Market conditions</h2><p class="help">For the order that is open on the Order &amp; letter tab. Nothing here is sent anywhere.</p></div></div>
   <div id="mkBody"></div>
 </section>
+<section class="panel" id="panel-genie" hidden>
+  <div class="listHead"><div><h2 id="gnTitle">Comp genie</h2><p class="help" id="gnHelp">The Comp genie for the order that is open. It is the same Comp genie, inside the Appraisal Assistant: anything you do here is saved the same way.</p></div>
+    <div class="toolrow"><a class="btn ghost" id="gnOwn" href="../comp-genie/" target="aa-genie" title="Open it in a tab of its own – handy on a second screen">Open in its own window ↗</a></div></div>
+  <iframe id="genieFrame" title="Comp genie" style="width:100%;height:calc(100vh - 150px);min-height:600px;border:1px solid var(--line);border-radius:14px;background:var(--panel)"></iframe>
+</section>
 <section class="panel" id="panel-books" hidden>
   <div class="listHead"><div><h2 id="bkTitle">Bookkeeping</h2><p class="help">The invoice for the order that is open, then every unpaid invoice and the half-year summary. Nothing here is sent anywhere.</p></div></div>
   <form id="booksForm" autocomplete="off" onsubmit="return false">
@@ -557,7 +563,9 @@ mark.blank{background:#fff3a8;padding:0 2px;border-radius:3px}.cmt textarea{widt
       <li>The two 2.6 lines for the Sales Comparison Approach (comparable listings offered now, comparable sales in the past 12 months, with price ranges) are under the grid.</li>
       <li><b>Copy the grid</b> to paste it, or <b>Print / Save as PDF</b>. Price per square foot is not used as a trend measure.</li></ol></details>
     <details><summary>Comp genie from an order</summary><ol>
-      <li>Click <b>Comp genie</b> on the order (or on its row in Orders). The comp genie opens with the subject filled in from the order.</li>
+      <li>The <b>Comp genie</b> tab (between Market and Bookkeeping) shows the Comp genie inside the Appraisal Assistant, on the order that is open – its assignment is made from the order the first time (subject, effective date, your Search Criteria search). The <b>Comp genie</b> buttons on the order, its row in All files and the Market tab open the same tab.</li>
+      <li>With no order open, the tab shows the Comp genie's list: <b>Orders not started here yet</b> (click <b>Start</b>) and <b>Your assignments</b>.</li>
+      <li><b>Open in its own window ↗</b> opens it in a separate browser tab, for a second screen. Both are the same Comp genie and save to the same place.</li>
       <li>In the comp genie, <b>From an order…</b> lists your active orders.</li><li>Use Chrome on this computer for both, so they share the same storage.</li></ol></details>
     <details><summary>Adjustment grid and the full report for SFREP (Comp genie)</summary><ol>
       <li>On the iPad, export the <b>Workfile package</b> and save it to OneDrive. In the Comp genie, drop that .zip on the page: the subject column fills from your inspection (living area from your sketch, bedrooms, baths, quality and condition, site, garage, view…).</li>

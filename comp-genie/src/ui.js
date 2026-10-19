@@ -15,6 +15,7 @@ async function start() {
   app.job = (POP && app.jobs.find(j => j.id === POP.job)) || app.jobs.find(j => last && j.id === last.v) || app.jobs[0] || null;
   app.orders = await readOrders();
   const oq = new URLSearchParams(location.search).get('order');
+  if (new URLSearchParams(location.search).get('embed')) document.body.classList.add('embed');   // inside the Appraisal Assistant's Comp genie tab
   app.home = !POP && !oq && !new URLSearchParams(location.search).get('job');   // her request (Oct 19 2026): open on the list of assignments, not the last one
   if (oq) { history.replaceState(null, '', location.pathname); const o = app.orders.find(x => x.id === oq); if (o) await jobFromOrder(o); else toast('That order was not found in this browser. Open the Appraisal Assistant in this same browser (Chrome).', 6000); }
   if (!app.job && !app.home) await newJob();
@@ -22,6 +23,13 @@ async function start() {
   await loadPhotos();
   render();
 }
+window.addEventListener('message', async e => {   // the Appraisal Assistant shows its Comp genie tab again: read the orders again (same site only)
+  if (e.origin !== location.origin || !e.data || e.data.type !== 'aa-refresh') return;
+  app.orders = await readOrders();
+  if (e.data.order && (!app.job || app.job.orderId !== e.data.order || app.home)) { const o = app.orders.find(x => x.id === e.data.order); if (o) { app.home = false; await jobFromOrder(o); await loadPhotos(); } }
+  if (!e.data.order && !app.job) app.home = true;
+  render();
+});
 function setCort(rows) {
   app.cort = rows || []; app.cortByApn = new Map(); app.cortByKey = new Map();
   app.cort.forEach((r, i) => { const a = apnKey(r.apn); if (a) { if (!app.cortByApn.has(a)) app.cortByApn.set(a, []); app.cortByApn.get(a).push(i); }
@@ -233,6 +241,8 @@ function homeHTML() {
     <span class="pill">${app.cort.length ? `CORT: ${app.cort.length} sales` : 'No CORT table'}</span><span class="grow"></span>
     <button class="btn" data-act="newjob">New assignment</button>
     ${open.length ? `<select data-act="fromorder" aria-label="Start from an order"><option value="">From an order…</option>${open.map(o => `<option value="${o.id}">${esc(orderName(o))}</option>`).join('')}</select>` : ''}</header>
+  ${(() => { const todo = open.filter(o => !app.jobs.some(j => j.orderId === o.id)); return todo.length ? `<section class="card"><h2>Orders not started here yet</h2><p class="muted">Every open order in the Appraisal Assistant. Click <b>Start</b> and its assignment is made from the order (subject, effective date, your Search Criteria search).</p>
+    <table class="tbl homelist"><thead><tr><th>Order</th><th>Subject</th><th>Client</th><th>Status</th><th></th></tr></thead><tbody>${todo.map(o => `<tr><td><b>${esc(o.fileNo || '')}</b></td><td>${esc(o.address || '')}</td><td>${esc(((o.clients || [])[0] || {}).company || ((o.clients || [])[0] || {}).name || '')}</td><td>${esc(o.stage || 'New')}</td><td><button class="btn primary" data-act="startorder" data-id="${o.id}">Start</button></td></tr>`).join('')}</tbody></table></section>` : ''; })()}
   <section class="card"><h2>Your assignments</h2>
     ${app.jobs.length ? `<p class="muted">Click one to open it. To go back to this list later, choose <b>All assignments</b> in the Assignment box at the top.</p>
     <table class="tbl homelist"><thead><tr><th>Assignment</th><th>Subject</th><th>Effective date</th><th>Comps</th><th>Order</th><th>Last changed</th></tr></thead><tbody>
@@ -501,6 +511,7 @@ document.addEventListener('click', async e => {
   switch (t.dataset.act) {
     case 'add': addByAddress($('#addr').value); break;
     case 'newjob': app.home = false; await newJob(); await loadPhotos(); render(); break;
+    case 'startorder': { const o = (app.orders || []).find(x => x.id === t.dataset.id); if (!o) break; app.home = false; await jobFromOrder(o); await loadPhotos(); render(); window.scrollTo(0, 0); break; }
     case 'openjob': { const j = app.jobs.find(x => x.id === t.dataset.id); if (!j) break; app.home = false; app.job = j; app.sel = null; await DB.put('kv', { id: 'lastJob', v: j.id }); await loadPhotos(); render(); window.scrollTo(0, 0); break; }
     case 'deljob': app.confirm = 'deljob'; render(); break;
     case 'deljob-yes': { const id = app.job.id; await DB.del('jobs', id); for (const p of await DB.byJob(id)) await DB.del('photos', p.id); app.jobs = app.jobs.filter(j => j.id !== id); app.job = app.jobs[0] || null; app.confirm = null; app.home = true; await loadPhotos(); render(); window.scrollTo(0, 0); toast('Assignment deleted'); break; }

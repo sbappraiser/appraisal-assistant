@@ -378,6 +378,11 @@ function showTab(t) { CUR_TAB = t;
   if (t === 'home') renderHome();
   if (t === 'letter') setTimeout(() => document.querySelectorAll('textarea[data-rqtext]').forEach(x => { x.style.height = 'auto'; x.style.height = (x.scrollHeight + 2) + 'px'; }), 0);
   syncGenieTop();
+  if (t === 'genie') { const on = cur && hasContent(cur); if (on) saveLetter(true, true); const nm = on ? [cur.fileNo, street(cur)].filter(Boolean).join(' ') : '';
+    $('#gnTitle').textContent = 'Comp genie' + (nm ? ' – ' + nm : ''); $('#gnOwn').href = on ? genieURL(cur) : '../comp-genie/';
+    const fr = $('#genieFrame'); const want = on ? cur.id : '';
+    if (!fr.dataset.loaded) { fr.dataset.loaded = '1'; fr.dataset.order = want; fr.src = '../comp-genie/index.html?embed=1' + (want ? '&order=' + encodeURIComponent(want) : ''); }
+    else { fr.dataset.order = want; setTimeout(() => { try { fr.contentWindow.postMessage({ type: 'aa-refresh', order: want }, location.origin); } catch (e) {} }, on ? 400 : 0); } }
   if (t === 'books') { $('#bkTitle').textContent = 'Bookkeeping' + (cur && (cur.fileNo || street(cur)) ? ' – ' + [cur.fileNo, street(cur)].filter(Boolean).join(' ') : ''); renderBooks(); const a = $('#bkAll'); if (a) { a.innerHTML = unpaidHTML(); wireUnpaid(a); } }
   if (t === 'market') { $('#mkTitle').textContent = 'Market conditions' + (cur && (cur.fileNo || street(cur)) ? ' – ' + [cur.fileNo, street(cur)].filter(Boolean).join(' ') : ''); mkRender(); }
 }
@@ -436,6 +441,10 @@ async function start() {
   document.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => showTab(b.dataset.tab));
   cmtInit(); crLoad().then(() => { if (cur) renderReqs(); });
   $('#booksForm').addEventListener('input', update); $('#booksForm').addEventListener('change', update);
+  document.addEventListener('click', e => { const a = e.target.closest('a[target="aa-genie"]'); if (!a || a.id === 'gnOwn') return; e.preventDefault();
+    const m = String(a.getAttribute('href') || '').match(/[?&]order=([^&]+)/); const id = m && decodeURIComponent(m[1]);
+    if (id && (!cur || cur.id !== id) && letters.some(x => x.id === id)) openLetter(id); else if (cur && hasContent(cur)) saveLetter(true);
+    setTimeout(() => { showTab('genie'); window.scrollTo(0, 0); }, 30); });
   document.addEventListener('click', e => { const b = e.target.closest('[data-gotab]'); if (b) { e.preventDefault(); showTab(b.dataset.gotab); window.scrollTo(0, 0); } });
   $('#f_signDate').addEventListener('change', () => { const d = $('#f_signDate').value; if (d && !$('#f_invDate').value) $('#f_invDate').value = d; if (d && !$('#f_invNo').value.trim()) $('#f_invNo').value = invNoOf($('#f_fileNo').value); update(); renderBooks(); });
   $('#letterForm').addEventListener('input', update); ['#f_otherUsers', '#f_userText'].forEach(id => $(id).addEventListener('input', syncVisibility)); $('#letterForm').addEventListener('change', update);
@@ -461,7 +470,6 @@ async function start() {
   $('#btnNew2').onclick = () => startNewOrder(); $('#btnNew').onclick = () => startNewOrder();
   $('#btnIpad').onclick = () => { saveLetter(true); activeOrdersFile(); };
   $('#genieLink').addEventListener('click', () => saveLetter(true));
-  $('#genieTop').addEventListener('click', () => { syncGenieTop(); if ($('#genieTop').href.includes('?order=')) saveLetter(true); });
   ['#f_lenderDiff', '#f_amcUsed', '#f_inspDate', '#f_effDate', '#f_dod'].forEach(id => $(id).addEventListener('change', syncVisibility));
   $('#f_stage').addEventListener('change', () => { if ($('#f_stage').value === 'Delivered') deliveredToday(); cur = readForm(); renderLetters(); });
   document.querySelectorAll('[data-tab]').forEach(b => b.addEventListener('click', () => { if (b.dataset.tab !== 'letter' && cur && hasContent(readForm())) saveLetter(true); }));
