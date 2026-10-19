@@ -386,11 +386,20 @@ function cellHTML(c, f, s, S, using) {
 }
 /* MLS listing link (her request): a link pattern she sets up once from one of her own MLS listing pages – nothing is fetched by the Comp genie */
 let MLSLINK = ''; DB.get('kv', 'mlsLink').then(r => { MLSLINK = (r && r.v) || ''; }).catch(() => {});
+let MLSSTART = 'https://www.flexmls.com/'; DB.get('kv', 'mlsStart').then(r => { if (r && r.v) MLSSTART = r.v; }).catch(() => {});   /* SBMLS (Flex) has no address per listing: open her MLS once, then paste each number */
+async function mlsGo(n) {
+  try { await navigator.clipboard.writeText(n); } catch (e) {}
+  let w = window.open('', 'mls-listing', 'width=1200,height=950'); if (!w) { toast('Chrome blocked the MLS window – allow pop-ups for this page', 6000); return; }
+  let blank = false; try { blank = !w.location.href || w.location.href === 'about:blank'; } catch (e) { blank = false; }   /* a page from the MLS cannot be read from here: it is already open */
+  if (blank) w.location.href = MLSSTART; try { w.focus(); } catch (e) {}
+  toast(blank ? `MLS opening – sign in, then click the MLS search box and press Ctrl+V (MLS ${n} is copied)` : `MLS ${n} copied – in the MLS window click the search box and press Ctrl+V`, 7000);
+}
 function mlsLinkHTML(c) { const n = String(V(c, 'mls')).trim();
-  return `<p class="mlsrow"><b>MLS ${esc(n)}</b> <button class="btn sm" data-act="mlscopy" data-n="${esc(n)}" title="Copy the MLS number, then paste it in the MLS search box">Copy MLS #</button>${MLSLINK ? ` <button class="btn sm primary" data-act="mlswin" data-u="${esc(MLSLINK.replace('{mls}', encodeURIComponent(n)).replace('{mlsnodash}', encodeURIComponent(n.replace(/-/g, ''))))}" title="Opens the listing in your MLS in a window you can move to another screen (you need to be logged in)">Open in MLS ↗</button> <button class="lnk" data-act="mlsset">change the MLS link</button>` : ' <button class="lnk" data-act="mlsset">Set up “Open in MLS”</button>'}</p>
-  ${app.mlsSet ? `<div class="card notice"><b>Set up “Open in MLS” once.</b> In your MLS, open any listing. Click Chrome's address bar, copy the whole address (Ctrl+C) and paste it here, then type that listing's MLS number.
-    <div class="row"><input class="txt" id="mlsUrl" placeholder="paste the address of one listing" style="flex:2"><input class="txt" id="mlsNo" placeholder="its MLS #, e.g. 26-1714" style="width:12em"><button class="btn primary" data-act="mlssave">Save</button><button class="btn" data-act="mlscancel">Cancel</button></div>
-    <small>If the address does not contain the MLS number, your MLS cannot be opened at one listing from a link – use <b>Copy MLS #</b> and paste it in the MLS search.</small></div>` : ''}`; }
+  const direct = MLSLINK ? MLSLINK.replace('{mls}', encodeURIComponent(n)).replace('{mlsnodash}', encodeURIComponent(n.replace(/-/g, ''))) : '';
+  return `<p class="mlsrow"><b>MLS ${esc(n)}</b> ${direct ? `<button class="btn sm primary" data-act="mlswin" data-u="${esc(direct)}" title="Opens the listing in a window you can move to another screen (you need to be logged in)">Open in MLS ↗</button>` : `<button class="btn sm primary" data-act="mlsgo" data-n="${esc(n)}" title="Copies the number and brings up your MLS window (the sign-in page the first time) – paste it in the MLS search box">Look it up in MLS ↗</button>`}
+    <button class="btn sm" data-act="mlscopy" data-n="${esc(n)}">Copy MLS #</button> <button class="lnk" data-act="mlsset">MLS settings</button></p>
+  ${app.mlsSet ? `<div class="card notice"><b>Your MLS.</b> Paste the address your MLS opens at (for SBMLS: the Flex sign-in page, e.g. https://www.flexmls.com/). If your MLS ever shows one listing at its own address, paste that address and type its MLS number – then each comp opens straight to its listing.
+    <div class="row"><input class="txt" id="mlsUrl" placeholder="${esc(MLSSTART)}" style="flex:2"><input class="txt" id="mlsNo" placeholder="MLS # (only for a listing address)" style="width:16em"><button class="btn primary" data-act="mlssave">Save</button><button class="btn" data-act="mlscancel">Cancel</button></div></div>` : ''}`; }
 function detailHTML(c) {
   if (!c) return '';
   const J = app.job; const S = srcVals(c); const fl = compFlags(c, J); const ps = photosOf(c); const fr = frontOf(c); const prior = priorSales(c); const px = proximity(c, J);
@@ -548,13 +557,14 @@ document.addEventListener('click', async e => {
       const S = j.subject || {}; t.disabled = true; t.textContent = 'Making the order…';
       window.parent.postMessage({ type: 'aa-make-order', jobId: j.id, name: j.name, fileNo: j.fileNo || '', subject: { addr: S.addr || '', unit: S.unit || '', city: S.city || '', zip: S.zip || '', apn: S.apn || '', lat: S.lat || '', lon: S.lon || '', eff: S.eff || '' } }, location.origin); break; }
     case 'cpop': { const w = window.open(`?pop=comp&id=${encodeURIComponent(t.dataset.id)}&job=${encodeURIComponent(app.job.id)}`, 'genie-comp-' + t.dataset.id, 'width=1100,height=900'); if (!w) toast('Chrome blocked the window – allow pop-ups for this page', 6000); break; }
+    case 'mlsgo': mlsGo(t.dataset.n); break;
     case 'mlscopy': try { await navigator.clipboard.writeText(t.dataset.n); toast('Copied MLS ' + t.dataset.n + ' – paste it in the MLS search box'); } catch (e) { toast('Could not copy'); } break;
     case 'mlswin': { const w = window.open(t.dataset.u, 'mls-listing', 'width=1200,height=950'); if (!w) toast('Chrome blocked the window – allow pop-ups for this page', 6000); break; }   
     case 'mlsset': app.mlsSet = true; render(); break;
     case 'mlscancel': app.mlsSet = false; render(); break;
-    case 'mlssave': { const u = ($('#mlsUrl').value || '').trim(), n = ($('#mlsNo').value || '').trim(); if (!/^https?:\/\//i.test(u) || !n) { toast('Paste the address and type its MLS number'); break; }
-      const vs = [n, n.replace(/-/g, ''), encodeURIComponent(n)]; const hit = vs.find(v => u.includes(v));
-      if (!hit) { toast('That address does not contain ' + n + ' – this MLS cannot be opened at a listing from a link. Use Copy MLS # instead.', 8000); break; }
+    case 'mlssave': { const u = ($('#mlsUrl').value || '').trim(), n = ($('#mlsNo').value || '').trim(); if (!/^https?:\/\//i.test(u)) { toast('Paste the address from Chrome (it starts with https://)'); break; }
+      const vs = n ? [n, n.replace(/-/g, ''), encodeURIComponent(n)] : []; const hit = vs.find(v => u.includes(v));
+      if (!hit) { MLSSTART = u; await DB.put('kv', { id: 'mlsStart', v: u }); app.mlsSet = false; render(); toast('Saved as your MLS start page – MLS buttons open it, and the number is copied for you to paste', 7000); break; }
       MLSLINK = u.replace(hit, '{mls}'); if (hit === n.replace(/-/g, '') && hit !== n) MLSLINK = MLSLINK.replace('{mls}', '{mlsnodash}');
       await DB.put('kv', { id: 'mlsLink', v: MLSLINK }); app.mlsSet = false; render(); toast('Saved – every comp now has Open in MLS'); break; }
     case 'openjob': { const j = app.jobs.find(x => x.id === t.dataset.id); if (!j) break; app.home = false; app.job = j; app.sel = null; await DB.put('kv', { id: 'lastJob', v: j.id }); await loadPhotos(); render(); window.scrollTo(0, 0); break; }
