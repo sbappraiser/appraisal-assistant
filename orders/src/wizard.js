@@ -22,7 +22,8 @@ function renderHome() {
       ${tile('hmOpen', '↻', 'Open an order', 'Your last 10 orders', HOME_VIEW === 'recent')}
       ${tile('hmFind', '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 21 21"/></svg>', 'All files', 'Search every order', HOME_VIEW === 'find')}
     </div>
-    <div class="hmpanel" id="hmPanel"></div>${letters.some(o => o.invDate || o.paidDate || (o.stage || '') === 'Delivered') ? '<div class="hmpanel" id="hmUnpaid"></div>' : ''}`;
+    <div class="hmpanel" id="hmPanel"></div>${letters.some(o => o.invDate || o.paidDate || (o.stage || '') === 'Delivered') ? '<div class="hmpanel" id="hmUnpaid"></div>' : ''}<div class="hmpanel" id="abCard"></div>`;
+  if (typeof abRender === 'function') abRender();
   { const u = $('#hmUnpaid'); if (u) { u.innerHTML = unpaidHTML(); wireUnpaid(u); } }
   $('#hmNew').onclick = () => startNewOrder();
   $('#hmOpen').onclick = () => { HOME_VIEW = 'recent'; renderHome(); };

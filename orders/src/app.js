@@ -179,7 +179,7 @@ function saveLetter(quiet, auto) { // auto = the quiet save while typing (client
   ODB.put('orders', f).then(() => { const t = new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }); document.querySelectorAll('[data-saved]').forEach(el => el.textContent = '✓ Order saved ' + t);
     if (!quiet) toast('Order saved' + (added ? ' · ' + added + ' new client' + (added > 1 ? 's' : '') + ' added' : '')); })
     .catch(e => toast('Could not save in this browser (' + (e.message || e) + ') – use Back up to keep a copy'));
-  renderLetters(); tabMarks();
+  renderLetters(); tabMarks(); abSoon();
 }
 function downloadDocx() {
   const f = readForm();
@@ -381,15 +381,21 @@ function showTab(t) { CUR_TAB = t;
 /* ---------- backup: one zip with every order, client, and document ---------- */
 async function backup() {
   saveLetter(true, true); toast('Making the backup…');
+  const B = await buildBackup();
+  download(new Uint8Array(await B.blob.arrayBuffer()), `Appraisal Assistant backup ${todayISO()}.zip`, 'application/zip');
+  toast(`Backup saved to Downloads: ${B.orders} orders, ${B.clients} clients, ${B.docs} documents` + (B.jobs ? `, ${B.jobs} Comp genie assignments` : ''));
+}
+/* one backup zip: orders, clients, documents, her lists – and the Comp genie's assignments and settings (same site) */
+async function buildBackup() {
   const docs = await ODB.all('docs'); const enc = new TextEncoder();
   const meta = docs.map(d => ({ id: d.id, orderId: d.orderId, name: d.name, type: d.type, size: d.size, mime: d.mime, added: d.added, note: d.note, page: d.page, pages: d.pages, preview: d.preview, file: 'documents/' + d.id + '-' + G.safeName(d.name) }));
   const kv = {}; for (const k of ['mk:boundaries', 'mk:stats', 'mk:zillow', 'cmt:lib', 'reqs:client']) { const r = await ODB.get('kv', k); if (r) kv[k] = r.v; }   // saved market areas, SBMLS monthly statistics, Zillow figures, her comment library
   const data = { app: 'appraisal-assistant', version: 1, saved: new Date().toISOString(), contacts, letters, aiText, rates: store.get('rates', {}), docs: meta, kv };
   const entries = [{ name: 'orders.json', data: enc.encode(JSON.stringify(data, null, 1)) }];
   for (const d of docs) entries.push({ name: meta.find(m => m.id === d.id).file, data: new Uint8Array(await d.blob.arrayBuffer()) });
+  const gn = await genieExport(); if (gn) entries.push({ name: 'comp-genie.json', data: enc.encode(JSON.stringify(gn)) });
   const zip = await G.makeZip(entries);
-  download(zip instanceof Blob ? new Uint8Array(await zip.arrayBuffer()) : zip, `Appraisal Assistant backup ${todayISO()}.zip`, 'application/zip');
-  toast(`Backup saved to Downloads: ${letters.length} orders, ${contacts.length} clients, ${docs.length} documents`);
+  return { blob: zip instanceof Blob ? zip : new Blob([zip]), orders: letters.filter(realOrder).length, clients: contacts.length, docs: docs.length, jobs: gn ? gn.jobs.length : 0 };
 }
 async function restore(file) {
   try {
@@ -407,11 +413,12 @@ async function restore(file) {
         if (k === 'mk:boundaries') { const list = Array.isArray(have) ? have.slice() : []; (v || []).forEach(b => { if (!list.some(x => x.name === b.name)) { list.push(b); na++; } }); list.sort((a, b) => a.name.localeCompare(b.name)); await ODB.put('kv', { id: k, v: list }); }
         else await ODB.put('kv', { id: k, v: { ...(v || {}), ...(have || {}) } }); }
       if (typeof mkLoad === 'function') await mkLoad(); if (typeof cmtLoad === 'function') { await cmtLoad(); cmtRender(); } if (typeof crLoad === 'function') await crLoad(); }
+    let gj = 0; if (files && files.get('comp-genie.json')) { try { gj = await genieImport(JSON.parse(new TextDecoder().decode(files.get('comp-genie.json')))); } catch (e) { console.warn('genie restore', e); } }
     if (files && d.docs) { const have = new Set((await ODB.all('docs')).map(x => x.id));
       for (const m of d.docs) { if (have.has(m.id)) continue; const u8 = files.get(m.file); if (!u8) continue; const { file: _f, ...rest } = m; await ODB.put('docs', { ...rest, blob: new Blob([u8], { type: m.mime || '' }) }); nd++; } }
     contacts.sort((a, b) => (a.name || a.company || '').localeCompare(b.name || b.company || ''));
     store.set('contacts', contacts); store.set('aiText', aiText); renderLetters(); renderContacts();
-    toast(`Restored ${nl} orders, ${nc} clients` + (files ? `, ${nd} documents` : '') + (na ? `, ${na} saved market areas` : ''));
+    toast(`Restored ${nl} orders, ${nc} clients` + (files ? `, ${nd} documents` : '') + (na ? `, ${na} saved market areas` : '') + (gj ? `, ${gj} Comp genie assignments` : ''), 6000); if (typeof renderHome === 'function') renderHome();
   } catch (e) { console.error(e); toast(e.message || 'Could not read that file'); }
 }
 
@@ -486,6 +493,7 @@ async function start() {
   writeForm(cur); render(); renderLetters(); renderContacts();
   showTab(q && pick ? 'letter' : 'home');
   $('#build').textContent = 'Version ' + BUILD; $('#rdBuild').textContent = BUILD;
+  abStart();
   $('#helpSearch').addEventListener('input', e => { const q = e.target.value.trim().toLowerCase(); document.querySelectorAll('.help-page details').forEach(d => { const hit = !q || d.textContent.toLowerCase().includes(q); d.hidden = !hit; d.open = !!q && hit; }); });
   $('#rdClose').onclick = closeReader; $('#rdPrev').onclick = () => { RD.page--; rdPage(); }; $('#rdNext').onclick = () => { RD.page++; rdPage(); }; $('#rdOpen').onclick = () => openDoc(RD.id);
   document.addEventListener('keydown', e => { if ($('#reader').hidden || /INPUT|TEXTAREA/.test(document.activeElement.tagName)) return; if (e.key === 'ArrowRight') { RD.page++; rdPage(); } if (e.key === 'ArrowLeft') { RD.page--; rdPage(); } if (e.key === 'Escape') closeReader(); });
