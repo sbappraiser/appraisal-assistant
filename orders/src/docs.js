@@ -6,7 +6,7 @@
    ===================================================================== */
 const h = s => hesc(s ?? '');
 const DOC_TYPES = [
-  ['Order and client', [['clientLetter', 'Client’s engagement letter / order'], ['myLetter', 'My engagement letter (signed)'], ['invoice', 'Invoice / payment'], ['ipadWorkfile', 'iPad inspection (Workfile package)']]],
+  ['Order and client', [['clientLetter', 'Client’s engagement letter / order'], ['myLetter', 'My engagement letter (signed)'], ['invoice', 'Invoice / payment'], ['ipadWorkfile', 'iPad inspection (Workfile package)'], ['email', 'Email (with its attachments)']]],
   ['Public record', [['crs', 'CRS property report'], ['permitsCounty', 'Permit history by parcel (County)'], ['permitsPdf', 'Permit records'], ['legal', 'Legal description'], ['deed', 'Deed (grant, trust transfer, quitclaim)'], ['prelim', 'Preliminary title report']]],
   ['MLS and market', [['mls', 'MLS listing (subject)'], ['marketSearch', 'MLS market-area search'], ['mlsStats', 'SBMLS monthly statistics'], ['zillow', 'Zillow market page']]],
   ['Plans and construction', [['floorplan', 'Floor plan (to trace in the sketch)'], ['plans', 'Plans'], ['specs', 'Specifications'], ['budget', 'Construction budget']]],
@@ -74,6 +74,7 @@ async function textDocType(file) { // what page 1 says it is (null when it does 
   for (const [re, k] of TEXT_RULES) if (re.test(t.slice(0, 3000))) return k; return null;
 }
 async function detectDocType(file) {
+  if (isEmailFile(file)) return 'email';
   if (/\.zip$/i.test(file.name)) { if (/workfile/i.test(file.name)) return 'ipadWorkfile'; try { const z = await G.readZip(file); if (z.has('inspection-backup.json')) return 'ipadWorkfile'; } catch (e) {} return 'other'; }
   const t = await firstText(file);
   if (/\.csv$/i.test(file.name)) return /Listing Number/i.test(t) ? 'mls' : 'other';
@@ -103,12 +104,14 @@ async function addDocs(fileList, forcedType) {
       try { await ODB.put('docs', { ...meta, orderId: cur.id, blob: file }); }
       catch (e) { said.push(file.name + ': could not be stored (' + (e.message || e) + ')'); continue; }
       cur.docs = old ? cur.docs.map(d => d.id === old.id ? meta : d) : [...(cur.docs || []), meta];
-      await readDoc(meta, file); said.push(file.name + (old ? ' → replaced the earlier copy' : ' → ' + DOC_LABEL[meta.type]) + (file._moved ? ' (dropped in the ' + file._moved + ' box, but page 1 says it is a ' + DOC_LABEL[meta.type] + ')' : '') + (meta.note ? ' · ' + meta.note : ''));
+      await readDoc(meta, file); if (file._fromEmail) meta.note = (meta.note ? meta.note + ' · ' : '') + 'from the email “' + String(file._fromEmail).slice(0, 50) + '”'; said.push(file.name + (old ? ' → replaced the earlier copy' : ' → ' + DOC_LABEL[meta.type]) + (file._moved ? ' (dropped in the ' + file._moved + ' box, but page 1 says it is a ' + DOC_LABEL[meta.type] + ')' : '') + (meta.note ? ' · ' + meta.note : ''));
     }
   } finally { docBusy = false; }
   { const nr = said.filter(x => x.includes('replaced the earlier copy')).length; $('#docStatus').textContent = said.length === 1 ? said[0] : (said.length - nr ? (said.length - nr) + ' files added' : '') + (nr ? (said.length - nr ? ', ' : '') + nr + ' replaced (same file name as one already here)' : '') + ' – see each one below.'; }
   renderDocs(); renderSubject(); syncVisibility(); update(); saveLetter(true); if (typeof wzRefresh === 'function') wzRefresh();
+  if (EMAIL_ATTACH && EMAIL_ATTACH.length) { const more = EMAIL_ATTACH; EMAIL_ATTACH = null; setTimeout(() => addDocs(more), 50); }
 }
+let EMAIL_ATTACH = null;   /* attachments found in emails during one drop, added right after it */
 async function readDoc(meta, file) { // turns the readable kinds into facts; notes what happened
   meta.note = ''; meta.warn = '';
   try {
@@ -137,6 +140,10 @@ async function readDoc(meta, file) { // turns the readable kinds into facts; not
       try { const F = await readMyLetter(file); if (F.scan) meta.note += ' · a scan – check the client, date and type on the order yourself';
         else { const did = applyMyLetter(F); cur = readForm(); cur.myLetterFill = did; cur.myLetterV = 1; if (did.length) { meta.note += ' · order updated from it: ' + did.map(x => x[0]).join(', '); toast('Your signed letter is now on the order: ' + did.map(x => x[0] + ' ' + x[1]).slice(0, 4).join(' · '), 7000); } else meta.note += ' · matches the order'; } } catch (e) { console.warn('my letter', e); }
       if (typeof renderScan === 'function') renderScan(cur.orderDoc);
+    } else if (meta.type === 'email') {   // an email for the workfile: its text is searchable; attachments become documents of their own
+      const E = await readEmail(file); const rec = await ODB.get('docs', meta.id); if (rec) { rec.pagesText = [emailText(E)]; rec.scanPages = []; rec.email = { from: E.from, to: E.to, cc: E.cc, date: E.date && !isNaN(E.date) ? E.date.toISOString() : '', subject: E.subject, text: E.text, files: E.files.map(f => f.name) }; await ODB.put('docs', rec); }
+      meta.textState = 'text'; meta.note = 'email' + (E.from ? ' from ' + E.from.replace(/\s*<[^>]*>/, '') : '') + (E.date && !isNaN(E.date) ? ', ' + E.date.toLocaleDateString() : '') + (E.subject ? ' · “' + E.subject.slice(0, 60) + '”' : '') + (E.files.length ? ' · ' + E.files.length + ' attachment' + (E.files.length > 1 ? 's' : '') + ' added below' : '');
+      E.files.forEach(f => { f._fromEmail = E.subject || meta.name; }); (EMAIL_ATTACH = EMAIL_ATTACH || []).push(...E.files.filter(f => f.size > 0 && !/^image\d*\.(png|gif|jpe?g)$/i.test(f.name) || f.size > 60000));   /* small inline logos are left out */
     } else if (meta.type === 'ipadWorkfile') {   // her inspection from the iPad: kept with the order; the Comp genie takes the subject from it
       try { const z = await G.readZip(file); const b = z.get('inspection-backup.json'); if (!b) { meta.note = 'no inspection inside – export the Workfile package on the iPad'; return; }
         const ins = (JSON.parse(new TextDecoder().decode(b)) || {}).inspection || {}; const P = (ins.data && ins.data.property) || {};
@@ -156,7 +163,8 @@ async function retypeDoc(id, type) {
   const f = await docFile(id); if (f) await readDoc(meta, f);
   renderDocs(); renderSubject(); update(); saveLetter(true);
 }
-async function openDoc(id) { const r = await ODB.get('docs', id); if (!r) { toast('That file is no longer stored'); return; } const u = URL.createObjectURL(r.blob); window.open(u, '_blank'); setTimeout(() => URL.revokeObjectURL(u), 60000); }
+async function openDoc(id) { const r = await ODB.get('docs', id); if (!r) { toast('That file is no longer stored'); return; }
+  if (r.type === 'email') { let E = r.email; if (!E) { try { E = await readEmail(new File([r.blob], r.name)); } catch (e) {} } if (E) { const w = window.open('', '_blank'); if (w) { w.document.write(emailPage({ ...E, date: E.date ? new Date(E.date) : null, files: (E.files || []).map(n => typeof n === 'string' ? { name: n } : n) }, r.name)); w.document.close(); } else toast('Chrome blocked the new tab – allow pop-ups for this page'); return; } } const u = URL.createObjectURL(r.blob); window.open(u, '_blank'); setTimeout(() => URL.revokeObjectURL(u), 60000); }
 async function removeDoc(id) {
   cur = readForm(); cur.docs = (cur.docs || []).filter(d => d.id !== id); await ODB.del('docs', id).catch(() => {});
   renderDocs(); update(); saveLetter(true); toast('File removed from this order');
@@ -176,7 +184,7 @@ function kindPop(btn) {
   setTimeout(() => { document.addEventListener('click', close); document.addEventListener('keydown', close); window.addEventListener('scroll', close, true); }, 0);
 }
 /* can this document be read here, or is it a scan? (her question, Oct 19 2026) */
-const AUTO_READ = ['ipadWorkfile', 'crs', 'mls', 'permitsCounty', 'clientLetter', 'myLetter', 'floorplan', 'marketSearch'];
+const AUTO_READ = ['email', 'ipadWorkfile', 'crs', 'mls', 'permitsCounty', 'clientLetter', 'myLetter', 'floorplan', 'marketSearch'];
 let textStateBusy = false;
 async function fillTextStates() {   // older documents: look once, then show the chip
   if (textStateBusy || !cur) return; const todo = (cur.docs || []).filter(d => !d.textState); if (!todo.length) return; textStateBusy = true;
@@ -185,6 +193,7 @@ async function fillTextStates() {   // older documents: look once, then show the
     saveLetter(true, true); renderDocs(); } finally { textStateBusy = false; }
 }
 function textChip(d) {
+  if (d.type === 'email') return '<span class="chip ok" title="Read here: from, to, date, subject and text are searchable; its attachments are separate documents">✓ read here</span>';
   if (d.type === 'ipadWorkfile') return '<span class="chip ok" title="Open the Comp genie tab: the subject column fills from this inspection (once; again when you drop a newer one)">✓ for the Comp genie</span>';
   const st = d.textState || ''; if (!st) return '';
   if (st === 'text') return `<span class="chip ok" title="${AUTO_READ.includes(d.type) ? 'Read here when you uploaded it – what it filled in is listed next to the name.' : 'Click Read: the reader suggests what to use and you accept or reject each one. Nothing is sent anywhere.'}">${AUTO_READ.includes(d.type) ? '✓ read here' : '✓ text – click Read'}</span>`;

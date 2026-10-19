@@ -453,6 +453,15 @@ mark.blank{background:#fff3a8;padding:0 2px;border-radius:3px}.cmt textarea{widt
       <li>Under <b>To check</b> Claude lists permits never finaled or expired, added or converted living area compared with the public record, code-enforcement cases, and work for another address. A draft permit comment is offered – read and edit it; nothing goes into the report by itself.</li>
       <li>The permit box shows the same tags as the documents: <b>scan – needs Claude or Acrobat</b> (brown) before it is read, then <b>✓ read by Claude</b> and <b>✓ done · N permits in the timeline</b> (solid green). Each permit file also shows <b>✓ done · in the permit timeline</b>. If you add a permit file later, a brown <b>new file not read yet</b> tag tells you to read them all again.</li>
       <li>This only works when the order's <b>AI use</b> is Yes or Redacted. On Redacted orders names, phones and emails are removed from the text (permit numbers stay); scanned pages are only sent from a redacted copy you made (Read › Redacted copy).</li></ol></details>
+    <details><summary>Emails in the workfile (Outlook)</summary><ol>
+      <li>In Outlook, drag the email out of the message list onto the order's <b>Documents</b> box (classic Outlook makes a <b>.msg</b> file). In the new Outlook or Outlook on the web, open the email, choose <b>… › Save as</b> (or Download) to save a <b>.eml</b> file, then drop that file in Documents. Several at once is fine.</li>
+      <li>It is filed as <b>Email</b>: the note shows who sent it, the date and the subject; click the name to read it. Its words are found by <b>Search every document</b>.</li>
+      <li>Every attachment is added to the order as its own document – sorted by kind and read like any other upload (an engagement letter, a permit, a contract) – with “from the email …” in its note. Small pictures such as signature logos are left out.</li>
+      <li>It is all kept in this browser on this computer, with the order (and in Back up). Nothing is sent anywhere.</li></ol></details>
+    <details><summary>Engagement letter to Adobe Acrobat (signature)</summary><ol>
+      <li>On the order, click <b>Save as PDF</b> under the letter (or Write engagement letter (Word) if you want to edit it in Word first).</li>
+      <li>Open that PDF in Adobe Acrobat and use <b>Request e-signatures</b> (Acrobat Sign) or <b>Fill &amp; Sign</b>, as you do now.</li>
+      <li>When the signed copy comes back, drop it in the order's Documents – it is recognized as <b>My engagement letter (signed)</b> and the order follows it. If it arrives by email, drop the email: the signed PDF is taken out of it for you.</li></ol></details>
     <details><summary>Documents: upload once, kinds, search, sticky notes</summary><ol>
       <li><b>Which documents fill things in by themselves?</b> Each one shows a tag next to its name (point at it for more):
         <b>✓ read here</b> – read when you uploaded it (CRS, MLS, County permit history, the client's letter, your signed letter, floor plan); what it filled in is listed after the size.
@@ -654,7 +663,7 @@ mark.blank{background:#fff3a8;padding:0 2px;border-radius:3px}.cmt textarea{widt
 </div>
 <div id="toast" role="status" hidden></div>
 <script>
-const BUILD='o1-1019-0059';
+const BUILD='o1-1019-0759';
 const G = (() => {
 /* ---------------- small helpers ---------------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -1040,7 +1049,7 @@ function mlsCanon(raw, G, g) {
   return {
     _src: 'mls', mls: g('Listing Number'), addr: [g('Street #'), titleCase(g('Street Name'))].filter(Boolean).join(' '), unit: g('Unit/Space #'), zip: g('Postal Code'), apn: g('Parcel Number'),
     city: g('City') ? titleCase(g('City')) : '',
-    status, listPrice: num(g('Price')), origList: num(g('Original List Price')), listDate: isoDate(g('Begin Date')),
+    status, listPrice: num(g('Price')), origList: num(g('Original List Price')), listDate: isoDate(g('Begin Date')), lastRed: isoDate(g('Price Change Date', 'Last Price Change Date', 'Price Change Timestamp')) || '',
     contractDate: isoDate(g('Under Contract Date')), saleDate: isoDate(g('Sold Date', 'COE')), salePrice: num(g('Sold Price')),
     dom: num(g('Days On Market')), cdom: num(g('Cumulative DOM')), financing: g('Financing'), concessions: num(g('Seller Concessions')),
     saleType, saleTypeNote: saleTypeTxt.join('; '),
@@ -1065,6 +1074,9 @@ function mlsCanon(raw, G, g) {
     tennis: has('Grounds/Landscaping', /Tennis/) ? 'Yes' : 'No', sport: has('Grounds/Landscaping', /Pickleball|Sport/) ? 'Yes' : 'No',
     porch: list('Patio and Porch Features'), accessory: list('Other Buildings'),
     hoa: num(g('Condo/CO-OP/PUD: Association Fee', 'Association Fee', 'HOA Fee')),
+    unitPos: has('Condo/CO-OP/PUD', /End Unit/i) ? 'End' : has('Condo/CO-OP/PUD', /Corner/i) ? 'Corner' : has('Condo/CO-OP/PUD', /Interior|Inside/i) ? 'Interior' : '',
+    hoaAmen: (G['Condo/CO-OP/PUD'] || []).filter(x => !/^(Attached|Detached|End Unit|Corner.*|Interior.*|Association Fee.*|\d.*)$/i.test(x)).join('; '),
+    project: g('Complex Name', 'Complex', 'Project Name', 'Condo/CO-OP/PUD: Complex Name'),
     lat: num(g('Geo Lat', 'Latitude')), lon: num(g('Geo Lon', 'Longitude')),
     remarks: g('Public Remarks'), privateRemarks: g('Private Remarks'), water: list('Water/Sewer'), roof: list('Roof'), foundation: list('Foundation'),
     remodel: [has('Amenities', /Remodeled Kitchen/) ? 'Remodeled kitchen' : '', has('Amenities', /Remodeled Bath/) ? 'Remodeled bath' : '', has('Condition', /Updated|Remodeled/) ? 'Updated/Remodeled' : ''].filter(Boolean).join('; '),
@@ -1771,7 +1783,7 @@ function setOrderAddr(v, force) { const old = readAddr('f_'); const n = { ...old
    ===================================================================== */
 const h = s => hesc(s ?? '');
 const DOC_TYPES = [
-  ['Order and client', [['clientLetter', 'Client’s engagement letter / order'], ['myLetter', 'My engagement letter (signed)'], ['invoice', 'Invoice / payment'], ['ipadWorkfile', 'iPad inspection (Workfile package)']]],
+  ['Order and client', [['clientLetter', 'Client’s engagement letter / order'], ['myLetter', 'My engagement letter (signed)'], ['invoice', 'Invoice / payment'], ['ipadWorkfile', 'iPad inspection (Workfile package)'], ['email', 'Email (with its attachments)']]],
   ['Public record', [['crs', 'CRS property report'], ['permitsCounty', 'Permit history by parcel (County)'], ['permitsPdf', 'Permit records'], ['legal', 'Legal description'], ['deed', 'Deed (grant, trust transfer, quitclaim)'], ['prelim', 'Preliminary title report']]],
   ['MLS and market', [['mls', 'MLS listing (subject)'], ['marketSearch', 'MLS market-area search'], ['mlsStats', 'SBMLS monthly statistics'], ['zillow', 'Zillow market page']]],
   ['Plans and construction', [['floorplan', 'Floor plan (to trace in the sketch)'], ['plans', 'Plans'], ['specs', 'Specifications'], ['budget', 'Construction budget']]],
@@ -1839,6 +1851,7 @@ async function textDocType(file) { // what page 1 says it is (null when it does 
   for (const [re, k] of TEXT_RULES) if (re.test(t.slice(0, 3000))) return k; return null;
 }
 async function detectDocType(file) {
+  if (isEmailFile(file)) return 'email';
   if (/\.zip$/i.test(file.name)) { if (/workfile/i.test(file.name)) return 'ipadWorkfile'; try { const z = await G.readZip(file); if (z.has('inspection-backup.json')) return 'ipadWorkfile'; } catch (e) {} return 'other'; }
   const t = await firstText(file);
   if (/\.csv$/i.test(file.name)) return /Listing Number/i.test(t) ? 'mls' : 'other';
@@ -1868,12 +1881,14 @@ async function addDocs(fileList, forcedType) {
       try { await ODB.put('docs', { ...meta, orderId: cur.id, blob: file }); }
       catch (e) { said.push(file.name + ': could not be stored (' + (e.message || e) + ')'); continue; }
       cur.docs = old ? cur.docs.map(d => d.id === old.id ? meta : d) : [...(cur.docs || []), meta];
-      await readDoc(meta, file); said.push(file.name + (old ? ' → replaced the earlier copy' : ' → ' + DOC_LABEL[meta.type]) + (file._moved ? ' (dropped in the ' + file._moved + ' box, but page 1 says it is a ' + DOC_LABEL[meta.type] + ')' : '') + (meta.note ? ' · ' + meta.note : ''));
+      await readDoc(meta, file); if (file._fromEmail) meta.note = (meta.note ? meta.note + ' · ' : '') + 'from the email “' + String(file._fromEmail).slice(0, 50) + '”'; said.push(file.name + (old ? ' → replaced the earlier copy' : ' → ' + DOC_LABEL[meta.type]) + (file._moved ? ' (dropped in the ' + file._moved + ' box, but page 1 says it is a ' + DOC_LABEL[meta.type] + ')' : '') + (meta.note ? ' · ' + meta.note : ''));
     }
   } finally { docBusy = false; }
   { const nr = said.filter(x => x.includes('replaced the earlier copy')).length; $('#docStatus').textContent = said.length === 1 ? said[0] : (said.length - nr ? (said.length - nr) + ' files added' : '') + (nr ? (said.length - nr ? ', ' : '') + nr + ' replaced (same file name as one already here)' : '') + ' – see each one below.'; }
   renderDocs(); renderSubject(); syncVisibility(); update(); saveLetter(true); if (typeof wzRefresh === 'function') wzRefresh();
+  if (EMAIL_ATTACH && EMAIL_ATTACH.length) { const more = EMAIL_ATTACH; EMAIL_ATTACH = null; setTimeout(() => addDocs(more), 50); }
 }
+let EMAIL_ATTACH = null;   /* attachments found in emails during one drop, added right after it */
 async function readDoc(meta, file) { // turns the readable kinds into facts; notes what happened
   meta.note = ''; meta.warn = '';
   try {
@@ -1902,6 +1917,10 @@ async function readDoc(meta, file) { // turns the readable kinds into facts; not
       try { const F = await readMyLetter(file); if (F.scan) meta.note += ' · a scan – check the client, date and type on the order yourself';
         else { const did = applyMyLetter(F); cur = readForm(); cur.myLetterFill = did; cur.myLetterV = 1; if (did.length) { meta.note += ' · order updated from it: ' + did.map(x => x[0]).join(', '); toast('Your signed letter is now on the order: ' + did.map(x => x[0] + ' ' + x[1]).slice(0, 4).join(' · '), 7000); } else meta.note += ' · matches the order'; } } catch (e) { console.warn('my letter', e); }
       if (typeof renderScan === 'function') renderScan(cur.orderDoc);
+    } else if (meta.type === 'email') {   // an email for the workfile: its text is searchable; attachments become documents of their own
+      const E = await readEmail(file); const rec = await ODB.get('docs', meta.id); if (rec) { rec.pagesText = [emailText(E)]; rec.scanPages = []; rec.email = { from: E.from, to: E.to, cc: E.cc, date: E.date && !isNaN(E.date) ? E.date.toISOString() : '', subject: E.subject, text: E.text, files: E.files.map(f => f.name) }; await ODB.put('docs', rec); }
+      meta.textState = 'text'; meta.note = 'email' + (E.from ? ' from ' + E.from.replace(/\s*<[^>]*>/, '') : '') + (E.date && !isNaN(E.date) ? ', ' + E.date.toLocaleDateString() : '') + (E.subject ? ' · “' + E.subject.slice(0, 60) + '”' : '') + (E.files.length ? ' · ' + E.files.length + ' attachment' + (E.files.length > 1 ? 's' : '') + ' added below' : '');
+      E.files.forEach(f => { f._fromEmail = E.subject || meta.name; }); (EMAIL_ATTACH = EMAIL_ATTACH || []).push(...E.files.filter(f => f.size > 0 && !/^image\d*\.(png|gif|jpe?g)$/i.test(f.name) || f.size > 60000));   /* small inline logos are left out */
     } else if (meta.type === 'ipadWorkfile') {   // her inspection from the iPad: kept with the order; the Comp genie takes the subject from it
       try { const z = await G.readZip(file); const b = z.get('inspection-backup.json'); if (!b) { meta.note = 'no inspection inside – export the Workfile package on the iPad'; return; }
         const ins = (JSON.parse(new TextDecoder().decode(b)) || {}).inspection || {}; const P = (ins.data && ins.data.property) || {};
@@ -1921,7 +1940,8 @@ async function retypeDoc(id, type) {
   const f = await docFile(id); if (f) await readDoc(meta, f);
   renderDocs(); renderSubject(); update(); saveLetter(true);
 }
-async function openDoc(id) { const r = await ODB.get('docs', id); if (!r) { toast('That file is no longer stored'); return; } const u = URL.createObjectURL(r.blob); window.open(u, '_blank'); setTimeout(() => URL.revokeObjectURL(u), 60000); }
+async function openDoc(id) { const r = await ODB.get('docs', id); if (!r) { toast('That file is no longer stored'); return; }
+  if (r.type === 'email') { let E = r.email; if (!E) { try { E = await readEmail(new File([r.blob], r.name)); } catch (e) {} } if (E) { const w = window.open('', '_blank'); if (w) { w.document.write(emailPage({ ...E, date: E.date ? new Date(E.date) : null, files: (E.files || []).map(n => typeof n === 'string' ? { name: n } : n) }, r.name)); w.document.close(); } else toast('Chrome blocked the new tab – allow pop-ups for this page'); return; } } const u = URL.createObjectURL(r.blob); window.open(u, '_blank'); setTimeout(() => URL.revokeObjectURL(u), 60000); }
 async function removeDoc(id) {
   cur = readForm(); cur.docs = (cur.docs || []).filter(d => d.id !== id); await ODB.del('docs', id).catch(() => {});
   renderDocs(); update(); saveLetter(true); toast('File removed from this order');
@@ -1941,7 +1961,7 @@ function kindPop(btn) {
   setTimeout(() => { document.addEventListener('click', close); document.addEventListener('keydown', close); window.addEventListener('scroll', close, true); }, 0);
 }
 /* can this document be read here, or is it a scan? (her question, Oct 19 2026) */
-const AUTO_READ = ['ipadWorkfile', 'crs', 'mls', 'permitsCounty', 'clientLetter', 'myLetter', 'floorplan', 'marketSearch'];
+const AUTO_READ = ['email', 'ipadWorkfile', 'crs', 'mls', 'permitsCounty', 'clientLetter', 'myLetter', 'floorplan', 'marketSearch'];
 let textStateBusy = false;
 async function fillTextStates() {   // older documents: look once, then show the chip
   if (textStateBusy || !cur) return; const todo = (cur.docs || []).filter(d => !d.textState); if (!todo.length) return; textStateBusy = true;
@@ -1950,6 +1970,7 @@ async function fillTextStates() {   // older documents: look once, then show the
     saveLetter(true, true); renderDocs(); } finally { textStateBusy = false; }
 }
 function textChip(d) {
+  if (d.type === 'email') return '<span class="chip ok" title="Read here: from, to, date, subject and text are searchable; its attachments are separate documents">✓ read here</span>';
   if (d.type === 'ipadWorkfile') return '<span class="chip ok" title="Open the Comp genie tab: the subject column fills from this inspection (once; again when you drop a newer one)">✓ for the Comp genie</span>';
   const st = d.textState || ''; if (!st) return '';
   if (st === 'text') return `<span class="chip ok" title="${AUTO_READ.includes(d.type) ? 'Read here when you uploaded it – what it filled in is listed next to the name.' : 'Click Read: the reader suggests what to use and you accept or reject each one. Nothing is sent anywhere.'}">${AUTO_READ.includes(d.type) ? '✓ read here' : '✓ text – click Read'}</span>`;
@@ -2207,6 +2228,87 @@ async function dedupeDocs(o) {
   o.docs = docs.filter(d => !map[d.id]);
   for (const [d] of drop) { try { await ODB.del('docs', d.id); } catch (e) {} }
   return drop.length;
+}
+
+/* =====================================================================
+   Emails into the workfile (her request, Oct 19 2026)
+   Drag an email from Outlook (a .msg file) or save one as .eml and drop it in Documents.
+   It is read here, on this computer: from, to, date, subject and the text become a document
+   ("Email") that the search finds; every attachment is added to the order as its own document
+   (sorted by kind and read like any other upload). Nothing is sent anywhere.
+   ===================================================================== */
+const isEmailFile = f => /\.(eml|msg)$/i.test(f.name) || f.type === 'message/rfc822' || f.type === 'application/vnd.ms-outlook';
+
+/* ---- .eml (internet mail) ---- */
+function emlDecodeWords(s) {   // =?utf-8?B?...?= and =?iso-8859-1?Q?...?=
+  return String(s || '').replace(/(\?=)\s+(?==\?)/g, '$1').replace(/=\?([^?]+)\?([BbQq])\?([^?]*)\?=/g, (m, cs, enc, txt) => {
+    try { const bytes = /b/i.test(enc) ? Uint8Array.from(atob(txt), c => c.charCodeAt(0)) : qpBytes(txt.replace(/_/g, ' '));
+      return new TextDecoder(cs.toLowerCase().replace('latin1', 'iso-8859-1')).decode(bytes); } catch (e) { return txt; } });
+}
+function qpBytes(s) { const out = []; s = s.replace(/=\r?\n/g, '');
+  for (let i = 0; i < s.length; i++) { if (s[i] === '=' && /^[0-9A-F]{2}$/i.test(s.substr(i + 1, 2))) { out.push(parseInt(s.substr(i + 1, 2), 16)); i += 2; } else out.push(s.charCodeAt(i) & 255); }
+  return new Uint8Array(out); }
+function emlHeaders(block) { const H = {}; block.replace(/\r?\n[ \t]+/g, ' ').split(/\r?\n/).forEach(l => { const m = l.match(/^([\w-]+):\s*(.*)$/); if (m) { const k = m[1].toLowerCase(); H[k] = H[k] ? H[k] + ', ' + m[2] : m[2]; } }); return H; }
+const hdrParam = (v, p) => { const m = String(v || '').match(new RegExp(p + '\\*?=\\s*"?([^";]+)"?', 'i')); return m ? emlDecodeWords(decodeURIComponent(m[1].replace(/^utf-8''/i, ''))) : ''; };
+function emlPart(raw, out) {   // raw: a "binary string" (one char per byte)
+  const cut = raw.search(/\r?\n\r?\n/); const H = emlHeaders(cut < 0 ? raw : raw.slice(0, cut)); let body = cut < 0 ? '' : raw.slice(cut).replace(/^\r?\n\r?\n/, '');
+  const ct = H['content-type'] || 'text/plain'; const te = (H['content-transfer-encoding'] || '').toLowerCase();
+  if (/^multipart\//i.test(ct)) { const b = hdrParam(ct, 'boundary'); if (b) body.split('--' + b).slice(1).forEach(p => { if (!/^--/.test(p)) emlPart(p.replace(/^\r?\n/, ''), out); }); return H; }
+  const bytes = te === 'base64' ? Uint8Array.from(atob(body.replace(/[^A-Za-z0-9+/=]/g, '')), c => c.charCodeAt(0)) : te === 'quoted-printable' ? qpBytes(body) : Uint8Array.from(body, c => c.charCodeAt(0) & 255);
+  const name = hdrParam(H['content-disposition'], 'filename') || hdrParam(ct, 'name'); const cs = (hdrParam(ct, 'charset') || 'utf-8').toLowerCase();
+  if (name || /attachment/i.test(H['content-disposition'] || '') || !/^text\//i.test(ct)) { if (name || !/^(text|multipart)/i.test(ct)) out.files.push(new File([bytes], name || 'attachment', { type: ct.split(';')[0].trim() })); }
+  else { let t = ''; try { t = new TextDecoder(cs).decode(bytes); } catch (e) { t = new TextDecoder().decode(bytes); }
+    if (/html/i.test(ct)) out.html = out.html || t; else out.text = out.text || t; }
+  return H;
+}
+async function readEml(file) {
+  const buf = new Uint8Array(await file.arrayBuffer()); let raw = ''; for (let i = 0; i < buf.length; i += 32768) raw += String.fromCharCode.apply(null, buf.subarray(i, i + 32768));
+  const out = { files: [], text: '', html: '' }; const H = emlPart(raw, out);
+  return { from: emlDecodeWords(H.from || ''), to: emlDecodeWords(H.to || ''), cc: emlDecodeWords(H.cc || ''), date: H.date ? new Date(H.date) : null, subject: emlDecodeWords(H.subject || ''), text: out.text || htmlText(out.html), files: out.files };
+}
+function htmlText(h) { if (!h) return ''; const d = new DOMParser().parseFromString(h, 'text/html'); d.querySelectorAll('style,script').forEach(x => x.remove()); d.querySelectorAll('br').forEach(x => x.replaceWith('\n')); d.querySelectorAll('p,div,tr,li').forEach(x => x.append('\n')); return (d.body ? d.body.textContent : '').replace(/\n{3,}/g, '\n\n').trim(); }
+
+/* ---- .msg (Outlook): a compound file; streams named __substg1.0_<property><type> ---- */
+function cfbRead(buf) {
+  const dv = new DataView(buf.buffer, buf.byteOffset, buf.byteLength); const u32 = o => dv.getUint32(o, true), u16 = o => dv.getUint16(o, true);
+  if (u32(0) !== 0xE011CFD0 || u32(4) !== 0xE11AB1A1) throw new Error('not an Outlook message file');
+  const ss = 1 << u16(30), mss = 1 << u16(32), cutoff = u32(56); const sec = n => 512 + n * ss;
+  const difat = []; for (let i = 0; i < 109; i++) { const v = u32(76 + i * 4); if (v < 0xFFFFFFFA) difat.push(v); }
+  let dn = u32(68), dcount = u32(72); while (dcount-- > 0 && dn < 0xFFFFFFFA) { for (let i = 0; i < ss / 4 - 1; i++) { const v = u32(sec(dn) + i * 4); if (v < 0xFFFFFFFA) difat.push(v); } dn = u32(sec(dn) + ss - 4); }
+  const fat = []; difat.forEach(s => { for (let i = 0; i < ss / 4; i++) fat.push(u32(sec(s) + i * 4)); });
+  const chain = (start, table) => { const out = []; let s = start, guard = 0; while (s < 0xFFFFFFFA && guard++ < 1e6) { out.push(s); s = table[s]; } return out; };
+  const readBig = (start, size) => { const out = new Uint8Array(size); let o = 0; for (const s of chain(start, fat)) { const n = Math.min(ss, size - o); if (n <= 0) break; out.set(buf.subarray(sec(s), sec(s) + n), o); o += n; } return out; };
+  const dirBytes = readBig(u32(48), chain(u32(48), fat).length * ss); const ents = [];
+  for (let o = 0; o + 128 <= dirBytes.length; o += 128) { const d = new DataView(dirBytes.buffer, dirBytes.byteOffset + o, 128); const nl = d.getUint16(64, true); let name = ''; for (let i = 0; i < Math.max(0, nl - 2); i += 2) name += String.fromCharCode(d.getUint16(i, true));
+    ents.push({ name, type: d.getUint8(66), left: d.getUint32(68, true), right: d.getUint32(72, true), child: d.getUint32(76, true), start: d.getUint32(116, true), size: d.getUint32(120, true) }); }
+  const root = ents[0]; const miniStream = readBig(root.start, root.size);
+  const mfat = []; chain(u32(60), fat).forEach(s => { for (let i = 0; i < ss / 4; i++) mfat.push(u32(sec(s) + i * 4)); });
+  const readMini = (start, size) => { const out = new Uint8Array(size); let o = 0; for (const s of chain(start, mfat)) { const n = Math.min(mss, size - o); if (n <= 0) break; out.set(miniStream.subarray(s * mss, s * mss + n), o); o += n; } return out; };
+  const data = e => e.size < cutoff ? readMini(e.start, e.size) : readBig(e.start, e.size);
+  const kids = i => { const out = []; const walk = j => { if (j === 0xFFFFFFFF || j >= ents.length) return; const e = ents[j]; walk(e.left); out.push(j); walk(e.right); }; walk(ents[i].child); return out; };
+  return { ents, kids, data };
+}
+async function readMsg(file) {
+  const buf = new Uint8Array(await file.arrayBuffer()); const C = cfbRead(buf);
+  const streams = i => { const o = {}; C.kids(i).forEach(j => { o[C.ents[j].name] = j; }); return o; };
+  const top = streams(0); const u16 = b => { let s = ''; for (let i = 0; i + 1 < b.length; i += 2) s += String.fromCharCode(b[i] | (b[i + 1] << 8)); return s.replace(/\0+$/, ''); };
+  const str = (S, id) => { const u = S['__substg1.0_' + id + '001F'], a = S['__substg1.0_' + id + '001E']; if (u !== undefined) return u16(C.data(C.ents[u])); if (a !== undefined) return new TextDecoder('windows-1252').decode(C.data(C.ents[a])).replace(/\0+$/, ''); return ''; };
+  const bin = (S, id) => { const b = S['__substg1.0_' + id + '0102']; return b === undefined ? null : C.data(C.ents[b]); };
+  let date = null; const pv = top['__properties_version1.0']; if (pv !== undefined) { const p = C.data(C.ents[pv]); const dv = new DataView(p.buffer, p.byteOffset, p.byteLength);
+    for (let o = 32; o + 16 <= p.length; o += 16) { const tag = dv.getUint32(o, true); if (tag === 0x00390040 || tag === 0x0E060040) { const ft = dv.getUint32(o + 8, true) + dv.getUint32(o + 12, true) * 4294967296; date = new Date(ft / 1e4 - 11644473600000); if (tag === 0x00390040) break; } } }
+  let text = str(top, '1000'); if (!text) { const h = bin(top, '1013'); if (h) text = htmlText(new TextDecoder().decode(h)); }
+  const files = [];
+  Object.entries(top).filter(([n]) => /^__attach_version1\.0_/.test(n)).forEach(([, j]) => { const S = streams(j); const d = bin(S, '3701'); if (!d) return;   // an attached Outlook message (no data stream) is skipped
+    const name = str(S, '3707') || str(S, '3704') || 'attachment'; files.push(new File([d], name, { type: str(S, '370E') || '' })); });
+  const fromMail = str(top, '5D01') || str(top, '0C1F') || str(top, '0065');
+  return { from: [str(top, '0C1A') || str(top, '0042'), fromMail && !/^\/o=/i.test(fromMail) ? '<' + fromMail + '>' : ''].filter(Boolean).join(' '), to: str(top, '0E04'), cc: str(top, '0E03'), date, subject: str(top, '0037'), text, files };
+}
+async function readEmail(file) { return /\.msg$/i.test(file.name) || file.type === 'application/vnd.ms-outlook' ? readMsg(file) : readEml(file); }
+const emailText = E => [`From: ${E.from || ''}`, `To: ${E.to || ''}`, E.cc ? `Cc: ${E.cc}` : '', `Date: ${E.date && !isNaN(E.date) ? E.date.toLocaleString() : ''}`, `Subject: ${E.subject || ''}`, E.files.length ? `Attachments: ${E.files.map(f => f.name).join(', ')}` : '', '', E.text || ''].filter((l, i) => l !== '' || i > 4).join('\n');
+function emailPage(E, name) {   // what opens when she clicks the email in Documents
+  return `<!doctype html><html><head><meta charset="utf-8"><title>${hesc(E.subject || name)}</title><style>body{font:15px/1.5 Arial,sans-serif;max-width:860px;margin:24px auto;padding:0 16px;color:#111}table{border-collapse:collapse;margin-bottom:16px}th{text-align:left;color:#555;padding:2px 12px 2px 0;vertical-align:top}pre{white-space:pre-wrap;font:inherit;border-top:1px solid #ccc;padding-top:12px}</style></head><body>
+  <table><tr><th>From</th><td>${hesc(E.from || '')}</td></tr><tr><th>To</th><td>${hesc(E.to || '')}</td></tr>${E.cc ? `<tr><th>Cc</th><td>${hesc(E.cc)}</td></tr>` : ''}<tr><th>Date</th><td>${hesc(E.date && !isNaN(E.date) ? E.date.toLocaleString() : '')}</td></tr><tr><th>Subject</th><td><b>${hesc(E.subject || '')}</b></td></tr>${E.files.length ? `<tr><th>Attachments</th><td>${hesc(E.files.map(f => f.name).join(', '))} <i>(each is in the order's Documents)</i></td></tr>` : ''}</table>
+  <pre>${hesc(E.text || '')}</pre></body></html>`;
 }
 
 /* =====================================================================

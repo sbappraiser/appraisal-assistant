@@ -7,7 +7,7 @@ BUILD = 'o1-' + time.strftime('%m%d-%H%M')
 shared = '\n'.join((root / p).read_text() for p in ['comp-genie/src/util.js', 'comp-genie/src/crs.js', 'comp-genie/src/sources.js', 'inspection-app/src/permits.js'])
 G = ('const G = (() => {\n' + shared + '\nreturn { parseCRS, crsCanon, parseMlsCsv, parseMlsPdf, parsePermits, permitItems: typeof permitItems === "function" ? permitItems : null,'
      ' pdfLines, pdfFirstText, readText, parseCSV, isoDate, showDate, num, money, titleCase, addrKey, splitAddr, apnKey, fmtApn, makeZip, readZip, safeName };\n})();\n')
-js = 'const BUILD=' + repr(BUILD) + ';\n' + G + '\n'.join((root / 'engagement-letter-writer/src' / f).read_text() for f in ['clauses.js', 'letter.js']) + '\n' + '\n'.join((src / f).read_text() for f in ['store.js', 'addr.js', 'docs.js', 'market.js', 'reader.js', 'permitsai.js', 'reqs.js', 'books.js', 'mc.js', 'comments.js', 'wizard.js', 'app.js'])
+js = 'const BUILD=' + repr(BUILD) + ';\n' + G + '\n'.join((root / 'engagement-letter-writer/src' / f).read_text() for f in ['clauses.js', 'letter.js']) + '\n' + '\n'.join((src / f).read_text() for f in ['store.js', 'addr.js', 'docs.js', 'email.js', 'market.js', 'reader.js', 'permitsai.js', 'reqs.js', 'books.js', 'mc.js', 'comments.js', 'wizard.js', 'app.js'])
 import subprocess, tempfile   # never publish a page whose script does not even parse (Oct 19 2026: one bad comment stopped the whole hub)
 with tempfile.NamedTemporaryFile('w', suffix='.js', delete=False) as t: t.write(js)
 chk = subprocess.run(['node', '--check', t.name], capture_output=True, text=True)
