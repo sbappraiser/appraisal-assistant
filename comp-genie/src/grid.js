@@ -320,7 +320,12 @@ async function saveToMyDb(c) {   // her own comp database: kept on this computer
   const key = (values.addr || compTitle(c)) + '|' + (values.saleDate || values.contractDate || '');
   const row = { key, saved: Date.now(), job: J.name, title: compTitle(c), values, sources: sourcesOf(c), notUsed: c.notUsed || null, adjustments: J.grid && J.grid.cells ? J.grid.cells[c.id] || null : null,
     tiers: { q: fineOf(J, c.id, 'q'), c: fineOf(J, c.id, 'c') }, landscaping: values.landscaping || null, compNo: c.use || null };   // her low / mid / high tiers: her database only, never UAD
-  const i = list.findIndex(x => x.key === key); if (i >= 0) list[i] = row; else list.push(row);
+  // her rule (Oct 19 2026): no duplicate entries – the same comp, only more aged or with the prior sales re-checked, replaces the saved one; anything else is kept as a new version
+  const fam = x => x.key === key || String(x.key).startsWith(key + '|v');
+  let same = list.findIndex(x => fam(x) && x.job === J.name);   // saved again from the same assignment: that version is updated
+  if (same < 0) same = list.findIndex(x => fam(x) && sameButAged(x.values || {}, values));
+  if (same >= 0) { row.key = list[same].key; row.jobs = [...new Set([...(list[same].jobs || [list[same].job]), J.name])]; list[same] = row; }
+  else { const n = list.filter(fam).length; if (n) row.key = key + '|v' + (n + 1); row.jobs = [J.name]; list.push(row); }
   await DB.put('kv', { id: 'mycomps', v: list }); return list.length; }
 
 /* text for an Add Other row (subject or comp) */

@@ -281,13 +281,26 @@ for key, lst in by_addr.items():
 
 # ---------- exact duplicates: identical in every appraisal field -> keep the newest only
 DUP_IGNORE = {'rec_id', 'sale_id', 'aci_property_id', 'from_report', 'entered_date', 'entered_by', 'front_photo', 'rear_photo', 'street_photo', 'flags', 'custom_rows_json', 'record_role'}
+# her rule (Oct 19 2026): also the same when only older – actual age, year built within 1 year (age arithmetic) – or when only
+# the date she checked the prior sales changed ("No Transfers" searches, any source) -> keep the newest only
+AGED_IGNORE = DUP_IGNORE | {'actual_age', 'year_built_est', 'prior_sale'}
+def _prior(t):
+    t = str(t or '').strip()
+    return '' if not t or re.search(r'no transfers?', t, re.I) else re.sub(r'^\s*(CRS Data|CRS|Realist|Realquest|NDC)\s*-\s*', '', t, flags=re.I)
+def _yb_close(a, b):
+    if a is None or b is None: return a is None and b is None
+    try: return abs(int(a) - int(b)) <= 1
+    except (TypeError, ValueError): return a == b
 dup_removed = set()
 for g in groups:
-    seen = {}
+    seen = {}; kept = []
     for o in sorted(g, key=lambda o: (o['entered_date'] or '', o['rec_id']), reverse=True):
         k = json.dumps({x: o[x] for x in o if x not in DUP_IGNORE}, sort_keys=True, default=str)
-        if k in seen: dup_removed.add(o['rec_id']); flags_rows.append((o['rec_id'], 'exact_duplicate_removed', f"same as record {seen[k]}"))
-        else: seen[k] = o['rec_id']
+        if k in seen: dup_removed.add(o['rec_id']); flags_rows.append((o['rec_id'], 'exact_duplicate_removed', f"same as record {seen[k]}")); continue
+        ka = json.dumps({x: o[x] for x in o if x not in AGED_IGNORE}, sort_keys=True, default=str)
+        twin = next((p for p in kept if p[0] == ka and _yb_close(p[1]['year_built_est'], o['year_built_est']) and _prior(p[1]['prior_sale']) == _prior(o['prior_sale'])), None)
+        if twin: dup_removed.add(o['rec_id']); flags_rows.append((o['rec_id'], 'aged_duplicate_removed', f"same as newer record {twin[1]['rec_id']} except age / prior-sale check date")); continue
+        seen[k] = o['rec_id']; kept.append((ka, o))
 groups = [[o for o in g if o['rec_id'] not in dup_removed] for g in groups]
 out = [o for o in out if o['rec_id'] not in dup_removed]
 

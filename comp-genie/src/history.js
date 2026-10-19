@@ -17,6 +17,15 @@ function histSameProp(c, o) {
   const m1 = V(c, 'mls'), m2 = V(o, 'mls'); if (m1 && m2 && m1 === m2) return true;
   return !!(k1 && k2 && k1 === k2);
 }
+/* her rule (Oct 19 2026): a version that is the same as another except that it is older (actual age, year built ±1 from the age
+   arithmetic) or that only the date she checked the prior sales changed is not a new version – the newer one replaces it */
+const histPrior = t => { t = String(t || '').trim(); return !t || /no transfers?/i.test(t) ? '' : t.replace(/^\s*(CRS Data|CRS|Realist|Realquest|NDC)\s*-\s*/i, ''); };
+function sameButAged(a, b) {
+  for (const f of FIELDS) { const x = a[f.k], y = b[f.k];
+    if (f.k === 'yearBuilt') { if (blank(x) !== blank(y) || (!blank(x) && Math.abs(num(x) - num(y)) > 1)) return false; continue; }
+    if (blank(x) && blank(y)) continue; if (blank(x) !== blank(y) || !sameVal(f, x, y)) return false; }
+  return histPrior(a.priorSaleText) === histPrior(b.priorSaleText);
+}
 function histSaleOf(vals) { return { price: num(vals.salePrice) || null, date: vals.saleDate || vals.contractDate || '' }; }
 function histSameSale(a, b) {
   if (!a || !b || (!a.price && !a.date) || (!b.price && !b.date)) return false;
@@ -45,7 +54,11 @@ async function histVersions(c) {
   out.forEach(x => { const s = histSaleOf(x.vals); x.same = histSameSale(now, s);
     x.group = x.same ? 'This sale' : s.price || s.date ? 'Sale ' + [s.date ? showDate(s.date) : '', s.price ? money(s.price) : ''].filter(Boolean).join(' ') : x.vals.listPrice ? 'Listing ' + money(x.vals.listPrice) : 'No sale recorded';
     x.gdate = s.date || ''; });
-  return out;
+  // the same version again, only more aged → one row (the newest), with the other reports listed
+  const keep = []; [...out].sort((p, q) => String(q.date).localeCompare(String(p.date))).forEach(x => {
+    const twin = keep.find(k => k.group === x.group && sameButAged(k.vals, x.vals));
+    if (twin) { (twin.alsoIn = twin.alsoIn || []).push(x.report + (x.date ? ' (' + showDate(x.date) + ')' : '')); if (x.chosen) twin.chosenTwin = x; } else keep.push(x); });
+  return keep;
 }
 function histSorted(list) {
   const d = HIST.dir, by = HIST.sort, s = (a, b) => String(a).localeCompare(String(b));
@@ -71,9 +84,9 @@ async function histOpen(id) {
     <p class="help">Every version of this property: each report in your ACI archive (UAD 2.6, or GPAR / older forms with word ratings) and each 3.6 assignment here. <b>Fields filled</b> shows how complete each one is. Click a row to see its main figures.</p>
     ${list.length ? `<div class="tablewrap"><table class="tbl hlist"><thead><tr>${th('date', 'Date')}${th('report', 'Report')}${th('form', 'Form')}<th>How it was used</th>${th('filled', 'Fields filled')}<th></th></tr></thead><tbody>
     ${list.map(x => { const g = HIST.sort === 'group' && x.group !== lastG ? `<tr class="hgrp"><th colspan="6">${esc(x.group)}${x.same ? ' <small>(the sale on your grid)</small>' : ''}</th></tr>` : ''; lastG = x.group;
-      const act = x.kind === 'arch' ? (x.chosen ? '<span class="pill ok">in use</span>' : `<button class="btn sm primary" data-huse="${esc(x.id)}">Use this version</button>`)
+      const act = x.kind === 'arch' ? (x.chosen || x.chosenTwin ? '<span class="pill ok">in use</span>' : `<button class="btn sm primary" data-huse="${esc(x.id)}">Use this version</button>`)
         : `<button class="btn sm" data-hfill="${esc(x.id)}" title="Only the fields that are blank on this comp now">Fill blanks from it</button><button class="btn sm primary" data-hall="${esc(x.id)}" title="Its values become your values on this comp${x.same ? '' : ' (house and site only – it is a different sale)'}">Use its values</button>`;
-      return g + `<tr class="hrow${HIST.open[x.id] ? ' on' : ''}" data-hrow="${esc(x.id)}"><td>${esc(showDate(x.date))}</td><td>${esc(x.report)}</td><td>${esc(x.form)}</td><td>${esc(x.role)}</td><td class="r">${x.filled} of ${FIELDS.length}</td><td class="acts">${act}</td></tr>`
+      return g + `<tr class="hrow${HIST.open[x.id] ? ' on' : ''}" data-hrow="${esc(x.id)}"><td>${esc(showDate(x.date))}</td><td>${esc(x.report)}${x.alsoIn ? `<br><small class="muted" title="${esc(x.alsoIn.join(' · '))}">same in ${x.alsoIn.length} other report${x.alsoIn.length === 1 ? '' : 's'} (only older or prior sales re-checked)</small>` : ''}</td><td>${esc(x.form)}</td><td>${esc(x.role)}</td><td class="r">${x.filled} of ${FIELDS.length}</td><td class="acts">${act}</td></tr>`
         + (HIST.open[x.id] ? `<tr class="hdet"><td colspan="6">${histFieldsHTML(x)}</td></tr>` : ''); }).join('')}</tbody></table></div>`
     : '<p>No other versions yet – not in your archive and not in another assignment.</p>'}
     <p class="help">Using an archive version makes it the “My database” column for this comp. Using a 3.6 version copies its values into “Your value” (for a different sale, only the house and site, never the sale facts). Nothing else changes.</p></div>`;
