@@ -58,9 +58,17 @@ const viewTier = v => { const t = String(v || '').toLowerCase(); if (!t.trim()) 
   if (/beneficial|ocean|mountain|city|lake|golf|canyon|panoram/.test(t)) return /panoram|excellent/.test(t) ? 3 : /limited/.test(t) ? 1 : 2; return null; };
 /* her view tier for each column (Oct 19 2026): the tier read from the view text is only a starting point – "Golf" alone reads as beneficial average, two tiers above neutral; she picks the tier */
 const VIEW_TIERS = [[-1, 'Adverse'], [0, 'Neutral'], [1, 'Beneficial – limited'], [2, 'Beneficial – average'], [3, 'Beneficial – excellent / panoramic']];
-const vtOf = (J, who, text) => { const o = ((G0(J).viewT || {})[who]); return o === undefined || o === null || o === '' ? viewTier(text) : +o; };
-function vtSel(who, J, text) { const set = ((G0(J).viewT || {})[who]); const auto = viewTier(text); const own = !(set === undefined || set === null || set === '');
-  return ` <select class="fine${own ? '' : ' arch'}" data-gvt="${who}" title="View tier used for the view adjustment (one step per tier). ${own ? 'Your choice.' : 'Read from the view – pick the tier you see.'}"><option value="">${auto === null ? 'tier?' : (VIEW_TIERS.find(x => x[0] === auto) || [, ''])[1] + ' (read)'}</option>${VIEW_TIERS.map(([n, l]) => `<option value="${n}" ${own && +set === n ? 'selected' : ''}>${l}</option>`).join('')}</select>`; }
+// her own view tiers, kept by address for the next assignment (kv 'viewTiers' = {addrKey: {t, at}}) – her ACI archive has no view grade
+let MYVT = {}; DB.get('kv', 'viewTiers').then(r => { MYVT = (r && r.v) || {}; }).catch(() => {});
+const vtKey = (J, who) => { if (who === 'subj') { const S = J.subject || {}; return S.addr ? addrKey((S.addr || '') + (S.unit ? ' #' + S.unit : '')) : ''; } const c = (J.comps || []).find(x => x.id === who); return c ? addrKey(compTitle(c)) : ''; };
+function vtInfo(J, who, text) { const o = ((G0(J).viewT || {})[who]); if (!(o === undefined || o === null || o === '')) return { t: +o, src: 'yours' };
+  const k = vtKey(J, who), m = k && MYVT[k]; if (m && m.t !== undefined) return { t: +m.t, src: 'saved', at: m.at };
+  const t = viewTier(text); return { t, src: t === null ? null : 'read' }; }
+const vtOf = (J, who, text) => vtInfo(J, who, text).t;
+function vtRemember(J, who, t) { const k = vtKey(J, who); if (!k) return; if (t === null) delete MYVT[k]; else MYVT[k] = { t, at: todayISO() }; DB.put('kv', { id: 'viewTiers', v: MYVT }); }
+function vtSel(who, J, text) { const I = vtInfo(J, who, text); const lab = t => (VIEW_TIERS.find(x => x[0] === t) || [, ''])[1];
+  const first = I.src === 'yours' ? '' : I.src === 'saved' ? lab(I.t) + ' (yours, ' + showDate(I.at) + ')' : I.t === null ? 'tier?' : lab(I.t) + ' (read – check it)';
+  return ` <select class="fine${I.src === 'yours' || I.src === 'saved' ? '' : ' arch'}" data-gvt="${who}" title="The degree of view used for the view adjustment (one step per tier). ${I.src === 'yours' ? 'Your choice for this assignment.' : I.src === 'saved' ? 'Your tier for this address from an earlier assignment.' : 'Only read from the words – decide the degree of view and pick it.'}"><option value="">${first || 'clear'}</option>${VIEW_TIERS.map(([n, l]) => `<option value="${n}" ${I.src === 'yours' && I.t === n ? 'selected' : ''}>${l}</option>`).join('')}</select>`; }
 const aduNums = F => { if (F.aduSf !== undefined && F.aduSf !== null && F.aduSf !== '') return { sf: +F.aduSf || 0, baths: +F.aduBaths || 0 };
   const t = String(F.adu || ''); if (!t.trim() || /^(no|none)$/i.test(t.trim())) return { sf: 0, baths: 0 };
   const sf = t.match(/([\d,]{2,})\s*(?:sf|sq|square)/i), ba = t.match(/(\d+(?:\.\d)?)\s*(?:full\s*)?ba/i); return { sf: sf ? +sf[1].replace(/,/g, '') : null, baths: ba ? +ba[1] : 0 }; };
@@ -326,6 +334,9 @@ function gridReview(J) {
     const rs = per.filter(Boolean); if (rs.length > 1) { const v = rs.map(x => Math.abs(x.rate)); const lo = Math.min(...v), hi = Math.max(...v);
       if (lo > 0 && hi / lo > 1.5) add(`cons:${id}`, 'Consistency', `${row[1]}: the amount per ${REVIEW_ROWS[id]} differs between comps (${rs.map(x => x.name + ' ' + money(Math.abs(x.rate))).join(', ')}). Fine if the comps differ in a way that explains it – say why.`); }
   });
+  // view: a tier only read from the words (her ACI archive and UAD 2.6 have no view grade) – she decides the degree of view
+  [['subj', 'Subject', S.view], ...used.map(c => [c.id, 'Comp ' + c.use, compFacts(c, J).view])].forEach(([who, name, v]) => { if (blank(v)) return; const I = vtInfo(J, who, v);
+    if (I.src === null || (I.src === 'read' && I.t > 0)) add(`vt:${who}`, 'View tier', `${name} – view "${v}": the degree of view is only ${I.src === null ? 'unknown' : 'read from the words (' + (VIEW_TIERS.find(x => x[0] === I.t) || [, ''])[1] + ')'}. Decide it (limited, average or excellent/panoramic) and pick it in the box under View – it is kept for this address next time.`); });
   // bracketing on the main features
   [['gla', 'living area'], ['usable', 'usable lot area'], ['q', 'quality'], ['view', 'view'], ['land', 'landscaping']].forEach(([id, l]) => {
     const gs = goodness(id, S); if (gs === null) return; const gc = used.map(c => goodness(id, compFacts(c, J))).filter(x => x !== null); if (gc.length < 2) return;
