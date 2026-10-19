@@ -216,9 +216,8 @@ function ingestCrs(r, name) {
 async function ingestCort(rows, name) {
   const seen = new Set(app.cort.map(r => r.apn + '|' + r.saleDate + '|' + r.doc)); let added = 0; const fid = uid();
   rows.forEach(r => { const k = r.apn + '|' + r.saleDate + '|' + r.doc; if (!seen.has(k)) { seen.add(k); r._file = fid; app.cort.push(r); added++; } });
-  logFile(name, 'CORT table', added, fid);
-  setCort(app.cort); await DB.put('kv', { id: 'cort', rows: app.cort });
-  app.job.comps.forEach(attachCort);
+  setCort(app.cort); await DB.put('kv', { id: 'cort', rows: app.cort });   // saved first – it works from the start page too (no assignment open)
+  if (app.job) { logFile(name, 'CORT table', added, fid); app.job.comps.forEach(attachCort); }
   return `${name}: ${added} new CORT sales saved (${app.cort.length} in your CORT table). They fill in automatically when a comp matches by APN or address.`;
 }
 async function ingestPhotos(f, z) {
