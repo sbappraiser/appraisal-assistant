@@ -453,8 +453,9 @@ async function start() {
   $('#sheet').addEventListener('click', () => { const n = $('#c0_name'); if (n && !n.value.trim()) { n.scrollIntoView({ block: 'center' }); n.focus(); toast('Type the client here – the letter fills in as you type'); } else toast('Type in the fields below the letter – it changes as you type'); }); $('#btnNew').onclick = newLetter;
   $('#letterSearch').oninput = renderLetters; $('#contactSearch').oninput = renderContacts;
   $('#docFile').onchange = e => { const fs = [...e.target.files]; e.target.value = ''; addDocs(fs); };
+  $('#docFolder').onchange = e => { const fs = [...e.target.files].filter(f => !/^\./.test(f.name) && !/^(thumbs\.db|desktop\.ini)$/i.test(f.name)); e.target.value = ''; addDocs(fs); };
   const dz = $('#dropZone'); dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('over'); }); dz.addEventListener('dragleave', () => dz.classList.remove('over'));
-  dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('over'); addDocs(e.dataTransfer.files); });
+  dz.addEventListener('drop', async e => { e.preventDefault(); dz.classList.remove('over'); addDocs(await droppedFiles(e.dataTransfer)); });
   window.addEventListener('dragover', e => e.preventDefault()); window.addEventListener('drop', e => e.preventDefault()); // a file dropped beside the box is not opened by Chrome
   document.querySelectorAll('[data-filter]').forEach(b => b.onclick = () => { listFilter = b.dataset.filter; renderLetters(); });
   $('#btnNew2').onclick = () => startNewOrder(); $('#btnNew').onclick = () => startNewOrder();

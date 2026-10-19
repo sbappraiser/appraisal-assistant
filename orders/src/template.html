@@ -124,6 +124,7 @@ table.mkrows td small { display: block; color: var(--muted); font-size: 12px; } 
 #rdSide { overflow: auto; padding: 12px 16px; border-left: 1px solid var(--line); background: var(--panel); display: grid; gap: 10px; align-content: start; }
 .rditem { border-bottom: 1px solid var(--line); padding-bottom: 8px; display: grid; gap: 6px; } .rdlab { font: 600 13px var(--ui); } .rdfact { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; color: var(--ok); } .rdfact small { color: var(--muted); font-size: 12px; width: 100%; } .rdsug small { color: var(--muted); font-size: 12px; }
 .rdsug { background: var(--accent-soft); border-radius: 8px; padding: 6px 8px; display: grid; gap: 4px; } .rdsug textarea { min-height: 0; padding: 4px 6px; } .rdsug .row { gap: 6px; } .rdsug textarea { width: 100%; } .rdadd { display: flex; gap: 6px; } .rdadd input { flex: 1; min-width: 0; }
+.permbatch { margin: 10px 0 6px; padding: 8px 10px; border: 1px dashed var(--line); border-radius: 8px; } .rdthumbs { display: flex; flex-wrap: wrap; gap: 6px; } .rdthumbs figure { margin: 0; font-size: 11px; } .pbt .warnRow td { background: #fff4e5; }
 .docs .chip { display: inline-block; margin: 2px 6px 0 0; border: 1px solid var(--line); border-radius: 99px; font-size: 12px; padding: 0 8px; color: var(--muted); cursor: help; } .docs .chip.ok { color: #0a6b3a; border-color: #9fd3b4; } .docs .chip.warn { color: var(--warn); border-color: var(--warn); }
 .pgchip { border: 1px solid var(--line); background: var(--panel); border-radius: 99px; font-size: 12px; padding: 1px 8px; cursor: pointer; color: var(--accent); }
 .rdflow { border-color: var(--accent); } .rdflow ol.steps { margin: 4px 0; padding-left: 20px; font-size: 13.5px; } .rdflow ol.steps li { margin: 3px 0; }
@@ -376,10 +377,11 @@ mark.blank{background:#fff3a8;padding:0 2px;border-radius:3px}.cmt textarea{widt
       <div class="drop big" id="dropZone">
         <div><span class="eyebrow">Drop the files here, or click Choose files</span>
           <p class="help">Drop every file for this order here: CRS report, engagement letter, MLS listing, plans, specs, budget, HOA documents, purchase contract, counters, addenda, disclosures, leaseback, preliminary title, legal description, permit records. Each one is sorted by kind, kept in this browser on this computer, and shared with the comp genie and the iPad.</p></div>
-        <label class="btn primary" for="docFile">Choose files<input type="file" id="docFile" multiple></label>
+        <label class="btn primary" for="docFile">Choose files<input type="file" id="docFile" multiple></label> <label class="btn" for="docFolder" title="Every file in the folder, for example a folder of permit records">Choose a folder<input type="file" id="docFolder" webkitdirectory multiple></label>
       </div>
       <p class="help pre" id="docStatus"></p>
       <div id="docList"></div>
+      <div id="permBatch"></div>
       <div class="searchrow"><label>Search every document, sticky note and accepted entry in this order<input id="docSearch" type="search" placeholder="for example: easement, rent, credit, Mello-Roos"></label><button type="button" class="btn" id="docSearchBtn">Search</button></div>
       <div id="docHits"></div>
       <div id="stickyList" class="facts-box"></div>
@@ -438,6 +440,12 @@ mark.blank{background:#fff3a8;padding:0 2px;border-radius:3px}.cmt textarea{widt
       <li><b>Report form format</b>: in <b>New order</b> step 1, click <b>UAD 3.6 (Traditional)</b>, <b>UAD 2.6 (Legacy)</b>, <b>GPAR</b> or <b>Other</b>. You can change it later in Scope and report on the order page.</li>
       <li><b>Form</b> (just below it on the order page): the assistant picks the usual one for the property type and inspection – e.g. UAD 2.6 condo → Form 1073, exterior-only → Form 2055. Click it to choose another (1004, 1073, 1025, 2055, 1075, 1004C, 2090, 2095, 1004 Desktop, 1004D; URAR kinds for 3.6; GPAR forms), or <b>Other – type it</b>. Once you choose, it stays. It is the "Format" line in your engagement letter.</li>
       <li>Your choices are kept – the assistant does not change them, even if the client's letter names a different form. If you have not chosen, a letter that names a 1004 / 1073 / 1025 sets UAD 2.6 and that form.</li></ol></details>
+    <details><summary>Permits: read all of them together with Claude (one timeline)</summary><ol>
+      <li>Put all the permit files for the property in one folder on your computer. In Documents click <b>Choose a folder</b> and pick it (or drag the whole folder onto the box). Every file inside is added; files in a folder named <i>Permits</i> are filed as <b>Permit records</b>.</li>
+      <li>Under the document list, click <b>Read all the permits together with Claude</b>. You first see what will be sent: each file, how many pages go as text and how many as pictures (scans), and small pictures of the scanned pages. Click <b>Send … pages to Claude</b>.</li>
+      <li>All the files go in one request, so Claude can match the same permit across files and build one timeline: permit number, work, square feet, applied / issued / final dates and status, with the file and page. Lots of scanned pages are read in parts and then put together.</li>
+      <li>Under <b>To check</b> Claude lists permits never finaled or expired, added or converted living area compared with the public record, code-enforcement cases, and work for another address. A draft permit comment is offered – read and edit it; nothing goes into the report by itself.</li>
+      <li>This only works when the order's <b>AI use</b> is Yes or Redacted. On Redacted orders names, phones and emails are removed from the text (permit numbers stay); scanned pages are only sent from a redacted copy you made (Read › Redacted copy).</li></ol></details>
     <details><summary>Documents: upload once, kinds, search, sticky notes</summary><ol>
       <li><b>Which documents fill things in by themselves?</b> Each one shows a tag next to its name (point at it for more):
         <b>✓ read here</b> – read when you uploaded it (CRS, MLS, County permit history, the client's letter, your signed letter, floor plan); what it filled in is listed after the size.

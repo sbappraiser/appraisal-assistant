@@ -90,7 +90,7 @@ async function addDocs(fileList, forcedType) {
   docBusy = true; const said = [];
   try {
     const typed = []; const seen = new Map(); files.forEach(f => seen.set(f.name.toLowerCase(), f)); // the same file twice in one drop counts once
-    for (const file of seen.values()) { $('#docStatus').textContent = 'Sorting ' + file.name + '…'; let type = forcedType || await detectDocType(file);
+    for (const file of seen.values()) { $('#docStatus').textContent = 'Sorting ' + file.name + '…'; let type = forcedType || await detectDocType(file); if (!forcedType && ['other', 'legal'].includes(type) && /permit/i.test((file._dir || file.webkitRelativePath || '').replace(/[^/]*$/, ''))) type = 'permitsPdf';   // in a folder named Permits
       if (forcedType) { const said = await textDocType(file); if (said && said !== forcedType && STRONG_TYPES.includes(said)) { type = said; file._moved = DOC_LABEL[forcedType]; } }   // a County permit history dropped in the prelim box is still a permit history
       typed.push([file, type]); }
     const FIRST = ['crs', 'mls', 'clientLetter']; const rank = t => { const i = FIRST.indexOf(t); return i < 0 ? 9 : i; };
@@ -196,7 +196,7 @@ function renderDocs() {
   $('#docCount').textContent = list.length ? list.length + ' file' + (list.length > 1 ? 's' : '') : '';
   box.querySelectorAll('[data-dopen]').forEach(b => b.onclick = () => openDoc(b.dataset.dopen));
   box.querySelectorAll('[data-dread]').forEach(b => b.onclick = () => { saveLetter(true, true); openReader(b.dataset.dread); });
-  if (typeof renderFacts === 'function') renderFacts();
+  if (typeof renderFacts === 'function') renderFacts(); if (typeof renderPermBatch === 'function') renderPermBatch();
   box.querySelectorAll('[data-dkind]').forEach(b => b.onclick = e => { e.stopPropagation(); kindPop(b); });
   box.querySelectorAll('[data-dpage]').forEach(i => i.onchange = async () => { cur = readForm(); const m = cur.docs.find(d => d.id === i.dataset.dpage); m.page = Math.max(1, Math.min(m.pages || 1, parseInt(i.value, 10) || 1)); const f = await docFile(m.id); await readDoc(m, f); renderDocs(); saveLetter(true); toast('Floor plan page ' + m.page + ' will go to the iPad'); });
   box.querySelectorAll('[data-ddel]').forEach(b => b.onclick = () => {
