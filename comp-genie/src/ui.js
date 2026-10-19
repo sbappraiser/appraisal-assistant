@@ -9,7 +9,7 @@ async function start() {
   try { if (navigator.storage && navigator.storage.persist) await navigator.storage.persist(); } catch (e) {} // ask Chrome to keep this data, never clear it to free space
   const arch = await DB.get('kv', 'archive'); if (arch && arch.data) archiveIndex(arch.data);
   const cort = await DB.get('kv', 'cort'); setCort(cort ? cort.rows : []);
-  await revLoad();
+  await revLoad(); await refLoad();
   app.jobs = (await DB.all('jobs')).sort((a, b) => b.updated - a.updated);
   const last = await DB.get('kv', 'lastJob');
   app.job = ((POP || CPOP) && app.jobs.find(j => j.id === (POP || CPOP).job)) || app.jobs.find(j => last && j.id === last.v) || app.jobs[0] || null;
@@ -156,7 +156,8 @@ async function ingest(files) {
         if (head.includes('listing number')) notes.push(ingestMls(parseMlsCsv(text), f.name));
         else if (head.includes('grantor')) notes.push(await ingestCort(parseCortCsv(text), f.name));
         else notes.push(f.name + ': not an MLS export or a CORT table');
-      } else if (low.endsWith('.gz') || low.endsWith('.json')) notes.push(await ingestJson(f));
+      } else if (low.endsWith('.xlsx')) notes.push(await ingestXlsx(f));
+      else if (low.endsWith('.gz') || low.endsWith('.json')) notes.push(await ingestJson(f));
       else if (low.endsWith('.pdf')) {
         const first = await pdfFirstText(f);
         if (/APN\/Tax ID|CRS Data|Property Report/i.test(first.text)) { const c = crsCanon(parseCRS(await pdfLines(f))); notes.push(ingestCrs(c, f.name)); }
@@ -254,7 +255,7 @@ function homeHTML() {
   const open = (app.orders || []).filter(o => !ORDER_DONE.includes(o.stage || 'New')).sort((a, b) => String(b.orderDate || '').localeCompare(String(a.orderDate || '')));
   return `<header class="top"><h1>Comp Genie</h1>
     <span class="pill ${ARCH.loaded ? 'ok' : 'warn'}">${ARCH.loaded ? `Archive: ${ARCH.rows.length.toLocaleString()} records` : 'Archive not loaded'}</span>
-    <span class="pill">${app.cort.length ? `CORT: ${app.cort.length} sales` : 'No CORT table'}</span><span class="grow"></span>
+    <span class="pill">${app.cort.length ? `CORT: ${app.cort.length} sales` : 'No CORT table'}</span><span class="pill" title="Your land sale and construction cost databases (shared with the cost approach)">${(app.land || []).length ? `Land sales: ${app.land.length}` : 'No land sales'} · ${app.costDb ? `Costs: ${app.costDb.projects.length} projects` : 'No cost database'}</span><span class="grow"></span>
     <button class="btn" data-act="newjob">New assignment</button>
     ${open.length ? `<select data-act="fromorder" aria-label="Start from an order"><option value="">From an order…</option>${open.map(o => `<option value="${o.id}">${esc(orderName(o))}</option>`).join('')}</select>` : ''}</header>
   ${(() => { const todo = open.filter(o => !app.jobs.some(j => j.orderId === o.id)); return todo.length ? `<section class="card"><h2>Orders not started here yet</h2><p class="muted">Every open order in the Appraisal Assistant. Click <b>Start</b> and its assignment is made from the order (subject, effective date, your Search Criteria search).</p>
@@ -277,7 +278,7 @@ function render() {
   root.innerHTML = `
   <header class="top"><h1>Comp Genie</h1>
     <span class="pill ${ARCH.loaded ? 'ok' : 'warn'}">${ARCH.loaded ? `Archive: ${ARCH.rows.length.toLocaleString()} records` : 'Archive not loaded'}</span>
-    <span class="pill">${app.cort.length ? `CORT: ${app.cort.length} sales` : 'No CORT table'}</span>
+    <span class="pill">${app.cort.length ? `CORT: ${app.cort.length} sales` : 'No CORT table'}</span><span class="pill" title="Your land sale and construction cost databases (shared with the cost approach)">${(app.land || []).length ? `Land sales: ${app.land.length}` : 'No land sales'} · ${app.costDb ? `Costs: ${app.costDb.projects.length} projects` : 'No cost database'}</span>
     <span class="grow"></span>
     <label class="jobsel">Assignment <select data-act="pickjob" id="jobpick"><option value="">All assignments (start page)</option>${app.jobs.map(j => `<option value="${j.id}" ${j.id === J.id ? 'selected' : ''}>${esc(j.name)}</option>`).join('')}</select></label>
     <button class="btn" data-act="newjob">New assignment</button>
@@ -296,12 +297,13 @@ function render() {
       return microIn(J, M) ? `<p class="help"><b class="ok">✓</b> Your Search Criteria search from the order's Market tab is in: <b>${esc(M.file)}</b>${Object.keys(M.exclude).length ? ` (${Object.keys(M.exclude).length} listing${Object.keys(M.exclude).length > 1 ? 's' : ''} you unticked there left out)` : ''}. <button class="lnk" data-act="pullmicro">Bring it in again</button></p>`
         : `<div class="row"><button class="btn primary" data-act="pullmicro">Add your Search Criteria search (${M.n} listings)</button><span class="help">from the order's Market tab: ${esc(M.file)}</span></div>`; })()}
     <label class="drop" id="drop"><input type="file" multiple data-act="files" hidden>
-      <b>Drop files here</b> or click to choose: MLS export (.csv) · MLS photos (.zip) · MLS printout (.pdf) · CRS reports (.pdf) · CORT table (.csv) · comp archive (.gz)</label>
+      <b>Drop files here</b> or click to choose: MLS export (.csv) · MLS photos (.zip) · MLS printout (.pdf) · CRS reports (.pdf) · CORT table (.csv) · comp archive (.gz) · your land sales or cost database (.xlsx)</label>
     ${(J.files || []).length ? `<div class="files"><b>Files in this assignment</b> <small>(✕ takes a file back out)</small><ul>${J.files.map(f => `<li>${esc(f.name)} <small>${esc(f.kind)}${f.n ? ', ' + f.n : ''}</small> ${app.confirm === 'rf:' + f.id ? `<span class="confirm">Take it out? <button class="btn danger solid sm" data-rfyes="${esc(f.id)}">Remove file</button><button class="btn sm" data-act="cancel">Keep</button></span>` : `<button class="btn sm" data-rf="${esc(f.id)}" title="Remove this file and what it added">✕</button>`}</li>`).join('')}</ul></div>` : ''}
   </section>
   <section class="card" id="compsCard">${compsCardHTML(J)}</section>
   <div id="detail">${app.sel ? detailHTML(J.comps.find(c => c.id === app.sel)) : ''}</div>
   <section class="card" id="gridCard">${gridHTML(J)}</section>
+  <section class="card" id="refCard">${refHTML(J)}</section>
   <section class="card" id="nuCard">${notUsedHTML(J)}</section>
   <section class="card" id="timeCard">${timeHTML(J)}</section>
   <section class="card" id="supCard">${supHTML(J)}</section>
@@ -534,6 +536,7 @@ document.addEventListener('click', async e => {
       if (c.use) { markNotUsed(c); app.nuAsk = c.id; c.use = null; toast('Taken off the grid – kept as analyzed, not used. Pick the reason below the grid.'); }
       else { const taken = new Set(app.job.comps.map(x => x.use).filter(Boolean)); let n = 1; while (taken.has(n)) n++; c.use = n; delete c.notUsed; toast(`On the grid as comp ${n}`); }
       save(); render(); return; } }
+  { const rt = e.target.closest('[data-reftab]'); if (rt && app.job) { app.ref = app.ref || {}; app.ref.tab = rt.dataset.reftab; const c = $('#refCard'); if (c) c.innerHTML = refHTML(app.job); return; } }
   const t = e.target.closest('[data-act],[data-open],[data-pick],[data-reset],[data-front],[data-view],[data-rm],[data-rmyes],[data-rf],[data-rfyes],.sug');
   if (!t) return;
   if (t.matches('select,input,option')) return;
@@ -638,6 +641,7 @@ document.addEventListener('change', async e => {
   if (t.dataset.st) { const P = STARTS || (STARTS = JSON.parse(JSON.stringify(STARTS_DEFAULT))); const path = t.dataset.st.split('.'); let o = P; path.slice(0, -1).forEach(k => { o[k] = o[k] || {}; o = o[k]; });
     const last = path[path.length - 1]; o[last] = path[0] === 'notes' ? t.value : (t.value.trim() === '' ? null : num(t.value.replace(/[$,\s]/g, ''))); DB.put('kv', { id: 'starts', v: P }); renderKeepFocus(); return; }
   if (t.dataset.act === 'starts-load' && t.files && t.files[0]) { try { const d = JSON.parse(await t.files[0].text()); if (!d.v || !d.v.tiers) throw 0; STARTS = d.v; await DB.put('kv', { id: 'starts', v: STARTS }); toast('Starting points loaded'); renderKeepFocus(); } catch (e) { toast('That is not a starting-points file'); } return; }
+  if (t.dataset.refarea !== undefined || t.dataset.refnew !== undefined) { const R = app.ref; if (t.dataset.refarea !== undefined) R.area = t.value; if (t.dataset.refnew !== undefined) R.newOnly = t.checked; const c = $('#refCard'); if (c) c.innerHTML = refHTML(app.job); return; }
   if (t.dataset.gmode) { const G = G0(app.job); G.mode = t.value; if (t.value === 'condo' && !G.tier) G.tier = 'condo'; save(); renderKeepFocus(); return; }
   if (t.dataset.gvt) { const G = G0(app.job); G.viewT = G.viewT || {}; const w = t.dataset.gvt; if (t.value === '') { delete G.viewT[w]; } else { G.viewT[w] = +t.value; vtRemember(app.job, w, +t.value); } save(); renderKeepFocus(); return; }
   if (t.dataset.gfine) { const G = G0(app.job); G.fine = G.fine || {}; const [who, k] = t.dataset.gfine.split('|'); G.fine[who] = G.fine[who] || {}; G.fine[who][k] = t.value; save(); renderKeepFocus(); return; }
@@ -659,7 +663,8 @@ document.addEventListener('change', async e => {
     if (t.dataset.gweight) { if (v) G.weights[t.dataset.gweight] = v; else delete G.weights[t.dataset.gweight]; }
     save(); renderKeepFocus(); return; }
 });
-document.addEventListener('input', e => {
+let REFQ_T = null;
+document.addEventListener('input', e => { if (e.target.dataset && e.target.dataset.refq !== undefined) { const v = e.target.value; clearTimeout(REFQ_T); REFQ_T = setTimeout(() => { app.ref.q = v; const c = $('#refCard'); if (c) { c.innerHTML = refHTML(app.job); const i = c.querySelector('[data-refq]'); if (i) { i.focus(); i.setSelectionRange(v.length, v.length); } } }, 300); return; }
   if (e.target.id === 'drText') { DR.text = e.target.value; const c = $('#drCt'); if (c) c.innerHTML = scCount(DR.text); return; }
   if (e.target.dataset && e.target.dataset.gnote) { const c = $('#gnoteCt'); if (c) c.innerHTML = scCount(e.target.value); }
   const t = e.target; if (t.id !== 'addr') return;
