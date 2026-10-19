@@ -450,3 +450,15 @@ Her ask: dictate the whole inspection and have it land in each room, interior, e
 - A-1 DataSourceName (required) was missing: comps (DS_NAME map, order Name, Identifier, Type) and iPad project sources.
 - Required A-1 items not produced anywhere now: appraiser name / company / license type, software vendor/product/version, ValuationReportContentIdentifier – SFREP adds at signing.
 - RULE (her, Oct 19 2026): in CRS Data the closing (sale/transfer) date is the **Date Recorded**, not the Date column (that is the document date). crs.js (genie, iPad, hub via comp-genie/src) now sets row.date = recorded, row.docDate = the Date column; model.js also uses lastSale.recorded for comps read before the fix (sale match, sale date, prior sales). Example 269 Moreton Bay Ln #2: Date 6/22/2026, Recorded 7/17/2026 → sale date 07/17/2026. Builds g2-1019-1543, 6v-1019-1543.
+
+## Cost database decisions returned (Oct 19 2026) – her standing rules (workbook kept in scratchpad ref/, not committed)
+135 items: 100 use the suggestion, 30 change it, 4 as bid, 1 don't use. Rules distilled from her notes:
+- Owner/borrower-paid items are costs – always include them (hard or soft) when the budget gives an amount.
+- Allowances are placeholders, not actual costs – do not use them as component costs. Unpriced / TBD / $0 lines are not costs; excluded items stay excluded. A lump not broken down (e.g. grounds $600k) is not used.
+- Soft costs (permits, school fees, utility/facility fees, architect, engineering, legal) are classified as soft costs and kept separately. Never property taxes. Never personal property (FF&E).
+- Owner-builder budgets carry no OH&P – note it; for statistics estimate the GC fee / OH&P from projects of the same quality and area (e.g. Montecito) – an estimate, not a bid line.
+- Fee: use the budget's fee line amount, not a computed rate.
+- Remodel / addition budgets: line items are valid for depreciated cost, cost to cure / repair; new ADU in a remodel = new-construction ADU cost.
+- Separate ADU / guest house / ancillary buildings from the main residence (ancillary costs more per sf than added main-house sf); finished basement can be in the main residence. Use her cost-approach allocation when the bid does not split (needs her cost approach pages).
+- Her sketch area over plan area. Her reference costs (not bid lines): 2-stop elevator ≈ $75,000; sport court $15k–65k (pickleball ≈ $50k, snap-together ≈ $15k); Wolf 60" range $18k–24k.
+- Specific: hrms2932 effective age after completion ≈ 5 yrs; vtrp652 = Hope Ranch hilltop lot; rncn36 concrete $696,900 → foundation by sq ft, remainder hardscape; pcho690 she will resend the full bid; mntn960e fire: careful with lines that doubled from rebuilding.
