@@ -29,6 +29,7 @@ window.addEventListener('message', async e => {   // the Appraisal Assistant sho
   if (e.origin !== location.origin || !e.data || e.data.type !== 'aa-refresh') return;
   app.orders = await readOrders();
   if (e.data.order && (!app.job || app.job.orderId !== e.data.order || app.home)) { const o = app.orders.find(x => x.id === e.data.order); if (o) { app.home = false; await jobFromOrder(o); await loadPhotos(); } }
+  if (e.data.order && app.job && app.job.orderId === e.data.order) { const o = app.orders.find(x => x.id === e.data.order); if (o) await pullWorkfile(o); }
   if (!e.data.order && !app.job) app.home = true;
   render();
 });
@@ -54,6 +55,14 @@ function readOrderDoc(id) { // one stored document (its file) from the Appraisal
     r.onupgradeneeded = () => { try { r.transaction.abort(); } catch (e) {} }; r.onerror = () => res(null);
     r.onsuccess = () => { const d = r.result; if (!d.objectStoreNames.contains('docs')) { d.close(); res(null); return; } const q = d.transaction('docs').objectStore('docs').get(id); q.onsuccess = () => { d.close(); res(q.result || null); }; q.onerror = () => { d.close(); res(null); }; }; });
 }
+/* her iPad Workfile package dropped in the order's Documents (Oct 19 2026): the subject comes in here once, and again when a newer one is dropped */
+async function pullWorkfile(o, quiet) {
+  const ds = ((o && o.docs) || []).filter(d => d.type === 'ipadWorkfile').sort((a, b) => String(b.added || '').localeCompare(String(a.added || ''))); const d = ds[0]; if (!d || !app.job) return false;
+  const key = d.id + '|' + (d.added || ''); if (app.job.inspDoc === key) return false;
+  const rec = await readOrderDoc(d.id); if (!rec || !rec.blob) return false;
+  try { const z = await readZip(new File([rec.blob], rec.name || d.name)); if (!z.has('inspection-backup.json')) return false; const note = await ingestInspection(z, d.name); app.job.inspDoc = key; await saveNow(); if (!quiet) toast(note, 7000); return true; }
+  catch (e) { console.warn('workfile', e); toast('Could not read the iPad workfile ' + d.name + ': ' + (e.message || e), 6000); return false; }
+}
 /* the order's Search Criteria search (the micro market on the Market tab) – its listings become the comps considered, minus the ones she unticked there */
 function orderMicro(o) { const mi = o && o.market && o.market.micro; if (!mi || !mi.file) return null; const doc = (o.docs || []).find(d => d.name === mi.file); return doc ? { file: mi.file, docId: doc.id, exclude: mi.exclude || {}, n: (mi.rows || []).length } : null; }
 const microIn = (J, M) => (J.files || []).some(f => f.kind === 'MLS export' && f.name === M.file);
@@ -76,6 +85,7 @@ async function jobFromOrder(o) {
   if (o.crs && !j.subject.crs) j.subject.crs = crsCanon(o.crs);
   j.subject.listings = o.listings || []; j.fileNo = o.fileNo || '';
   app.sel = null; await saveNow(); await loadPhotos(); toast('Opened the assignment for order ' + orderName(o));
+  await pullWorkfile(o);
   { const M = orderMicro(o); if (M && !microIn(j, M)) { await pullMicro(o, true); toast('Opened the assignment for order ' + orderName(o) + ' and added your Search Criteria search (' + M.file + ')', 6000); } }
 }
 async function newJob(name) {

@@ -377,7 +377,7 @@ mark.blank{background:#fff3a8;padding:0 2px;border-radius:3px}.cmt textarea{widt
     <fieldset id="docsSet"><legend>Documents – upload everything here <span class="opt" id="docCount"></span></legend>
       <div class="drop big" id="dropZone">
         <div><span class="eyebrow">Drop the files here, or click Choose files</span>
-          <p class="help">Drop every file for this order here: CRS report, engagement letter, MLS listing, plans, specs, budget, HOA documents, purchase contract, counters, addenda, disclosures, leaseback, preliminary title, legal description, permit records. Each one is sorted by kind, kept in this browser on this computer, and shared with the comp genie and the iPad.</p></div>
+          <p class="help">Drop every file for this order here: CRS report, engagement letter, MLS listing, plans, specs, budget, HOA documents, purchase contract, counters, addenda, disclosures, leaseback, preliminary title, legal description, permit records, and your iPad inspection (the – Workfile.zip). Each one is sorted by kind, kept in this browser on this computer, and shared with the comp genie and the iPad.</p></div>
         <label class="btn primary" for="docFile">Choose files<input type="file" id="docFile" multiple></label> <label class="btn" for="docFolder" title="Every file in the folder, for example a folder of permit records. In the window the folder looks empty – that is normal: click the folder once, then Upload (or Select Folder), then Upload again when Chrome asks.">Choose a folder<input type="file" id="docFolder" webkitdirectory multiple></label>
       </div>
       <p class="help pre" id="docStatus"></p>
@@ -565,6 +565,7 @@ mark.blank{background:#fff3a8;padding:0 2px;border-radius:3px}.cmt textarea{widt
     <details><summary>Comp genie from an order</summary><ol>
       <li>The <b>Comp genie</b> tab (between Market and Bookkeeping) shows the Comp genie inside the Appraisal Assistant, on the order that is open – its assignment is made from the order the first time (subject, effective date, your Search Criteria search). The <b>Comp genie</b> buttons on the order, its row in All files and the Market tab open the same tab.</li>
       <li>With no order open, the tab shows the Comp genie's list: <b>Orders not started here yet</b> (click <b>Start</b>) and <b>Your assignments</b>.</li>
+      <li><b>Your iPad inspection:</b> drop the <b>– Workfile.zip</b> (from OneDrive → Inspections) in the order's <b>Documents</b>. It is filed as <b>iPad inspection (Workfile package)</b> with the tag <b>✓ for the Comp genie</b>. When you open the <b>Comp genie</b> tab, the subject column fills from it by itself (living area from your sketch, rooms, quality and condition) and the full SFREP export can use it. Drop a newer one after a revision and it is taken again. You can still drop it straight on the Comp genie page instead.</li>
       <li>An assignment started in the Comp genie without an order (for example 5930 Encina Rd #3) shows <b>Make it an order</b> on the list and on the assignment. Click it in the Comp genie tab: the Appraisal Assistant makes the order (file number, address, APN, effective date) and links the two, keeping your comps. Then open the order and fill in the client, type and fee.</li>
       <li><b>Open in its own window ↗</b> opens it in a separate browser tab, for a second screen. Both are the same Comp genie and save to the same place.</li>
       <li>In the comp genie, <b>From an order…</b> lists your active orders.</li><li>Use Chrome on this computer for both, so they share the same storage.</li></ol></details>
@@ -653,7 +654,7 @@ mark.blank{background:#fff3a8;padding:0 2px;border-radius:3px}.cmt textarea{widt
 </div>
 <div id="toast" role="status" hidden></div>
 <script>
-const BUILD='o1-1019-0037';
+const BUILD='o1-1019-0043';
 const G = (() => {
 /* ---------------- small helpers ---------------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -1770,7 +1771,7 @@ function setOrderAddr(v, force) { const old = readAddr('f_'); const n = { ...old
    ===================================================================== */
 const h = s => hesc(s ?? '');
 const DOC_TYPES = [
-  ['Order and client', [['clientLetter', 'Client’s engagement letter / order'], ['myLetter', 'My engagement letter (signed)'], ['invoice', 'Invoice / payment']]],
+  ['Order and client', [['clientLetter', 'Client’s engagement letter / order'], ['myLetter', 'My engagement letter (signed)'], ['invoice', 'Invoice / payment'], ['ipadWorkfile', 'iPad inspection (Workfile package)']]],
   ['Public record', [['crs', 'CRS property report'], ['permitsCounty', 'Permit history by parcel (County)'], ['permitsPdf', 'Permit records'], ['legal', 'Legal description'], ['deed', 'Deed (grant, trust transfer, quitclaim)'], ['prelim', 'Preliminary title report']]],
   ['MLS and market', [['mls', 'MLS listing (subject)'], ['marketSearch', 'MLS market-area search'], ['mlsStats', 'SBMLS monthly statistics'], ['zillow', 'Zillow market page']]],
   ['Plans and construction', [['floorplan', 'Floor plan (to trace in the sketch)'], ['plans', 'Plans'], ['specs', 'Specifications'], ['budget', 'Construction budget']]],
@@ -1838,6 +1839,7 @@ async function textDocType(file) { // what page 1 says it is (null when it does 
   for (const [re, k] of TEXT_RULES) if (re.test(t.slice(0, 3000))) return k; return null;
 }
 async function detectDocType(file) {
+  if (/\.zip$/i.test(file.name)) { if (/workfile/i.test(file.name)) return 'ipadWorkfile'; try { const z = await G.readZip(file); if (z.has('inspection-backup.json')) return 'ipadWorkfile'; } catch (e) {} return 'other'; }
   const t = await firstText(file);
   if (/\.csv$/i.test(file.name)) return /Listing Number/i.test(t) ? 'mls' : 'other';
   if (t) { for (const [re, k] of TEXT_RULES) if (re.test(t.slice(0, 3000))) return k; }
@@ -1900,6 +1902,12 @@ async function readDoc(meta, file) { // turns the readable kinds into facts; not
       try { const F = await readMyLetter(file); if (F.scan) meta.note += ' · a scan – check the client, date and type on the order yourself';
         else { const did = applyMyLetter(F); cur = readForm(); cur.myLetterFill = did; cur.myLetterV = 1; if (did.length) { meta.note += ' · order updated from it: ' + did.map(x => x[0]).join(', '); toast('Your signed letter is now on the order: ' + did.map(x => x[0] + ' ' + x[1]).slice(0, 4).join(' · '), 7000); } else meta.note += ' · matches the order'; } } catch (e) { console.warn('my letter', e); }
       if (typeof renderScan === 'function') renderScan(cur.orderDoc);
+    } else if (meta.type === 'ipadWorkfile') {   // her inspection from the iPad: kept with the order; the Comp genie takes the subject from it
+      try { const z = await G.readZip(file); const b = z.get('inspection-backup.json'); if (!b) { meta.note = 'no inspection inside – export the Workfile package on the iPad'; return; }
+        const ins = (JSON.parse(new TextDecoder().decode(b)) || {}).inspection || {}; const P = (ins.data && ins.data.property) || {};
+        meta.note = 'iPad inspection' + (P.inspDate ? ' of ' + (G.showDate ? G.showDate(P.inspDate) : P.inspDate) : '') + (P.addr ? ' · ' + P.addr : '') + ' · the Comp genie tab takes the subject from it';
+        if (P.addr && $('#f_address').value.trim() && !sameStreet(P.addr, $('#f_address').value)) meta.warn = 'This inspection is for ' + P.addr + ', not ' + street(readForm()) + '.';
+        if (P.inspDate && !$('#f_inspDate').value) { const d = G.isoDate(P.inspDate) || P.inspDate; if (/^\d{4}-\d\d-\d\d$/.test(d)) $('#f_inspDate').value = d; } } catch (e) { meta.note = 'could not open the zip: ' + (e.message || e); }
     } else if (meta.type === 'floorplan') {
       const prev = await planPreview(file, meta.page || 1); if (prev) { const rec = await ODB.get('docs', meta.id); rec.preview = prev.src; rec.pages = prev.pages; await ODB.put('docs', rec); meta.pages = prev.pages; meta.note = 'ready for the iPad'; }
     }
@@ -1933,7 +1941,7 @@ function kindPop(btn) {
   setTimeout(() => { document.addEventListener('click', close); document.addEventListener('keydown', close); window.addEventListener('scroll', close, true); }, 0);
 }
 /* can this document be read here, or is it a scan? (her question, Oct 19 2026) */
-const AUTO_READ = ['crs', 'mls', 'permitsCounty', 'clientLetter', 'myLetter', 'floorplan', 'marketSearch'];
+const AUTO_READ = ['ipadWorkfile', 'crs', 'mls', 'permitsCounty', 'clientLetter', 'myLetter', 'floorplan', 'marketSearch'];
 let textStateBusy = false;
 async function fillTextStates() {   // older documents: look once, then show the chip
   if (textStateBusy || !cur) return; const todo = (cur.docs || []).filter(d => !d.textState); if (!todo.length) return; textStateBusy = true;
@@ -1942,6 +1950,7 @@ async function fillTextStates() {   // older documents: look once, then show the
     saveLetter(true, true); renderDocs(); } finally { textStateBusy = false; }
 }
 function textChip(d) {
+  if (d.type === 'ipadWorkfile') return '<span class="chip ok" title="Open the Comp genie tab: the subject column fills from this inspection (once; again when you drop a newer one)">✓ for the Comp genie</span>';
   const st = d.textState || ''; if (!st) return '';
   if (st === 'text') return `<span class="chip ok" title="${AUTO_READ.includes(d.type) ? 'Read here when you uploaded it – what it filled in is listed next to the name.' : 'Click Read: the reader suggests what to use and you accept or reject each one. Nothing is sent anywhere.'}">${AUTO_READ.includes(d.type) ? '✓ read here' : '✓ text – click Read'}</span>`;
   if (st === 'scan') return '<span class="chip warn" title="A picture of the pages: nothing can be read here. Click Read to send it to Claude (when this order allows AI), or open it in Acrobat, use Scan &amp; OCR › Recognize text, save, and upload it again.">scan – needs Claude or Acrobat</span>';

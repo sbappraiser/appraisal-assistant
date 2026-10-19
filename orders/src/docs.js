@@ -6,7 +6,7 @@
    ===================================================================== */
 const h = s => hesc(s ?? '');
 const DOC_TYPES = [
-  ['Order and client', [['clientLetter', 'Client’s engagement letter / order'], ['myLetter', 'My engagement letter (signed)'], ['invoice', 'Invoice / payment']]],
+  ['Order and client', [['clientLetter', 'Client’s engagement letter / order'], ['myLetter', 'My engagement letter (signed)'], ['invoice', 'Invoice / payment'], ['ipadWorkfile', 'iPad inspection (Workfile package)']]],
   ['Public record', [['crs', 'CRS property report'], ['permitsCounty', 'Permit history by parcel (County)'], ['permitsPdf', 'Permit records'], ['legal', 'Legal description'], ['deed', 'Deed (grant, trust transfer, quitclaim)'], ['prelim', 'Preliminary title report']]],
   ['MLS and market', [['mls', 'MLS listing (subject)'], ['marketSearch', 'MLS market-area search'], ['mlsStats', 'SBMLS monthly statistics'], ['zillow', 'Zillow market page']]],
   ['Plans and construction', [['floorplan', 'Floor plan (to trace in the sketch)'], ['plans', 'Plans'], ['specs', 'Specifications'], ['budget', 'Construction budget']]],
@@ -74,6 +74,7 @@ async function textDocType(file) { // what page 1 says it is (null when it does 
   for (const [re, k] of TEXT_RULES) if (re.test(t.slice(0, 3000))) return k; return null;
 }
 async function detectDocType(file) {
+  if (/\.zip$/i.test(file.name)) { if (/workfile/i.test(file.name)) return 'ipadWorkfile'; try { const z = await G.readZip(file); if (z.has('inspection-backup.json')) return 'ipadWorkfile'; } catch (e) {} return 'other'; }
   const t = await firstText(file);
   if (/\.csv$/i.test(file.name)) return /Listing Number/i.test(t) ? 'mls' : 'other';
   if (t) { for (const [re, k] of TEXT_RULES) if (re.test(t.slice(0, 3000))) return k; }
@@ -136,6 +137,12 @@ async function readDoc(meta, file) { // turns the readable kinds into facts; not
       try { const F = await readMyLetter(file); if (F.scan) meta.note += ' · a scan – check the client, date and type on the order yourself';
         else { const did = applyMyLetter(F); cur = readForm(); cur.myLetterFill = did; cur.myLetterV = 1; if (did.length) { meta.note += ' · order updated from it: ' + did.map(x => x[0]).join(', '); toast('Your signed letter is now on the order: ' + did.map(x => x[0] + ' ' + x[1]).slice(0, 4).join(' · '), 7000); } else meta.note += ' · matches the order'; } } catch (e) { console.warn('my letter', e); }
       if (typeof renderScan === 'function') renderScan(cur.orderDoc);
+    } else if (meta.type === 'ipadWorkfile') {   // her inspection from the iPad: kept with the order; the Comp genie takes the subject from it
+      try { const z = await G.readZip(file); const b = z.get('inspection-backup.json'); if (!b) { meta.note = 'no inspection inside – export the Workfile package on the iPad'; return; }
+        const ins = (JSON.parse(new TextDecoder().decode(b)) || {}).inspection || {}; const P = (ins.data && ins.data.property) || {};
+        meta.note = 'iPad inspection' + (P.inspDate ? ' of ' + (G.showDate ? G.showDate(P.inspDate) : P.inspDate) : '') + (P.addr ? ' · ' + P.addr : '') + ' · the Comp genie tab takes the subject from it';
+        if (P.addr && $('#f_address').value.trim() && !sameStreet(P.addr, $('#f_address').value)) meta.warn = 'This inspection is for ' + P.addr + ', not ' + street(readForm()) + '.';
+        if (P.inspDate && !$('#f_inspDate').value) { const d = G.isoDate(P.inspDate) || P.inspDate; if (/^\d{4}-\d\d-\d\d$/.test(d)) $('#f_inspDate').value = d; } } catch (e) { meta.note = 'could not open the zip: ' + (e.message || e); }
     } else if (meta.type === 'floorplan') {
       const prev = await planPreview(file, meta.page || 1); if (prev) { const rec = await ODB.get('docs', meta.id); rec.preview = prev.src; rec.pages = prev.pages; await ODB.put('docs', rec); meta.pages = prev.pages; meta.note = 'ready for the iPad'; }
     }
@@ -169,7 +176,7 @@ function kindPop(btn) {
   setTimeout(() => { document.addEventListener('click', close); document.addEventListener('keydown', close); window.addEventListener('scroll', close, true); }, 0);
 }
 /* can this document be read here, or is it a scan? (her question, Oct 19 2026) */
-const AUTO_READ = ['crs', 'mls', 'permitsCounty', 'clientLetter', 'myLetter', 'floorplan', 'marketSearch'];
+const AUTO_READ = ['ipadWorkfile', 'crs', 'mls', 'permitsCounty', 'clientLetter', 'myLetter', 'floorplan', 'marketSearch'];
 let textStateBusy = false;
 async function fillTextStates() {   // older documents: look once, then show the chip
   if (textStateBusy || !cur) return; const todo = (cur.docs || []).filter(d => !d.textState); if (!todo.length) return; textStateBusy = true;
@@ -178,6 +185,7 @@ async function fillTextStates() {   // older documents: look once, then show the
     saveLetter(true, true); renderDocs(); } finally { textStateBusy = false; }
 }
 function textChip(d) {
+  if (d.type === 'ipadWorkfile') return '<span class="chip ok" title="Open the Comp genie tab: the subject column fills from this inspection (once; again when you drop a newer one)">✓ for the Comp genie</span>';
   const st = d.textState || ''; if (!st) return '';
   if (st === 'text') return `<span class="chip ok" title="${AUTO_READ.includes(d.type) ? 'Read here when you uploaded it – what it filled in is listed next to the name.' : 'Click Read: the reader suggests what to use and you accept or reject each one. Nothing is sent anywhere.'}">${AUTO_READ.includes(d.type) ? '✓ read here' : '✓ text – click Read'}</span>`;
   if (st === 'scan') return '<span class="chip warn" title="A picture of the pages: nothing can be read here. Click Read to send it to Claude (when this order allows AI), or open it in Acrobat, use Scan &amp; OCR › Recognize text, save, and upload it again.">scan – needs Claude or Acrobat</span>';
