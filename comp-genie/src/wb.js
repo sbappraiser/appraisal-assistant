@@ -19,6 +19,7 @@ const WB = { page: 0, cur: null, undo: null,
   set on(v) { try { localStorage.setItem('genie-wb', v ? '1' : '0'); } catch (e) {} },
   get per() { try { return +(localStorage.getItem('genie-wb-per') || 3); } catch (e) { return 3; } },
   set per(v) { try { localStorage.setItem('genie-wb-per', String(v)); } catch (e) {} } };
+const CPOP = (() => { const q = new URLSearchParams(location.search); return q.get('pop') === 'comp' ? { id: q.get('id') || '', job: q.get('job') || '' } : null; })();   // one comp in its own window (her request, Oct 19 2026)
 let WBC = null; try { WBC = new BroadcastChannel('comp-genie'); } catch (e) {}
 function wbNotify() { if (WBC && app.job) try { WBC.postMessage({ job: app.job.id, from: WIN }); } catch (e) {} }
 if (WBC) WBC.onmessage = async e => {

@@ -3,7 +3,7 @@
    ===================================================================== */
 const SRC = {
   edit: { name: 'Yours', short: 'You' },
-  arch: { name: 'Your archive', short: 'Archive' },
+  arch: { name: 'My database', short: 'My DB' },
   mls: { name: 'MLS export', short: 'MLS' },
   pdf: { name: 'MLS printout', short: 'Printout' },
   crs: { name: 'CRS report', short: 'CRS' },

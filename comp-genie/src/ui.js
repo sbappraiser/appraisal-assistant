@@ -12,14 +12,18 @@ async function start() {
   await revLoad();
   app.jobs = (await DB.all('jobs')).sort((a, b) => b.updated - a.updated);
   const last = await DB.get('kv', 'lastJob');
-  app.job = (POP && app.jobs.find(j => j.id === POP.job)) || app.jobs.find(j => last && j.id === last.v) || app.jobs[0] || null;
+  app.job = ((POP || CPOP) && app.jobs.find(j => j.id === (POP || CPOP).job)) || app.jobs.find(j => last && j.id === last.v) || app.jobs[0] || null;
   app.orders = await readOrders();
   const oq = new URLSearchParams(location.search).get('order');
   if (new URLSearchParams(location.search).get('embed')) document.body.classList.add('embed');   // inside the Appraisal Assistant's Comp genie tab
-  app.home = !POP && !oq && !new URLSearchParams(location.search).get('job');   // her request (Oct 19 2026): open on the list of assignments, not the last one
+  if (CPOP) app.sel = CPOP.id;
+  app.home = !POP && !CPOP && !oq && !new URLSearchParams(location.search).get('job');   // her request (Oct 19 2026): open on the list of assignments, not the last one
   if (oq) { history.replaceState(null, '', location.pathname); const o = app.orders.find(x => x.id === oq); if (o) await jobFromOrder(o); else toast('That order was not found in this browser. Open the Appraisal Assistant in this same browser (Chrome).', 6000); }
   if (!app.job && !app.home) await newJob();
-  app.jobs.forEach(j => (j.files || []).forEach(f => { if (!f.id) { f.id = uid(); f.legacy = true; } }));  // files dropped before "remove file" existed
+  app.jobs.forEach(j => (j.files || []).forEach(f => { if (!f.id) { f.id = uid(); f.legacy = true; } }));
+  for (const j of app.jobs) { let ch = false; (j.comps || []).forEach(c => { const m = String((c.edit || {}).mlsCondition || '').trim().toUpperCase().match(/^(?:(LOW|MID|HIGH)\s+)?C\s*([1-6])\s*([+-])?$/); if (!m || !blank(c.edit.condition)) return;   // a C rating typed in the MLS words line before Oct 19 2026
+      c.edit.condition = 'C' + m[2]; delete c.edit.mlsCondition; if (m[1] || m[3]) { const G = G0(j); G.fine = G.fine || {}; G.fine[c.id] = G.fine[c.id] || {}; G.fine[c.id].c = m[1] ? m[1].toLowerCase() : m[3] === '-' ? 'low' : 'high'; } ch = true; });
+    if (ch) await DB.put('jobs', j); }  // files dropped before "remove file" existed
   await loadPhotos();
   render();
 }
@@ -94,7 +98,7 @@ async function newJob(name) {
 }
 let saveT = null;
 function save() { clearTimeout(saveT); saveT = setTimeout(saveNow, 300); }
-async function saveNow() { if (!app.job) return; app.job.updated = Date.now(); await DB.put('jobs', app.job); if (!POP) await DB.put('kv', { id: 'lastJob', v: app.job.id }); wbNotify(); }
+async function saveNow() { if (!app.job) return; app.job.updated = Date.now(); await DB.put('jobs', app.job); if (!POP && !CPOP) await DB.put('kv', { id: 'lastJob', v: app.job.id }); wbNotify(); }
 
 /* ---------------- photos ---------------- */
 app.photos = []; // [{id, mls, n, name}] for this job (blobs stay in storage)
@@ -266,6 +270,7 @@ function homeHTML() {
 }
 function render() {
   const J = app.job; const root = $('#app');
+  if (CPOP) { const c = J && J.comps.find(x => x.id === CPOP.id); root.innerHTML = c ? `<header class="top pop"><h1>Comp Genie</h1><span class="pill">${esc(J.name)}</span><span class="grow"></span><small>stays in step with your other windows</small></header>` + detailHTML(c) : '<p class="help">That comp is no longer in this assignment.</p>'; document.title = (c ? compTitle(c) : 'Comp') + ' · ' + (J ? J.name : ''); fillImages(); return; }
   if (POP) { root.innerHTML = popHTML(J); document.title = `Comps ${POP.from}–${POP.to} · ${J.name}`; wbUndoBar(); return; }
   if (app.home || !J) { root.innerHTML = homeHTML(); document.title = 'Comp Genie'; return; }
   document.title = 'Comp Genie · ' + J.name;
@@ -374,13 +379,20 @@ function cellHTML(c, f, s, S, using) {
   const on = using.src === s;
   return `<td class="srccell ${on ? 'on' : ''}" data-pick="${s}" data-field="${f.k}" title="Use the ${esc(SRC[s].name)} value">${esc(fmt(f, v))}</td>`;
 }
+/* MLS listing link (her request): a link pattern she sets up once from one of her own MLS listing pages – nothing is fetched by the Comp genie */
+let MLSLINK = ''; DB.get('kv', 'mlsLink').then(r => { MLSLINK = (r && r.v) || ''; }).catch(() => {});
+function mlsLinkHTML(c) { const n = String(V(c, 'mls')).trim();
+  return `<p class="mlsrow"><b>MLS ${esc(n)}</b> <button class="btn sm" data-act="mlscopy" data-n="${esc(n)}" title="Copy the MLS number, then paste it in the MLS search box">Copy MLS #</button>${MLSLINK ? ` <a class="btn sm primary" href="${esc(MLSLINK.replace('{mls}', encodeURIComponent(n)).replace('{mlsnodash}', encodeURIComponent(n.replace(/-/g, ''))))}" target="mls-listing" rel="noopener" title="Opens the listing in your MLS (you need to be logged in)">Open in MLS ↗</a> <button class="lnk" data-act="mlsset">change the MLS link</button>` : ' <button class="lnk" data-act="mlsset">Set up “Open in MLS”</button>'}</p>
+  ${app.mlsSet ? `<div class="card notice"><b>Set up “Open in MLS” once.</b> In your MLS, open any listing. Click Chrome's address bar, copy the whole address (Ctrl+C) and paste it here, then type that listing's MLS number.
+    <div class="row"><input class="txt" id="mlsUrl" placeholder="paste the address of one listing" style="flex:2"><input class="txt" id="mlsNo" placeholder="its MLS #, e.g. 26-1714" style="width:12em"><button class="btn primary" data-act="mlssave">Save</button><button class="btn" data-act="mlscancel">Cancel</button></div>
+    <small>If the address does not contain the MLS number, your MLS cannot be opened at one listing from a link – use <b>Copy MLS #</b> and paste it in the MLS search.</small></div>` : ''}`; }
 function detailHTML(c) {
   if (!c) return '';
   const J = app.job; const S = srcVals(c); const fl = compFlags(c, J); const ps = photosOf(c); const fr = frontOf(c); const prior = priorSales(c); const px = proximity(c, J);
-  const cols = SRC_ORDER.filter(s => s === 'arch' ? c.src.arch.length : s === 'cort' ? c.src.cort.length : c.src[s]);
+  const cols = SRC_ORDER.filter(s => ['arch', 'mls', 'crs'].includes(s) || (s === 'cort' ? c.src.cort.length : c.src[s]));   // her three always side by side, even when empty
   let lastG = '';
   const rows = FIELDS.map(f => {
-    const u = val(c, f.k); const any = cols.some(s => S[s] && !blank(S[s][f.k])) || !blank(c.edit[f.k]); if (!any && !app.showAll) return '';
+    const u = val(c, f.k); const any = cols.some(s => S[s] && !blank(S[s][f.k])) || !blank(c.edit[f.k]); if (!any && !app.showAll && !['quality', 'condition'].includes(f.k)) return '';   // her own Q and C ratings always have a row
     const head = f.g !== lastG ? `<tr class="grp"><th colspan="${3 + cols.length}">${esc(f.g)}</th></tr>` : ''; lastG = f.g;
     const dis = disagree(c, f.k);
     return head + `<tr><th>${esc(f.l)}${dis ? ' <span class="diff" title="Sources disagree">≠</span>' : ''}</th>
@@ -396,11 +408,12 @@ function detailHTML(c) {
       <div><h2>${esc(compTitle(c))} <small>${esc([V(c, 'city'), V(c, 'zip')].filter(Boolean).join(' '))}</small></h2>
       <p class="big">${esc(V(c, 'status') || '')} · ${money(V(c, 'salePrice') || V(c, 'listPrice'))} · ${esc(showDate(V(c, 'saleDate') || V(c, 'contractDate')))}${px ? ` · ${px.mi.toFixed(2)} mi ${esc(px.dir)}` : ''}</p>
       <p><label>Use as comp # <select data-use="${c.id}"><option value="">–</option>${Array.from({ length: Math.max(9, J.comps.length) }, (_, i) => `<option ${c.use === i + 1 ? 'selected' : ''}>${i + 1}</option>`).join('')}</select></label>
-         <button class="btn sm" data-act="close">Close</button></p>
+         ${CPOP ? '' : `<button class="btn sm" data-act="cpop" data-id="${c.id}" title="Open this comp in a window of its own – drag it to another screen and make it bigger">Pop out ↗</button>`}<button class="btn sm" data-act="close">Close</button></p>
+      ${V(c, 'mls') ? mlsLinkHTML(c) : ''}
       ${fl.length ? `<ul class="flags">${fl.map(x => `<li class="${x.sev}">${esc(x.t)}</li>`).join('')}</ul>` : '<p class="help">No flags.</p>'}</div></div>
     ${ps.length ? `<div class="strip">${ps.map(ph => `<button class="ph ${fr && ph.id === fr.id ? 'on' : ''}" data-view="${ph.id}" title="Click to look at it full size"><img data-photo="${ph.id}" alt="Photo ${ph.n}"></button>`).join('')}</div><p class="help">Click a photo to see it full size and page through them. The outlined one is the front photo; change it in the viewer.</p>` : (V(c, 'mls') ? '<p class="help">No photos yet – drop the MLS photos zip.</p>' : '')}
     <h3>Field by field <small>click any source value to use it, or type your own</small></h3>
-    <div class="tablewrap"><table class="cmp"><colgroup><col style="width:200px"><col style="width:190px"><col style="width:120px">${cols.map(() => '<col>').join('')}</colgroup><thead><tr><th>Field</th><th>Using</th><th>Your value</th>${cols.map(s => `<th>${esc(SRC[s].name)}${s === 'arch' ? '<br>' + archSel : s === 'cort' ? '<br>' + cortSel : ''}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table></div>
+    <div class="tablewrap"><table class="cmp"><colgroup><col style="width:200px"><col style="width:190px"><col style="width:120px">${cols.map(() => '<col>').join('')}</colgroup><thead><tr><th>Field</th><th>Using</th><th>Your value</th>${cols.map(s => `<th>${esc(SRC[s].name)}${s === 'arch' ? '<br>' + (c.src.arch.length ? archSel : '<small class="muted">not in your database</small>') : s === 'cort' ? '<br>' + cortSel : s === 'mls' && !c.src.mls ? '<br><small class="muted">drop the MLS export</small>' : s === 'crs' && !c.src.crs ? '<br><small class="muted">drop its CRS PDF on the page</small>' : ''}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table></div>
     <p><label><input type="checkbox" data-act="showall" ${app.showAll ? 'checked' : ''}> Show empty fields too</label></p>
     <h3>Prior sales and transfers</h3>
     ${prior.length ? `<table class="mini"><tr><th>Date</th><th class="r">Price</th><th>Type</th><th>Before this sale</th><th>From</th></tr>${prior.map(s => `<tr class="${s.monthsBefore > 0 && s.monthsBefore <= 12 ? 'hot' : ''}"><td>${esc(showDate(s.date))}</td><td class="r">${money(s.price)}</td><td>${esc(s.inst || s.type || '')}</td><td>${s.monthsBefore != null ? Math.round(s.monthsBefore) + ' mo' : ''}</td><td><small>${esc(s.src)}</small></td></tr>`).join('')}</table>` : '<p class="help">None found in the sources you have loaded.</p>'}
@@ -528,6 +541,15 @@ document.addEventListener('click', async e => {
       if (window.parent === window) { toast('Open the Appraisal Assistant, click its Comp genie tab, and click Make it an order there – the order is made by the Appraisal Assistant.', 7000); break; }
       const S = j.subject || {}; t.disabled = true; t.textContent = 'Making the order…';
       window.parent.postMessage({ type: 'aa-make-order', jobId: j.id, name: j.name, fileNo: j.fileNo || '', subject: { addr: S.addr || '', unit: S.unit || '', city: S.city || '', zip: S.zip || '', apn: S.apn || '', lat: S.lat || '', lon: S.lon || '', eff: S.eff || '' } }, location.origin); break; }
+    case 'cpop': { const w = window.open(`?pop=comp&id=${encodeURIComponent(t.dataset.id)}&job=${encodeURIComponent(app.job.id)}`, 'genie-comp-' + t.dataset.id, 'width=1100,height=900'); if (!w) toast('Chrome blocked the window – allow pop-ups for this page', 6000); break; }
+    case 'mlscopy': try { await navigator.clipboard.writeText(t.dataset.n); toast('Copied MLS ' + t.dataset.n + ' – paste it in the MLS search box'); } catch (e) { toast('Could not copy'); } break;
+    case 'mlsset': app.mlsSet = true; render(); break;
+    case 'mlscancel': app.mlsSet = false; render(); break;
+    case 'mlssave': { const u = ($('#mlsUrl').value || '').trim(), n = ($('#mlsNo').value || '').trim(); if (!/^https?:\/\//i.test(u) || !n) { toast('Paste the address and type its MLS number'); break; }
+      const vs = [n, n.replace(/-/g, ''), encodeURIComponent(n)]; const hit = vs.find(v => u.includes(v));
+      if (!hit) { toast('That address does not contain ' + n + ' – this MLS cannot be opened at a listing from a link. Use Copy MLS # instead.', 8000); break; }
+      MLSLINK = u.replace(hit, '{mls}'); if (hit === n.replace(/-/g, '') && hit !== n) MLSLINK = MLSLINK.replace('{mls}', '{mlsnodash}');
+      await DB.put('kv', { id: 'mlsLink', v: MLSLINK }); app.mlsSet = false; render(); toast('Saved – every comp now has Open in MLS'); break; }
     case 'openjob': { const j = app.jobs.find(x => x.id === t.dataset.id); if (!j) break; app.home = false; app.job = j; app.sel = null; await DB.put('kv', { id: 'lastJob', v: j.id }); await loadPhotos(); render(); window.scrollTo(0, 0); break; }
     case 'deljob': app.confirm = 'deljob'; render(); break;
     case 'deljob-yes': { const id = app.job.id; await DB.del('jobs', id); for (const p of await DB.byJob(id)) await DB.del('photos', p.id); app.jobs = app.jobs.filter(j => j.id !== id); app.job = app.jobs[0] || null; app.confirm = null; app.home = true; await loadPhotos(); render(); window.scrollTo(0, 0); toast('Assignment deleted'); break; }
@@ -582,7 +604,12 @@ document.addEventListener('change', async e => {
   if (t.dataset.use) { const c = app.job.comps.find(x => x.id === t.dataset.use); const n = t.value ? +t.value : null; if (!n && c.use) { markNotUsed(c); app.nuAsk = c.id; } if (n) app.job.comps.forEach(x => { if (x !== c && x.use === n) x.use = null; }); c.use = n; save(); render(); return; }
   if (t.dataset.archpick) { const c = app.job.comps.find(x => x.id === t.dataset.archpick); c.archPick = +t.value; save(); render(); return; }
   if (t.dataset.cortpick) { const c = app.job.comps.find(x => x.id === t.dataset.cortpick); c.cortPick = +t.value; save(); render(); return; }
-  if (t.dataset.edit) { const c = app.job.comps.find(x => x.id === app.sel); const f = FIELD[t.dataset.edit]; const v = parseInput(f, t.value); if (blank(v)) delete c.edit[f.k]; else c.edit[f.k] = v; save(); renderParts({ field: f.k }); return; }
+  if (t.dataset.edit) { const c = app.job.comps.find(x => x.id === app.sel); let f = FIELD[t.dataset.edit];
+    if (f.k === 'mlsCondition' && /^\s*(?:(?:low|mid|high)\s+)?c\s*[1-6]\s*[+-]?\s*$/i.test(t.value)) { f = FIELD.condition; toast('A C rating goes in the Condition line (the one the grid uses) – moved it there', 6000); }   // she typed C3- in the MLS words line
+    { const m = String(t.value || '').trim().toUpperCase().match(/^(?:(LOW|MID|HIGH)\s+)?([QC])\s*([1-6])\s*([+-])?$/); if (m && ['quality', 'condition'].includes(f.k) && (m[1] || m[4])) {   // "C3-" / "High Q3": UAD takes the whole rating; the tier goes to the grid
+      const tier = m[1] ? m[1].toLowerCase() : m[4] === '-' ? 'low' : 'high'; const G = G0(app.job); G.fine = G.fine || {}; G.fine[c.id] = G.fine[c.id] || {}; G.fine[c.id][m[2].toLowerCase()] = tier; t.value = m[2] + m[3];
+      toast(`Saved as ${m[2]}${m[3]} (UAD takes whole ratings only) with the tier “${tier}” on your grid`, 6000); } }
+    const v = parseInput(f, t.value); if (blank(v)) delete c.edit[f.k]; else c.edit[f.k] = v; save(); renderParts({ field: f.k }); return; }
   if (t.dataset.subj) { app.job.subject[t.dataset.subj] = t.dataset.subj === 'eff' ? (isoDate(t.value) || t.value.trim()) : t.value.trim(); if (t.dataset.subj === 'addr' && (!app.job.name.trim() || app.job.name === 'New assignment')) app.job.name = t.value.trim() || app.job.name; const jn = $('[data-jobname]'); if (jn && document.activeElement !== jn) jn.value = app.job.name; save(); renderParts(); return; }
   if (t.dataset.jobname) { app.job.name = t.value.trim() || 'Assignment'; save(); renderParts(); return; }
   if (t.dataset.notes) { const c = app.job.comps.find(x => x.id === t.dataset.notes); c.notes = t.value; save(); return; }
