@@ -313,3 +313,10 @@ Section order = the order she considers the data (her UAD 2.6 template order, cl
 13. Certifications · addenda
 14. Pre-check → one "Full report for SFREP" file; workfile zip
 Open questions for her: construction cost source (Marshall & Swift / CoreLogic? her own cost figures from the ACI archive?); land sales source; which addenda SFREP must carry vs. attach in SFREP; does Import Forms start from her template.
+
+## Guiding rule from her (Oct 19 2026) – the assistant follows HER process, not the form
+"I don't like the SFREP form style. The UAD 3.6 format does not flow per my process and workflow. … Simplify: let me do the analysis and inspection notes and photos; the assistant does the clerical, data, typing, organization, UAD coordination, storage of data, and items appraiser expertise is not needed for. Assistant does spell check, review, write notes based on inspection notes, etc."
+- Screens are laid out in her working order; the UAD 3.6 field structure stays behind the scenes and is only assembled at export (one import file), then SFREP validates/converts.
+- She: inspection (iPad notes, photos, sketch), analysis and judgment (comp selection, adjustments, ratings, value, which approaches), reading and approving every comment.
+- Assistant: reading documents, filling data, typing, organizing the workfile, mapping everything to UAD 3.6, storing her data, spell check, consistency review / pre-check, drafting notes and comments from her inspection notes and data in her wording (drafts only – she reads them).
+- Drafting: rule-based from her own phrases and comment library first (works on No-AI orders); Claude only when the order's AI setting allows it.
