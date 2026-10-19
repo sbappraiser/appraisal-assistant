@@ -26,7 +26,7 @@ function drComp(J, c, t) {
   const part = [];
   if (us) part.push(`${part.length ? dir(us).toLowerCase() : dir(us)} adjustment of ${$m(Math.abs(us))} was made for the ${sup(us)} lot utility${blank(C.usable) ? '' : ` (${C.usable} usable acres)`}`);
   if (vw) { const vl = String(C.view || '').split(':').slice(1).join(':').split(/;\s*|,\s*/).map(x => x.trim().toLowerCase()).filter(Boolean); const vt = vl.length > 2 ? vl.slice(0, -1).join(', ') + ', and ' + vl.at(-1) : vl.join(' and '); part.push(`${part.length ? dir(vw).toLowerCase() : dir(vw)} adjustment of ${$m(Math.abs(vw))} was made for the ${sup(vw)} ${vt ? vt + ' ' : ''}view`); }
-  if (part.length) s.push(part.join(', and ') + '.'); else if (!blank(C.view) && !blank(S.view) && viewTier(C.view) === viewTier(S.view)) s.push('The view is similar.');
+  if (part.length) s.push(part.join(', and ') + '.'); else if (!blank(C.view) && !blank(S.view) && vtOf(J, C._id, C.view) === vtOf(J, 'subj', S.view)) s.push('The view is similar.');
   if (site) s.push(`${dir(site)} adjustment of ${$m(Math.abs(site))} was made for the ${site > 0 ? 'smaller' : 'larger'} total site.`);
   const q = A('q'), cd = A('c'), sty = A('style'); const sim = []; const adj = [];
   if (!sty) sim.push('design/style'); else adj.push(`${dir(sty).toLowerCase()} adjustment of ${$m(Math.abs(sty))} was made for its ${sup(sty)} design/style`);

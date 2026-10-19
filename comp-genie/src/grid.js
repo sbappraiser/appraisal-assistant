@@ -56,6 +56,11 @@ function fineArch(J, who, k) { if (who === 'subj') return ''; const c = (J.comps
 const ratingPos = (v, fine) => { const m = String(v || '').match(/(\d)/); return m ? -(+m[1]) + (FINE[fine] || 0) : null; };   // higher = better; Q2 > Q4; high C3 > low C3
 const viewTier = v => { const t = String(v || '').toLowerCase(); if (!t.trim()) return null; if (/adverse/.test(t)) return -1; if (/neutral/.test(t)) return 0;
   if (/beneficial|ocean|mountain|city|lake|golf|canyon|panoram/.test(t)) return /panoram|excellent/.test(t) ? 3 : /limited/.test(t) ? 1 : 2; return null; };
+/* her view tier for each column (Oct 19 2026): the tier read from the view text is only a starting point – "Golf" alone reads as beneficial average, two tiers above neutral; she picks the tier */
+const VIEW_TIERS = [[-1, 'Adverse'], [0, 'Neutral'], [1, 'Beneficial – limited'], [2, 'Beneficial – average'], [3, 'Beneficial – excellent / panoramic']];
+const vtOf = (J, who, text) => { const o = ((G0(J).viewT || {})[who]); return o === undefined || o === null || o === '' ? viewTier(text) : +o; };
+function vtSel(who, J, text) { const set = ((G0(J).viewT || {})[who]); const auto = viewTier(text); const own = !(set === undefined || set === null || set === '');
+  return ` <select class="fine${own ? '' : ' arch'}" data-gvt="${who}" title="View tier used for the view adjustment (one step per tier). ${own ? 'Your choice.' : 'Read from the view – pick the tier you see.'}"><option value="">${auto === null ? 'tier?' : (VIEW_TIERS.find(x => x[0] === auto) || [, ''])[1] + ' (read)'}</option>${VIEW_TIERS.map(([n, l]) => `<option value="${n}" ${own && +set === n ? 'selected' : ''}>${l}</option>`).join('')}</select>`; }
 const aduNums = F => { if (F.aduSf !== undefined && F.aduSf !== null && F.aduSf !== '') return { sf: +F.aduSf || 0, baths: +F.aduBaths || 0 };
   const t = String(F.adu || ''); if (!t.trim() || /^(no|none)$/i.test(t.trim())) return { sf: 0, baths: 0 };
   const sf = t.match(/([\d,]{2,})\s*(?:sf|sq|square)/i), ba = t.match(/(\d+(?:\.\d)?)\s*(?:full\s*)?ba/i); return { sf: sf ? +sf[1].replace(/,/g, '') : null, baths: ba ? +ba[1] : 0 }; };
@@ -147,7 +152,7 @@ function rateAmount(row, S, C, J) {
   if (Array.isArray(key)) { let tot = 0, any = false; key.forEach(k => { const r = num(R[k]); if (!r) return; let x = null;
       if (['pool', 'spa', 'pond', 'lake', 'tennis', 'sport'].includes(k)) { const a = hasFeat(S, k), b = hasFeat(C, k); if (a !== null && b !== null) x = (a - b) * r; }
       else if (k === 'qStep' || k === 'qPct' || k === 'cStep' || k === 'cPct') { const f = k[0]; const a = ratingPos(S[f], fineOf(J, 'subj', f)), b = ratingPos(C[f], fineOf(J, C._id, f)); if (a !== null && b !== null) x = (a - b) * (k.endsWith('Pct') ? r / 100 * (C.price || 0) : r); }
-      else if (k === 'viewStep' || k === 'viewPct') { const a = viewTier(S.view), b = viewTier(C.view); if (a !== null && b !== null) x = (a - b) * (k === 'viewPct' ? r / 100 * (C.price || 0) : r); }
+      else if (k === 'viewStep' || k === 'viewPct') { const a = vtOf(J, 'subj', S.view), b = vtOf(J, C._id, C.view); if (a !== null && b !== null) x = (a - b) * (k === 'viewPct' ? r / 100 * (C.price || 0) : r); }
       else if (k === 'landStep') { const a = goodness('land', S), b = goodness('land', C); if (a !== null && b !== null) x = (a - b) * r; }
       else if (k === 'aduSf' || k === 'aduBath') { const a = aduNums(S), b = aduNums(C); const v = k === 'aduSf' ? [a.sf, b.sf] : [a.baths, b.baths]; if (v[0] !== null && v[1] !== null) x = (v[0] - v[1]) * r; }
       if (x !== null) { tot += x; any = true; } }); return any ? Math.round(tot / 500) * 500 : null; }
@@ -184,13 +189,13 @@ function gridHTML(J) {
     const [id, label, section, type] = row; const head = section !== sec ? `<tr class="grp"><th colspan="${2 + used.length}">${esc(section)}</th></tr>` : ''; sec = section;
     const sv = id === 'baths' ? [S.full, S.half].every(blank) ? '' : `${S.full ?? '–'} / ${S.half ?? 0}` : showFact(id, S[id]);
     const subjCell = ['price', 'ppsf', 'src', 'prox', 'dom', 'terms', 'conc', 'contract', 'sale'].includes(id) ? `<td class="subj">${esc(sv)}</td>`
-      : `<td class="subj"><input class="txt sm" data-gsubj="${id}" value="${esc(blank(G.subj[id]) ? '' : G.subj[id])}" placeholder="${esc(sv || (id === 'usable' ? 'Measure it' : id === 'adu' ? 'e.g. Guest house 450 sf 1 bath' : ''))}">${id === 'q' || id === 'c' ? fineSel('subj', id, J) : ''}</td>`;
+      : `<td class="subj"><input class="txt sm" data-gsubj="${id}" value="${esc(blank(G.subj[id]) ? '' : G.subj[id])}" placeholder="${esc(sv || (id === 'usable' ? 'Measure it' : id === 'adu' ? 'e.g. Guest house 450 sf 1 bath' : ''))}">${id === 'q' || id === 'c' ? fineSel('subj', id, J) : id === 'view' ? vtSel('subj', J, S.view) : ''}</td>`;
     const cells = used.map(c => { const C = compFacts(c, J);
       let shown = id === 'beds' && C.bedsBg ? `${C.beds} (${C.bedsBg} below grade)` : id === 'baths' ? ([C.full, C.half].every(blank) ? '' : `${C.full ?? '–'} / ${C.half ?? 0}`) : id === 'ppsf' ? (C.price && C.gla ? money(C.price / C.gla) : '') : showFact(id, C[id]);
       if (lean && !WB_NOEDIT.includes(id)) { const raw = id === 'usable' ? (blank(C.usable) ? '' : String(C.usable)) : wbFactText(id, C);
         shown = `<input class="txt sm fact" data-gfact="${c.id}|${id}" value="${esc(raw)}" placeholder="${id === 'usable' ? 'Measure it (ac)' : ''}" title="Type the comp's entry · = copies the subject · =2 copies comp 2">`; }
       else if (id === 'usable' && blank(C.usable)) shown = '<span class="measure">Measure it</span>'; else shown = esc(shown);
-      if (id === 'q' || id === 'c') shown += fineSel(c.id, id, J);
+      if (id === 'q' || id === 'c') shown += fineSel(c.id, id, J); if (id === 'view') shown += vtSel(c.id, J, C.view);
       if (!type) return `<td>${shown}</td>`;
       const a = cellAmount(J, c, row);
       return `<td><div class="gval">${shown}</div><input class="txt sm adj ${a.own ? 'own' : a.v !== null ? 'auto' : ''}" data-gadj="${c.id}|${id}" value="${a.own ? a.v : ''}" placeholder="${a.v !== null && !a.own ? (a.v >= 0 ? '+' : '') + a.v.toLocaleString() : '$ adj'}" inputmode="decimal" title="${a.own ? 'Your amount – clear it to use the rate' : a.v !== null ? 'From your rate – type to override' : 'Type the adjustment'}"></td>`; }).join('');
