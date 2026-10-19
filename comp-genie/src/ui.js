@@ -335,7 +335,7 @@ function compsTable(J) {
   ${rows.map(c => { const fr = frontOf(c); const px = proximity(c, J); const fl = compFlags(c, J); const warn = fl.filter(x => x.sev === 'warn').length;
     const st = V(c, 'status') || ((currentSale(c) || {}).status || '');
     return `<tr class="${c.id === app.sel ? 'sel' : ''} ${c.use ? 'used' : ''}" data-open="${c.id}">
-      <td><select data-use="${c.id}" aria-label="Use as comp number"><option value="">–</option>${Array.from({ length: maxUse }, (_, i) => `<option ${c.use === i + 1 ? 'selected' : ''}>${i + 1}</option>`).join('')}</select></td>
+      <td class="usecell"><button class="btn small${c.use ? '' : ' primary'}" data-quse="${c.id}" title="${c.use ? 'Take it off the grid' : 'Put it on the grid as the next comp'}">${c.use ? 'Remove' : '+ Grid'}</button><select data-use="${c.id}" aria-label="Use as comp number" title="Or pick its comp number">${'<option value="">–</option>'}${Array.from({ length: maxUse }, (_, i) => `<option ${c.use === i + 1 ? 'selected' : ''}>${i + 1}</option>`).join('')}</select></td>
       <td>${fr ? `<img class="thumb" data-photo="${fr.id}" alt="">` : '<span class="nothumb"></span>'}</td>
       <td><b>${esc(compTitle(c))}</b><br><small>${esc(V(c, 'mls') ? 'MLS ' + V(c, 'mls') : '')}</small></td>
       <td>${esc(st)}</td><td class="r">${money(V(c, 'salePrice') || V(c, 'listPrice'))}${!V(c, 'salePrice') && V(c, 'listPrice') ? '<br><small>list</small>' : ''}</td>
@@ -480,6 +480,10 @@ document.addEventListener('click', async e => {
     if (nb.dataset.rmdb) { app.job.comps = app.job.comps.filter(x => x.id !== id); if (app.sel === id) app.sel = null; app.confirm = null; save(); render(); return; }
     if (nb.dataset.nuback) { delete c.notUsed; if (app.nuAsk === id) app.nuAsk = null; save(); render(); return; }
     return; }
+  { const q = e.target.closest('[data-quse]'); if (q && app.job) { e.stopPropagation(); const c = app.job.comps.find(x => x.id === q.dataset.quse); if (!c) return;
+      if (c.use) { markNotUsed(c); app.nuAsk = c.id; c.use = null; toast('Taken off the grid – kept as analyzed, not used. Pick the reason below the grid.'); }
+      else { const taken = new Set(app.job.comps.map(x => x.use).filter(Boolean)); let n = 1; while (taken.has(n)) n++; c.use = n; delete c.notUsed; toast(`On the grid as comp ${n}`); }
+      save(); render(); return; } }
   const t = e.target.closest('[data-act],[data-open],[data-pick],[data-reset],[data-front],[data-view],[data-rm],[data-rmyes],[data-rf],[data-rfyes],.sug');
   if (!t) return;
   if (t.matches('select,input,option')) return;

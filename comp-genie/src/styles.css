@@ -112,3 +112,4 @@ header.top.pop{gap:8px}header.top.pop h1{font-size:18px}
 .vt{padding:1px 7px;border-radius:9px;background:#eef1f4}.vt.v26{background:#fff1d6;color:#8a5a00}.vt.v36{background:#e1f2e6;color:#226b3a}.vt.vboth{background:#e6eefb;color:#2c4f8a}mark.blank{background:#fff3a8;padding:0 2px}
 .draft{margin:8px 0;padding:8px 10px;background:#f7faf7;border:1px solid #dfe9df;border-radius:8px}.draft textarea{width:100%;font-size:13px;line-height:1.45;margin:6px 0}
 .charct{font-size:12px;color:#667;margin:2px 0 6px}.charct .over{color:#b3261e}
+table.comps td.usecell{white-space:nowrap}table.comps td.usecell .btn{margin-right:4px;padding:2px 8px}
