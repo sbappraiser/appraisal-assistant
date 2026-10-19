@@ -185,11 +185,25 @@ function textChip(d) {
   if (st.startsWith('part:')) return `<span class="chip warn" title="These pages are pictures: ${h(st.slice(5))}. The rest can be read here.">part scan (p. ${h(st.slice(5))})</span>`;
   return '<span class="chip" title="Kept with the order; this kind of file is not read.">kept, not read</span>';
 }
+function docStatusChips(d) {   // her request (Oct 19 2026): see at a glance what was read, by whom, and what is finished
+  const rv = ((cur && cur.review) || {})[d.id]; const S = (rv && rv.sugg) || []; const nNew = S.filter(x => x.state === 'new').length, nAcc = S.filter(x => x.state === 'accepted').length;
+  const T = cur.permitTimeline; const byClaude = (cur.aiLog || []).some(l => l.doc === d.name) || S.some(x => x.by === 'claude') || !!(T && (T.files || []).includes(d.name));
+  const F = (cur.facts || []).filter(f => f.docId === d.id); const filled = [...new Set(F.flatMap(f => f.filled || []))];
+  const out = [];
+  if (byClaude) out.push(`<span class="chip ok" title="Claude has read this document${T && (T.files || []).includes(d.name) ? ' (with the other permit files, for the permit timeline)' : ''} – no need to send it again">✓ read by Claude</span>`);
+  if (S.length && nNew) out.push(`<span class="chip warn" title="Click Read to accept or reject them">${nNew} to accept or reject</span>`);
+  else if (!S.length && !F.length && T && (T.files || []).includes(d.name)) out.push('<span class="chip done" title="Read with the other permit files – see the permit timeline below the list">✓ done · in the permit timeline</span>');
+  else if (S.length || F.length) out.push(`<span class="chip done" title="Every suggestion is accepted or rejected${filled.length ? '. Filled in on the order: ' + h(filled.join(', ')) : ''}">✓ done · ${nAcc || F.length} accepted${filled.length ? ' · filled in: ' + h(filled.join(', ')) : ''}</span>`);
+  const reviewed = S.length || F.length;
+  if (!reviewed && !byClaude) out.unshift(textChip(d));   // the read/scan tag until there is something better to say
+  else if (AUTO_READ.includes(d.type) && d.textState) out.unshift(textChip(d));
+  return out.join('');
+}
 function renderDocs() {
   const list = (cur && cur.docs) || []; const box = $('#docList'); setTimeout(fillTextStates, 0);
   const opts = sel => DOC_TYPES.map(([g, ks]) => `<optgroup label="${h(g)}">${ks.map(([k, l]) => `<option value="${k}"${k === sel ? ' selected' : ''}>${h(l)}</option>`).join('')}</optgroup>`).join('');
   box.innerHTML = list.length ? `<table class="docs"><tbody>${list.map(d => `<tr>
-      <td><button type="button" class="lnk" data-dopen="${d.id}" title="Open">${h(d.name)}</button><small>${Math.max(1, Math.round(d.size / 1024)).toLocaleString()} KB${d.note ? ' · ' + h(d.note) : READS[d.type] ? '' : ''}</small>${textChip(d)}${d.warn ? `<small class="warnTxt">⚠ ${h(d.warn)}</small>` : ''}</td>
+      <td><button type="button" class="lnk" data-dopen="${d.id}" title="Open">${h(d.name)}</button><small>${Math.max(1, Math.round(d.size / 1024)).toLocaleString()} KB${d.note ? ' · ' + h(d.note) : READS[d.type] ? '' : ''}</small>${docStatusChips(d)}${d.warn ? `<small class="warnTxt">⚠ ${h(d.warn)}</small>` : ''}</td>
       <td><button type="button" class="kindBtn" data-dkind="${d.id}" aria-haspopup="true" title="Change the kind of document">${h(DOC_LABEL[d.type] || 'Other')} ▾</button>${d.type === 'floorplan' && d.pages > 1 ? ` <label class="pg">page <input data-dpage="${d.id}" inputmode="numeric" value="${d.page || 1}" size="2"> of ${d.pages}</label>` : ''}</td>
       <td class="acts"><button type="button" class="btn small" data-dread="${d.id}">Read</button><button type="button" class="btn ghost small danger" data-ddel="${d.id}">Remove</button></td></tr>`).join('')}</tbody></table>`
     : '<p class="help">No documents yet.</p>';

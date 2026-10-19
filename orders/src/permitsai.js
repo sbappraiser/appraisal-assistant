@@ -80,7 +80,7 @@ async function pbSend() {
     cur.permitTimeline = { at: new Date().toISOString(), model: aiModel(), files: sentFiles, rounds: rounds.length, mode: cur.aiUse === 'Redacted' ? 'redacted' : 'full',
       permits: (out.permits || []).filter(x => x && (x.work || x.number)), flags: (out.flags || []).filter(x => x && x.text), comment: String(out.comment || '') };
     (cur.aiLog = cur.aiLog || []).push({ at: cur.permitTimeline.at, doc: 'All permit records (' + sentFiles.length + ' files)', pages: [], mode: cur.permitTimeline.mode, model: aiModel(), items: cur.permitTimeline.permits.length });
-    PB.plan = null; PB.show = true; saveLetter(true, true); renderPermBatch();
+    PB.plan = null; PB.show = true; saveLetter(true, true); renderDocs();
     toast(`Claude read ${sentFiles.length} permit files together: ${cur.permitTimeline.permits.length} permits, ${cur.permitTimeline.flags.length} things to check`, 6000);
   } catch (e) { console.error(e); toast('Not sent or not read: ' + (e.message || e), 7000); say('Try again'); }
   PB.busy = false;
@@ -98,7 +98,12 @@ async function renderPermBatch() {
   const box = $('#permBatch'); if (!box || !cur) return; const docs = pbDocs(); const T = cur.permitTimeline;
   if (!docs.length && !T) { box.innerHTML = ''; return; }
   const ai = cur.aiUse, ok = ai === 'Yes' || ai === 'Redacted', key = aiKey();
-  let html = `<div class="permbatch"><b>Permit records: ${docs.length} file${docs.length === 1 ? '' : 's'}.</b> `;
+  const inT = d => !!(T && (T.files || []).includes(d.name)); const fresh = docs.filter(d => !inT(d)); const scans = fresh.filter(d => /^(scan|part:)/.test(d.textState || ''));
+  const chips = (T ? `<span class="chip ok" title="Claude read these together on ${h(new Date(T.at).toLocaleString())}">✓ read by Claude · ${h(new Date(T.at).toLocaleDateString())}</span><span class="chip done" title="The permit timeline is below (Show the permit timeline)">✓ done · ${T.permits.length} permit${T.permits.length === 1 ? '' : 's'} in the timeline</span>` : '')
+    + (fresh.length && T ? `<span class="chip warn" title="${h(fresh.map(d => d.name).join(', '))}">${fresh.length} new file${fresh.length === 1 ? '' : 's'} not read yet – read them all again</span>` : '')
+    + (scans.length ? `<span class="chip warn" title="${h(scans.map(d => d.name).join(', '))}: pictures of pages – only Claude (or Acrobat Recognize text) can read them">scan – needs Claude or Acrobat (${scans.length} file${scans.length === 1 ? '' : 's'})</span>` : '')
+    + (!T && docs.length && !scans.length ? '<span class="chip">text – ready to send</span>' : '');
+  let html = `<div class="permbatch"><b>Permit records: ${docs.length} file${docs.length === 1 ? '' : 's'}.</b> ${chips ? '<div>' + chips + '</div>' : ''}`;
   if (!docs.length) html += '';
   else if (!ok) html += `To have Claude read them all together and build one timeline, set <b>AI use</b> on this order to Yes or Redacted (it is <b>${h(ai || 'not set')}</b>).`;
   else if (!key) html += 'Claude can read them all together, but no Claude API key is saved yet: <b>Standard wording → AI settings</b>.';

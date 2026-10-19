@@ -132,11 +132,11 @@ function rdRender() {
   const side = $('#rdSide');
   side.querySelectorAll('[data-goto]').forEach(b => b.onclick = () => { RD.page = +b.dataset.goto; rdPage(); });
   side.querySelectorAll('[data-acc]').forEach(b => b.onclick = () => { const s = rv.sugg.find(x => x.id === b.dataset.acc); const v = side.querySelector(`[data-sugv="${s.id}"]`).value.trim(); s.state = 'accepted';
-    (cur.facts = cur.facts || []).push({ id: uid(), docId: RD.id, doc: meta.name, type: meta.type, key: s.key, label: (C.items.find(i => i[0] === s.key) || [, s.key])[1], value: v, page: s.page, n: +((String(s.quote || '').match(/^#(\d+)/) || [])[1] || 0) || null, by: v === s.value ? s.by : 'you', at: new Date().toISOString() }); if (meta.type === 'contract') contractToUad(s.key, v); factToOrder(s.key, v); saveLetter(true, true); rdRender(); });
+    (cur.facts = cur.facts || []).push({ id: uid(), docId: RD.id, doc: meta.name, type: meta.type, key: s.key, label: (C.items.find(i => i[0] === s.key) || [, s.key])[1], value: v, page: s.page, n: +((String(s.quote || '').match(/^#(\d+)/) || [])[1] || 0) || null, by: v === s.value ? s.by : 'you', at: new Date().toISOString() }); markFilled(cur.facts[cur.facts.length - 1], meta.type, s.key, v); saveLetter(true, true); rdRender(); });
   side.querySelectorAll('[data-rej]').forEach(b => b.onclick = () => { rv.sugg.find(x => x.id === b.dataset.rej).state = 'rejected'; saveLetter(true, true); rdRender(); });
   side.querySelectorAll('[data-unfact]').forEach(b => b.onclick = () => { cur.facts = cur.facts.filter(f => f.id !== b.dataset.unfact); saveLetter(true, true); rdRender(); });
   side.querySelectorAll('[data-ownadd]').forEach(b => b.onclick = () => { const k = b.dataset.ownadd, i = side.querySelector(`[data-own="${k}"]`); const v = i.value.trim(); if (!v) return;
-    (cur.facts = cur.facts || []).push({ id: uid(), docId: RD.id, doc: meta.name, type: meta.type, key: k, label: (C.items.find(x => x[0] === k) || [, k])[1], value: v, page: RD.page, by: 'you', at: new Date().toISOString() }); if (meta.type === 'contract') contractToUad(k, v); factToOrder(k, v); saveLetter(true, true); rdRender(); });
+    (cur.facts = cur.facts || []).push({ id: uid(), docId: RD.id, doc: meta.name, type: meta.type, key: k, label: (C.items.find(x => x[0] === k) || [, k])[1], value: v, page: RD.page, by: 'you', at: new Date().toISOString() }); markFilled(cur.facts[cur.facts.length - 1], meta.type, k, v); saveLetter(true, true); rdRender(); });
   const prep = $('#rdPrep'); if (prep) prep.onclick = () => rdPrepare('claude');
   const rc = $('#rdRedact'); if (rc) rc.onclick = () => rdPrepare('copy');
   wireStickies(side); rdWireExtras(side);
@@ -338,11 +338,16 @@ function listInOrder(vals) { // keeps the order they appear in the report; repea
   return out.length > 1 ? out.slice(0, -1).join(', ') + ' and ' + out.at(-1) : out[0] || '';
 }
 const NUMW = ['', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'];
+function markFilled(f, type, key, v) {   // what an accepted entry filled in on the order (shown on the document's tag)
+  const before = JSON.stringify(cur.uad || {}); if (type === 'contract') contractToUad(key, v); const out = [];
+  if (JSON.stringify(cur.uad || {}) !== before) out.push('UAD 3.6 sales contract'); const o = factToOrder(key, v); if (o) out.push(o);
+  if (f && out.length) f.filled = out;
+}
 function factToOrder(key, v) {   // an accepted legal description goes into the order's Legal description box (the Comp genie and SFREP use it)
   if (!v) return;
-  if (key === 'legal') { const el = $('#f_legal'); if (!el) return; el.value = v; cur = readForm(); toast('Legal description is on the order now'); return; }
+  if (key === 'legal') { const el = $('#f_legal'); if (!el) return; el.value = String(v).replace(/\bS(\d{2})(?= (?:FEET|FT)\b)/gi, '5$1');   // a scan's "S00 FEET" is 500 feet cur = readForm(); toast('Legal description is on the order now'); return 'Legal description'; }
   if (key === 'reserve') { const el = $('#f_rightsNot'); if (!el) return; const t = rightsNotText(v);
-    el.value = el.value.trim() && !el.value.includes(t) ? (el.value.trim() + ' ' + t).slice(0, 540) : t; cur = readForm(); toast('Added to "Rights not appraised" on the order. You decide in the Comp genie whether all rights are included.'); }
+    el.value = el.value.trim() && !el.value.includes(t) ? (el.value.trim() + ' ' + t).slice(0, 540) : t; cur = readForm(); toast('Added to "Rights not appraised" on the order. You decide in the Comp genie whether all rights are included.'); return 'Rights not appraised'; }
 }
 function rightsNotText(v) {   // a short line for UAD 3.6 (540 characters); OCR's S00 → 500
   let t = String(v).replace(/\s+/g, ' ').replace(/\bS(\d{2})\b/g, '5$1').replace(/\bO(\d{2})\b/g, '0$1').trim();

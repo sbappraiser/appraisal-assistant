@@ -125,7 +125,7 @@ table.mkrows td small { display: block; color: var(--muted); font-size: 12px; } 
 .rditem { border-bottom: 1px solid var(--line); padding-bottom: 8px; display: grid; gap: 6px; } .rdlab { font: 600 13px var(--ui); } .rdfact { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; color: var(--ok); } .rdfact small { color: var(--muted); font-size: 12px; width: 100%; } .rdsug small { color: var(--muted); font-size: 12px; }
 .rdsug { background: var(--accent-soft); border-radius: 8px; padding: 6px 8px; display: grid; gap: 4px; } .rdsug textarea { min-height: 0; padding: 4px 6px; } .rdsug .row { gap: 6px; } .rdsug textarea { width: 100%; } .rdadd { display: flex; gap: 6px; } .rdadd input { flex: 1; min-width: 0; }
 .permbatch { margin: 10px 0 6px; padding: 8px 10px; border: 1px dashed var(--line); border-radius: 8px; } .rdthumbs { display: flex; flex-wrap: wrap; gap: 6px; } .rdthumbs figure { margin: 0; font-size: 11px; } .pbt .warnRow td { background: #fff4e5; }
-.docs .chip { display: inline-block; margin: 2px 6px 0 0; border: 1px solid var(--line); border-radius: 99px; font-size: 12px; padding: 0 8px; color: var(--muted); cursor: help; } .docs .chip.ok { color: #0a6b3a; border-color: #9fd3b4; } .docs .chip.warn { color: var(--warn); border-color: var(--warn); }
+#docsSet .chip { display: inline-block; margin: 2px 6px 0 0; border: 1px solid var(--line); border-radius: 99px; font-size: 12px; padding: 0 8px; color: var(--muted); cursor: help; } #docsSet .chip.ok { color: #0a6b3a; border-color: #9fd3b4; } #docsSet .chip.warn { color: #7a4a12; border-color: #b9824a; background: #fbf1e4; } #docsSet .chip.done { color: #fff; background: #0a7a37; border-color: #0a7a37; font-weight: 600; }
 .pgchip { border: 1px solid var(--line); background: var(--panel); border-radius: 99px; font-size: 12px; padding: 1px 8px; cursor: pointer; color: var(--accent); }
 .rdflow { border-color: var(--accent); } .rdflow ol.steps { margin: 4px 0; padding-left: 20px; font-size: 13.5px; } .rdflow ol.steps li { margin: 3px 0; }
 .rdai { background: var(--field); border: 1px solid var(--line); border-radius: 10px; padding: 10px; } .rdai input { width: 3em; display: inline; }
@@ -445,6 +445,7 @@ mark.blank{background:#fff3a8;padding:0 2px;border-radius:3px}.cmt textarea{widt
       <li>Under the document list, click <b>Read all the permits together with Claude</b>. You first see what will be sent: each file, how many pages go as text and how many as pictures (scans), and small pictures of the scanned pages. Click <b>Send … pages to Claude</b>.</li>
       <li>All the files go in one request, so Claude can match the same permit across files and build one timeline: permit number, work, square feet, applied / issued / final dates and status, with the file and page. Lots of scanned pages are read in parts and then put together.</li>
       <li>Under <b>To check</b> Claude lists permits never finaled or expired, added or converted living area compared with the public record, code-enforcement cases, and work for another address. A draft permit comment is offered – read and edit it; nothing goes into the report by itself.</li>
+      <li>The permit box shows the same tags as the documents: <b>scan – needs Claude or Acrobat</b> (brown) before it is read, then <b>✓ read by Claude</b> and <b>✓ done · N permits in the timeline</b> (solid green). Each permit file also shows <b>✓ done · in the permit timeline</b>. If you add a permit file later, a brown <b>new file not read yet</b> tag tells you to read them all again.</li>
       <li>This only works when the order's <b>AI use</b> is Yes or Redacted. On Redacted orders names, phones and emails are removed from the text (permit numbers stay); scanned pages are only sent from a redacted copy you made (Read › Redacted copy).</li></ol></details>
     <details><summary>Documents: upload once, kinds, search, sticky notes</summary><ol>
       <li><b>Which documents fill things in by themselves?</b> Each one shows a tag next to its name (point at it for more):
@@ -452,6 +453,7 @@ mark.blank{background:#fff3a8;padding:0 2px;border-radius:3px}.cmt textarea{widt
         <b>✓ text – click Read</b> – the text can be read here, but nothing is filled in until you click <b>Read</b> and accept the suggestions (contract, prelim, deed, legal description, HOA papers).
         <b>scan – needs Claude or Acrobat</b> – a picture of the pages; click <b>Read</b> to send it to Claude (only when the order's AI use allows it), or in Acrobat use <b>Scan &amp; OCR › Recognize text</b>, save, and upload it again.
         <b>part scan</b> – some pages are pictures. <b>kept, not read</b> – photos and other files are stored with the order only.</li>
+      <li>After a document is read, its tag changes so you never do it twice: <b>✓ read by Claude</b> (green outline) once Claude has read it – also for permit files read together; <b>3 to accept or reject</b> (orange) while suggestions are waiting; and <b>✓ done · 2 accepted · filled in: Legal description</b> (solid green) when every suggestion is accepted or rejected, naming what it filled in on the order.</li>
       <li>Uploading a file with the same name as one already in the order <b>replaces</b> it – you never get two copies. Its sticky notes and accepted entries stay. (Orders that already had a file twice are cleaned up when you open them.)</li>
       <li>Drop every file for the order into the <b>Documents</b> box, or click <b>Choose files</b>. Each one is sorted by kind; change the kind with its drop-down if it guessed wrong.</li>
       <li>Click a file name to open it. Click <b>Read</b> to open the reader (next section). <b>Remove</b> takes it out of the order.</li>
@@ -642,7 +644,7 @@ mark.blank{background:#fff3a8;padding:0 2px;border-radius:3px}.cmt textarea{widt
 </div>
 <div id="toast" role="status" hidden></div>
 <script>
-const BUILD='o1-1019-0013';
+const BUILD='o1-1019-0021';
 const G = (() => {
 /* ---------------- small helpers ---------------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -1938,11 +1940,25 @@ function textChip(d) {
   if (st.startsWith('part:')) return `<span class="chip warn" title="These pages are pictures: ${h(st.slice(5))}. The rest can be read here.">part scan (p. ${h(st.slice(5))})</span>`;
   return '<span class="chip" title="Kept with the order; this kind of file is not read.">kept, not read</span>';
 }
+function docStatusChips(d) {   // her request (Oct 19 2026): see at a glance what was read, by whom, and what is finished
+  const rv = ((cur && cur.review) || {})[d.id]; const S = (rv && rv.sugg) || []; const nNew = S.filter(x => x.state === 'new').length, nAcc = S.filter(x => x.state === 'accepted').length;
+  const T = cur.permitTimeline; const byClaude = (cur.aiLog || []).some(l => l.doc === d.name) || S.some(x => x.by === 'claude') || !!(T && (T.files || []).includes(d.name));
+  const F = (cur.facts || []).filter(f => f.docId === d.id); const filled = [...new Set(F.flatMap(f => f.filled || []))];
+  const out = [];
+  if (byClaude) out.push(`<span class="chip ok" title="Claude has read this document${T && (T.files || []).includes(d.name) ? ' (with the other permit files, for the permit timeline)' : ''} – no need to send it again">✓ read by Claude</span>`);
+  if (S.length && nNew) out.push(`<span class="chip warn" title="Click Read to accept or reject them">${nNew} to accept or reject</span>`);
+  else if (!S.length && !F.length && T && (T.files || []).includes(d.name)) out.push('<span class="chip done" title="Read with the other permit files – see the permit timeline below the list">✓ done · in the permit timeline</span>');
+  else if (S.length || F.length) out.push(`<span class="chip done" title="Every suggestion is accepted or rejected${filled.length ? '. Filled in on the order: ' + h(filled.join(', ')) : ''}">✓ done · ${nAcc || F.length} accepted${filled.length ? ' · filled in: ' + h(filled.join(', ')) : ''}</span>`);
+  const reviewed = S.length || F.length;
+  if (!reviewed && !byClaude) out.unshift(textChip(d));   // the read/scan tag until there is something better to say
+  else if (AUTO_READ.includes(d.type) && d.textState) out.unshift(textChip(d));
+  return out.join('');
+}
 function renderDocs() {
   const list = (cur && cur.docs) || []; const box = $('#docList'); setTimeout(fillTextStates, 0);
   const opts = sel => DOC_TYPES.map(([g, ks]) => `<optgroup label="${h(g)}">${ks.map(([k, l]) => `<option value="${k}"${k === sel ? ' selected' : ''}>${h(l)}</option>`).join('')}</optgroup>`).join('');
   box.innerHTML = list.length ? `<table class="docs"><tbody>${list.map(d => `<tr>
-      <td><button type="button" class="lnk" data-dopen="${d.id}" title="Open">${h(d.name)}</button><small>${Math.max(1, Math.round(d.size / 1024)).toLocaleString()} KB${d.note ? ' · ' + h(d.note) : READS[d.type] ? '' : ''}</small>${textChip(d)}${d.warn ? `<small class="warnTxt">⚠ ${h(d.warn)}</small>` : ''}</td>
+      <td><button type="button" class="lnk" data-dopen="${d.id}" title="Open">${h(d.name)}</button><small>${Math.max(1, Math.round(d.size / 1024)).toLocaleString()} KB${d.note ? ' · ' + h(d.note) : READS[d.type] ? '' : ''}</small>${docStatusChips(d)}${d.warn ? `<small class="warnTxt">⚠ ${h(d.warn)}</small>` : ''}</td>
       <td><button type="button" class="kindBtn" data-dkind="${d.id}" aria-haspopup="true" title="Change the kind of document">${h(DOC_LABEL[d.type] || 'Other')} ▾</button>${d.type === 'floorplan' && d.pages > 1 ? ` <label class="pg">page <input data-dpage="${d.id}" inputmode="numeric" value="${d.page || 1}" size="2"> of ${d.pages}</label>` : ''}</td>
       <td class="acts"><button type="button" class="btn small" data-dread="${d.id}">Read</button><button type="button" class="btn ghost small danger" data-ddel="${d.id}">Remove</button></td></tr>`).join('')}</tbody></table>`
     : '<p class="help">No documents yet.</p>';
@@ -2736,11 +2752,11 @@ function rdRender() {
   const side = $('#rdSide');
   side.querySelectorAll('[data-goto]').forEach(b => b.onclick = () => { RD.page = +b.dataset.goto; rdPage(); });
   side.querySelectorAll('[data-acc]').forEach(b => b.onclick = () => { const s = rv.sugg.find(x => x.id === b.dataset.acc); const v = side.querySelector(`[data-sugv="${s.id}"]`).value.trim(); s.state = 'accepted';
-    (cur.facts = cur.facts || []).push({ id: uid(), docId: RD.id, doc: meta.name, type: meta.type, key: s.key, label: (C.items.find(i => i[0] === s.key) || [, s.key])[1], value: v, page: s.page, n: +((String(s.quote || '').match(/^#(\d+)/) || [])[1] || 0) || null, by: v === s.value ? s.by : 'you', at: new Date().toISOString() }); if (meta.type === 'contract') contractToUad(s.key, v); factToOrder(s.key, v); saveLetter(true, true); rdRender(); });
+    (cur.facts = cur.facts || []).push({ id: uid(), docId: RD.id, doc: meta.name, type: meta.type, key: s.key, label: (C.items.find(i => i[0] === s.key) || [, s.key])[1], value: v, page: s.page, n: +((String(s.quote || '').match(/^#(\d+)/) || [])[1] || 0) || null, by: v === s.value ? s.by : 'you', at: new Date().toISOString() }); markFilled(cur.facts[cur.facts.length - 1], meta.type, s.key, v); saveLetter(true, true); rdRender(); });
   side.querySelectorAll('[data-rej]').forEach(b => b.onclick = () => { rv.sugg.find(x => x.id === b.dataset.rej).state = 'rejected'; saveLetter(true, true); rdRender(); });
   side.querySelectorAll('[data-unfact]').forEach(b => b.onclick = () => { cur.facts = cur.facts.filter(f => f.id !== b.dataset.unfact); saveLetter(true, true); rdRender(); });
   side.querySelectorAll('[data-ownadd]').forEach(b => b.onclick = () => { const k = b.dataset.ownadd, i = side.querySelector(`[data-own="${k}"]`); const v = i.value.trim(); if (!v) return;
-    (cur.facts = cur.facts || []).push({ id: uid(), docId: RD.id, doc: meta.name, type: meta.type, key: k, label: (C.items.find(x => x[0] === k) || [, k])[1], value: v, page: RD.page, by: 'you', at: new Date().toISOString() }); if (meta.type === 'contract') contractToUad(k, v); factToOrder(k, v); saveLetter(true, true); rdRender(); });
+    (cur.facts = cur.facts || []).push({ id: uid(), docId: RD.id, doc: meta.name, type: meta.type, key: k, label: (C.items.find(x => x[0] === k) || [, k])[1], value: v, page: RD.page, by: 'you', at: new Date().toISOString() }); markFilled(cur.facts[cur.facts.length - 1], meta.type, k, v); saveLetter(true, true); rdRender(); });
   const prep = $('#rdPrep'); if (prep) prep.onclick = () => rdPrepare('claude');
   const rc = $('#rdRedact'); if (rc) rc.onclick = () => rdPrepare('copy');
   wireStickies(side); rdWireExtras(side);
@@ -2942,11 +2958,16 @@ function listInOrder(vals) { // keeps the order they appear in the report; repea
   return out.length > 1 ? out.slice(0, -1).join(', ') + ' and ' + out.at(-1) : out[0] || '';
 }
 const NUMW = ['', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'];
+function markFilled(f, type, key, v) {   // what an accepted entry filled in on the order (shown on the document's tag)
+  const before = JSON.stringify(cur.uad || {}); if (type === 'contract') contractToUad(key, v); const out = [];
+  if (JSON.stringify(cur.uad || {}) !== before) out.push('UAD 3.6 sales contract'); const o = factToOrder(key, v); if (o) out.push(o);
+  if (f && out.length) f.filled = out;
+}
 function factToOrder(key, v) {   // an accepted legal description goes into the order's Legal description box (the Comp genie and SFREP use it)
   if (!v) return;
-  if (key === 'legal') { const el = $('#f_legal'); if (!el) return; el.value = v; cur = readForm(); toast('Legal description is on the order now'); return; }
+  if (key === 'legal') { const el = $('#f_legal'); if (!el) return; el.value = String(v).replace(/\bS(\d{2})(?= (?:FEET|FT)\b)/gi, '5$1');   // a scan's "S00 FEET" is 500 feet cur = readForm(); toast('Legal description is on the order now'); return 'Legal description'; }
   if (key === 'reserve') { const el = $('#f_rightsNot'); if (!el) return; const t = rightsNotText(v);
-    el.value = el.value.trim() && !el.value.includes(t) ? (el.value.trim() + ' ' + t).slice(0, 540) : t; cur = readForm(); toast('Added to "Rights not appraised" on the order. You decide in the Comp genie whether all rights are included.'); }
+    el.value = el.value.trim() && !el.value.includes(t) ? (el.value.trim() + ' ' + t).slice(0, 540) : t; cur = readForm(); toast('Added to "Rights not appraised" on the order. You decide in the Comp genie whether all rights are included.'); return 'Rights not appraised'; }
 }
 function rightsNotText(v) {   // a short line for UAD 3.6 (540 characters); OCR's S00 → 500
   let t = String(v).replace(/\s+/g, ' ').replace(/\bS(\d{2})\b/g, '5$1').replace(/\bO(\d{2})\b/g, '0$1').trim();
@@ -3248,7 +3269,7 @@ async function pbSend() {
     cur.permitTimeline = { at: new Date().toISOString(), model: aiModel(), files: sentFiles, rounds: rounds.length, mode: cur.aiUse === 'Redacted' ? 'redacted' : 'full',
       permits: (out.permits || []).filter(x => x && (x.work || x.number)), flags: (out.flags || []).filter(x => x && x.text), comment: String(out.comment || '') };
     (cur.aiLog = cur.aiLog || []).push({ at: cur.permitTimeline.at, doc: 'All permit records (' + sentFiles.length + ' files)', pages: [], mode: cur.permitTimeline.mode, model: aiModel(), items: cur.permitTimeline.permits.length });
-    PB.plan = null; PB.show = true; saveLetter(true, true); renderPermBatch();
+    PB.plan = null; PB.show = true; saveLetter(true, true); renderDocs();
     toast(`Claude read ${sentFiles.length} permit files together: ${cur.permitTimeline.permits.length} permits, ${cur.permitTimeline.flags.length} things to check`, 6000);
   } catch (e) { console.error(e); toast('Not sent or not read: ' + (e.message || e), 7000); say('Try again'); }
   PB.busy = false;
@@ -3266,7 +3287,12 @@ async function renderPermBatch() {
   const box = $('#permBatch'); if (!box || !cur) return; const docs = pbDocs(); const T = cur.permitTimeline;
   if (!docs.length && !T) { box.innerHTML = ''; return; }
   const ai = cur.aiUse, ok = ai === 'Yes' || ai === 'Redacted', key = aiKey();
-  let html = `<div class="permbatch"><b>Permit records: ${docs.length} file${docs.length === 1 ? '' : 's'}.</b> `;
+  const inT = d => !!(T && (T.files || []).includes(d.name)); const fresh = docs.filter(d => !inT(d)); const scans = fresh.filter(d => /^(scan|part:)/.test(d.textState || ''));
+  const chips = (T ? `<span class="chip ok" title="Claude read these together on ${h(new Date(T.at).toLocaleString())}">✓ read by Claude · ${h(new Date(T.at).toLocaleDateString())}</span><span class="chip done" title="The permit timeline is below (Show the permit timeline)">✓ done · ${T.permits.length} permit${T.permits.length === 1 ? '' : 's'} in the timeline</span>` : '')
+    + (fresh.length && T ? `<span class="chip warn" title="${h(fresh.map(d => d.name).join(', '))}">${fresh.length} new file${fresh.length === 1 ? '' : 's'} not read yet – read them all again</span>` : '')
+    + (scans.length ? `<span class="chip warn" title="${h(scans.map(d => d.name).join(', '))}: pictures of pages – only Claude (or Acrobat Recognize text) can read them">scan – needs Claude or Acrobat (${scans.length} file${scans.length === 1 ? '' : 's'})</span>` : '')
+    + (!T && docs.length && !scans.length ? '<span class="chip">text – ready to send</span>' : '');
+  let html = `<div class="permbatch"><b>Permit records: ${docs.length} file${docs.length === 1 ? '' : 's'}.</b> ${chips ? '<div>' + chips + '</div>' : ''}`;
   if (!docs.length) html += '';
   else if (!ok) html += `To have Claude read them all together and build one timeline, set <b>AI use</b> on this order to Yes or Redacted (it is <b>${h(ai || 'not set')}</b>).`;
   else if (!key) html += 'Claude can read them all together, but no Claude API key is saved yet: <b>Standard wording → AI settings</b>.';
