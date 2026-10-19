@@ -541,6 +541,7 @@ document.addEventListener('click', async e => {
       if (c.use) { markNotUsed(c); app.nuAsk = c.id; c.use = null; toast('Taken off the grid – kept as analyzed, not used. Pick the reason below the grid.'); }
       else { const taken = new Set(app.job.comps.map(x => x.use).filter(Boolean)); let n = 1; while (taken.has(n)) n++; c.use = n; delete c.notUsed; toast(`On the grid as comp ${n}`); }
       save(); render(); return; } }
+  { const ro = e.target.closest('[data-refopen],[data-refclose]'); if (ro && app.job) { app.ref = app.ref || { tab: 'land', area: null, q: '', newOnly: true }; if (ro.dataset.refopen) { app.ref.openFor = app.job.id; app.ref.closedFor = null; } else { app.ref.closedFor = app.job.id; app.ref.openFor = null; } const c = $('#refCard'); if (c) c.innerHTML = refHTML(app.job); return; } }
   { const rt = e.target.closest('[data-reftab]'); if (rt && app.job) { app.ref = app.ref || {}; app.ref.tab = rt.dataset.reftab; const c = $('#refCard'); if (c) c.innerHTML = refHTML(app.job); return; } }
   const t = e.target.closest('[data-act],[data-open],[data-pick],[data-reset],[data-front],[data-view],[data-rm],[data-rmyes],[data-rf],[data-rfyes],.sug');
   if (!t) return;

@@ -64,6 +64,10 @@ const isRemodel = p => /remodel|renovat|addition/i.test(String(p.f['Project type
 function refAreaGuess(J) { const t = [J.subject.addr, J.subject.city, J.subject.zip, (subjFacts(J) || {}).nbhd].join(' ');
   return /93108|montecito/i.test(t) ? 'Montecito' : /hope ranch/i.test(t) ? 'Hope Ranch-Foothills' : /goleta|93117|93111/i.test(t) ? 'Goleta' : /carpinteria|93013/i.test(t) ? 'Carpinteria' : /summerland|93067/i.test(t) ? 'Summerland' : ''; }
 function refHTML(J) {
+  { /* a condo has no land value of its own: the card stays closed unless she opens it (her Encina question, Oct 19 2026) */
+    const condo = typeof gridMode === 'function' && gridMode(J) === 'condo'; const RS = app.ref || {}; const open = RS.openFor === J.id ? true : RS.closedFor === J.id ? false : !condo;
+    if (!open) return `<div class="row"><h2 style="margin:0">Land sales and construction costs <small>your own databases, shared with the cost approach</small></h2><span class="grow"></span><button class="btn sm" data-refopen="1">Show</button></div><p class="help">${condo ? 'Closed for this condo – land sales and site value are not used for a condominium unit.' : 'Closed.'} These are your land sale and construction cost databases (from your reports, your land sales workbook and CORT “vacant” sales), not comps for this assignment.</p>`;
+  }
   const L = app.land || [], C = app.costDb; const R = app.ref = app.ref || { tab: 'land', area: null, q: '', newOnly: true };
   if (R.area === null || R.job !== J.id) { R.area = refAreaGuess(J); R.job = J.id; }
   if (!L.length && !C) return `<h2>Land sales and construction costs</h2><p class="help">Drop your <b>Land Sales by Market Area.xlsx</b> and your <b>Construction_Cost_Database.xlsx</b> on this page once. They are kept in this browser and shared with the cost approach.</p>`;
@@ -84,7 +88,7 @@ function refHTML(J) {
       ${boeHTML(J)}
       <p class="help">From ${esc(C.file)}, your local contractor budgets. Figures are brought to today with the California Construction Cost Index; you noted local costs rose faster, so older budgets read as floors. Your 135 review decisions are not in yet – figures use the suggested handling.</p>`; }
   else body = '<p class="help">Drop your <b>Construction_Cost_Database.xlsx</b> on this page.</p>';
-  return `<h2>Land sales and construction costs <small>your own databases, shared with the cost approach</small></h2>
+  return `<div class="row"><h2 style="margin:0">Land sales and construction costs <small>your own databases, shared with the cost approach</small></h2><span class="grow"></span><button class="btn sm" data-refclose="1">Hide</button></div>
     <div class="row"><button class="btn sm${R.tab === 'land' ? ' primary' : ''}" data-reftab="land">Land sales (${L.length})</button><button class="btn sm${R.tab === 'cost' ? ' primary' : ''}" data-reftab="cost">Construction costs (${C ? C.projects.length + ' projects' : 'not loaded'})</button></div>${body}`;
 }
 
