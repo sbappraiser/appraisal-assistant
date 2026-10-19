@@ -294,3 +294,22 @@ Run on the full report before it goes to SFREP; nothing about value, all about c
 2. Consistency checks: area data source = physical measurement when she measured; measured vs county area > 10% → reconciliation comment present; every exhibit photo captioned (outbuildings too); market search description states radius, time period, data source and the ranges; lookback months in the text = lookback field; comps > ~1 mile → distance explained + location support (unadjusted $/sf near vs far comps drafted from the numbers); PUD vs project coded the same for subject and comps; numbers in narrative = numbers in fields (GLA, value, dates, DOM); grid totals = adjusted prices; gross/net % flagged.
 3. Her own rules: a Revision log in the assistant – she pastes every stip / revision request / precheck flag; each becomes a rule (checklist item first, automated check when possible). The list grows with every file.
 Cautions kept: it flags, she decides; no commentary goes out unread; every check result and the math behind it is saved to the workfile.
+
+## The whole report in the Appraisal Assistant, one import into SFREP (her goal, Oct 19 2026)
+Her words: start and finish the entire report in the Appraisal Assistant; one import file fills SFREP completely so SFREP validates and converts it to the file she emails the client. The assistant also keeps the workfile (inspection notes, labeled photos, aerial, legal description, FEMA map, property data report, permit summary, documents).
+Section order = the order she considers the data (her UAD 2.6 template order, close to her inspection workflow), one tab each on the order:
+ 1. Order & engagement (exists: Order, client requirements, documents, bookkeeping)
+ 2. Scope of work · intended use/users · relevant dates · extraordinary assumptions / hypothetical conditions (near the beginning)
+ 3. Subject & contract (legal, rights, contract analysis – exists in the reader)
+ 4. Neighborhood & market conditions (exists: Market tab)
+ 5. Site (iPad + flood/FEMA map, zoning, permits summary, aerial)
+ 6. Improvements (iPad + sketch, floor plan, photos)
+ 7. Highest and best use – MOVE OUT of the Comp genie into this front section
+ 8. Approaches to value (which are developed and why)
+ 9. Cost approach – BEFORE the sales comparison: land value (land sales database: her archive + CORT land sales), cost new (construction cost database), depreciation (physical / functional / external), cost grid
+10. Sales comparison – the Comp genie: market-condition (time) adjustment, comps, grid, considered-not-used, comments, graphs
+11. Income approach (only when developed) – after the sales comparison
+12. Reconciliation (approaches, final value)
+13. Certifications · addenda
+14. Pre-check → one "Full report for SFREP" file; workfile zip
+Open questions for her: construction cost source (Marshall & Swift / CoreLogic? her own cost figures from the ACI archive?); land sales source; which addenda SFREP must carry vs. attach in SFREP; does Import Forms start from her template.
