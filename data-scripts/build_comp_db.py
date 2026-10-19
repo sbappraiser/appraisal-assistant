@@ -102,7 +102,7 @@ CREATE TABLE comp_records (
   acc_count INTEGER, acc_fin_sf INTEGER, acc_unfin_sf INTEGER, acc_unlabeled_sf INTEGER, adu_or_guest INTEGER, accessory_json TEXT, accessory_raw TEXT,
   hoa_month REAL, prior_sale TEXT,
   front_photo TEXT, rear_photo TEXT, street_photo TEXT,
-  custom_rows_json TEXT, flags TEXT
+  custom_rows_json TEXT, flags TEXT, also_reports TEXT
 );
 CREATE TABLE sales (
   sale_id INTEGER PRIMARY KEY, norm_address TEXT, unit TEXT, zip TEXT, area_name TEXT, neighborhood TEXT,
@@ -280,7 +280,7 @@ for key, lst in by_addr.items():
     if cur: groups.append(cur)
 
 # ---------- exact duplicates: identical in every appraisal field -> keep the newest only
-DUP_IGNORE = {'rec_id', 'sale_id', 'aci_property_id', 'from_report', 'entered_date', 'entered_by', 'front_photo', 'rear_photo', 'street_photo', 'flags', 'custom_rows_json', 'record_role'}
+DUP_IGNORE = {'also_reports', 'rec_id', 'sale_id', 'aci_property_id', 'from_report', 'entered_date', 'entered_by', 'front_photo', 'rear_photo', 'street_photo', 'flags', 'custom_rows_json', 'record_role'}
 # her rule (Oct 19 2026): also the same when only older – actual age, year built within 1 year (age arithmetic) – or when only
 # the date she checked the prior sales changed ("No Transfers" searches, any source) -> keep the newest only
 AGED_IGNORE = DUP_IGNORE | {'actual_age', 'year_built_est', 'prior_sale'}
@@ -291,15 +291,21 @@ def _yb_close(a, b):
     if a is None or b is None: return a is None and b is None
     try: return abs(int(a) - int(b)) <= 1
     except (TypeError, ValueError): return a == b
+# the removed older record's report stays listed on the record kept (she looks up the reports a comp was in to copy her comments)
+byid = {o['rec_id']: o for g in groups for o in g}
+def _also(keep, gone):
+    L = json.loads(keep.get('also_reports') or '[]')
+    L.append({'report': gone['from_report'], 'entered': gone['entered_date'], 'role': gone['record_role']}); L += json.loads(gone.get('also_reports') or '[]')
+    keep['also_reports'] = json.dumps(L)
 dup_removed = set()
 for g in groups:
     seen = {}; kept = []
     for o in sorted(g, key=lambda o: (o['entered_date'] or '', o['rec_id']), reverse=True):
         k = json.dumps({x: o[x] for x in o if x not in DUP_IGNORE}, sort_keys=True, default=str)
-        if k in seen: dup_removed.add(o['rec_id']); flags_rows.append((o['rec_id'], 'exact_duplicate_removed', f"same as record {seen[k]}")); continue
+        if k in seen: dup_removed.add(o['rec_id']); flags_rows.append((o['rec_id'], 'exact_duplicate_removed', f"same as record {seen[k]}")); _also(byid[seen[k]], o); continue
         ka = json.dumps({x: o[x] for x in o if x not in AGED_IGNORE}, sort_keys=True, default=str)
         twin = next((p for p in kept if p[0] == ka and _yb_close(p[1]['year_built_est'], o['year_built_est']) and _prior(p[1]['prior_sale']) == _prior(o['prior_sale'])), None)
-        if twin: dup_removed.add(o['rec_id']); flags_rows.append((o['rec_id'], 'aged_duplicate_removed', f"same as newer record {twin[1]['rec_id']} except age / prior-sale check date")); continue
+        if twin: dup_removed.add(o['rec_id']); flags_rows.append((o['rec_id'], 'aged_duplicate_removed', f"same as newer record {twin[1]['rec_id']} except age / prior-sale check date")); _also(twin[1], o); continue
         seen[k] = o['rec_id']; kept.append((ka, o))
 groups = [[o for o in g if o['rec_id'] not in dup_removed] for g in groups]
 out = [o for o in out if o['rec_id'] not in dup_removed]
@@ -344,8 +350,8 @@ for lst in by_a.values():
             a['resale_flag'] = (a['resale_flag'] + ' | ' if a['resale_flag'] else '') + note
             b['resale_flag'] = (b['resale_flag'] + ' | ' if b['resale_flag'] else '') + f"previous sale {a['sale_month']} at ${a['price']:,.0f} ({m} months earlier, {b['price']/a['price']-1:+.0%})"
 
-cols = list(out[0].keys()) + ['sale_id']
-for o in out: o.setdefault('sale_id', None)
+for o in out: o.setdefault('sale_id', None); o.setdefault('also_reports', None)
+cols = list(dict.fromkeys(list(out[0].keys()) + ['sale_id', 'also_reports']))
 db.executemany(f'insert into comp_records ({",".join(cols)}) values ({",".join("?"*len(cols))})', [tuple(o[c] for c in cols) for o in out])
 scol = list(sales[0].keys())
 db.executemany(f'insert into sales ({",".join(scol)}) values ({",".join("?"*len(scol))})', [tuple(s[c] for c in scol) for s in sales])

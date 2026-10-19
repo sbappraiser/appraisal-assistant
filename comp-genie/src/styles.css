@@ -143,3 +143,4 @@ table.grid{min-width:0;width:auto}table.grid td.subj{width:140px}
 .hlist tr.hrow { cursor: pointer; } .hlist tr.hrow:hover, .hlist tr.hrow.on { background: rgba(0,0,0,.04); }
 .hlist td.acts { white-space: nowrap; } .hlist td.acts .btn { margin-left: 4px; }
 .hfields { font-size: 13px; } .hfields th { text-align: left; font-weight: 600; padding-right: 12px; color: var(--muted, #5b6876); }
+.hcmt { border-left: 3px solid var(--accent, #e07b00); padding: 4px 10px; margin: 6px 0; background: rgba(0,0,0,.02); } .hcmt p { margin: 4px 0; white-space: pre-wrap; }

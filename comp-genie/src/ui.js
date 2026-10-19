@@ -125,7 +125,7 @@ function findComp({ mls, apn, key }) {
 function attachArchive(c) {
   if (!ARCH.loaded) return;
   const rows = archiveFind({ apn: c.apn || V(c, 'apn'), key: c.key });
-  c.src.arch = rows.map(r => ({ rec: r.rec_id, label: archLabel(r), report: r.from_report || '', entered: r.entered_date || '', role: r.record_role || '', photo: r.front_photo || '', v: archCanon(r) }));
+  c.src.arch = rows.map(r => ({ rec: r.rec_id, label: archLabel(r), report: r.from_report || '', entered: r.entered_date || '', role: r.record_role || '', photo: r.front_photo || '', also: (() => { try { return JSON.parse(r.also_reports || '[]'); } catch (e) { return []; } })(), v: archCanon(r) }));
 }
 function attachCort(c) {
   const idx = new Set(); const a = apnKey(c.apn || V(c, 'apn')); if (a && app.cortByApn.has(a)) app.cortByApn.get(a).forEach(i => idx.add(i));

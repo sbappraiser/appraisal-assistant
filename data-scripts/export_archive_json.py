@@ -14,7 +14,7 @@ COLS = ['rec_id', 'sale_id', 'record_role', 'comparable_type', 'property_type_id
         'garage_spaces', 'garage_type', 'driveway_spaces', 'carport_spaces', 'garage_raw', 'heating_cooling', 'energy_raw', 'solar', 'battery', 'generator',
         'fu_raw', 'remodel_year', 'buyer_to_remodel', 'lpr_days', 'buyer_broker_pct', 'porch_patio', 'fireplaces',
         'pool', 'spa', 'tennis', 'pickleball', 'sport_court', 'sauna', 'equestrian', 'community_amenities', 'amenities', 'landscaping',
-        'acc_count', 'acc_fin_sf', 'acc_unfin_sf', 'adu_or_guest', 'accessory_json', 'accessory_raw', 'hoa_month', 'prior_sale', 'front_photo', 'flags']
+        'acc_count', 'acc_fin_sf', 'acc_unfin_sf', 'adu_or_guest', 'accessory_json', 'accessory_raw', 'hoa_month', 'prior_sale', 'front_photo', 'flags', 'also_reports']
 rows = [[r[c] for c in COLS] for r in d.execute(f'select {",".join(COLS)} from comp_records order by norm_address, entered_date')]
 sales = {r['sale_id']: {'price': r['price'], 'month': r['sale_month'], 'type': r['sale_type'], 'primary': r['primary_rec_id'], 'resale': r['resale_flag'],
                         'use': r['use_for_analysis'], 'diff': r['disagreements']} for r in d.execute('select * from sales')}

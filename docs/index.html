@@ -591,7 +591,9 @@ mark.blank{background:#fff3a8;padding:0 2px;border-radius:3px}.cmt textarea{widt
       <li>The list shows every report the property was in: your ACI reports (marked <b>UAD 2.6</b>, or <b>GPAR / older form</b> when it had word ratings) and your 3.6 assignments here (Comp 2, Considered not used and why, or only on the list), with <b>Fields filled</b> so you can see which version is the most complete.</li>
       <li>Sorted with <b>this sale</b> first (the sale on your grid), then earlier sales, newest first inside each. Click Date, Report, Form or Fields filled to sort by that instead; <b>This sale first</b> goes back.</li>
       <li>Click a row to see its main figures. <b>Use this version</b> (ACI report) makes it the “My database” column. For a 3.6 version, <b>Fill blanks from it</b> fills only empty fields; <b>Use its values</b> uses all of them. For a different sale only the house and site are copied, never the sale facts. ↺ beside a field undoes it.</li>
-      <li>No duplicates: a version that is the same as another except that it is older (age, year built) or that you only re-checked the prior sales is shown once – the newest – with “same in N other reports”. Saving to your comp database follows the same rule: such a save replaces the saved one, any other change is kept as a new version. Saving again from the same assignment updates that assignment’s version.</li></ol></details>
+      <li>No duplicates: a version that is the same as another except that it is older (age, year built) or that you only re-checked the prior sales is shown once – the newest – with “same in N other reports”. Saving to your comp database follows the same rule: such a save replaces the saved one, any other change is kept as a new version. Saving again from the same assignment updates that assignment’s version.</li>
+      <li>When a duplicate is removed, the report it came from stays listed: click the row and see <b>Also in:</b> – so you can still open any report the comp was in.</li>
+      <li>Your comments: click a 3.6 row to see what you wrote about that comp in that assignment (the sales comparison comment sentences that name it, the considered-not-used comment, your notes) with a <b>Copy</b> button. For ACI reports the comments are in the report itself – open the report named on the row.</li></ol></details>
     <details><summary>Adjustment grid and the full report for SFREP (Comp genie)</summary><ol>
       <li>On the iPad, export the <b>Workfile package</b> and save it to OneDrive. In the Comp genie, drop that .zip on the page: the subject column fills from your inspection (living area from your sketch, bedrooms, baths, quality and condition, site, garage, view…).</li>
       <li>Pick your comps with <b>Use as</b> 1, 2, 3… They line up in the <b>Adjustment grid</b> in UAD 3.6 order (sales and listing, site, dwelling, amenities).</li>
@@ -678,7 +680,7 @@ mark.blank{background:#fff3a8;padding:0 2px;border-radius:3px}.cmt textarea{widt
 </div>
 <div id="toast" role="status" hidden></div>
 <script>
-const BUILD='o1-1019-1447';
+const BUILD='o1-1019-1450';
 const G = (() => {
 /* ---------------- small helpers ---------------- */
 const $ = (s, r = document) => r.querySelector(s);
