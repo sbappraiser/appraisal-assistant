@@ -49,6 +49,7 @@ const TEXT_RULES = [
 const STRONG_TYPES = ['myLetter', 'crs', 'permitsCounty', 'marketSearch', 'prelim', 'condoQ', 'ccrs', 'leaseback', 'counter', 'contract'];   // page 1 says so plainly
 // documents filed in the wrong box before Oct 16 2026: check them once when the order opens
 async function recheckDocTypes(o) { let n = 0;
+  (o.docs || []).forEach(d => { if (d.warn && /address was not found/.test(d.warn) && NO_ADDR_CHECK.includes(d.type)) delete d.warn; });   // old false alarms on market pages
   for (const d of (o.docs || [])) { if (d.typeChecked2 || !['prelim', 'legal', 'other', 'permitsPdf', 'disclosures', 'clientLetter'].includes(d.type)) continue; d.typeChecked2 = true; d.typeChecked = true;
     try { const f = await docFile(d.id); const said = f && await textDocType(f); if (said && said !== d.type && STRONG_TYPES.includes(said)) { await retypeDoc(d.id, said); n++; } } catch (e) {} }
   if (n) toast(n + ' document' + (n > 1 ? 's were' : ' was') + ' in the wrong kind and ' + (n > 1 ? 'have' : 'has') + ' been corrected (see Documents)', 6000); }
@@ -426,8 +427,9 @@ function applyClientLetter(F) { // fills only empty boxes (type, form, client al
   return did;
 }
 
+const NO_ADDR_CHECK = ['photo', 'floorplan', 'marketSearch', 'mls', 'crs', 'zillow', 'mlsStats'];   // market pages (Zillow, SBMLS statistics) are not about one property
 async function checkDocAddress(meta, file) { // is this document for the order's property? (street number and street name on its first pages)
-  const street = ($('#f_address').value || '').split(',')[0].trim(); if (!street || !isPdf(file) || ['photo', 'floorplan', 'marketSearch', 'mls', 'crs'].includes(meta.type)) return;
+  const street = ($('#f_address').value || '').split(',')[0].trim(); if (!street || !isPdf(file) || NO_ADDR_CHECK.includes(meta.type)) return;
   const sp = G.splitAddr(street); const word = (sp.street.split(/\s+/).find(w => w.length > 2 && !/^(north|south|east|west|n|s|e|w)$/i.test(w)) || '').toLowerCase(); if (!sp.no || !word) return;
   const pdfjs = await loadPdfJs(); const doc = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()), isEvalSupported: false, wasmUrl: './wasm/', standardFontDataUrl: './standard_fonts/' }).promise;
   let t = ''; for (let n = 1; n <= Math.min(4, doc.numPages); n++) t += ' ' + (await (await doc.getPage(n)).getTextContent()).items.map(i => i.str).join(' ');
