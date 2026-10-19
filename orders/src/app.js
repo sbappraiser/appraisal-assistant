@@ -381,7 +381,7 @@ function showTab(t) { CUR_TAB = t;
   if (t === 'genie') { const on = cur && hasContent(cur); if (on) saveLetter(true, true); const nm = on ? [cur.fileNo, street(cur)].filter(Boolean).join(' ') : '';
     $('#gnTitle').textContent = 'Comp genie' + (nm ? ' – ' + nm : ''); $('#gnOwn').href = on ? genieURL(cur) : '../comp-genie/';
     const fr = $('#genieFrame'); const want = on ? cur.id : '';
-    if (!fr.dataset.loaded) { fr.dataset.loaded = '1'; fr.dataset.order = want; fr.src = '../comp-genie/index.html?embed=1' + (want ? '&order=' + encodeURIComponent(want) : ''); }
+    if (!fr.dataset.loaded) { fr.dataset.loaded = '1'; fr.dataset.order = want; fr.src = '../comp-genie/index.html?embed=1&v=' + Date.now() + (want ? '&order=' + encodeURIComponent(want) : '');   // v = always the newest Comp genie, never a cached copy }
     else { fr.dataset.order = want; setTimeout(() => { try { fr.contentWindow.postMessage({ type: 'aa-refresh', order: want }, location.origin); } catch (e) {} }, on ? 400 : 0); } }
   if (t === 'books') { $('#bkTitle').textContent = 'Bookkeeping' + (cur && (cur.fileNo || street(cur)) ? ' – ' + [cur.fileNo, street(cur)].filter(Boolean).join(' ') : ''); renderBooks(); const a = $('#bkAll'); if (a) { a.innerHTML = unpaidHTML(); wireUnpaid(a); } }
   if (t === 'market') { $('#mkTitle').textContent = 'Market conditions' + (cur && (cur.fileNo || street(cur)) ? ' – ' + [cur.fileNo, street(cur)].filter(Boolean).join(' ') : ''); mkRender(); }
