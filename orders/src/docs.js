@@ -25,7 +25,7 @@ const TEXT_RULES = [
   [/Zillow Home Value Index|Housing Market Overview|zillow\.com/i, 'zillow'],
   [/flexmls|MLS #\s?\d/i, 'mls'],
   [/Client hereby engages Appraiser|PARTIES TO AGREEMENT[\s\S]{0,800}Jennifer L\.? Heath/i, 'myLetter'],
-  [/ENGAGEMENT LETTER|Letter of Engagement|Engagement Agreement|Appraisal (Order|Request)|Order Detail|Scope of Work/i, 'clientLetter'],
+  [/ENGAGEMENT LETTER|Letter of Engagement|Engagement Agreement|Appraisal (Order|Request)|Order Detail|Scope of Work|Appraisal Engagement|engagement to perform an appraisal/i, 'clientLetter'],
   [/Condominium Questionnaire|Condo Questionnaire|Project Questionnaire|HOA Questionnaire/i, 'condoQ'],
   [/Declaration of (Covenants|Restrictions|CC&Rs)|CC&R/i, 'ccrs'],
   [/\bBylaws\b|By-Laws/i, 'bylaws'],
@@ -98,7 +98,7 @@ async function addDocs(fileList, forcedType) {
     for (const [file, type] of typed) {
       $('#docStatus').textContent = 'Reading ' + file.name + '…';
       cur = readForm(); const old = (cur.docs || []).find(d => (d.name || '').toLowerCase() === file.name.toLowerCase()); // same file name again → replace it, keep its notes and accepted entries
-      const meta = old ? { ...old, type: file._moved ? type : forcedType || old.type || type, size: file.size, mime: file.type || '', added: new Date().toISOString(), note: '' } : { id: uid(), name: file.name, type, size: file.size, mime: file.type || '', added: new Date().toISOString(), note: '' };
+      const meta = old ? { ...old, type: file._moved ? type : forcedType || old.type || type, size: file.size, mime: file.type || '', added: new Date().toISOString(), note: '', textState: '' } : { id: uid(), name: file.name, type, size: file.size, mime: file.type || '', added: new Date().toISOString(), note: '' };
       try { await ODB.put('docs', { ...meta, orderId: cur.id, blob: file }); }
       catch (e) { said.push(file.name + ': could not be stored (' + (e.message || e) + ')'); continue; }
       cur.docs = old ? cur.docs.map(d => d.id === old.id ? meta : d) : [...(cur.docs || []), meta];
@@ -168,11 +168,28 @@ function kindPop(btn) {
   const close = e => { if (!pop.contains(e.target) || e.key === 'Escape') { pop.remove(); document.removeEventListener('click', close); document.removeEventListener('keydown', close); window.removeEventListener('scroll', close, true); } };
   setTimeout(() => { document.addEventListener('click', close); document.addEventListener('keydown', close); window.addEventListener('scroll', close, true); }, 0);
 }
+/* can this document be read here, or is it a scan? (her question, Oct 19 2026) */
+const AUTO_READ = ['crs', 'mls', 'permitsCounty', 'clientLetter', 'myLetter', 'floorplan', 'marketSearch'];
+let textStateBusy = false;
+async function fillTextStates() {   // older documents: look once, then show the chip
+  if (textStateBusy || !cur) return; const todo = (cur.docs || []).filter(d => !d.textState); if (!todo.length) return; textStateBusy = true;
+  try { for (const d of todo) { try { const r = await docPages(d.id); if (!r) { d.textState = 'file'; continue; }
+      const n = (r.pagesText || []).length, sc = (r.scanPages || []).length; d.textState = !n ? 'file' : sc >= n ? 'scan' : sc ? 'part:' + r.scanPages.join(',') : 'text'; } catch (e) { d.textState = 'file'; } }
+    saveLetter(true, true); renderDocs(); } finally { textStateBusy = false; }
+}
+function textChip(d) {
+  const st = d.textState || ''; if (!st) return '';
+  if (st === 'text') return `<span class="chip ok" title="${AUTO_READ.includes(d.type) ? 'Read here when you uploaded it – what it filled in is listed next to the name.' : 'Click Read: the reader suggests what to use and you accept or reject each one. Nothing is sent anywhere.'}">${AUTO_READ.includes(d.type) ? '✓ read here' : '✓ text – click Read'}</span>`;
+  if (st === 'scan') return '<span class="chip warn" title="A picture of the pages: nothing can be read here. Click Read to send it to Claude (when this order allows AI), or open it in Acrobat, use Scan &amp; OCR › Recognize text, save, and upload it again.">scan – needs Claude or Acrobat</span>';
+  if (st.startsWith('part:') && AUTO_READ.includes(d.type)) return `<span class="chip ok" title="Read here when you uploaded it. Page ${h(st.slice(5))} is a picture (often the signature page), so it was not read.">✓ read here (p. ${h(st.slice(5))} is a scan)</span>`;
+  if (st.startsWith('part:')) return `<span class="chip warn" title="These pages are pictures: ${h(st.slice(5))}. The rest can be read here.">part scan (p. ${h(st.slice(5))})</span>`;
+  return '<span class="chip" title="Kept with the order; this kind of file is not read.">kept, not read</span>';
+}
 function renderDocs() {
-  const list = (cur && cur.docs) || []; const box = $('#docList');
+  const list = (cur && cur.docs) || []; const box = $('#docList'); setTimeout(fillTextStates, 0);
   const opts = sel => DOC_TYPES.map(([g, ks]) => `<optgroup label="${h(g)}">${ks.map(([k, l]) => `<option value="${k}"${k === sel ? ' selected' : ''}>${h(l)}</option>`).join('')}</optgroup>`).join('');
   box.innerHTML = list.length ? `<table class="docs"><tbody>${list.map(d => `<tr>
-      <td><button type="button" class="lnk" data-dopen="${d.id}" title="Open">${h(d.name)}</button><small>${Math.max(1, Math.round(d.size / 1024)).toLocaleString()} KB${d.note ? ' · ' + h(d.note) : READS[d.type] ? '' : ''}</small>${d.warn ? `<small class="warnTxt">⚠ ${h(d.warn)}</small>` : ''}</td>
+      <td><button type="button" class="lnk" data-dopen="${d.id}" title="Open">${h(d.name)}</button><small>${Math.max(1, Math.round(d.size / 1024)).toLocaleString()} KB${d.note ? ' · ' + h(d.note) : READS[d.type] ? '' : ''}</small>${textChip(d)}${d.warn ? `<small class="warnTxt">⚠ ${h(d.warn)}</small>` : ''}</td>
       <td><button type="button" class="kindBtn" data-dkind="${d.id}" aria-haspopup="true" title="Change the kind of document">${h(DOC_LABEL[d.type] || 'Other')} ▾</button>${d.type === 'floorplan' && d.pages > 1 ? ` <label class="pg">page <input data-dpage="${d.id}" inputmode="numeric" value="${d.page || 1}" size="2"> of ${d.pages}</label>` : ''}</td>
       <td class="acts"><button type="button" class="btn small" data-dread="${d.id}">Read</button><button type="button" class="btn ghost small danger" data-ddel="${d.id}">Remove</button></td></tr>`).join('')}</tbody></table>`
     : '<p class="help">No documents yet.</p>';
@@ -312,6 +329,16 @@ async function readClientLetter(file) {
   if (/exterior[- ]only|\b2055\b|drive[- ]by|exterior inspection only/i.test(T)) F.exterior = true;
   if (/cost approach (is |will be )?(required|must)/i.test(T)) F.cost = true;
   if (/\bPURCHASE appraisal\b/i.test(T) && !F.purpose) F.purpose = 'Purchase';
+  // bank letters laid out like Montecito Bank & Trust's (Oct 18 2026): "For use by <client>, <street>, <city, ST zip>", Location:, Parcel #:, Value Determination:
+  m = T.match(/For use by ([A-Z][^,]{2,80}?),\s*(\d+[^,]{3,60}|P\.?\s?O\.? Box[^,]{1,30}),\s*([A-Za-z .]+,\s*[A-Z]{2}\s*\d{5}(?:-\d{4})?)/);
+  if (m) { if (!F.client) F.client = m[1].trim(); F.clientAddr1 = m[2].trim(); F.clientAddr2 = m[3].trim(); }
+  if (!F.propAddr) { const a = line(/^Location:\s*(.+)$/i); if (a) F.propAddr = a; }
+  { const a = line(/^(?:Parcel\s*(?:#|No\.?|Number)|APN|Assessor'?s Parcel (?:No\.?|Number))\s*:?\s*([\d-]{5,})/i); if (a) F.apn = a; }
+  if (F.form) F.form = F.form.replace(/^the appraisal type we are requesting:?\s*/i, '');
+  m = T.match(/interest appraised[^:]{0,60}:\s*(Fee Simple|Leased Fee|Leasehold)/i); if (m) F.interest = G.titleCase(m[1]);
+  m = T.match(/Value Determination:\s*((?:[\s|]*(?:Cost|Sales Comparison|Income)\b)+)/i); if (m) F.approaches = m[1].match(/Cost|Sales Comparison|Income/gi).map(x => x.toLowerCase());
+  if (/\brent survey\b/i.test(T)) { F.rent = true; F.rentWord = 'rent survey'; }
+  if (/\bops? statement|operating statement|operating expenses? statement/i.test(T)) F.ops = true;
   return F;
 }
 /* her own engagement letter, signed and uploaded (Oct 18 2026): the letter is the record of the agreement, so the order follows it */
@@ -358,9 +385,12 @@ function applyClientLetter(F) { // fills only empty boxes (type, form, client al
   const d = x => G.isoDate(String(x || '').match(/\d{1,2}\/\d{1,2}\/\d{2,4}|\d{4}-\d{2}-\d{2}/)?.[0] || ''); set('dueDate', d(F.due), 'Report due'); set('orderDate', d(F.orderDate), 'Order received', true);
   set('fee', F.fee ? Number(String(F.fee).replace(/[^\d.]/g, '')).toLocaleString() : '', 'Fee'); set('amcRef', F.ref, 'Client / AMC reference');
   set('otherUsers', F.users && client && F.users.toLowerCase().includes(client.toLowerCase().slice(0, 12)) ? '' : F.users, 'Other intended users');
+  if (F.clientAddr1 || F.clientAddr2) { const a1 = $('#c0_addr1'), a2 = $('#c0_addr2'); if (a1 && !a1.value.trim() && !(a2 && a2.value.trim())) { a1.value = F.clientAddr1 || ''; if (a2) a2.value = F.clientAddr2 || ''; did.push(['Client address', [F.clientAddr1, F.clientAddr2].filter(Boolean).join(', ')]); } }
+  set('apn', F.apn, 'APN'); set('interest', F.interest, 'Interest valued');
+  if (F.approaches) { [['sales comparison', 'apSales', 'Sales comparison'], ['cost', 'apCost', 'Cost approach'], ['income', 'apIncome', 'Income approach']].forEach(([k, id, l]) => { if (F.approaches.includes(k)) set(id, true, l + ' requested'); }); }
   if (F.rent) set('rent', true, 'Rent schedule (1007) requested'); if (F.cost) set('apCost', true, 'Cost approach required'); if (F.exterior) { $('#f_inspection').value = 'exterior'; did.push(['Inspection', 'Exterior only']); }
   if (F.propAddr) { const a = $('#f_address'); if (!a.value.trim()) { setOrderAddr(splitAddr(G.titleCase(F.propAddr).replace(/\b(Ca)\b/, 'CA'))); did.push(['Property address', a.value]); } else if (!sameStreet(F.propAddr, a.value)) did.push(['⚠ Address in the letter', F.propAddr + ' – not the same as the order']); }
-  const notes = [F.use && 'Intended use per client: ' + F.use, F.users && 'Intended user per client: ' + F.users, F.price && 'Sales price per order: $' + Number(String(F.price).replace(/[^\d.]/g, '')).toLocaleString(), F.mc && '1004MC required', F.occupancy && 'Occupancy: ' + F.occupancy].filter(Boolean);
+  const notes = [F.use && 'Intended use per client: ' + F.use, F.users && 'Intended user per client: ' + F.users, F.price && 'Sales price per order: $' + Number(String(F.price).replace(/[^\d.]/g, '')).toLocaleString(), F.mc && '1004MC required', F.ops && 'Operating (ops) statement requested', F.occupancy && 'Occupancy: ' + F.occupancy].filter(Boolean);
   if (notes.length) { const n = $('#f_notes'); const add = notes.filter(x => !n.value.includes(x)); if (add.length) { n.value = (n.value ? n.value + '\n' : '') + add.join('\n'); did.push(['Notes', add.join('; ')]); } }
   return did;
 }

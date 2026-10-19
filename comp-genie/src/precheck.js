@@ -57,6 +57,7 @@ function precheckGrid(J) {
   if (!J.subject.eff) out.push({ sev: 'Must fix', msg: 'No effective date on the assignment.' });
   { const R = (J.report || {}), rn = typeof rv === 'function' ? rv(J, 'rightsNot') : R.rightsNot;
     if (R.allRights === 'false' && !String(rn || '').trim()) out.push({ sev: 'Must fix', msg: 'You answered No to "All rights included in the appraisal?" – describe the rights not included (report section, 540 characters).' });
+    if (R.allRights === 'false' && R.rightsType === 'Other' && !String(R.rightsOther || '').trim()) out.push({ sev: 'Must fix', msg: 'Kind of rights not included is Other – describe it (33 characters) in the report section.' });
     if (R.allRights !== 'false' && String(rn || '').trim()) out.push({ sev: 'Check', msg: 'The order lists rights not appraised (from the deed), but "All rights included in the appraisal?" is Yes, so they are not reported. Answer No if those rights are not part of what you appraised.' }); }
   const tot = used.map(c => compTotals(J, c)).filter(t => t.price); const adj = tot.map(t => t.adj);
   if (!blank(G.value) && adj.length) { const v = num(G.value), lo = Math.min(...adj), hi = Math.max(...adj); if (v < lo || v > hi) out.push({ sev: 'Check', msg: `Your value ${money(v)} is outside the adjusted range ${money(lo)} – ${money(hi)}.`, hint: 'Explain it in the comment, or look again at the adjustments.' }); }

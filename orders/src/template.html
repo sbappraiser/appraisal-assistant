@@ -124,6 +124,7 @@ table.mkrows td small { display: block; color: var(--muted); font-size: 12px; } 
 #rdSide { overflow: auto; padding: 12px 16px; border-left: 1px solid var(--line); background: var(--panel); display: grid; gap: 10px; align-content: start; }
 .rditem { border-bottom: 1px solid var(--line); padding-bottom: 8px; display: grid; gap: 6px; } .rdlab { font: 600 13px var(--ui); } .rdfact { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; color: var(--ok); } .rdfact small { color: var(--muted); font-size: 12px; width: 100%; } .rdsug small { color: var(--muted); font-size: 12px; }
 .rdsug { background: var(--accent-soft); border-radius: 8px; padding: 6px 8px; display: grid; gap: 4px; } .rdsug textarea { min-height: 0; padding: 4px 6px; } .rdsug .row { gap: 6px; } .rdsug textarea { width: 100%; } .rdadd { display: flex; gap: 6px; } .rdadd input { flex: 1; min-width: 0; }
+.docs .chip { display: inline-block; margin: 2px 6px 0 0; border: 1px solid var(--line); border-radius: 99px; font-size: 12px; padding: 0 8px; color: var(--muted); cursor: help; } .docs .chip.ok { color: #0a6b3a; border-color: #9fd3b4; } .docs .chip.warn { color: var(--warn); border-color: var(--warn); }
 .pgchip { border: 1px solid var(--line); background: var(--panel); border-radius: 99px; font-size: 12px; padding: 1px 8px; cursor: pointer; color: var(--accent); }
 .rdflow { border-color: var(--accent); } .rdflow ol.steps { margin: 4px 0; padding-left: 20px; font-size: 13.5px; } .rdflow ol.steps li { margin: 3px 0; }
 .rdai { background: var(--field); border: 1px solid var(--line); border-radius: 10px; padding: 10px; } .rdai input { width: 3em; display: inline; }
@@ -201,6 +202,7 @@ mark.blank{background:#fff3a8;padding:0 2px;border-radius:3px}.cmt textarea{widt
     <button type="button" data-tab="saved" aria-selected="false">All files</button>
     <button type="button" data-tab="letter" aria-selected="false">Order</button>
     <button type="button" data-tab="market" aria-selected="false">Market</button>
+    <button type="button" data-tab="books" aria-selected="false">Bookkeeping</button>
     <button type="button" data-tab="contacts" aria-selected="false">Clients</button>
     <button type="button" data-tab="comments" aria-selected="false">My comments</button>
     <button type="button" data-tab="wording" aria-selected="false">Standard wording</button>
@@ -339,22 +341,7 @@ mark.blank{background:#fff3a8;padding:0 2px;border-radius:3px}.cmt textarea{widt
       </div>
       <p class="help" id="deliveryNote"></p>
     </fieldset>
-    <fieldset id="booksSet"><legend>Invoice and payment</legend>
-      <div class="grid3">
-        <label>Invoice number<input id="f_invNo" placeholder="your file number"></label>
-        <label>Invoice date<input id="f_invDate" type="date"></label>
-        <label>Invoice amount ($) <span class="opt">blank = the fee</span><input id="f_invAmt" inputmode="decimal"></label>
-      </div>
-      <div class="formEnd"><button type="button" class="btn primary" id="btnInvoice">Make the invoice (print / Save as PDF)</button></div>
-      <div class="grid3">
-        <label>Paid on<input id="f_paidDate" type="date"></label>
-        <label>How<select id="f_paidMethod"><option value=""></option><option>Check</option><option>ACH / bank transfer</option><option>Credit card</option><option>Zelle</option><option>AMC payment</option><option>Cash</option><option>Other</option></select></label>
-        <label>Amount received ($)<input id="f_paidAmt" inputmode="decimal"></label>
-        <label style="grid-column:1/-1">Check number or payment reference <span class="opt">optional</span><input id="f_paidRef"></label>
-      </div>
-      <div class="formEnd"><button type="button" class="btn" id="btnPaid">Mark paid today</button></div>
-      <p class="help" id="booksNote"></p>
-    </fieldset>
+    <p class="help" style="margin:6px 0 14px">Invoice and payment are on the <button type="button" class="lnk" data-gotab="books">Bookkeeping</button> tab.</p>
     <fieldset><legend>Rent survey and court testimony</legend>
       <div class="grid2">
         <label class="check"><input type="checkbox" id="f_rent">Add a current market rent survey</label>
@@ -370,14 +357,14 @@ mark.blank{background:#fff3a8;padding:0 2px;border-radius:3px}.cmt textarea{widt
     </fieldset>
     <fieldset><legend>Confidentiality and extra terms</legend>
       <p class="help">The AI-use paragraph prints at the end of Confidentiality unless AI use is set to No AI. Edit its wording on the Standard wording tab.</p>
-      <label>Additional terms <span class="opt">optional · a blank line starts a new paragraph</span><textarea id="f_extra"></textarea></label>
+      <label>Additional terms <span class="opt">optional · only what you type here; it prints in your letter · a blank line starts a new paragraph</span><textarea id="f_extra"></textarea></label>
     </fieldset>
     <fieldset id="reqSet"><legend>Client requirements <span class="opt">from the client’s engagement letter</span></legend>
       <div id="reqBox" class="facts-box"></div>
     </fieldset>
     <fieldset><legend>Notes and inspection to-dos</legend>
       <label>Notes <span class="opt">for you; not in the letter</span><textarea id="f_notes"></textarea></label>
-      <label>To-dos at the inspection <span class="opt">one per line · they show on the iPad</span><textarea id="f_todos"></textarea></label>
+      <label>To-dos at the inspection <span class="opt">yours, one per line · they show on the iPad (client requirements ticked iPad are added there too)</span><textarea id="f_todos"></textarea></label>
     </fieldset>
       <div class="formEnd"><button type="button" class="btn" id="btnSave2">Save</button><button type="button" class="btn primary" id="btnWrite2">Write engagement letter (Word)</button><button type="button" class="btn" id="btnPdf2">Save as PDF</button><span class="savedAt" data-saved></span><span class="help" id="writeHelp">Saves the order, then downloads your letter as a Word file (the same as Download Word letter at the top).</span></div>
   </form>
@@ -411,6 +398,29 @@ mark.blank{background:#fff3a8;padding:0 2px;border-radius:3px}.cmt textarea{widt
   <div class="listHead"><div><h2 id="mkTitle">Market conditions</h2><p class="help">For the order that is open on the Order &amp; letter tab. Nothing here is sent anywhere.</p></div></div>
   <div id="mkBody"></div>
 </section>
+<section class="panel" id="panel-books" hidden>
+  <div class="listHead"><div><h2 id="bkTitle">Bookkeeping</h2><p class="help">The invoice for the order that is open, then every unpaid invoice and the half-year summary. Nothing here is sent anywhere.</p></div></div>
+  <form id="booksForm" autocomplete="off" onsubmit="return false">
+    <fieldset id="booksSet"><legend>This order: invoice and payment</legend>
+      <div class="grid3">
+        <label>Report signed and delivered<input id="f_signDate" type="date"></label>
+        <label>Invoice number<input id="f_invNo" placeholder="your file number + -inv"></label>
+        <label>Invoice date<input id="f_invDate" type="date"></label>
+        </div>
+      <div class="grid3"><label>Invoice amount ($) <span class="opt">blank = the fee</span><input id="f_invAmt" inputmode="decimal"></label></div>
+      <div class="formEnd"><button type="button" class="btn primary" id="btnInvoice">Make the invoice (print / Save as PDF)</button></div>
+      <div class="grid3">
+        <label>Paid on<input id="f_paidDate" type="date"></label>
+        <label>How<select id="f_paidMethod"><option value=""></option><option>Check</option><option>ACH / bank transfer</option><option>Credit card</option><option>Zelle</option><option>AMC payment</option><option>Cash</option><option>Other</option></select></label>
+        <label>Amount received ($)<input id="f_paidAmt" inputmode="decimal"></label>
+        <label style="grid-column:1/-1">Check number or payment reference <span class="opt">optional</span><input id="f_paidRef"></label>
+      </div>
+      <div class="formEnd"><button type="button" class="btn" id="btnPaid">Mark paid today</button></div>
+      <p class="help" id="booksNote"></p>
+    </fieldset>
+  </form>
+  <div class="hmpanel" id="bkAll"></div>
+</section>
 <section class="panel" id="panel-help" hidden>
   <div class="wording help-page">
     <h2>How to</h2>
@@ -429,6 +439,11 @@ mark.blank{background:#fff3a8;padding:0 2px;border-radius:3px}.cmt textarea{widt
       <li><b>Form</b> (just below it on the order page): the assistant picks the usual one for the property type and inspection – e.g. UAD 2.6 condo → Form 1073, exterior-only → Form 2055. Click it to choose another (1004, 1073, 1025, 2055, 1075, 1004C, 2090, 2095, 1004 Desktop, 1004D; URAR kinds for 3.6; GPAR forms), or <b>Other – type it</b>. Once you choose, it stays. It is the "Format" line in your engagement letter.</li>
       <li>Your choices are kept – the assistant does not change them, even if the client's letter names a different form. If you have not chosen, a letter that names a 1004 / 1073 / 1025 sets UAD 2.6 and that form.</li></ol></details>
     <details><summary>Documents: upload once, kinds, search, sticky notes</summary><ol>
+      <li><b>Which documents fill things in by themselves?</b> Each one shows a tag next to its name (point at it for more):
+        <b>✓ read here</b> – read when you uploaded it (CRS, MLS, County permit history, the client's letter, your signed letter, floor plan); what it filled in is listed after the size.
+        <b>✓ text – click Read</b> – the text can be read here, but nothing is filled in until you click <b>Read</b> and accept the suggestions (contract, prelim, deed, legal description, HOA papers).
+        <b>scan – needs Claude or Acrobat</b> – a picture of the pages; click <b>Read</b> to send it to Claude (only when the order's AI use allows it), or in Acrobat use <b>Scan &amp; OCR › Recognize text</b>, save, and upload it again.
+        <b>part scan</b> – some pages are pictures. <b>kept, not read</b> – photos and other files are stored with the order only.</li>
       <li>Uploading a file with the same name as one already in the order <b>replaces</b> it – you never get two copies. Its sticky notes and accepted entries stay. (Orders that already had a file twice are cleaned up when you open them.)</li>
       <li>Drop every file for the order into the <b>Documents</b> box, or click <b>Choose files</b>. Each one is sorted by kind; change the kind with its drop-down if it guessed wrong.</li>
       <li>Click a file name to open it. Click <b>Read</b> to open the reader (next section). <b>Remove</b> takes it out of the order.</li>
@@ -464,6 +479,7 @@ mark.blank{background:#fff3a8;padding:0 2px;border-radius:3px}.cmt textarea{widt
       <li>Drop the client's engagement letter or order in <b>Documents</b> (or in the New order step 2 box). It is read on this computer, with no AI.</li>
       <li>On the order page, scroll to <b>Client requirements</b>. Each thing the letter asks for is listed by kind – before you accept, inspection, photos, comparables, approaches to value, report and addenda, comments to include, before you deliver, delivery and invoice – with the page it came from. Click <b>p. 3</b> to open the letter at that page.</li>
       <li>Tick an item when it is done. Click into the wording to change it. <b>remove</b> takes it off the list. Type your own in <b>Add a requirement yourself</b> and click <b>Add</b>.</li>
+      <li><b>Always</b>: tick it on an item (or on <b>Add a requirement yourself</b>) and every order for that client gets it, even when their letter does not say so – for example Montecito Bank &amp; Trust: <i>Include the 1004MC</i> and <i>Include the signed engagement letter in the report</i>. It follows the client company on the order. Untick it to stop. Removing it from one order leaves it on the others.</li>
       <li><b>iPad</b>: items with this ticked go to the iPad as inspection to-dos (photos, measuring, inspection conduct are ticked for you). Untick any you do not want on the iPad. Ticked-done items are not sent.</li>
       <li>Then click <b>Send this order to the iPad</b> (top of the order) and open that file on the iPad – the to-dos show in the order box with check boxes.</li>
       <li><b>Read the client's letter again</b> re-reads it; your own items, your edits and your ticks are kept. <b>Copy the list</b> copies it for an email or your notes.</li></ol></details>
@@ -478,9 +494,12 @@ mark.blank{background:#fff3a8;padding:0 2px;border-radius:3px}.cmt textarea{widt
       <li>In the <b>Comp genie</b>, the comment boxes (sales comparison, highest and best use, reconciliation) have a <b>My comments</b> button: search, then <b>Insert</b> puts the comment where your cursor is. It uses the same list, so import it here first.</li>
       <li><b>Draft from your grid:</b> in the Comp genie, under the sales comparison comment, click <b>Draft the comment from my grid</b>. It writes the comparable paragraphs (superior / inferior overall, each adjustment with its amount, your low / mid / high tiers, sale-to-list price, your notes for the comp in [brackets]), your rate paragraphs with the rates on the grid, and the start of the reconciliation (bracketing and adjusted range, your weights). Read it, fill in the [brackets], then click <b>Put it in the comment</b> or <b>Add it to the end</b>. Nothing goes in until you click.</li>
       <li>Your library is kept in this browser on this computer and in your <b>Back up</b> zip – keep backing up.</li></ol></details>
-    <details><summary>Invoice, payment and the unpaid list</summary><ol>
+    <details><summary>Invoice, payment and the unpaid list (Bookkeeping tab)</summary><ol>
+      <li>Everything about the money is on the <b>Bookkeeping</b> tab: this order's invoice and payment at the top, then every unpaid invoice and the half-year summary.</li>
+      <li>The invoice number is your file number with <b>-inv</b> (brkl5464 → brkl5464-inv). The invoice date is the day you sign and deliver the report: set the order status to <b>Delivered</b> (or type <b>Report signed and delivered</b>) and both are filled in. Change either if you need to.</li>
+      <li>The invoice is not part of the UAD 3.6 report file, so it does not go into SFREP: send the invoice PDF with the report (email or the client's portal).</li>
       <li>The fee comes from <b>Total fee</b> (Fee and delivery). A rent survey fee is added when the rent survey is ticked; a retainer is taken off the balance.</li>
-      <li>When you deliver the report, go to <b>Invoice and payment</b> on the order and click <b>Make the invoice</b>. It fills in the invoice number (your file number), today's date and the amount (type a different amount to change it). A new tab opens with the invoice on your letterhead: in the print window choose <b>Destination: Save as PDF</b>, then Save. Attach that PDF to your email or the AMC portal. AMC orders are billed to the AMC, with the AMC order / reference ID (for example the Document ID) on the invoice.</li>
+      <li>When you deliver the report, go to the <b>Bookkeeping</b> tab and click <b>Make the invoice</b>. It fills in the invoice number (file number + -inv), the delivered date (today if blank) and the amount (type a different amount to change it). A new tab opens with the invoice on your letterhead: in the print window choose <b>Destination: Save as PDF</b>, then Save. Attach that PDF to your email or the AMC portal. AMC orders are billed to the AMC, with the AMC order / reference ID (for example the Document ID) on the invoice.</li>
       <li>When the money comes in, click <b>Mark paid today</b> (or type the date), pick how it was paid and the amount. The order status changes to Paid.</li>
       <li><b>Home</b> shows <b>Unpaid invoices</b> with the days outstanding (over 30 days in red). <b>Follow-up email</b> opens a polite reminder in your mail program – read it, change it if you like, and send it yourself. Nothing is sent by the assistant. Orders marked Delivered with no invoice are listed under it.</li>
       <li>Twice a year, pick the half year under the list and click <b>Print the summary</b>: invoices dated in that half year, retainers, payments received, and what is still unpaid. Save it as a PDF for your bookkeeper.</li>

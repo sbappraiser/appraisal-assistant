@@ -124,6 +124,7 @@ table.mkrows td small { display: block; color: var(--muted); font-size: 12px; } 
 #rdSide { overflow: auto; padding: 12px 16px; border-left: 1px solid var(--line); background: var(--panel); display: grid; gap: 10px; align-content: start; }
 .rditem { border-bottom: 1px solid var(--line); padding-bottom: 8px; display: grid; gap: 6px; } .rdlab { font: 600 13px var(--ui); } .rdfact { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; color: var(--ok); } .rdfact small { color: var(--muted); font-size: 12px; width: 100%; } .rdsug small { color: var(--muted); font-size: 12px; }
 .rdsug { background: var(--accent-soft); border-radius: 8px; padding: 6px 8px; display: grid; gap: 4px; } .rdsug textarea { min-height: 0; padding: 4px 6px; } .rdsug .row { gap: 6px; } .rdsug textarea { width: 100%; } .rdadd { display: flex; gap: 6px; } .rdadd input { flex: 1; min-width: 0; }
+.docs .chip { display: inline-block; margin: 2px 6px 0 0; border: 1px solid var(--line); border-radius: 99px; font-size: 12px; padding: 0 8px; color: var(--muted); cursor: help; } .docs .chip.ok { color: #0a6b3a; border-color: #9fd3b4; } .docs .chip.warn { color: var(--warn); border-color: var(--warn); }
 .pgchip { border: 1px solid var(--line); background: var(--panel); border-radius: 99px; font-size: 12px; padding: 1px 8px; cursor: pointer; color: var(--accent); }
 .rdflow { border-color: var(--accent); } .rdflow ol.steps { margin: 4px 0; padding-left: 20px; font-size: 13.5px; } .rdflow ol.steps li { margin: 3px 0; }
 .rdai { background: var(--field); border: 1px solid var(--line); border-radius: 10px; padding: 10px; } .rdai input { width: 3em; display: inline; }
@@ -201,6 +202,7 @@ mark.blank{background:#fff3a8;padding:0 2px;border-radius:3px}.cmt textarea{widt
     <button type="button" data-tab="saved" aria-selected="false">All files</button>
     <button type="button" data-tab="letter" aria-selected="false">Order</button>
     <button type="button" data-tab="market" aria-selected="false">Market</button>
+    <button type="button" data-tab="books" aria-selected="false">Bookkeeping</button>
     <button type="button" data-tab="contacts" aria-selected="false">Clients</button>
     <button type="button" data-tab="comments" aria-selected="false">My comments</button>
     <button type="button" data-tab="wording" aria-selected="false">Standard wording</button>
@@ -339,22 +341,7 @@ mark.blank{background:#fff3a8;padding:0 2px;border-radius:3px}.cmt textarea{widt
       </div>
       <p class="help" id="deliveryNote"></p>
     </fieldset>
-    <fieldset id="booksSet"><legend>Invoice and payment</legend>
-      <div class="grid3">
-        <label>Invoice number<input id="f_invNo" placeholder="your file number"></label>
-        <label>Invoice date<input id="f_invDate" type="date"></label>
-        <label>Invoice amount ($) <span class="opt">blank = the fee</span><input id="f_invAmt" inputmode="decimal"></label>
-      </div>
-      <div class="formEnd"><button type="button" class="btn primary" id="btnInvoice">Make the invoice (print / Save as PDF)</button></div>
-      <div class="grid3">
-        <label>Paid on<input id="f_paidDate" type="date"></label>
-        <label>How<select id="f_paidMethod"><option value=""></option><option>Check</option><option>ACH / bank transfer</option><option>Credit card</option><option>Zelle</option><option>AMC payment</option><option>Cash</option><option>Other</option></select></label>
-        <label>Amount received ($)<input id="f_paidAmt" inputmode="decimal"></label>
-        <label style="grid-column:1/-1">Check number or payment reference <span class="opt">optional</span><input id="f_paidRef"></label>
-      </div>
-      <div class="formEnd"><button type="button" class="btn" id="btnPaid">Mark paid today</button></div>
-      <p class="help" id="booksNote"></p>
-    </fieldset>
+    <p class="help" style="margin:6px 0 14px">Invoice and payment are on the <button type="button" class="lnk" data-gotab="books">Bookkeeping</button> tab.</p>
     <fieldset><legend>Rent survey and court testimony</legend>
       <div class="grid2">
         <label class="check"><input type="checkbox" id="f_rent">Add a current market rent survey</label>
@@ -370,14 +357,14 @@ mark.blank{background:#fff3a8;padding:0 2px;border-radius:3px}.cmt textarea{widt
     </fieldset>
     <fieldset><legend>Confidentiality and extra terms</legend>
       <p class="help">The AI-use paragraph prints at the end of Confidentiality unless AI use is set to No AI. Edit its wording on the Standard wording tab.</p>
-      <label>Additional terms <span class="opt">optional · a blank line starts a new paragraph</span><textarea id="f_extra"></textarea></label>
+      <label>Additional terms <span class="opt">optional · only what you type here; it prints in your letter · a blank line starts a new paragraph</span><textarea id="f_extra"></textarea></label>
     </fieldset>
     <fieldset id="reqSet"><legend>Client requirements <span class="opt">from the client’s engagement letter</span></legend>
       <div id="reqBox" class="facts-box"></div>
     </fieldset>
     <fieldset><legend>Notes and inspection to-dos</legend>
       <label>Notes <span class="opt">for you; not in the letter</span><textarea id="f_notes"></textarea></label>
-      <label>To-dos at the inspection <span class="opt">one per line · they show on the iPad</span><textarea id="f_todos"></textarea></label>
+      <label>To-dos at the inspection <span class="opt">yours, one per line · they show on the iPad (client requirements ticked iPad are added there too)</span><textarea id="f_todos"></textarea></label>
     </fieldset>
       <div class="formEnd"><button type="button" class="btn" id="btnSave2">Save</button><button type="button" class="btn primary" id="btnWrite2">Write engagement letter (Word)</button><button type="button" class="btn" id="btnPdf2">Save as PDF</button><span class="savedAt" data-saved></span><span class="help" id="writeHelp">Saves the order, then downloads your letter as a Word file (the same as Download Word letter at the top).</span></div>
   </form>
@@ -411,6 +398,29 @@ mark.blank{background:#fff3a8;padding:0 2px;border-radius:3px}.cmt textarea{widt
   <div class="listHead"><div><h2 id="mkTitle">Market conditions</h2><p class="help">For the order that is open on the Order &amp; letter tab. Nothing here is sent anywhere.</p></div></div>
   <div id="mkBody"></div>
 </section>
+<section class="panel" id="panel-books" hidden>
+  <div class="listHead"><div><h2 id="bkTitle">Bookkeeping</h2><p class="help">The invoice for the order that is open, then every unpaid invoice and the half-year summary. Nothing here is sent anywhere.</p></div></div>
+  <form id="booksForm" autocomplete="off" onsubmit="return false">
+    <fieldset id="booksSet"><legend>This order: invoice and payment</legend>
+      <div class="grid3">
+        <label>Report signed and delivered<input id="f_signDate" type="date"></label>
+        <label>Invoice number<input id="f_invNo" placeholder="your file number + -inv"></label>
+        <label>Invoice date<input id="f_invDate" type="date"></label>
+        </div>
+      <div class="grid3"><label>Invoice amount ($) <span class="opt">blank = the fee</span><input id="f_invAmt" inputmode="decimal"></label></div>
+      <div class="formEnd"><button type="button" class="btn primary" id="btnInvoice">Make the invoice (print / Save as PDF)</button></div>
+      <div class="grid3">
+        <label>Paid on<input id="f_paidDate" type="date"></label>
+        <label>How<select id="f_paidMethod"><option value=""></option><option>Check</option><option>ACH / bank transfer</option><option>Credit card</option><option>Zelle</option><option>AMC payment</option><option>Cash</option><option>Other</option></select></label>
+        <label>Amount received ($)<input id="f_paidAmt" inputmode="decimal"></label>
+        <label style="grid-column:1/-1">Check number or payment reference <span class="opt">optional</span><input id="f_paidRef"></label>
+      </div>
+      <div class="formEnd"><button type="button" class="btn" id="btnPaid">Mark paid today</button></div>
+      <p class="help" id="booksNote"></p>
+    </fieldset>
+  </form>
+  <div class="hmpanel" id="bkAll"></div>
+</section>
 <section class="panel" id="panel-help" hidden>
   <div class="wording help-page">
     <h2>How to</h2>
@@ -429,6 +439,11 @@ mark.blank{background:#fff3a8;padding:0 2px;border-radius:3px}.cmt textarea{widt
       <li><b>Form</b> (just below it on the order page): the assistant picks the usual one for the property type and inspection – e.g. UAD 2.6 condo → Form 1073, exterior-only → Form 2055. Click it to choose another (1004, 1073, 1025, 2055, 1075, 1004C, 2090, 2095, 1004 Desktop, 1004D; URAR kinds for 3.6; GPAR forms), or <b>Other – type it</b>. Once you choose, it stays. It is the "Format" line in your engagement letter.</li>
       <li>Your choices are kept – the assistant does not change them, even if the client's letter names a different form. If you have not chosen, a letter that names a 1004 / 1073 / 1025 sets UAD 2.6 and that form.</li></ol></details>
     <details><summary>Documents: upload once, kinds, search, sticky notes</summary><ol>
+      <li><b>Which documents fill things in by themselves?</b> Each one shows a tag next to its name (point at it for more):
+        <b>✓ read here</b> – read when you uploaded it (CRS, MLS, County permit history, the client's letter, your signed letter, floor plan); what it filled in is listed after the size.
+        <b>✓ text – click Read</b> – the text can be read here, but nothing is filled in until you click <b>Read</b> and accept the suggestions (contract, prelim, deed, legal description, HOA papers).
+        <b>scan – needs Claude or Acrobat</b> – a picture of the pages; click <b>Read</b> to send it to Claude (only when the order's AI use allows it), or in Acrobat use <b>Scan &amp; OCR › Recognize text</b>, save, and upload it again.
+        <b>part scan</b> – some pages are pictures. <b>kept, not read</b> – photos and other files are stored with the order only.</li>
       <li>Uploading a file with the same name as one already in the order <b>replaces</b> it – you never get two copies. Its sticky notes and accepted entries stay. (Orders that already had a file twice are cleaned up when you open them.)</li>
       <li>Drop every file for the order into the <b>Documents</b> box, or click <b>Choose files</b>. Each one is sorted by kind; change the kind with its drop-down if it guessed wrong.</li>
       <li>Click a file name to open it. Click <b>Read</b> to open the reader (next section). <b>Remove</b> takes it out of the order.</li>
@@ -464,6 +479,7 @@ mark.blank{background:#fff3a8;padding:0 2px;border-radius:3px}.cmt textarea{widt
       <li>Drop the client's engagement letter or order in <b>Documents</b> (or in the New order step 2 box). It is read on this computer, with no AI.</li>
       <li>On the order page, scroll to <b>Client requirements</b>. Each thing the letter asks for is listed by kind – before you accept, inspection, photos, comparables, approaches to value, report and addenda, comments to include, before you deliver, delivery and invoice – with the page it came from. Click <b>p. 3</b> to open the letter at that page.</li>
       <li>Tick an item when it is done. Click into the wording to change it. <b>remove</b> takes it off the list. Type your own in <b>Add a requirement yourself</b> and click <b>Add</b>.</li>
+      <li><b>Always</b>: tick it on an item (or on <b>Add a requirement yourself</b>) and every order for that client gets it, even when their letter does not say so – for example Montecito Bank &amp; Trust: <i>Include the 1004MC</i> and <i>Include the signed engagement letter in the report</i>. It follows the client company on the order. Untick it to stop. Removing it from one order leaves it on the others.</li>
       <li><b>iPad</b>: items with this ticked go to the iPad as inspection to-dos (photos, measuring, inspection conduct are ticked for you). Untick any you do not want on the iPad. Ticked-done items are not sent.</li>
       <li>Then click <b>Send this order to the iPad</b> (top of the order) and open that file on the iPad – the to-dos show in the order box with check boxes.</li>
       <li><b>Read the client's letter again</b> re-reads it; your own items, your edits and your ticks are kept. <b>Copy the list</b> copies it for an email or your notes.</li></ol></details>
@@ -478,9 +494,12 @@ mark.blank{background:#fff3a8;padding:0 2px;border-radius:3px}.cmt textarea{widt
       <li>In the <b>Comp genie</b>, the comment boxes (sales comparison, highest and best use, reconciliation) have a <b>My comments</b> button: search, then <b>Insert</b> puts the comment where your cursor is. It uses the same list, so import it here first.</li>
       <li><b>Draft from your grid:</b> in the Comp genie, under the sales comparison comment, click <b>Draft the comment from my grid</b>. It writes the comparable paragraphs (superior / inferior overall, each adjustment with its amount, your low / mid / high tiers, sale-to-list price, your notes for the comp in [brackets]), your rate paragraphs with the rates on the grid, and the start of the reconciliation (bracketing and adjusted range, your weights). Read it, fill in the [brackets], then click <b>Put it in the comment</b> or <b>Add it to the end</b>. Nothing goes in until you click.</li>
       <li>Your library is kept in this browser on this computer and in your <b>Back up</b> zip – keep backing up.</li></ol></details>
-    <details><summary>Invoice, payment and the unpaid list</summary><ol>
+    <details><summary>Invoice, payment and the unpaid list (Bookkeeping tab)</summary><ol>
+      <li>Everything about the money is on the <b>Bookkeeping</b> tab: this order's invoice and payment at the top, then every unpaid invoice and the half-year summary.</li>
+      <li>The invoice number is your file number with <b>-inv</b> (brkl5464 → brkl5464-inv). The invoice date is the day you sign and deliver the report: set the order status to <b>Delivered</b> (or type <b>Report signed and delivered</b>) and both are filled in. Change either if you need to.</li>
+      <li>The invoice is not part of the UAD 3.6 report file, so it does not go into SFREP: send the invoice PDF with the report (email or the client's portal).</li>
       <li>The fee comes from <b>Total fee</b> (Fee and delivery). A rent survey fee is added when the rent survey is ticked; a retainer is taken off the balance.</li>
-      <li>When you deliver the report, go to <b>Invoice and payment</b> on the order and click <b>Make the invoice</b>. It fills in the invoice number (your file number), today's date and the amount (type a different amount to change it). A new tab opens with the invoice on your letterhead: in the print window choose <b>Destination: Save as PDF</b>, then Save. Attach that PDF to your email or the AMC portal. AMC orders are billed to the AMC, with the AMC order / reference ID (for example the Document ID) on the invoice.</li>
+      <li>When you deliver the report, go to the <b>Bookkeeping</b> tab and click <b>Make the invoice</b>. It fills in the invoice number (file number + -inv), the delivered date (today if blank) and the amount (type a different amount to change it). A new tab opens with the invoice on your letterhead: in the print window choose <b>Destination: Save as PDF</b>, then Save. Attach that PDF to your email or the AMC portal. AMC orders are billed to the AMC, with the AMC order / reference ID (for example the Document ID) on the invoice.</li>
       <li>When the money comes in, click <b>Mark paid today</b> (or type the date), pick how it was paid and the amount. The order status changes to Paid.</li>
       <li><b>Home</b> shows <b>Unpaid invoices</b> with the days outstanding (over 30 days in red). <b>Follow-up email</b> opens a polite reminder in your mail program – read it, change it if you like, and send it yourself. Nothing is sent by the assistant. Orders marked Delivered with no invoice are listed under it.</li>
       <li>Twice a year, pick the half year under the list and click <b>Print the summary</b>: invoices dated in that half year, retainers, payments received, and what is still unpaid. Save it as a PDF for your bookkeeper.</li>
@@ -615,7 +634,7 @@ mark.blank{background:#fff3a8;padding:0 2px;border-radius:3px}.cmt textarea{widt
 </div>
 <div id="toast" role="status" hidden></div>
 <script>
-const BUILD='o1-1018-2351';
+const BUILD='o1-1019-0006';
 const G = (() => {
 /* ---------------- small helpers ---------------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -1751,7 +1770,7 @@ const TEXT_RULES = [
   [/Zillow Home Value Index|Housing Market Overview|zillow\.com/i, 'zillow'],
   [/flexmls|MLS #\s?\d/i, 'mls'],
   [/Client hereby engages Appraiser|PARTIES TO AGREEMENT[\s\S]{0,800}Jennifer L\.? Heath/i, 'myLetter'],
-  [/ENGAGEMENT LETTER|Letter of Engagement|Engagement Agreement|Appraisal (Order|Request)|Order Detail|Scope of Work/i, 'clientLetter'],
+  [/ENGAGEMENT LETTER|Letter of Engagement|Engagement Agreement|Appraisal (Order|Request)|Order Detail|Scope of Work|Appraisal Engagement|engagement to perform an appraisal/i, 'clientLetter'],
   [/Condominium Questionnaire|Condo Questionnaire|Project Questionnaire|HOA Questionnaire/i, 'condoQ'],
   [/Declaration of (Covenants|Restrictions|CC&Rs)|CC&R/i, 'ccrs'],
   [/\bBylaws\b|By-Laws/i, 'bylaws'],
@@ -1824,7 +1843,7 @@ async function addDocs(fileList, forcedType) {
     for (const [file, type] of typed) {
       $('#docStatus').textContent = 'Reading ' + file.name + '…';
       cur = readForm(); const old = (cur.docs || []).find(d => (d.name || '').toLowerCase() === file.name.toLowerCase()); // same file name again → replace it, keep its notes and accepted entries
-      const meta = old ? { ...old, type: file._moved ? type : forcedType || old.type || type, size: file.size, mime: file.type || '', added: new Date().toISOString(), note: '' } : { id: uid(), name: file.name, type, size: file.size, mime: file.type || '', added: new Date().toISOString(), note: '' };
+      const meta = old ? { ...old, type: file._moved ? type : forcedType || old.type || type, size: file.size, mime: file.type || '', added: new Date().toISOString(), note: '', textState: '' } : { id: uid(), name: file.name, type, size: file.size, mime: file.type || '', added: new Date().toISOString(), note: '' };
       try { await ODB.put('docs', { ...meta, orderId: cur.id, blob: file }); }
       catch (e) { said.push(file.name + ': could not be stored (' + (e.message || e) + ')'); continue; }
       cur.docs = old ? cur.docs.map(d => d.id === old.id ? meta : d) : [...(cur.docs || []), meta];
@@ -1894,11 +1913,28 @@ function kindPop(btn) {
   const close = e => { if (!pop.contains(e.target) || e.key === 'Escape') { pop.remove(); document.removeEventListener('click', close); document.removeEventListener('keydown', close); window.removeEventListener('scroll', close, true); } };
   setTimeout(() => { document.addEventListener('click', close); document.addEventListener('keydown', close); window.addEventListener('scroll', close, true); }, 0);
 }
+/* can this document be read here, or is it a scan? (her question, Oct 19 2026) */
+const AUTO_READ = ['crs', 'mls', 'permitsCounty', 'clientLetter', 'myLetter', 'floorplan', 'marketSearch'];
+let textStateBusy = false;
+async function fillTextStates() {   // older documents: look once, then show the chip
+  if (textStateBusy || !cur) return; const todo = (cur.docs || []).filter(d => !d.textState); if (!todo.length) return; textStateBusy = true;
+  try { for (const d of todo) { try { const r = await docPages(d.id); if (!r) { d.textState = 'file'; continue; }
+      const n = (r.pagesText || []).length, sc = (r.scanPages || []).length; d.textState = !n ? 'file' : sc >= n ? 'scan' : sc ? 'part:' + r.scanPages.join(',') : 'text'; } catch (e) { d.textState = 'file'; } }
+    saveLetter(true, true); renderDocs(); } finally { textStateBusy = false; }
+}
+function textChip(d) {
+  const st = d.textState || ''; if (!st) return '';
+  if (st === 'text') return `<span class="chip ok" title="${AUTO_READ.includes(d.type) ? 'Read here when you uploaded it – what it filled in is listed next to the name.' : 'Click Read: the reader suggests what to use and you accept or reject each one. Nothing is sent anywhere.'}">${AUTO_READ.includes(d.type) ? '✓ read here' : '✓ text – click Read'}</span>`;
+  if (st === 'scan') return '<span class="chip warn" title="A picture of the pages: nothing can be read here. Click Read to send it to Claude (when this order allows AI), or open it in Acrobat, use Scan &amp; OCR › Recognize text, save, and upload it again.">scan – needs Claude or Acrobat</span>';
+  if (st.startsWith('part:') && AUTO_READ.includes(d.type)) return `<span class="chip ok" title="Read here when you uploaded it. Page ${h(st.slice(5))} is a picture (often the signature page), so it was not read.">✓ read here (p. ${h(st.slice(5))} is a scan)</span>`;
+  if (st.startsWith('part:')) return `<span class="chip warn" title="These pages are pictures: ${h(st.slice(5))}. The rest can be read here.">part scan (p. ${h(st.slice(5))})</span>`;
+  return '<span class="chip" title="Kept with the order; this kind of file is not read.">kept, not read</span>';
+}
 function renderDocs() {
-  const list = (cur && cur.docs) || []; const box = $('#docList');
+  const list = (cur && cur.docs) || []; const box = $('#docList'); setTimeout(fillTextStates, 0);
   const opts = sel => DOC_TYPES.map(([g, ks]) => `<optgroup label="${h(g)}">${ks.map(([k, l]) => `<option value="${k}"${k === sel ? ' selected' : ''}>${h(l)}</option>`).join('')}</optgroup>`).join('');
   box.innerHTML = list.length ? `<table class="docs"><tbody>${list.map(d => `<tr>
-      <td><button type="button" class="lnk" data-dopen="${d.id}" title="Open">${h(d.name)}</button><small>${Math.max(1, Math.round(d.size / 1024)).toLocaleString()} KB${d.note ? ' · ' + h(d.note) : READS[d.type] ? '' : ''}</small>${d.warn ? `<small class="warnTxt">⚠ ${h(d.warn)}</small>` : ''}</td>
+      <td><button type="button" class="lnk" data-dopen="${d.id}" title="Open">${h(d.name)}</button><small>${Math.max(1, Math.round(d.size / 1024)).toLocaleString()} KB${d.note ? ' · ' + h(d.note) : READS[d.type] ? '' : ''}</small>${textChip(d)}${d.warn ? `<small class="warnTxt">⚠ ${h(d.warn)}</small>` : ''}</td>
       <td><button type="button" class="kindBtn" data-dkind="${d.id}" aria-haspopup="true" title="Change the kind of document">${h(DOC_LABEL[d.type] || 'Other')} ▾</button>${d.type === 'floorplan' && d.pages > 1 ? ` <label class="pg">page <input data-dpage="${d.id}" inputmode="numeric" value="${d.page || 1}" size="2"> of ${d.pages}</label>` : ''}</td>
       <td class="acts"><button type="button" class="btn small" data-dread="${d.id}">Read</button><button type="button" class="btn ghost small danger" data-ddel="${d.id}">Remove</button></td></tr>`).join('')}</tbody></table>`
     : '<p class="help">No documents yet.</p>';
@@ -2038,6 +2074,16 @@ async function readClientLetter(file) {
   if (/exterior[- ]only|\b2055\b|drive[- ]by|exterior inspection only/i.test(T)) F.exterior = true;
   if (/cost approach (is |will be )?(required|must)/i.test(T)) F.cost = true;
   if (/\bPURCHASE appraisal\b/i.test(T) && !F.purpose) F.purpose = 'Purchase';
+  // bank letters laid out like Montecito Bank & Trust's (Oct 18 2026): "For use by <client>, <street>, <city, ST zip>", Location:, Parcel #:, Value Determination:
+  m = T.match(/For use by ([A-Z][^,]{2,80}?),\s*(\d+[^,]{3,60}|P\.?\s?O\.? Box[^,]{1,30}),\s*([A-Za-z .]+,\s*[A-Z]{2}\s*\d{5}(?:-\d{4})?)/);
+  if (m) { if (!F.client) F.client = m[1].trim(); F.clientAddr1 = m[2].trim(); F.clientAddr2 = m[3].trim(); }
+  if (!F.propAddr) { const a = line(/^Location:\s*(.+)$/i); if (a) F.propAddr = a; }
+  { const a = line(/^(?:Parcel\s*(?:#|No\.?|Number)|APN|Assessor'?s Parcel (?:No\.?|Number))\s*:?\s*([\d-]{5,})/i); if (a) F.apn = a; }
+  if (F.form) F.form = F.form.replace(/^the appraisal type we are requesting:?\s*/i, '');
+  m = T.match(/interest appraised[^:]{0,60}:\s*(Fee Simple|Leased Fee|Leasehold)/i); if (m) F.interest = G.titleCase(m[1]);
+  m = T.match(/Value Determination:\s*((?:[\s|]*(?:Cost|Sales Comparison|Income)\b)+)/i); if (m) F.approaches = m[1].match(/Cost|Sales Comparison|Income/gi).map(x => x.toLowerCase());
+  if (/\brent survey\b/i.test(T)) { F.rent = true; F.rentWord = 'rent survey'; }
+  if (/\bops? statement|operating statement|operating expenses? statement/i.test(T)) F.ops = true;
   return F;
 }
 /* her own engagement letter, signed and uploaded (Oct 18 2026): the letter is the record of the agreement, so the order follows it */
@@ -2084,9 +2130,12 @@ function applyClientLetter(F) { // fills only empty boxes (type, form, client al
   const d = x => G.isoDate(String(x || '').match(/\d{1,2}\/\d{1,2}\/\d{2,4}|\d{4}-\d{2}-\d{2}/)?.[0] || ''); set('dueDate', d(F.due), 'Report due'); set('orderDate', d(F.orderDate), 'Order received', true);
   set('fee', F.fee ? Number(String(F.fee).replace(/[^\d.]/g, '')).toLocaleString() : '', 'Fee'); set('amcRef', F.ref, 'Client / AMC reference');
   set('otherUsers', F.users && client && F.users.toLowerCase().includes(client.toLowerCase().slice(0, 12)) ? '' : F.users, 'Other intended users');
+  if (F.clientAddr1 || F.clientAddr2) { const a1 = $('#c0_addr1'), a2 = $('#c0_addr2'); if (a1 && !a1.value.trim() && !(a2 && a2.value.trim())) { a1.value = F.clientAddr1 || ''; if (a2) a2.value = F.clientAddr2 || ''; did.push(['Client address', [F.clientAddr1, F.clientAddr2].filter(Boolean).join(', ')]); } }
+  set('apn', F.apn, 'APN'); set('interest', F.interest, 'Interest valued');
+  if (F.approaches) { [['sales comparison', 'apSales', 'Sales comparison'], ['cost', 'apCost', 'Cost approach'], ['income', 'apIncome', 'Income approach']].forEach(([k, id, l]) => { if (F.approaches.includes(k)) set(id, true, l + ' requested'); }); }
   if (F.rent) set('rent', true, 'Rent schedule (1007) requested'); if (F.cost) set('apCost', true, 'Cost approach required'); if (F.exterior) { $('#f_inspection').value = 'exterior'; did.push(['Inspection', 'Exterior only']); }
   if (F.propAddr) { const a = $('#f_address'); if (!a.value.trim()) { setOrderAddr(splitAddr(G.titleCase(F.propAddr).replace(/\b(Ca)\b/, 'CA'))); did.push(['Property address', a.value]); } else if (!sameStreet(F.propAddr, a.value)) did.push(['⚠ Address in the letter', F.propAddr + ' – not the same as the order']); }
-  const notes = [F.use && 'Intended use per client: ' + F.use, F.users && 'Intended user per client: ' + F.users, F.price && 'Sales price per order: $' + Number(String(F.price).replace(/[^\d.]/g, '')).toLocaleString(), F.mc && '1004MC required', F.occupancy && 'Occupancy: ' + F.occupancy].filter(Boolean);
+  const notes = [F.use && 'Intended use per client: ' + F.use, F.users && 'Intended user per client: ' + F.users, F.price && 'Sales price per order: $' + Number(String(F.price).replace(/[^\d.]/g, '')).toLocaleString(), F.mc && '1004MC required', F.ops && 'Operating (ops) statement requested', F.occupancy && 'Occupancy: ' + F.occupancy].filter(Boolean);
   if (notes.length) { const n = $('#f_notes'); const add = notes.filter(x => !n.value.includes(x)); if (add.length) { n.value = (n.value ? n.value + '\n' : '') + add.join('\n'); did.push(['Notes', add.join('; ')]); } }
   return did;
 }
@@ -3118,10 +3167,14 @@ function contractToUad(key, v) {   // accepted entries also fill the UAD 3.6 sal
    to-dos (order.todos on the iPad: plain lines) until they are ticked done.
    Stored on the order: reqs [{id, docId, doc, page, cat, text, quote, done, ipad, by, edited}], reqsRead {docId: version}.
    ===================================================================== */
-const REQ_V = 1;   // bump when the rules change: not-yet-edited items are read again
+const REQ_V = 2;   // bump when the rules change: not-yet-edited items are read again
 const REQ_CATS = ['Before you accept', 'Inspection', 'Photos', 'Comparables', 'Approaches to value', 'Report and addenda', 'Comments to include', 'Before you deliver', 'Delivery and invoice', 'Other'];
 // first rule that matches wins; ipad: true / a regex on the sentence / false
 const REQ_RULES = [
+  { cat: 'Report and addenda', re: /^(Special (Assignment )?(Conditions|Instructions)|Additional Instructions)/i, ipad: false },
+  { cat: 'Report and addenda', key: 'gar', re: /General Appraisal Requirements/i, text: 'Follow the client’s General Appraisal Requirements (the report must pass their review before payment). Ask them for a copy if you need it.' },
+  { cat: 'Inspection', re: /potential violation of (local|state|federal)|(description|pictures) of any onsite activit/i, ipad: true },
+  { cat: 'Approaches to value', re: /insurable value/i, text: 'If the cost approach is not warranted, provide the insurable value of the improvements.' },
   { cat: 'Before you accept', re: /prior services|time of your bid|(any|the) prior (appraisal|report|service)|within the (past|prior|last) (three|3) years/i },
   { cat: 'Before you deliver', re: /do not (complete|deliver|submit)|unless or until|executed purchase|purchase (sale |and sale )?(agreement|contract).{0,60}(review|supplied|provided)|must (receive|review) the (purchase|sales) (contract|agreement)/i },
   { cat: 'Inspection', key: 'conduct', re: /attend the appointment alone|firearms|business card|dress professionally|on time for each appointment|announce your departure|do not state your value|pets should never/i, ipad: true,
@@ -3136,7 +3189,7 @@ const REQ_RULES = [
   { cat: 'Comments to include', re: /highest and best use|zoning|exposure time|marketing time|USPS|non-?conforming|external (issues|obsolescence)|railroad|climate|extraordinary assumption|cost to cure|repairs? noted|commentary|comment on|please comment|explain|value to be reported|\bas is.{0,6}market value|\bas[ -]complete\b/i },
   { cat: 'Delivery and invoice', re: /invoice|sales tax|payable upon|rush|due (date|by)|late (fee|penalt)|revision(s)? (request|within)/i },
 ];
-const REQ_SKIP = /^CONTACT INFORMATION|marital status|guidelines (has|have) been provided|incorporated (by reference|into this)|appraiser independence|artificial intelligence|code of conduct|^firefox\b|https?:\/\/|subject to the rules and regulations|you represent to/i;   // boilerplate (AI wording is checked separately)
+const REQ_SKIP = /regulated institution|supplemental standards|Be based upon the definition of market value|Be performed by a state licensed|Analyze and report appropriate deductions|Be written and contain sufficient|^CONTACT INFORMATION|marital status|guidelines (has|have) been provided|incorporated (by reference|into this)|appraiser independence|artificial intelligence|code of conduct|^firefox\b|https?:\/\/|subject to the rules and regulations|you represent to/i;   // boilerplate (AI wording is checked separately)
 function reqFix(t) {   // ligature characters in client PDFs: Ɵ = ti, Ʃ = tt
   return String(t || '').replace(/Ɵ/g, 'ti').replace(/Ʃ/g, 'tt').replace(/ﬁ/g, 'fi').replace(/ﬂ/g, 'fl').replace(/ﬀ/g, 'ff').replace(/ﬃ/g, 'ffi').replace(/ﬄ/g, 'ffl').replace(/[ \t]+/g, ' ');
 }
@@ -3175,9 +3228,12 @@ async function readReqs(docId) {   // → items for one client letter
   if (F.due) add('Delivery and invoice', 'Report due: ' + F.due, F.due);
   if (F.fee) add('Delivery and invoice', 'Fee: ' + F.fee, F.fee);
   if (F.mc) add('Report and addenda', '1004MC (market conditions addendum) required', '1004MC');
-  if (F.rent) add('Report and addenda', 'Rent schedule (1007) requested', '1007');
+  if (F.rent) add('Report and addenda', 'Rent survey / rent schedule (1007) requested', F.rentWord || '1007');
   if (F.exterior) add('Inspection', 'Exterior-only inspection', 'exterior', true);
   if (F.form) add('Report and addenda', 'Report form: ' + F.form, F.form);
+  if (F.approaches) add('Approaches to value', 'Approaches requested: ' + F.approaches.map(x => x.replace(/\b\w/g, c => c.toUpperCase())).join(', '), 'Value Determination');
+  if (F.ops) add('Report and addenda', 'Operating (ops) statement requested', 'Ops statement');
+  if (F.interest) add('Report and addenda', 'Interest appraised: ' + F.interest, F.interest);
   return out.slice(0, 60);
 }
 async function runReqs(docIds, quiet) {   // reads the client letters again; her own and edited items stay; ticks carry over
@@ -3193,9 +3249,27 @@ async function runReqs(docIds, quiet) {   // reads the client letters again; her
   renderReqs(); if (!quiet) toast(fresh.length + ' requirement' + (fresh.length === 1 ? '' : 's') + ' found in the client’s letter – check them'); saveLetter(true, true);
   return fresh.length;
 }
+/* a client's standing requirements (her request, Oct 19 2026): tick "Always" and every order for that client gets the item */
+let CLIENT_REQS = {};   // kv 'reqs:client' = { clientKey: [{cat, text, ipad}] }; in Back up / Restore
+const clientKeyOf = o => { const c = ((o && o.clients) || [])[0] || {}; return String(c.company || c.name || '').toLowerCase().replace(/[^a-z0-9&]+/g, ' ').trim(); };
+const clientNameOf = o => { const c = ((o && o.clients) || [])[0] || {}; return c.company || c.name || ''; };
+async function crLoad() { const r = await ODB.get('kv', 'reqs:client'); CLIENT_REQS = (r && r.v) || {}; }
+function crSave() { return ODB.put('kv', { id: 'reqs:client', v: CLIENT_REQS }); }
+const crList = o => CLIENT_REQS[clientKeyOf(o)] || [];
+const crHas = (o, text) => crList(o).some(x => x.text === text);
+function crSet(o, x, on, oldText) { const k = clientKeyOf(o); if (!k) return;
+  const L = (CLIENT_REQS[k] || []).filter(y => y.text !== x.text && y.text !== oldText); if (on) L.push({ cat: x.cat, text: x.text, ipad: !!x.ipad });
+  if (L.length) CLIENT_REQS[k] = L; else delete CLIENT_REQS[k]; crSave(); }
+function crApply(o) {   // this client's standing items that the order does not have yet (and she has not removed from it)
+  let n = 0; o.reqs = o.reqs || []; const gone = o.reqsGone || [];
+  crList(o).forEach(x => { if (!o.reqs.some(y => y.text === x.text) && !gone.includes(x.text)) { o.reqs.push({ id: uid(), docId: null, doc: '', page: null, cat: x.cat, text: x.text, quote: '', done: false, ipad: x.ipad, by: 'client' }); n++; } });
+  return n;
+}
 let reqAutoBusy = false;
 function renderReqs() {
-  const box = $('#reqBox'); if (!box || !cur) return; const R = cur.reqs || []; const letters = (cur.docs || []).filter(d => d.type === 'clientLetter');
+  const box = $('#reqBox'); if (!box || !cur) return;
+  { const n = crApply(cur); if (n) { saveLetter(true, true); toast(n + ' standing requirement' + (n === 1 ? '' : 's') + ' for ' + clientNameOf(cur) + ' added to this order', 5000); } }
+  const R = cur.reqs || []; const ck = clientKeyOf(cur), cn = clientNameOf(cur); const letters = (cur.docs || []).filter(d => d.type === 'clientLetter');
   const unread = letters.filter(d => (cur.reqsRead || {})[d.id] !== REQ_V);
   if (unread.length && !reqAutoBusy) { reqAutoBusy = true; setTimeout(() => runReqs(unread.map(d => d.id), true).finally(() => { reqAutoBusy = false; }), 0); }
   const nOpen = R.filter(x => !x.done).length, nPad = R.filter(x => x.ipad && !x.done).length;
@@ -3205,18 +3279,19 @@ function renderReqs() {
     ${groups.map(([c, list]) => `<h4>${h(c)}</h4>${list.map(x => `<div class="req${x.done ? ' done' : ''}">
       <input type="checkbox" data-rqdone="${x.id}" ${x.done ? 'checked' : ''} aria-label="Done">
       <textarea data-rqtext="${x.id}" rows="${Math.max(1, Math.min(4, Math.ceil(x.text.length / 55)))}" aria-label="Requirement">${h(x.text)}</textarea>
-      <span class="reqacts">${x.page ? `<button type="button" class="pgchip" data-rqpage="${x.id}" title="Open the letter at this page">p. ${x.page}</button>` : ''}<label class="check" title="Send to the iPad as an inspection to-do"><input type="checkbox" data-rqipad="${x.id}" ${x.ipad ? 'checked' : ''}>iPad</label><button type="button" class="lnk" data-rqdel="${x.id}" aria-label="Remove">remove</button></span></div>`).join('')}`).join('')}
-    <div class="row reqadd"><select id="rqCat">${REQ_CATS.map(c => `<option>${h(c)}</option>`).join('')}</select><input id="rqNew" placeholder="Add a requirement yourself"><label class="check"><input type="checkbox" id="rqNewPad">iPad</label><button type="button" class="btn ghost small" id="rqAdd">Add</button></div>
+      <span class="reqacts">${x.page ? `<button type="button" class="pgchip" data-rqpage="${x.id}" title="Open the letter at this page">p. ${x.page}</button>` : ''}<label class="check" title="Send to the iPad as an inspection to-do"><input type="checkbox" data-rqipad="${x.id}" ${x.ipad ? 'checked' : ''}>iPad</label>${ck ? `<label class="check" title="Add this to every order for ${h(cn)}"><input type="checkbox" data-rqalways="${x.id}" ${crHas(cur, x.text) ? 'checked' : ''}>Always</label>` : ''}<button type="button" class="lnk" data-rqdel="${x.id}" aria-label="Remove">remove</button></span></div>`).join('')}`).join('')}
+    <div class="row reqadd"><select id="rqCat">${REQ_CATS.map(c => `<option>${h(c)}</option>`).join('')}</select><input id="rqNew" placeholder="Add a requirement yourself"><label class="check"><input type="checkbox" id="rqNewPad">iPad</label>${ck ? `<label class="check" title="Add this to every order for ${h(cn)}"><input type="checkbox" id="rqNewAlways">Always for ${h(cn.length > 28 ? cn.slice(0, 26) + '…' : cn)}</label>` : ''}<button type="button" class="btn ghost small" id="rqAdd">Add</button></div>
     <div class="row">${letters.length ? '<button type="button" class="btn ghost small" id="rqRead">Read the client’s letter again</button>' : ''}${R.length ? '<button type="button" class="btn ghost small" id="rqCopy">Copy the list</button>' : ''}</div>`;
   const fit = t => { if (!t.offsetParent) return; t.style.height = 'auto'; t.style.height = (t.scrollHeight + 2) + 'px'; };
   box.querySelectorAll('textarea[data-rqtext]').forEach(t => { fit(t); t.addEventListener('input', () => fit(t)); });
   const find = id => R.find(x => x.id === id);
   box.querySelectorAll('[data-rqdone]').forEach(c => c.onchange = () => { find(c.dataset.rqdone).done = c.checked; saveLetter(true, true); renderReqs(); });
   box.querySelectorAll('[data-rqipad]').forEach(c => c.onchange = () => { find(c.dataset.rqipad).ipad = c.checked; saveLetter(true, true); renderReqs(); });
-  box.querySelectorAll('[data-rqtext]').forEach(t => t.onchange = () => { const x = find(t.dataset.rqtext); const v = t.value.trim(); if (!v) return; if (v !== x.text) { x.text = v; x.edited = true; saveLetter(true, true); } });
-  box.querySelectorAll('[data-rqdel]').forEach(b => b.onclick = () => { cur.reqs = R.filter(x => x.id !== b.dataset.rqdel); saveLetter(true, true); renderReqs(); });
+  box.querySelectorAll('[data-rqtext]').forEach(t => t.onchange = () => { const x = find(t.dataset.rqtext); const v = t.value.trim(); if (!v) return; if (v !== x.text) { const was = x.text, al = crHas(cur, was); x.text = v; x.edited = true; if (al) crSet(cur, x, true, was); saveLetter(true, true); } });
+  box.querySelectorAll('[data-rqdel]').forEach(b => b.onclick = () => { const x = find(b.dataset.rqdel); if (x && crHas(cur, x.text)) cur.reqsGone = [...(cur.reqsGone || []), x.text]; cur.reqs = R.filter(y => y.id !== b.dataset.rqdel); saveLetter(true, true); renderReqs(); });
+  box.querySelectorAll('[data-rqalways]').forEach(c => c.onchange = () => { const x = find(c.dataset.rqalways); crSet(cur, x, c.checked); toast(c.checked ? 'Every new order for ' + cn + ' will get this' : 'No longer added for ' + cn); });
   box.querySelectorAll('[data-rqpage]').forEach(b => b.onclick = () => { const x = find(b.dataset.rqpage); if ((cur.docs || []).some(d => d.id === x.docId)) { saveLetter(true, true); openReader(x.docId, x.page); } else toast('That document is no longer in this order'); });
-  $('#rqAdd').onclick = () => { const v = $('#rqNew').value.trim(); if (!v) { $('#rqNew').focus(); return; } (cur.reqs = cur.reqs || []).push({ id: uid(), docId: null, doc: '', page: null, cat: $('#rqCat').value, text: v, quote: '', done: false, ipad: $('#rqNewPad').checked, by: 'you' }); saveLetter(true, true); renderReqs(); };
+  $('#rqAdd').onclick = () => { const v = $('#rqNew').value.trim(); if (!v) { $('#rqNew').focus(); return; } (cur.reqs = cur.reqs || []).push({ id: uid(), docId: null, doc: '', page: null, cat: $('#rqCat').value, text: v, quote: '', done: false, ipad: $('#rqNewPad').checked, by: 'you' }); const al = $('#rqNewAlways'); if (al && al.checked) { crSet(cur, cur.reqs[cur.reqs.length - 1], true); toast('Every new order for ' + cn + ' will get this'); } saveLetter(true, true); renderReqs(); };
   $('#rqNew').onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); $('#rqAdd').click(); } };
   const rr = $('#rqRead'); if (rr) rr.onclick = () => runReqs();
   const rc = $('#rqCopy'); if (rc) rc.onclick = async () => { const txt = groups.map(([c, list]) => c + '\n' + list.map(x => (x.done ? '[x] ' : '[ ] ') + x.text + (x.page ? ' (p. ' + x.page + ')' : '')).join('\n')).join('\n\n'); try { await navigator.clipboard.writeText(txt); toast('Copied'); } catch (e) { toast('Could not copy'); } };
@@ -3276,16 +3351,23 @@ function printWindow(html, what) {
   w.document.open(); w.document.write(html); w.document.close(); setTimeout(() => { try { w.focus(); w.print(); } catch (e) {} }, 300);
   toast((what || 'It') + ' opened in a new tab – choose Destination: Save as PDF', 6000); return w;
 }
+const invNoOf = fileNo => { const f = String(fileNo || '').trim(); return f ? (/-inv$/i.test(f) ? f : f + '-inv') : ''; };   // her rule: the file name + "-inv" (brkl5464 → brkl5464-inv)
+function deliveredToday() {   // order set to Delivered: the day she signs and sends the report is the invoice date
+  if (!$('#f_signDate').value) $('#f_signDate').value = todayISO();
+  if (!$('#f_invDate').value) $('#f_invDate').value = $('#f_signDate').value;
+  if (!$('#f_invNo').value.trim()) $('#f_invNo').value = invNoOf($('#f_fileNo').value);
+  toast('Delivered ' + longDate($('#f_signDate').value) + ' – the invoice is dated that day (Bookkeeping tab)', 5000);
+}
 function makeInvoice() {
-  if (!$('#f_invNo').value.trim()) $('#f_invNo').value = $('#f_fileNo').value.trim();
-  if (!$('#f_invDate').value) $('#f_invDate').value = todayISO();
+  if (!$('#f_invNo').value.trim()) $('#f_invNo').value = invNoOf($('#f_fileNo').value);
+  if (!$('#f_invDate').value) $('#f_invDate').value = $('#f_signDate').value || todayISO();
   cur = readForm(); if (!invAmount(cur)) { toast('Fill in the fee first (Total fee, above)'); $('#f_fee').focus(); return; }
   saveLetter(true); renderBooks(); printWindow(invoiceHTML(cur), 'The invoice');
 }
 function markPaid() {
   if (!$('#f_paidDate').value) $('#f_paidDate').value = todayISO();
   cur = readForm(); if (!String(cur.paidAmt || '').trim()) { $('#f_paidAmt').value = invBalance(cur).toLocaleString(); }
-  if (!cur.invDate) { $('#f_invDate').value = $('#f_paidDate').value; if (!$('#f_invNo').value.trim()) $('#f_invNo').value = $('#f_fileNo').value.trim(); }
+  if (!cur.invDate) { $('#f_invDate').value = $('#f_signDate').value || $('#f_paidDate').value; if (!$('#f_invNo').value.trim()) $('#f_invNo').value = invNoOf($('#f_fileNo').value); }
   if ($('#f_stage').value !== 'Cancelled') $('#f_stage').value = 'Paid';
   cur = readForm(); saveLetter(true); renderBooks(); renderLetters(); toast('Marked paid – order status set to Paid');
 }
@@ -3295,7 +3377,7 @@ function renderBooks() {
   el.className = 'help' + (isUnpaid(o) && daysOut(o) > 30 ? ' warnTxt' : '');
   el.innerHTML = o.paidDate ? `<b class="ck">✓</b> Paid ${h(longDate(o.paidDate))}${o.paidMethod ? ' by ' + h(o.paidMethod) : ''}${o.paidAmt ? ' · ' + usd(o.paidAmt) : ''}.`
     : o.invDate ? `Invoiced ${h(longDate(o.invDate))} · balance due ${usd(invBalance(o))} · ${daysOut(o)} day${daysOut(o) === 1 ? '' : 's'} outstanding.`
-    : tot ? `Not invoiced yet. When you deliver the report, click <b>Make the invoice</b>: it fills in the number (your file number), today’s date and ${usd(tot)}${n$(o.retainer) ? ' less the ' + usd(o.retainer) + ' retainer' : ''}.` : 'Fill in the fee above, then make the invoice when you deliver the report.';
+    : tot ? `Not invoiced yet. When you deliver the report, click <b>Make the invoice</b>: it fills in the number (your file number + -inv), the date you signed and delivered the report (today if blank) and ${usd(tot)}${n$(o.retainer) ? ' less the ' + usd(o.retainer) + ' retainer' : ''}.` : 'Fill in the fee above, then make the invoice when you deliver the report.';
 }
 function followUpMail(o) {
   const B = billTo(o); const first = (B.attn || '').trim().split(/\s+/)[0] || '';
@@ -3314,8 +3396,8 @@ function unpaidHTML() {
     <div class="row"><label>Summary for <select id="bkHalf">${[yr, yr - 1, yr - 2].flatMap(y => [[y, 2], [y, 1]]).filter(([y, hh]) => y < yr || hh <= half).map(([y, hh]) => `<option value="${y}-${hh}">${hh === 1 ? 'January–June' : 'July–December'} ${y}</option>`).join('')}</select></label><button type="button" class="btn ghost small" id="bkSum">Print the summary</button></div>`;
 }
 function wireUnpaid(box) {
-  box.querySelectorAll('[data-bkopen]').forEach(b => b.onclick = () => openLetter(b.dataset.bkopen));
-  box.querySelectorAll('[data-bkpaid]').forEach(b => b.onclick = () => { openLetter(b.dataset.bkpaid); setTimeout(() => { markPaid(); const f = $('#booksSet'); if (f) f.scrollIntoView({ block: 'center' }); }, 60); });
+  box.querySelectorAll('[data-bkopen]').forEach(b => b.onclick = () => { openLetter(b.dataset.bkopen); setTimeout(() => showTab('books'), 60); });
+  box.querySelectorAll('[data-bkpaid]').forEach(b => b.onclick = () => { openLetter(b.dataset.bkpaid); setTimeout(() => { showTab('books'); markPaid(); const f = $('#booksSet'); if (f) f.scrollIntoView({ block: 'center' }); }, 60); });
   const s = box.querySelector('#bkSum'); if (s) s.onclick = () => { const [y, hh] = box.querySelector('#bkHalf').value.split('-').map(Number); printWindow(summaryHTML(y, hh), 'The summary'); };
 }
 function summaryHTML(y, half) {
@@ -3727,7 +3809,7 @@ let aiText = store.get('aiText', null);
 let cur = null;           // the letter being edited
 let clientCount = 1;
 
-const NEW_FIELDS = { rightsNot: '', jurisdiction: '', street: '', city: '', state: 'CA', zip: '', zip4: '', stage: 'New', inspDate: '', inspTime: '', effDate: '', unit: '', apn: '', county: '', lat: '', lon: '', owner: '', legal: '', borrower: '',
+const NEW_FIELDS = { rightsNot: '', signDate: '', jurisdiction: '', street: '', city: '', state: 'CA', zip: '', zip4: '', stage: 'New', inspDate: '', inspTime: '', effDate: '', unit: '', apn: '', county: '', lat: '', lon: '', owner: '', legal: '', borrower: '',
   lenderDiff: false, govAgency: '', investorId: '', reportForm: '', lenderCo: '', lenderAddr1: '', lenderAddr2: '', loanNo: '', amcUsed: false, amcCo: '', amcAddr1: '', amcAddr2: '', amcLic: '', amcState: 'CA', amcExp: '', amcFee: '', amcRef: '', notes: '', todos: '', invNo: '', invDate: '', invAmt: '', paidDate: '', paidMethod: '', paidAmt: '', paidRef: '' };
 function blankLetter() {
   return { ...NEW_FIELDS, docs: [], crs: null, listings: [], permits: null, created: new Date().toISOString(), id: uid(), status: 'Client letter', reportForm: 'uad36', fileNo: '', orderDate: todayISO(), dueDate: '', aiUse: '', orderDoc: null, agreeDate: todayISO(), type: 'uadPurchase', clients: [{}], address: '', propType: 'sfr', propTypeOther: '',
@@ -3736,7 +3818,7 @@ function blankLetter() {
 }
 
 /* ---------- form <-> object ---------- */
-const FIELDS = ['rightsNot', 'fileNo', 'orderDate', 'dueDate', 'agreeDate', 'type', 'status', 'address', 'propType', 'propTypeOther', 'interest', 'decedent', 'dod', 'otherUsers', 'inspection', 'apSales', 'apCost', 'apIncome',
+const FIELDS = ['rightsNot', 'signDate', 'fileNo', 'orderDate', 'dueDate', 'agreeDate', 'type', 'status', 'address', 'propType', 'propTypeOther', 'interest', 'decedent', 'dod', 'otherUsers', 'inspection', 'apSales', 'apCost', 'apIncome',
   'format', 'listing', 'listingDetail', 'ea', 'hc', 'accessName', 'accessRel', 'accessPhone', 'fee', 'retainer', 'payDue', 'payWhen', 'deliveryN', 'deliveryUnit', 'deliveryFrom', 'userText', 'extra', 'premise', 'completion', 'plans', 'purpose', 'joint', 'rent', 'rentFee', 'testimony', 'tRate', 'tDecl', 'tRetainer', 'tCancel',
   ...Object.keys(NEW_FIELDS)];
 function readForm() {
@@ -3983,7 +4065,7 @@ function renderLetters() {
   $('#letterList').querySelectorAll('[data-copy]').forEach(b => b.onclick = () => openLetter(b.dataset.copy, true));
   $('#letterList').querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
     armDelete(b, () => deleteOrder(b.dataset.del)); });
-  $('#letterList').querySelectorAll('[data-stage]').forEach(s => s.onchange = () => { const f = letters.find(x => x.id === s.dataset.stage); f.stage = s.value; ODB.put('orders', f); if (cur && cur.id === f.id) { $('#f_stage').value = s.value; cur.stage = s.value; } renderLetters(); });
+  $('#letterList').querySelectorAll('[data-stage]').forEach(s => s.onchange = () => { const f = letters.find(x => x.id === s.dataset.stage); f.stage = s.value; if (s.value === 'Delivered') { f.signDate = f.signDate || todayISO(); f.invDate = f.invDate || f.signDate; f.invNo = f.invNo || invNoOf(f.fileNo); } ODB.put('orders', f); if (cur && cur.id === f.id) { $('#f_stage').value = s.value; cur.stage = s.value; ['signDate', 'invDate', 'invNo'].forEach(k => { if (f[k] !== undefined) { $('#f_' + k).value = f[k] || ''; cur[k] = f[k]; } }); } renderLetters(); });
 }
 const genieURL = f => '../comp-genie/?order=' + encodeURIComponent(f.id);
 function renderLinks() { const a = $('#genieLink'); if (a && cur) a.href = genieURL(cur); syncGenieTop(); }
@@ -4091,6 +4173,7 @@ function showTab(t) { CUR_TAB = t;
   if (t === 'home') renderHome();
   if (t === 'letter') setTimeout(() => document.querySelectorAll('textarea[data-rqtext]').forEach(x => { x.style.height = 'auto'; x.style.height = (x.scrollHeight + 2) + 'px'; }), 0);
   syncGenieTop();
+  if (t === 'books') { $('#bkTitle').textContent = 'Bookkeeping' + (cur && (cur.fileNo || street(cur)) ? ' – ' + [cur.fileNo, street(cur)].filter(Boolean).join(' ') : ''); renderBooks(); const a = $('#bkAll'); if (a) { a.innerHTML = unpaidHTML(); wireUnpaid(a); } }
   if (t === 'market') { $('#mkTitle').textContent = 'Market conditions' + (cur && (cur.fileNo || street(cur)) ? ' – ' + [cur.fileNo, street(cur)].filter(Boolean).join(' ') : ''); mkRender(); }
 }
 
@@ -4099,7 +4182,7 @@ async function backup() {
   saveLetter(true, true); toast('Making the backup…');
   const docs = await ODB.all('docs'); const enc = new TextEncoder();
   const meta = docs.map(d => ({ id: d.id, orderId: d.orderId, name: d.name, type: d.type, size: d.size, mime: d.mime, added: d.added, note: d.note, page: d.page, pages: d.pages, preview: d.preview, file: 'documents/' + d.id + '-' + G.safeName(d.name) }));
-  const kv = {}; for (const k of ['mk:boundaries', 'mk:stats', 'mk:zillow', 'cmt:lib']) { const r = await ODB.get('kv', k); if (r) kv[k] = r.v; }   // saved market areas, SBMLS monthly statistics, Zillow figures, her comment library
+  const kv = {}; for (const k of ['mk:boundaries', 'mk:stats', 'mk:zillow', 'cmt:lib', 'reqs:client']) { const r = await ODB.get('kv', k); if (r) kv[k] = r.v; }   // saved market areas, SBMLS monthly statistics, Zillow figures, her comment library
   const data = { app: 'appraisal-assistant', version: 1, saved: new Date().toISOString(), contacts, letters, aiText, rates: store.get('rates', {}), docs: meta, kv };
   const entries = [{ name: 'orders.json', data: enc.encode(JSON.stringify(data, null, 1)) }];
   for (const d of docs) entries.push({ name: meta.find(m => m.id === d.id).file, data: new Uint8Array(await d.blob.arrayBuffer()) });
@@ -4122,7 +4205,7 @@ async function restore(file) {
     let na = 0; if (d.kv) { for (const [k, v] of Object.entries(d.kv)) { const have = ((await ODB.get('kv', k)) || {}).v;
         if (k === 'mk:boundaries') { const list = Array.isArray(have) ? have.slice() : []; (v || []).forEach(b => { if (!list.some(x => x.name === b.name)) { list.push(b); na++; } }); list.sort((a, b) => a.name.localeCompare(b.name)); await ODB.put('kv', { id: k, v: list }); }
         else await ODB.put('kv', { id: k, v: { ...(v || {}), ...(have || {}) } }); }
-      if (typeof mkLoad === 'function') await mkLoad(); if (typeof cmtLoad === 'function') { await cmtLoad(); cmtRender(); } }
+      if (typeof mkLoad === 'function') await mkLoad(); if (typeof cmtLoad === 'function') { await cmtLoad(); cmtRender(); } if (typeof crLoad === 'function') await crLoad(); }
     if (files && d.docs) { const have = new Set((await ODB.all('docs')).map(x => x.id));
       for (const m of d.docs) { if (have.has(m.id)) continue; const u8 = files.get(m.file); if (!u8) continue; const { file: _f, ...rest } = m; await ODB.put('docs', { ...rest, blob: new Blob([u8], { type: m.mime || '' }) }); nd++; } }
     contacts.sort((a, b) => (a.name || a.company || '').localeCompare(b.name || b.company || ''));
@@ -4146,7 +4229,10 @@ async function start() {
     + Object.keys(TYPES).filter(k => !listed.has(k)).map(k => `<option value="${k}">${hesc(TYPES[k].label)}</option>`).join('');
   $('#f_propType').innerHTML = PROPERTY_TYPES.map(p => `<option value="${p[0]}">${hesc(p[1])}</option>`).join('');
   document.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => showTab(b.dataset.tab));
-  cmtInit();
+  cmtInit(); crLoad().then(() => { if (cur) renderReqs(); });
+  $('#booksForm').addEventListener('input', update); $('#booksForm').addEventListener('change', update);
+  document.addEventListener('click', e => { const b = e.target.closest('[data-gotab]'); if (b) { e.preventDefault(); showTab(b.dataset.gotab); window.scrollTo(0, 0); } });
+  $('#f_signDate').addEventListener('change', () => { const d = $('#f_signDate').value; if (d && !$('#f_invDate').value) $('#f_invDate').value = d; if (d && !$('#f_invNo').value.trim()) $('#f_invNo').value = invNoOf($('#f_fileNo').value); update(); renderBooks(); });
   $('#letterForm').addEventListener('input', update); ['#f_otherUsers', '#f_userText'].forEach(id => $(id).addEventListener('input', syncVisibility)); $('#letterForm').addEventListener('change', update);
   $('#letterForm').addEventListener('submit', e => e.preventDefault());
   $('#f_reportForm').addEventListener('change', () => { if (cur) cur.formPicked = true; syncVisibility(); });
@@ -4171,7 +4257,7 @@ async function start() {
   $('#genieLink').addEventListener('click', () => saveLetter(true));
   $('#genieTop').addEventListener('click', () => { syncGenieTop(); if ($('#genieTop').href.includes('?order=')) saveLetter(true); });
   ['#f_lenderDiff', '#f_amcUsed', '#f_inspDate', '#f_effDate', '#f_dod'].forEach(id => $(id).addEventListener('change', syncVisibility));
-  $('#f_stage').addEventListener('change', () => { cur = readForm(); renderLetters(); });
+  $('#f_stage').addEventListener('change', () => { if ($('#f_stage').value === 'Delivered') deliveredToday(); cur = readForm(); renderLetters(); });
   document.querySelectorAll('[data-tab]').forEach(b => b.addEventListener('click', () => { if (b.dataset.tab !== 'letter' && cur && hasContent(readForm())) saveLetter(true); }));
   document.querySelectorAll('input[name=aiUse]').forEach(r => r.addEventListener('change', () => { syncVisibility(); update(); }));
   $('#btnBackup').onclick = backup; $('#restoreFile').onchange = e => { if (e.target.files[0]) restore(e.target.files[0]); e.target.value = ''; };

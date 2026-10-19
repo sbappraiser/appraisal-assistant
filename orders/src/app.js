@@ -14,7 +14,7 @@ let aiText = store.get('aiText', null);
 let cur = null;           // the letter being edited
 let clientCount = 1;
 
-const NEW_FIELDS = { rightsNot: '', jurisdiction: '', street: '', city: '', state: 'CA', zip: '', zip4: '', stage: 'New', inspDate: '', inspTime: '', effDate: '', unit: '', apn: '', county: '', lat: '', lon: '', owner: '', legal: '', borrower: '',
+const NEW_FIELDS = { rightsNot: '', signDate: '', jurisdiction: '', street: '', city: '', state: 'CA', zip: '', zip4: '', stage: 'New', inspDate: '', inspTime: '', effDate: '', unit: '', apn: '', county: '', lat: '', lon: '', owner: '', legal: '', borrower: '',
   lenderDiff: false, govAgency: '', investorId: '', reportForm: '', lenderCo: '', lenderAddr1: '', lenderAddr2: '', loanNo: '', amcUsed: false, amcCo: '', amcAddr1: '', amcAddr2: '', amcLic: '', amcState: 'CA', amcExp: '', amcFee: '', amcRef: '', notes: '', todos: '', invNo: '', invDate: '', invAmt: '', paidDate: '', paidMethod: '', paidAmt: '', paidRef: '' };
 function blankLetter() {
   return { ...NEW_FIELDS, docs: [], crs: null, listings: [], permits: null, created: new Date().toISOString(), id: uid(), status: 'Client letter', reportForm: 'uad36', fileNo: '', orderDate: todayISO(), dueDate: '', aiUse: '', orderDoc: null, agreeDate: todayISO(), type: 'uadPurchase', clients: [{}], address: '', propType: 'sfr', propTypeOther: '',
@@ -23,7 +23,7 @@ function blankLetter() {
 }
 
 /* ---------- form <-> object ---------- */
-const FIELDS = ['rightsNot', 'fileNo', 'orderDate', 'dueDate', 'agreeDate', 'type', 'status', 'address', 'propType', 'propTypeOther', 'interest', 'decedent', 'dod', 'otherUsers', 'inspection', 'apSales', 'apCost', 'apIncome',
+const FIELDS = ['rightsNot', 'signDate', 'fileNo', 'orderDate', 'dueDate', 'agreeDate', 'type', 'status', 'address', 'propType', 'propTypeOther', 'interest', 'decedent', 'dod', 'otherUsers', 'inspection', 'apSales', 'apCost', 'apIncome',
   'format', 'listing', 'listingDetail', 'ea', 'hc', 'accessName', 'accessRel', 'accessPhone', 'fee', 'retainer', 'payDue', 'payWhen', 'deliveryN', 'deliveryUnit', 'deliveryFrom', 'userText', 'extra', 'premise', 'completion', 'plans', 'purpose', 'joint', 'rent', 'rentFee', 'testimony', 'tRate', 'tDecl', 'tRetainer', 'tCancel',
   ...Object.keys(NEW_FIELDS)];
 function readForm() {
@@ -270,7 +270,7 @@ function renderLetters() {
   $('#letterList').querySelectorAll('[data-copy]').forEach(b => b.onclick = () => openLetter(b.dataset.copy, true));
   $('#letterList').querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
     armDelete(b, () => deleteOrder(b.dataset.del)); });
-  $('#letterList').querySelectorAll('[data-stage]').forEach(s => s.onchange = () => { const f = letters.find(x => x.id === s.dataset.stage); f.stage = s.value; ODB.put('orders', f); if (cur && cur.id === f.id) { $('#f_stage').value = s.value; cur.stage = s.value; } renderLetters(); });
+  $('#letterList').querySelectorAll('[data-stage]').forEach(s => s.onchange = () => { const f = letters.find(x => x.id === s.dataset.stage); f.stage = s.value; if (s.value === 'Delivered') { f.signDate = f.signDate || todayISO(); f.invDate = f.invDate || f.signDate; f.invNo = f.invNo || invNoOf(f.fileNo); } ODB.put('orders', f); if (cur && cur.id === f.id) { $('#f_stage').value = s.value; cur.stage = s.value; ['signDate', 'invDate', 'invNo'].forEach(k => { if (f[k] !== undefined) { $('#f_' + k).value = f[k] || ''; cur[k] = f[k]; } }); } renderLetters(); });
 }
 const genieURL = f => '../comp-genie/?order=' + encodeURIComponent(f.id);
 function renderLinks() { const a = $('#genieLink'); if (a && cur) a.href = genieURL(cur); syncGenieTop(); }
@@ -378,6 +378,7 @@ function showTab(t) { CUR_TAB = t;
   if (t === 'home') renderHome();
   if (t === 'letter') setTimeout(() => document.querySelectorAll('textarea[data-rqtext]').forEach(x => { x.style.height = 'auto'; x.style.height = (x.scrollHeight + 2) + 'px'; }), 0);
   syncGenieTop();
+  if (t === 'books') { $('#bkTitle').textContent = 'Bookkeeping' + (cur && (cur.fileNo || street(cur)) ? ' – ' + [cur.fileNo, street(cur)].filter(Boolean).join(' ') : ''); renderBooks(); const a = $('#bkAll'); if (a) { a.innerHTML = unpaidHTML(); wireUnpaid(a); } }
   if (t === 'market') { $('#mkTitle').textContent = 'Market conditions' + (cur && (cur.fileNo || street(cur)) ? ' – ' + [cur.fileNo, street(cur)].filter(Boolean).join(' ') : ''); mkRender(); }
 }
 
@@ -386,7 +387,7 @@ async function backup() {
   saveLetter(true, true); toast('Making the backup…');
   const docs = await ODB.all('docs'); const enc = new TextEncoder();
   const meta = docs.map(d => ({ id: d.id, orderId: d.orderId, name: d.name, type: d.type, size: d.size, mime: d.mime, added: d.added, note: d.note, page: d.page, pages: d.pages, preview: d.preview, file: 'documents/' + d.id + '-' + G.safeName(d.name) }));
-  const kv = {}; for (const k of ['mk:boundaries', 'mk:stats', 'mk:zillow', 'cmt:lib']) { const r = await ODB.get('kv', k); if (r) kv[k] = r.v; }   // saved market areas, SBMLS monthly statistics, Zillow figures, her comment library
+  const kv = {}; for (const k of ['mk:boundaries', 'mk:stats', 'mk:zillow', 'cmt:lib', 'reqs:client']) { const r = await ODB.get('kv', k); if (r) kv[k] = r.v; }   // saved market areas, SBMLS monthly statistics, Zillow figures, her comment library
   const data = { app: 'appraisal-assistant', version: 1, saved: new Date().toISOString(), contacts, letters, aiText, rates: store.get('rates', {}), docs: meta, kv };
   const entries = [{ name: 'orders.json', data: enc.encode(JSON.stringify(data, null, 1)) }];
   for (const d of docs) entries.push({ name: meta.find(m => m.id === d.id).file, data: new Uint8Array(await d.blob.arrayBuffer()) });
@@ -409,7 +410,7 @@ async function restore(file) {
     let na = 0; if (d.kv) { for (const [k, v] of Object.entries(d.kv)) { const have = ((await ODB.get('kv', k)) || {}).v;
         if (k === 'mk:boundaries') { const list = Array.isArray(have) ? have.slice() : []; (v || []).forEach(b => { if (!list.some(x => x.name === b.name)) { list.push(b); na++; } }); list.sort((a, b) => a.name.localeCompare(b.name)); await ODB.put('kv', { id: k, v: list }); }
         else await ODB.put('kv', { id: k, v: { ...(v || {}), ...(have || {}) } }); }
-      if (typeof mkLoad === 'function') await mkLoad(); if (typeof cmtLoad === 'function') { await cmtLoad(); cmtRender(); } }
+      if (typeof mkLoad === 'function') await mkLoad(); if (typeof cmtLoad === 'function') { await cmtLoad(); cmtRender(); } if (typeof crLoad === 'function') await crLoad(); }
     if (files && d.docs) { const have = new Set((await ODB.all('docs')).map(x => x.id));
       for (const m of d.docs) { if (have.has(m.id)) continue; const u8 = files.get(m.file); if (!u8) continue; const { file: _f, ...rest } = m; await ODB.put('docs', { ...rest, blob: new Blob([u8], { type: m.mime || '' }) }); nd++; } }
     contacts.sort((a, b) => (a.name || a.company || '').localeCompare(b.name || b.company || ''));
@@ -433,7 +434,10 @@ async function start() {
     + Object.keys(TYPES).filter(k => !listed.has(k)).map(k => `<option value="${k}">${hesc(TYPES[k].label)}</option>`).join('');
   $('#f_propType').innerHTML = PROPERTY_TYPES.map(p => `<option value="${p[0]}">${hesc(p[1])}</option>`).join('');
   document.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => showTab(b.dataset.tab));
-  cmtInit();
+  cmtInit(); crLoad().then(() => { if (cur) renderReqs(); });
+  $('#booksForm').addEventListener('input', update); $('#booksForm').addEventListener('change', update);
+  document.addEventListener('click', e => { const b = e.target.closest('[data-gotab]'); if (b) { e.preventDefault(); showTab(b.dataset.gotab); window.scrollTo(0, 0); } });
+  $('#f_signDate').addEventListener('change', () => { const d = $('#f_signDate').value; if (d && !$('#f_invDate').value) $('#f_invDate').value = d; if (d && !$('#f_invNo').value.trim()) $('#f_invNo').value = invNoOf($('#f_fileNo').value); update(); renderBooks(); });
   $('#letterForm').addEventListener('input', update); ['#f_otherUsers', '#f_userText'].forEach(id => $(id).addEventListener('input', syncVisibility)); $('#letterForm').addEventListener('change', update);
   $('#letterForm').addEventListener('submit', e => e.preventDefault());
   $('#f_reportForm').addEventListener('change', () => { if (cur) cur.formPicked = true; syncVisibility(); });
@@ -458,7 +462,7 @@ async function start() {
   $('#genieLink').addEventListener('click', () => saveLetter(true));
   $('#genieTop').addEventListener('click', () => { syncGenieTop(); if ($('#genieTop').href.includes('?order=')) saveLetter(true); });
   ['#f_lenderDiff', '#f_amcUsed', '#f_inspDate', '#f_effDate', '#f_dod'].forEach(id => $(id).addEventListener('change', syncVisibility));
-  $('#f_stage').addEventListener('change', () => { cur = readForm(); renderLetters(); });
+  $('#f_stage').addEventListener('change', () => { if ($('#f_stage').value === 'Delivered') deliveredToday(); cur = readForm(); renderLetters(); });
   document.querySelectorAll('[data-tab]').forEach(b => b.addEventListener('click', () => { if (b.dataset.tab !== 'letter' && cur && hasContent(readForm())) saveLetter(true); }));
   document.querySelectorAll('input[name=aiUse]').forEach(r => r.addEventListener('change', () => { syncVisibility(); update(); }));
   $('#btnBackup').onclick = backup; $('#restoreFile').onchange = e => { if (e.target.files[0]) restore(e.target.files[0]); e.target.value = ''; };

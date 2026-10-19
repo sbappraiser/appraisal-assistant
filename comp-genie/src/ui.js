@@ -15,8 +15,9 @@ async function start() {
   app.job = (POP && app.jobs.find(j => j.id === POP.job)) || app.jobs.find(j => last && j.id === last.v) || app.jobs[0] || null;
   app.orders = await readOrders();
   const oq = new URLSearchParams(location.search).get('order');
+  app.home = !POP && !oq && !new URLSearchParams(location.search).get('job');   // her request (Oct 19 2026): open on the list of assignments, not the last one
   if (oq) { history.replaceState(null, '', location.pathname); const o = app.orders.find(x => x.id === oq); if (o) await jobFromOrder(o); else toast('That order was not found in this browser. Open the Appraisal Assistant in this same browser (Chrome).', 6000); }
-  if (!app.job) await newJob();
+  if (!app.job && !app.home) await newJob();
   app.jobs.forEach(j => (j.files || []).forEach(f => { if (!f.id) { f.id = uid(); f.legacy = true; } }));  // files dropped before "remove file" existed
   await loadPhotos();
   render();
@@ -222,15 +223,36 @@ function fillSubjectFrom(r) {
 }
 
 /* ---------------- rendering ---------------- */
+/* the start page: every assignment, newest first */
+function homeHTML() {
+  const orderOfJ = j => (app.orders || []).find(o => o.id === j.orderId) || null;
+  const d = t => t ? new Date(t).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+  const open = (app.orders || []).filter(o => !ORDER_DONE.includes(o.stage || 'New')).sort((a, b) => String(b.orderDate || '').localeCompare(String(a.orderDate || '')));
+  return `<header class="top"><h1>Comp Genie</h1>
+    <span class="pill ${ARCH.loaded ? 'ok' : 'warn'}">${ARCH.loaded ? `Archive: ${ARCH.rows.length.toLocaleString()} records` : 'Archive not loaded'}</span>
+    <span class="pill">${app.cort.length ? `CORT: ${app.cort.length} sales` : 'No CORT table'}</span><span class="grow"></span>
+    <button class="btn" data-act="newjob">New assignment</button>
+    ${open.length ? `<select data-act="fromorder" aria-label="Start from an order"><option value="">From an order…</option>${open.map(o => `<option value="${o.id}">${esc(orderName(o))}</option>`).join('')}</select>` : ''}</header>
+  <section class="card"><h2>Your assignments</h2>
+    ${app.jobs.length ? `<p class="muted">Click one to open it. To go back to this list later, choose <b>All assignments</b> in the Assignment box at the top.</p>
+    <table class="tbl homelist"><thead><tr><th>Assignment</th><th>Subject</th><th>Effective date</th><th>Comps</th><th>Order</th><th>Last changed</th></tr></thead><tbody>
+    ${app.jobs.map(j => { const o = orderOfJ(j), S = j.subject || {}; const used = (j.comps || []).filter(c => c.use).length;
+      return `<tr data-act="openjob" data-id="${j.id}" tabindex="0" style="cursor:pointer"><td><b>${esc(j.name)}</b></td><td>${esc([S.addr, S.city].filter(Boolean).join(', '))}</td><td>${esc(S.eff || '')}</td><td>${(j.comps || []).length}${used ? ` (${used} on the grid)` : ''}</td><td>${o ? esc(o.fileNo || '') + (o.stage ? ' · ' + esc(o.stage) : '') : ''}</td><td>${esc(d(j.updated))}</td></tr>`; }).join('')}
+    </tbody></table>` : '<p>No assignments yet. Click <b>New assignment</b>, or start one <b>From an order</b> in the Appraisal Assistant.</p>'}
+  </section>
+  <footer class="foot">Comp Genie · your data stays on this computer · build ${typeof BUILD !== 'undefined' ? BUILD : ''}</footer>`;
+}
 function render() {
   const J = app.job; const root = $('#app');
   if (POP) { root.innerHTML = popHTML(J); document.title = `Comps ${POP.from}–${POP.to} · ${J.name}`; wbUndoBar(); return; }
+  if (app.home || !J) { root.innerHTML = homeHTML(); document.title = 'Comp Genie'; return; }
+  document.title = 'Comp Genie · ' + J.name;
   root.innerHTML = `
   <header class="top"><h1>Comp Genie</h1>
     <span class="pill ${ARCH.loaded ? 'ok' : 'warn'}">${ARCH.loaded ? `Archive: ${ARCH.rows.length.toLocaleString()} records` : 'Archive not loaded'}</span>
     <span class="pill">${app.cort.length ? `CORT: ${app.cort.length} sales` : 'No CORT table'}</span>
     <span class="grow"></span>
-    <label class="jobsel">Assignment <select data-act="pickjob" id="jobpick">${app.jobs.map(j => `<option value="${j.id}" ${j.id === J.id ? 'selected' : ''}>${esc(j.name)}</option>`).join('')}</select></label>
+    <label class="jobsel">Assignment <select data-act="pickjob" id="jobpick"><option value="">All assignments (start page)</option>${app.jobs.map(j => `<option value="${j.id}" ${j.id === J.id ? 'selected' : ''}>${esc(j.name)}</option>`).join('')}</select></label>
     <button class="btn" data-act="newjob">New assignment</button>
     ${(app.orders || []).some(o => !ORDER_DONE.includes(o.stage || 'New')) ? `<select data-act="fromorder" aria-label="Start from an order"><option value="">From an order…</option>${app.orders.filter(o => !ORDER_DONE.includes(o.stage || 'New')).sort((a, b) => String(b.orderDate || '').localeCompare(String(a.orderDate || ''))).map(o => `<option value="${o.id}">${esc(orderName(o))}</option>`).join('')}</select>` : ''}
     <button class="btn" data-act="backup" title="Save this assignment to a file">Back up</button>
@@ -474,9 +496,10 @@ document.addEventListener('click', async e => {
   if (t.dataset.rmyes) { app.job.comps = app.job.comps.filter(x => x.id !== t.dataset.rmyes); if (app.sel === t.dataset.rmyes) app.sel = null; app.confirm = null; save(); render(); return; }
   switch (t.dataset.act) {
     case 'add': addByAddress($('#addr').value); break;
-    case 'newjob': await newJob(); await loadPhotos(); render(); break;
+    case 'newjob': app.home = false; await newJob(); await loadPhotos(); render(); break;
+    case 'openjob': { const j = app.jobs.find(x => x.id === t.dataset.id); if (!j) break; app.home = false; app.job = j; app.sel = null; await DB.put('kv', { id: 'lastJob', v: j.id }); await loadPhotos(); render(); window.scrollTo(0, 0); break; }
     case 'deljob': app.confirm = 'deljob'; render(); break;
-    case 'deljob-yes': { const id = app.job.id; await DB.del('jobs', id); for (const p of await DB.byJob(id)) await DB.del('photos', p.id); app.jobs = app.jobs.filter(j => j.id !== id); app.job = app.jobs[0] || null; app.confirm = null; if (!app.job) await newJob(); await loadPhotos(); render(); break; }
+    case 'deljob-yes': { const id = app.job.id; await DB.del('jobs', id); for (const p of await DB.byJob(id)) await DB.del('photos', p.id); app.jobs = app.jobs.filter(j => j.id !== id); app.job = app.jobs[0] || null; app.confirm = null; app.home = true; await loadPhotos(); render(); window.scrollTo(0, 0); toast('Assignment deleted'); break; }
     case 'cancel': app.confirm = null; render(); break;
     case 'rmall': app.confirm = 'rmall'; render(); break;
     case 'rmall-yes': app.job.comps = []; app.sel = null; app.confirm = null; await saveNow(); render(); toast('All comps removed – your files list is unchanged'); break;
@@ -521,8 +544,9 @@ document.addEventListener('change', async e => {
   const t = e.target;
   if (t.dataset.act === 'files' && t.files.length) { await ingest([...t.files]); t.value = ''; return; }
   if (t.dataset.act === 'subjcrs' && t.files.length) { try { const r = crsCanon(parseCRS(await pdfLines(t.files[0]))); app.job.subject.crs = r; ['addr', 'city', 'zip', 'apn'].forEach(k => { if (r[k]) app.job.subject[k] = r[k]; }); if (r.lat) { app.job.subject.lat = r.lat; app.job.subject.lon = r.lon; } if (app.job.name === 'New assignment' && r.addr) app.job.name = r.addr; logFile(t.files[0].name, 'CRS (subject)', 1); save(); render(); toast('Subject filled from the CRS report'); } catch (err) { toast('Could not read that CRS report'); } return; }
-  if (t.dataset.act === 'fromorder' && t.value) { const o = app.orders.find(x => x.id === t.value); if (o) { await jobFromOrder(o); render(); } return; }
-  if (t.dataset.act === 'pickjob') { app.job = app.jobs.find(j => j.id === t.value); app.sel = null; await DB.put('kv', { id: 'lastJob', v: app.job.id }); await loadPhotos(); render(); return; }
+  if (t.dataset.act === 'fromorder' && t.value) { const o = app.orders.find(x => x.id === t.value); if (o) { app.home = false; await jobFromOrder(o); await loadPhotos(); render(); } return; }
+  if (t.dataset.act === 'pickjob' && !t.value) { app.home = true; render(); window.scrollTo(0, 0); return; }
+  if (t.dataset.act === 'pickjob') { app.home = false; app.job = app.jobs.find(j => j.id === t.value); app.sel = null; await DB.put('kv', { id: 'lastJob', v: app.job.id }); await loadPhotos(); render(); return; }
   if (t.dataset.act === 'showall') { app.showAll = t.checked; render(); return; }
   if (t.dataset.use) { const c = app.job.comps.find(x => x.id === t.dataset.use); const n = t.value ? +t.value : null; if (!n && c.use) { markNotUsed(c); app.nuAsk = c.id; } if (n) app.job.comps.forEach(x => { if (x !== c && x.use === n) x.use = null; }); c.use = n; save(); render(); return; }
   if (t.dataset.archpick) { const c = app.job.comps.find(x => x.id === t.dataset.archpick); c.archPick = +t.value; save(); render(); return; }

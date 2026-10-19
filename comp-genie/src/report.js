@@ -56,6 +56,7 @@ function reportHTML(J) {
       <label class="fld"><span>Number of parcels</span>${inp('parcels', '1', '5em')}</label>
       <label class="fld"><span>All rights included in the appraisal?</span>${yn('allRights', true)}</label>
       <label class="fld"><span>Rights not included <small class="muted">(only sent when the answer above is No; 540 characters)</small></span><textarea class="txt" rows="2" maxlength="540" data-rpt="rightsNot" placeholder="${esc(F.rightsNot || 'e.g. Oil, gas and mineral rights below 500 feet, reserved in a prior deed')}">${esc(R.rightsNot || '')}</textarea>${F.rightsNot && R.allRights !== 'false' ? '<small class="muted">The order has a reservation from the deed. If those rights are not part of what you appraised, answer No above.</small>' : ''}</label>
+      ${R.allRights === 'false' ? `<label class="fld"><span>Kind of rights not included</span>${sel('rightsType', RIGHTS_TYPES, rightsGuess(rv(J, 'rightsNot')), 'from the description')}</label>${R.rightsType === 'Other' ? `<label class="fld"><span>Describe (33 characters)</span>${inp('rightsOther', 'e.g. Geothermal rights')}</label>` : ''}` : ''}
       <label class="fld"><span>Zoning code</span>${inp('zone', 'e.g. E-3', '8em')}</label>
       <label class="fld"><span>Zoning description</span>${inp('zoneDesc', 'e.g. One-family residential, 7,000 sq. ft. minimum lot')}<small class="muted">Kept for this code, so you type it once.</small></label></section>
     <section><h3>Highest and best use</h3>
@@ -88,7 +89,7 @@ document.addEventListener('change', e => {
   const t = e.target; if (!app.job) return; const R = R0(app.job);
   if (t.dataset.rpt) { const k = t.dataset.rpt, v = t.value.trim(); if (v === '') delete R[k]; else R[k] = k === 'zone' ? v.toUpperCase() : t.tagName === 'TEXTAREA' ? t.value : v;
     if (k === 'zoneDesc' && v) { const code = rv(app.job, 'zone').toUpperCase(); if (code) { zoneTable()[code] = v; DB.put('kv', { id: 'zoneDesc', v: app.zoneDesc }); } }
-    save(); if (['assign', 'zone'].includes(k)) { const c = $('#reportCard'); if (c) c.innerHTML = reportHTML(app.job); } return; }
+    save(); if (['assign', 'zone', 'allRights', 'rightsType'].includes(k)) { const c = $('#reportCard'); if (c) c.innerHTML = reportHTML(app.job); } return; }
   if (t.dataset.hbu) { R.hbu[t.dataset.hbu] = t.checked; save(); }
 });
 document.addEventListener('click', e => {
@@ -97,6 +98,13 @@ document.addEventListener('click', e => {
   if (b.dataset.act === 'hbu-draft') { if (R.hbuNote && !confirm('Replace your comment with a new draft?')) return; R.hbuNote = hbuDraft(app.job); }
   save(); const c = $('#reportCard'); if (c) c.innerHTML = reportHTML(app.job);
 });
+
+/* rights not included (A-1 0100.0035–0037, sort 1350–1352: after PROPERTY_VALUATIONS, before SALES_CONTRACTS) */
+if (D1_ORDER.PROPERTY && !D1_ORDER.PROPERTY.includes('REAL_PROPERTY_INTERESTS')) D1_ORDER.PROPERTY.splice(D1_ORDER.PROPERTY.indexOf('SALES_CONTRACTS'), 0, 'REAL_PROPERTY_INTERESTS');
+D1_ORDER.REAL_PROPERTY_INTERESTS = D1_ORDER.REAL_PROPERTY_INTERESTS || ['REAL_PROPERTY_INTEREST'];
+D1_ORDER.REAL_PROPERTY_INTEREST = D1_ORDER.REAL_PROPERTY_INTEREST || ['AppraisedIndicator', 'PropertyPartialInterestType', 'PropertyPartialInterestTypeOtherDescription'];
+const RIGHTS_TYPES = [['MineralRights', 'Mineral rights (oil, gas, minerals)'], ['WaterRights', 'Water rights'], ['AirRights', 'Air rights'], ['TimberRights', 'Timber rights'], ['Other', 'Other']];
+const rightsGuess = t => /oil|gas|mineral|hydrocarbon/i.test(t || '') ? 'MineralRights' : /water/i.test(t || '') ? 'WaterRights' : /timber/i.test(t || '') ? 'TimberRights' : /\bair\b/i.test(t || '') ? 'AirRights' : '';
 
 /* ---------------- into the full report (DOM of the merged file) ---------------- */
 function writeReportXML(doc, NS, J, SUBJ, VA, SVC) {
@@ -137,7 +145,9 @@ function writeReportXML(doc, NS, J, SUBJ, VA, SVC) {
   const zone = rv(J, 'zone'), zd = rv(J, 'zoneDesc');
   if (zone || zd) { const z = path(SITE, 'SITE_ZONING', 'SITE_ZONING_DETAIL'); set(z, 'SiteZoningClassificationDescription', zd && zd.slice(0, 100)); set(z, 'SiteZoningClassificationIdentifier', zone); }
   set(path(SUBJ, 'SALES_CONTRACTS', 'SALES_CONTRACT', 'SALES_CONTRACT_DETAIL'), 'AllPropertyRightsAppraisedIndicator', tf('allRights', 'true'));
-  if (tf('allRights', 'true') === 'false') { const rn = rv(J, 'rightsNot'); if (rn) set(sow, 'PropertyRightsNotAppraisedDescription', String(rn).slice(0, 540)); }
+  if (tf('allRights', 'true') === 'false') { const rn = rv(J, 'rightsNot'); if (rn) set(sow, 'PropertyRightsNotAppraisedDescription', String(rn).slice(0, 540));
+    const ty = R.rightsType || rightsGuess(rn); if (ty) { const ri = add(path(SUBJ, 'REAL_PROPERTY_INTERESTS'), 'REAL_PROPERTY_INTEREST');
+      set(ri, 'AppraisedIndicator', 'false'); set(ri, 'PropertyPartialInterestType', ty); if (ty === 'Other') set(ri, 'PropertyPartialInterestTypeOtherDescription', String(R.rightsOther || '').slice(0, 33) || null); } }
   if (HBU_TESTS.some(([k]) => H[k]) || R.hbuPresent) { const hb = child(SITE, 'HIGHEST_AND_BEST_USE');
     set(hb, 'FinanciallyFeasibleIndicator', String(!!H.fin)); set(hb, 'LegallyPermissibleIndicator', String(!!H.legal)); set(hb, 'MaximallyProductiveIndicator', String(!!H.max)); set(hb, 'PhysicallyPossibleIndicator', String(!!H.phys)); set(hb, 'SiteHighestBestUseIndicator', R.hbuPresent || null); }
   comment('HighestAndBestUse', R.hbuNote, 4000);

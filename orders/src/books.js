@@ -50,16 +50,23 @@ function printWindow(html, what) {
   w.document.open(); w.document.write(html); w.document.close(); setTimeout(() => { try { w.focus(); w.print(); } catch (e) {} }, 300);
   toast((what || 'It') + ' opened in a new tab – choose Destination: Save as PDF', 6000); return w;
 }
+const invNoOf = fileNo => { const f = String(fileNo || '').trim(); return f ? (/-inv$/i.test(f) ? f : f + '-inv') : ''; };   // her rule: the file name + "-inv" (brkl5464 → brkl5464-inv)
+function deliveredToday() {   // order set to Delivered: the day she signs and sends the report is the invoice date
+  if (!$('#f_signDate').value) $('#f_signDate').value = todayISO();
+  if (!$('#f_invDate').value) $('#f_invDate').value = $('#f_signDate').value;
+  if (!$('#f_invNo').value.trim()) $('#f_invNo').value = invNoOf($('#f_fileNo').value);
+  toast('Delivered ' + longDate($('#f_signDate').value) + ' – the invoice is dated that day (Bookkeeping tab)', 5000);
+}
 function makeInvoice() {
-  if (!$('#f_invNo').value.trim()) $('#f_invNo').value = $('#f_fileNo').value.trim();
-  if (!$('#f_invDate').value) $('#f_invDate').value = todayISO();
+  if (!$('#f_invNo').value.trim()) $('#f_invNo').value = invNoOf($('#f_fileNo').value);
+  if (!$('#f_invDate').value) $('#f_invDate').value = $('#f_signDate').value || todayISO();
   cur = readForm(); if (!invAmount(cur)) { toast('Fill in the fee first (Total fee, above)'); $('#f_fee').focus(); return; }
   saveLetter(true); renderBooks(); printWindow(invoiceHTML(cur), 'The invoice');
 }
 function markPaid() {
   if (!$('#f_paidDate').value) $('#f_paidDate').value = todayISO();
   cur = readForm(); if (!String(cur.paidAmt || '').trim()) { $('#f_paidAmt').value = invBalance(cur).toLocaleString(); }
-  if (!cur.invDate) { $('#f_invDate').value = $('#f_paidDate').value; if (!$('#f_invNo').value.trim()) $('#f_invNo').value = $('#f_fileNo').value.trim(); }
+  if (!cur.invDate) { $('#f_invDate').value = $('#f_signDate').value || $('#f_paidDate').value; if (!$('#f_invNo').value.trim()) $('#f_invNo').value = invNoOf($('#f_fileNo').value); }
   if ($('#f_stage').value !== 'Cancelled') $('#f_stage').value = 'Paid';
   cur = readForm(); saveLetter(true); renderBooks(); renderLetters(); toast('Marked paid – order status set to Paid');
 }
@@ -69,7 +76,7 @@ function renderBooks() {
   el.className = 'help' + (isUnpaid(o) && daysOut(o) > 30 ? ' warnTxt' : '');
   el.innerHTML = o.paidDate ? `<b class="ck">✓</b> Paid ${h(longDate(o.paidDate))}${o.paidMethod ? ' by ' + h(o.paidMethod) : ''}${o.paidAmt ? ' · ' + usd(o.paidAmt) : ''}.`
     : o.invDate ? `Invoiced ${h(longDate(o.invDate))} · balance due ${usd(invBalance(o))} · ${daysOut(o)} day${daysOut(o) === 1 ? '' : 's'} outstanding.`
-    : tot ? `Not invoiced yet. When you deliver the report, click <b>Make the invoice</b>: it fills in the number (your file number), today’s date and ${usd(tot)}${n$(o.retainer) ? ' less the ' + usd(o.retainer) + ' retainer' : ''}.` : 'Fill in the fee above, then make the invoice when you deliver the report.';
+    : tot ? `Not invoiced yet. When you deliver the report, click <b>Make the invoice</b>: it fills in the number (your file number + -inv), the date you signed and delivered the report (today if blank) and ${usd(tot)}${n$(o.retainer) ? ' less the ' + usd(o.retainer) + ' retainer' : ''}.` : 'Fill in the fee above, then make the invoice when you deliver the report.';
 }
 function followUpMail(o) {
   const B = billTo(o); const first = (B.attn || '').trim().split(/\s+/)[0] || '';
@@ -88,8 +95,8 @@ function unpaidHTML() {
     <div class="row"><label>Summary for <select id="bkHalf">${[yr, yr - 1, yr - 2].flatMap(y => [[y, 2], [y, 1]]).filter(([y, hh]) => y < yr || hh <= half).map(([y, hh]) => `<option value="${y}-${hh}">${hh === 1 ? 'January–June' : 'July–December'} ${y}</option>`).join('')}</select></label><button type="button" class="btn ghost small" id="bkSum">Print the summary</button></div>`;
 }
 function wireUnpaid(box) {
-  box.querySelectorAll('[data-bkopen]').forEach(b => b.onclick = () => openLetter(b.dataset.bkopen));
-  box.querySelectorAll('[data-bkpaid]').forEach(b => b.onclick = () => { openLetter(b.dataset.bkpaid); setTimeout(() => { markPaid(); const f = $('#booksSet'); if (f) f.scrollIntoView({ block: 'center' }); }, 60); });
+  box.querySelectorAll('[data-bkopen]').forEach(b => b.onclick = () => { openLetter(b.dataset.bkopen); setTimeout(() => showTab('books'), 60); });
+  box.querySelectorAll('[data-bkpaid]').forEach(b => b.onclick = () => { openLetter(b.dataset.bkpaid); setTimeout(() => { showTab('books'); markPaid(); const f = $('#booksSet'); if (f) f.scrollIntoView({ block: 'center' }); }, 60); });
   const s = box.querySelector('#bkSum'); if (s) s.onclick = () => { const [y, hh] = box.querySelector('#bkHalf').value.split('-').map(Number); printWindow(summaryHTML(y, hh), 'The summary'); };
 }
 function summaryHTML(y, half) {
