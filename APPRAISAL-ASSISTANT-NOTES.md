@@ -431,3 +431,8 @@ Her ask: dictate the whole inspection and have it land in each room, interior, e
 - Comp genie: genie saveNow stores job.status = precheckGrid messages (minus "outside the adjusted range") and posts aa-genie-status to the hub; the hub also reads the genie's IndexedDB 'appraisal-assistant' jobs read-only (orderId → status). Job without status = "open it once".
 - Bookkeeping: invNo + invDate + paidDate (Cancelled = done).
 - Builds o1-1019-1426, g2-1019-1425.
+
+## Comp history (Oct 19 2026, her request; genie src/history.js, g2-1019-1437)
+- Right-click a comp ([data-open] list row, [data-wbcol] grid/workbook header) or History button on its page → window listing every version: ACI archive records (c.src.arch: report file name, entered date, role; form = UAD 2.6 when Q/C, else "GPAR / older form (word ratings)"), every 3.6 genie job with the same property (APN + address, MLS, or address key; role Comp N / Considered not used + reasons / On the list), and mycomps saved copies whose job is gone. Fields filled = non-blank FIELDS.
+- Sort (her question): default = this sale (price ±$1k or date ±1.5 mo of the grid's sale) first, then other sales newest first, newest version first inside; headings sort by date / report / form / fields filled.
+- Use: archive → c.archPick; 3.6 → "Fill blanks" or "Use its values" into c.edit (different sale: house/site only, never sale/listing fields); copies not-used reasons when the comp has none and is not on the grid.

@@ -135,3 +135,11 @@ table.grid td+td,table.grid th+th{border-left:1px solid #c9d1da}table.grid td.su
 table.grid tr.info th,table.grid tr.info td{background:#fafbfc}
 table.grid tbody th:first-child,table.grid thead th:first-child{width:230px;max-width:250px;white-space:normal}
 table.grid{min-width:0;width:auto}table.grid td.subj{width:140px}
+/* comp history (history.js) */
+.hist { position: fixed; inset: 0; background: rgba(20, 30, 40, .35); z-index: 60; display: grid; place-items: start center; padding: 40px 16px; overflow: auto; }
+.histcard { background: var(--panel, #fff); color: var(--ink, #1c2631); border-radius: 12px; box-shadow: 0 12px 40px rgba(0,0,0,.25); padding: 16px 20px; width: min(1050px, 100%); }
+.histcard h2 { margin: 0; font-size: 18px; }
+.hlist tr.hgrp th { background: var(--accent-soft, #fde8d2); text-align: left; font-weight: 700; }
+.hlist tr.hrow { cursor: pointer; } .hlist tr.hrow:hover, .hlist tr.hrow.on { background: rgba(0,0,0,.04); }
+.hlist td.acts { white-space: nowrap; } .hlist td.acts .btn { margin-left: 4px; }
+.hfields { font-size: 13px; } .hfields th { text-align: left; font-weight: 600; padding-right: 12px; color: var(--muted, #5b6876); }
