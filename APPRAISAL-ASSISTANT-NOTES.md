@@ -639,3 +639,4 @@ Decisions (her, Oct 19–20): "Exterior of dwelling" instead of left/right/side 
 - g2-1020-2202: flags (red badge, red box, flagged rows) only for comps on the grid (c.use); others get a folded 'notes on this property' list.
 - g2-1020-2207: low / mid / high selector (fineSel) beside Quality and Condition on the comp's Field by field page (main and popped-out window); same value as the grid's.
 - g2-1020-2209: comp Field by field rows yellow (tr.disrow) when disagree() and no pick/edit; clears on click. Sq-ft-differs flag only while GLA is unpicked. Q: 3.6 outdoor living – AMENITY repeats (Patio, Porch, Deck, Balcony, Gazebo… each its own AmenityType); export already writes each one found in the porch text.
+- g2-1020-2210: empty DETAIL_ALWAYS rows (no source, no value) also yellow (emptyrow) until she types a value.
