@@ -248,7 +248,7 @@ async function ingest(files) {
     try {
       app.busy = 'Reading ' + f.name + '…'; renderBusy();
       const low = f.name.toLowerCase();
-      if (low.endsWith('.zip')) { const z = await readZip(f); notes.push(z.has('inspection-backup.json') ? await ingestInspection(z, f.name) : await ingestPhotos(f, z)); }
+      if (low.endsWith('.zip')) { const z = await readZip(f); if (z.has('comp-genie.json')) { backupPick(z, f.name); continue; } notes.push(z.has('inspection-backup.json') ? await ingestInspection(z, f.name) : await ingestPhotos(f, z)); }
       else if (low.endsWith('.csv')) {
         const text = await readText(f); const head = text.slice(0, 2000).toLowerCase();
         if (head.includes('listing number')) notes.push(ingestMls(parseMlsCsv(text), f.name));
@@ -867,3 +867,18 @@ if (!CPOP && !POP && WBC) WBC.addEventListener('message', e => { const d = e.dat
   setTimeout(() => { if (next) { const tr = document.querySelector(`table.comps tr[data-open="${CSS.escape(next.id)}"]`); if (tr) { tr.scrollIntoView({ behavior: 'smooth', block: 'center' }); tr.classList.add('nextflag'); const b = tr.querySelector('[data-act="cpop"]'); if (b) b.focus({ preventScroll: true }); setTimeout(() => tr.classList.remove('nextflag'), 6000); }
       toast('Next comp with flags: ' + compTitle(next) + ' (comp ' + next.use + ') – press Enter to pop it out', 6000); }
     else { const cc = document.getElementById('compsCard'); if (cc) cc.scrollIntoView({ behavior: 'smooth', block: 'start' }); toast('No more flags on the comps on your grid ✓', 5000); } }, 150); });
+
+/* her Appraisal Assistant daily backup (.zip with comp-genie.json): pick an assignment saved in it and bring it back as a copy – nothing here is overwritten (Oct 20 2026) */
+function backupPick(z, fname) {
+  let g = null; try { g = JSON.parse(new TextDecoder().decode(z.get('comp-genie.json'))); } catch (e) {} if (!g || !Array.isArray(g.jobs) || !g.jobs.length) { toast('That backup has no Comp genie assignments'); return; }
+  const when = t => t ? new Date(t).toLocaleString([], { month: 'numeric', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' }) : '';
+  const rows = g.jobs.slice().sort((a, b) => (b.updated || 0) - (a.updated || 0)).map(j => { const cs = j.comps || []; return `<tr><td><b>${esc(j.name)}</b><br><small>${esc((j.subject || {}).addr || '')}</small></td><td>${esc(when(j.created))}</td><td>${esc(when(j.updated))}</td><td class="r">${cs.length}</td><td class="r">${cs.filter(c => c.use).length}</td><td class="r">${cs.filter(c => c.src && c.src.crs && !c.src.crs.fromList).length}</td><td><button class="btn sm primary" data-bkrestore="${esc(j.id)}">Bring back as a copy</button></td></tr>`; }).join('');
+  const bg = document.createElement('div'); bg.className = 'sheetbg';
+  bg.innerHTML = `<div class="sheet"><h2>Assignments in your backup <small>${esc(fname)} · saved ${esc(when(g.saved))}</small></h2><p class="help">Pick the one to bring back. It comes in as a <b>copy</b> named “… (from backup)” – your assignments here are not changed. Photos are not in this backup; drop the MLS photos zip again if you want them.</p>
+    <div class="tablewrap"><table class="mini"><tr><th>Assignment</th><th>Started</th><th>Last changed</th><th class="r">Comps</th><th class="r">On grid</th><th class="r">CRS reports</th><th></th></tr>${rows}</table></div><p><button class="btn" data-bkclose="1">Close</button></p></div>`;
+  document.body.appendChild(bg);
+  bg.addEventListener('click', async e => { const t = e.target; if (t.dataset.bkclose || t === bg) { bg.remove(); return; }
+    if (t.dataset.bkrestore) { const src = g.jobs.find(j => j.id === t.dataset.bkrestore); if (!src) return; const j = JSON.parse(JSON.stringify(src)); j.id = uid(); j.name = src.name + ' (from backup ' + new Date(g.saved || Date.now()).toLocaleDateString() + ')'; j.restoredFrom = src.id;   // keeps its order link and comes first, so opening the order opens this copy
+      app.jobs.unshift(j); app.job = j; app.sel = null; app.home = false; await saveNow(); j.comps.forEach(c => { c.src = c.src || {}; c.src.arch = c.src.arch || []; c.src.cort = c.src.cort || []; attachArchive(c); attachCort(c); }); await saveNow(); bg.remove(); render();
+      toast(`Brought back “${src.name}” as a copy: ${j.comps.length} comps, ${j.comps.filter(c => c.use).length} on the grid. Opening the order now opens this copy – when you are happy with it, delete the other one.`, 9000); } });
+}
