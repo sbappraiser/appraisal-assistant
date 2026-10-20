@@ -116,7 +116,7 @@ table.docs { table-layout: fixed; } table.docs td:first-child { width: 42%; over
 .mkgrid { display: grid; gap: 16px; } .mkcard { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; display: grid; gap: 12px; min-width: 0; }
 .mkcard h3 { margin: 0; font: 600 17px var(--ui); } .mkcard h4 { margin: 8px 0 0; font: 600 14px var(--ui); } .mkcard canvas { width: 100%; max-width: 900px; height: auto; border: 1px solid var(--line); border-radius: 8px; background: #fff; display: block; }
 .mkcard figure { margin: 0; display: grid; gap: 6px; } table.uad th { width: 34%; } table.uad textarea { width: 100%; } table.uad td small { font-size: 12.5px; }
-table.mkrows td small { display: block; color: var(--muted); font-size: 12px; } table.mkrows .mkfix { display: flex; gap: 4px; align-items: center; margin-top: 4px; font-size: 13px; text-decoration: none; } table.mkrows .mkfix input { width: 9em; font-size: 13px; padding: 2px 4px; } table.mkrows tr.off td .mkfix, table.mkrows tr.off td .warnTxt { text-decoration: none; } table.mkrows tr.off td { color: var(--muted); text-decoration: line-through; } table.mkrows tr.off td:first-child, table.mkrows tr.off td:last-child { text-decoration: none; }
+table.mkrows td small { display: block; color: var(--muted); font-size: 12px; } .mkcsvs { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 6px; } table.mkrows .mkfix { display: flex; gap: 4px; align-items: center; margin-top: 4px; font-size: 13px; text-decoration: none; } table.mkrows .mkfix input { width: 9em; font-size: 13px; padding: 2px 4px; } table.mkrows tr.off td .mkfix, table.mkrows tr.off td .warnTxt { text-decoration: none; } table.mkrows tr.off td { color: var(--muted); text-decoration: line-through; } table.mkrows tr.off td:first-child, table.mkrows tr.off td:last-child { text-decoration: none; }
 .cnt { display: block; font-size: 12px; color: var(--muted); text-align: right; } .cnt.near { color: var(--warn); } .cnt.over { color: var(--danger); font-weight: 700; } .muted { color: var(--muted); } .warnTxt { color: var(--warn); font-weight: 600; }
 .types { display: flex; flex-wrap: wrap; gap: 4px 12px; padding-top: 6px; } .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; } .zil input { width: 100%; }
 #reader { position: fixed; inset: 0; z-index: 20; background: var(--bg); display: grid; grid-template-rows: auto 1fr; } body.reading { overflow: hidden; }
@@ -725,7 +725,7 @@ mark.blank{background:#fff3a8;padding:0 2px;border-radius:3px}.cmt textarea{widt
 </div>
 <div id="toast" role="status" hidden></div>
 <script>
-const BUILD='o1-1020-0657';
+const BUILD='o1-1020-0659';
 const G = (() => {
 /* ---------------- small helpers ---------------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -2669,11 +2669,25 @@ function mkTable(R, src, which) {
       <td>${r.at === 'closed – no sale date' ? `<b class="warnTxt">closed – no sale date or price in the CSV</b><span class="mkfix">Sold <input type="date" data-mkfix="${which}|${h(r.mls)}|saleDate" aria-label="Sold date"> for $<input class="num" inputmode="numeric" data-mkfix="${which}|${h(r.mls)}|salePrice" placeholder="sold price" aria-label="Sold price"></span>` : h(r.at || 'not on the market') + (r.typed ? `<small>sale typed by you · <a href="#" data-mkunfix="${which}|${h(r.mls)}">undo</a></small>` : '')}</td><td>${h(shortDate(r.listDate))}</td><td>${h($m(r.listPrice))}</td><td>${h(shortDate(r.contractDate))}</td><td>${h(shortDate(r.saleDate))}</td><td>${h($m(r.salePrice))}</td><td>${r.salePrice && r.gla ? h($m(r.salePrice / r.gla)) : ''}</td><td>${h(r.domAt ?? '')}</td><td>${r.gla ? Math.round(r.gla).toLocaleString() : ''}</td>
       <td>${[r.twoUnits ? 'two units? (left out)' : '', r.distressed ? '<b>distressed: ' + h(r.details.join(', ')) + '</b>' : r.details.length ? h(r.details.join(', ')) : ''].filter(Boolean).join(' · ')}</td></tr>`).join('')}</table></div>`;
 }
-async function mkAddSearch(file, which) {
-  try { const rows = parseMarketCsv(await G.readText(file)); const m = which === 'micro' ? MI() : M(); m.rows = rows; m.file = file.name; m.exclude = {}; rows.filter(r => r.twoUnits).forEach(r => { m.exclude[r.mls] = true; });
-    m.types = null; mkChanged(); mkRender(true); toast(`${rows.length} listings read from ${file.name}` + (which === 'micro' ? ' (comparable-sales search)' : ' (market area)'));
+/* a CSV for a search box. A small file next to a loaded search is ADDED to it (her Oct 20 2026 loss: a one-sale CSV
+   replaced the whole search); a full export replaces it. The search before is kept: "Bring back the previous search". */
+async function mkAddSearch(file, which, how) {
+  try { const rows = parseMarketCsv(await G.readText(file)); const m = which === 'micro' ? MI() : M(); const old = m.rows || [];
+    let mode = how || 'replace';
+    if (!how && old.length && rows.length < Math.max(5, old.length / 2)) mode = confirm(`${file.name} has ${rows.length} listing${rows.length === 1 ? '' : 's'}; your search has ${old.length}.\n\nOK = ADD ${rows.length === 1 ? 'it' : 'them'} to your search (keeps the other ${old.length}).\nCancel = REPLACE the whole search with this file.`) ? 'add' : 'replace';
+    m.prev = { rows: old, file: m.file, exclude: { ...(m.exclude || {}) }, types: m.types, at: new Date().toISOString() };
+    if (mode === 'add') { const ids = new Set(rows.map(r => r.mls)); m.rows = [...old.filter(r => !ids.has(r.mls)), ...rows]; m.file = (m.file || '') + ' + ' + file.name; rows.forEach(r => { if (m.exclude) delete m.exclude[r.mls]; }); }
+    else { m.rows = rows; m.file = file.name; m.exclude = {}; m.types = null; }
+    rows.filter(r => r.twoUnits).forEach(r => { m.exclude = m.exclude || {}; m.exclude[r.mls] = true; });
+    mkChanged(); mkRender(true); toast(mode === 'add' ? `${rows.length} listing${rows.length === 1 ? '' : 's'} added – the search now has ${m.rows.length}` : `${rows.length} listings read from ${file.name}` + (which === 'micro' ? ' (comparable-sales search)' : ' (market area)'));
     if (!(cur.docs || []).some(d => d.name === file.name)) addDocs([file]); // keep the search with the order's documents
   } catch (e) { toast(e.message || 'Could not read that file'); }
+}
+/* the CSV files already in this order's documents, to load one again with one click */
+function mkCsvDocsHTML(which) {
+  const m = which === 'micro' ? MI() : M(); const cs = (cur.docs || []).filter(d => /\.csv$/i.test(d.name || ''));
+  const prev = m.prev && (m.prev.rows || []).length ? `<button type="button" class="btn small" data-mkprev="${which}">↶ Bring back the previous search (${m.prev.rows.length} listings${m.prev.file ? ' – ' + h(m.prev.file) : ''})</button>` : '';
+  return cs.length || prev ? `<div class="mkcsvs">${prev}${cs.length ? '<span class="help">Or use a CSV already in this order:</span>' + cs.map(d => `<button type="button" class="btn small ghost" data-mkcsv="${which}|${h(d.id)}" title="Replace the search with this file">${h(d.name)}</button>`).join('') : ''}</div>` : '';
 }
 async function mkAddStats(file) {
   try { toast('Reading the statistics PDF…'); const st = parseStatsPdf(await pdfItems(file)); st.file = file.name; MK.stats[st.ym] = st; await mkSave('stats');
@@ -2724,13 +2738,13 @@ function mkRender(redraft) {
       <label>Look back<select data-mk="lookback">${[3, 6, 12, 18, 24, 36].map(n => `<option value="${n}"${+m.lookback === n ? ' selected' : ''}>${n} months</option>`).join('')}</select></label>
       <label>Property types${typesAll.length ? `<span class="types">${typesAll.map(t => `<label class="check"><input type="checkbox" data-mktype="${h(t)}" ${!m.types || m.types.includes(t) ? 'checked' : ''}>${h(t)}</label>`).join('')}</span>` : '<input disabled value="from the search">'}</label></div>
     <p class="help">The effective date comes from the order (inspection date, or the date of death for retrospective work). Change it on the Order &amp; letter tab.</p>
-    <div class="drop" id="mkDrop"><div><span class="eyebrow mkhd">Market Area Boundary search <b>(MACRO market area)</b></span><p class="help">In Flexmls, search all residential listings inside your market area boundaries (actives, pendings and sales for the look-back period), export the CSV and drop it here.${m.file ? ' Loaded: <b>' + h(m.file) + '</b>' : ''}</p></div>
+    <div class="drop" id="mkDrop"><div><span class="eyebrow mkhd">Market Area Boundary search <b>(MACRO market area)</b></span><p class="help">In Flexmls, search all residential listings inside your market area boundaries (actives, pendings and sales for the look-back period), export the CSV and drop it here.${m.file ? ' Loaded: <b>' + h(m.file) + '</b>' : ''}</p>${mkCsvDocsHTML('macro')}</div>
       <label class="btn" for="mkFile">Choose CSV<input type="file" id="mkFile" accept=".csv,text/csv"></label></div>
     ${(cur.docs || []).some(d => d.type === 'marketSearch' && /\.csv$/i.test(d.name)) && !m.rows.length ? '<p><button type="button" class="btn small" id="mkFromDocs">Use the market search in this order’s documents</button></p>' : ''}
     ${m.rows.length ? mkTable(RA, m, 'macro') + '<p class="help">Untick a listing that is not competitive with the subject (wrong property type, two units on one lot, a different market). It is left out of every number below. Click a column heading to sort.</p>' : ''}
   </section>
   <section class="mkcard"><h3>2 · Search Criteria (17.004) – the comparable properties within the boundaries <small>fills the UAD 3.6 Search Result Metrics (17.005–17.016)</small></h3>
-    <div class="drop" id="mkDrop2"><div><span class="eyebrow mkhd">Search Criteria search <b>(MICRO – competitive market area)</b></span><p class="help">Your Flexmls search of the similar properties within the macro market area that compete with the subject (the same one you use for the 1004MC and, in a 2.6 report, the comparable listings and sales line at the top of the Sales Comparison Approach). Export the CSV and drop it here. Its results are the 3.6 Search Result Metrics, Demand/Supply and Marketing Time. Until it is loaded, the boundary search above is used.${MI().file ? ' Loaded: <b>' + h(MI().file) + '</b>' : ''}</p></div>
+    <div class="drop" id="mkDrop2"><div><span class="eyebrow mkhd">Search Criteria search <b>(MICRO – competitive market area)</b></span><p class="help">Your Flexmls search of the similar properties within the macro market area that compete with the subject (the same one you use for the 1004MC and, in a 2.6 report, the comparable listings and sales line at the top of the Sales Comparison Approach). Export the CSV and drop it here. Its results are the 3.6 Search Result Metrics, Demand/Supply and Marketing Time. Until it is loaded, the boundary search above is used.${MI().file ? ' Loaded: <b>' + h(MI().file) + '</b>' : ''}</p>${mkCsvDocsHTML('micro')}</div>
       <label class="btn" for="mkFile2">Choose CSV<input type="file" id="mkFile2" accept=".csv,text/csv"></label></div>
     ${MI().rows.length ? (() => { const Q = R; const ppsf = Q.S.filter(r => r.salePrice && r.gla).map(r => r.salePrice / r.gla), stl = Q.S.filter(r => r.salePrice && r.listPrice).map(r => r.salePrice / r.listPrice);
       return `<table class="facts uad mkmini"><tr><th>Sales in the look-back</th><td>${Q.salesN}${Q.salesN ? ` · ${$m(Q.saleLow)} / ${$m(Q.saleMed)} / ${$m(Q.saleHigh)} (low / median / high)` : ''}</td></tr>
@@ -2787,6 +2801,10 @@ function mkRender(redraft) {
   box.querySelectorAll('[data-mkinc2]').forEach(cb => cb.onchange = () => { const q = MI(); q.exclude = q.exclude || {}; if (cb.checked) delete q.exclude[cb.dataset.mkinc2]; else q.exclude[cb.dataset.mkinc2] = true; mkChanged(); mkRender(true); });
   $('#mkStatsFile').onchange = e => { const f = e.target.files[0]; e.target.value = ''; if (f) mkAddStats(f); };
   const fd = $('#mkFromDocs'); if (fd) fd.onclick = async () => { const d = cur.docs.find(d => d.type === 'marketSearch' && /\.csv$/i.test(d.name)); const f = await docFile(d.id); if (f) mkAddSearch(f); };
+  box.querySelectorAll('[data-mkcsv]').forEach(bt => bt.onclick = async e => { e.stopPropagation(); const [w, id] = bt.dataset.mkcsv.split('|'); const rec = await ODB.get('docs', id); const d = (cur.docs || []).find(x => x.id === id); if (!rec || !rec.blob) { toast('That file is not stored any more'); return; }
+    const ask = confirm('Replace the search with ' + (d ? d.name : 'this file') + '?\n\nOK = replace the whole search · Cancel = add its listings to the search'); await mkAddSearch(new File([rec.blob], d ? d.name : 'search.csv', { type: 'text/csv' }), w, ask ? 'replace' : 'add'); });
+  box.querySelectorAll('[data-mkprev]').forEach(bt => bt.onclick = e => { e.stopPropagation(); const q = bt.dataset.mkprev === 'micro' ? MI() : M(); const P = q.prev; if (!P) return; const now = { rows: q.rows, file: q.file, exclude: q.exclude, types: q.types };
+    Object.assign(q, { rows: P.rows, file: P.file, exclude: P.exclude || {}, types: P.types }); q.prev = now; mkChanged(); mkRender(true); toast('The previous search is back (' + q.rows.length + ' listings)'); });
   box.querySelectorAll('[data-mkfix]').forEach(inp => inp.onchange = () => { const [w, mls, k] = inp.dataset.mkfix.split('|'); const q = w === 'micro' ? MI() : m; q.fix = q.fix || {}; const f = q.fixDraft = q.fixDraft || {}; f[mls] = f[mls] || {};
     f[mls][k] = k === 'salePrice' ? G.num(inp.value) : inp.value; if (f[mls].saleDate && f[mls].salePrice) { q.fix[mls] = { saleDate: f[mls].saleDate, salePrice: f[mls].salePrice }; delete f[mls]; if (q.exclude) delete q.exclude[mls]; mkChanged(); mkRender(true); toast('Counted as a closed sale with the date and price you typed'); } });
   box.querySelectorAll('[data-mkunfix]').forEach(a => a.onclick = e => { e.preventDefault(); const [w, mls] = a.dataset.mkunfix.split('|'); const q = w === 'micro' ? MI() : m; if (q.fix) delete q.fix[mls]; mkChanged(); mkRender(true); });
