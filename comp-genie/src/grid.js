@@ -608,6 +608,9 @@ async function buildFullReport(J) {
   const S = subjFacts(J);
   adjRows(J).filter(r => r[3] === 'OTHER' && rowShown(r, J)).forEach(r => { const desc = otherDesc(r, S); if (!desc) return; const CM = child(SUBJ, 'COMPARABLE'); const AS = child(CM, 'COMPARABLE_ADJUSTMENTS'); const a = sub.createElementNS(NS, 'COMPARABLE_ADJUSTMENT'); AS.appendChild(a);
     leaf(a, 'AdditionalComparisonLineItemDescription', desc); leaf(a, 'AdditionalComparisonLineItemIdentifier', r[5]); leaf(a, 'ComparableAdjustmentType', 'SalesComparableAdditionalAdjustableComparisonItem'); });
+  // the subject's site influences when she changed them on the grid (▾ pick); otherwise the iPad's stay as they are
+  if (!blank(G0(J).subj.loc)) { const L = siParse(G0(J).subj.loc); const SITE = child(SUBJ, 'SITE'); [...SITE.children].filter(k => k.localName === 'SITE_INFLUENCES').forEach(k => k.remove());
+    if (L.length) { const SIS = child(SITE, 'SITE_INFLUENCES'); L.forEach(i => { const si = sub.createElementNS(NS, 'SITE_INFLUENCE'); SIS.appendChild(si); const d = sub.createElementNS(NS, 'SITE_INFLUENCE_DETAIL'); si.appendChild(d); siXV(d, i, (el, tag, v) => { if (!blank(v)) leaf(el, tag, v); }); }); } }
   // value and comment
   const G = G0(J); const VR = child(VA, 'VALUATION_REPORT');
   if (!blank(G.value) || G.note) { const sca = child(child(VR, 'APPROACH_TO_VALUE'), 'SALES_COMPARISON_APPROACH'); const det = child(sca, 'SALES_COMPARISON_APPROACH_DETAIL');

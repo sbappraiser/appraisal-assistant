@@ -52,6 +52,12 @@ function uadCool(s) {
 const VIEW_MAP = [[/ocean|water|coast|harbor|beach|island/i, 'Ocean'], [/mountain/i, 'Mountain'], [/skyline|city(?! street)/i, 'Skyline'], [/city street/i, 'CityStreet'], [/golf/i, 'GolfCourse'], [/wood/i, 'Woods'], [/park|greenbelt/i, 'Park'], [/pastoral/i, 'Pastoral'], [/canyon|valley/i, 'Valley'], [/lake/i, 'Lake'], [/creek/i, 'Creek'], [/residential|garden|setting/i, 'Residential']];
 function uadViews(s) { const out = []; String(s || '').split(/;\s*/).filter(Boolean).forEach(p => { if (/panoramic|partial|filtered|other/i.test(p)) return; const m = VIEW_MAP.find(([re]) => re.test(p)); const t = m ? m[1] : 'Other'; if (!out.some(o => o.t === t)) out.push({ t, other: t === 'Other' ? p.slice(0, 33) : '' }); }); return out; }
 const INFL_MAP = [[/busy road|freeway/i, 'BusyRoadway'], [/^residential$/i, 'Residential'], [/waterfront|near water/i, 'BodyOfWater'], [/commercial/i, 'CommercialArea'], [/train/i, 'RailLine'], [/school/i, 'School'], [/park/i, 'Park'], [/golf/i, 'GolfCourse']];
+/* one UAD 3.6 site influence, elements in schema (alphabetical) order */
+function siXV(d, i, put) { put(d, 'SiteInfluenceProximityType', i.prox || null); put(d, 'SiteInfluenceType', i.type); if (i.type === 'Other') put(d, 'SiteInfluenceTypeOtherDescription', String(i.other || 'Other').slice(0, 45)); put(d, 'ValueMarketabilityImpactType', i.impact || 'Neutral'); }
+function funcIssues(t) { t = String(t || '').trim(); if (!t) return []; const out = [];
+  t.split(/;|,/).map(x => x.trim()).filter(Boolean).forEach(p => { const ty = /^none/i.test(p) ? 'None' : /ceiling/i.test(p) ? 'CeilingHeight' : /floor ?plan|layout|tandem|access/i.test(p) ? 'FloorPlan' : /non.?conform/i.test(p) ? 'NonConformity' : /over.?improv/i.test(p) ? 'Overimprovement' : /under.?improv/i.test(p) ? 'Underimprovement' : 'Other';
+    if (!out.some(o => o.t === ty && ty !== 'Other')) out.push({ t: ty, other: ty === 'Other' ? p.slice(0, 33) : '' }); });
+  return out.some(o => o.t !== 'None') ? out.filter(o => o.t !== 'None') : out; }
 function uadInfluences(s) { const out = []; String(s || '').split(/;\s*/).filter(Boolean).forEach(p => { const m = INFL_MAP.find(([re]) => re.test(p)); const t = m ? m[1] : 'Other'; if (!out.some(o => o.t === t && t !== 'Other')) out.push({ t, other: t === 'Other' ? p.slice(0, 33) : '' }); }); return out; }
 const yes = v => /^(yes|y|true|1)/i.test(String(v || '')) || (typeof v === 'string' && /guest|adu/i.test(v) && !/^none|^no$/i.test(v));
 
@@ -91,6 +97,7 @@ function buildCompXML(PROPS, RELS, DSS, c, n, job) {
   // HAZARD (from CRS flood zone) goes in SITE below
   // IMPROVEMENTS
   const mode = gridMode(job), CF = compFacts(c, job);   /* condo / PUD facts from her grid */
+  { const fx = funcIssues(CF.func); if (fx.length) { const FI = X(P, 'FUNCTIONAL_ISSUES'); fx.forEach(f => { const e = X(FI, 'FUNCTIONAL_ISSUE'); XV(e, 'FunctionalIssueType', f.t); if (f.other) XV(e, 'FunctionalIssueTypeOtherDescription', f.other); }); } }   // her Functional utility line
   if (mode !== 'house' && num(CF.hoa)) { const d = X(X(X(X(P, 'HOMEOWNERS_ASSOCIATIONS'), 'HOMEOWNERS_ASSOCIATION'), 'ASSOCIATION_CHARGES'), 'ASSOCIATION_CHARGE'); const dd = X(d, 'ASSOCIATION_CHARGE_DETAIL'); XV(dd, 'AssociationChargeAmount', Math.round(num(CF.hoa))); XV(dd, 'AssociationChargeType', 'AssociationDues'); }
   const imp = X(X(P, 'IMPROVEMENTS'), 'IMPROVEMENT'); const idt = X(imp, 'IMPROVEMENT_DETAIL'); const cool = uadCool(g('heatCool'));
   if (cool) XV(idt, 'CoolingSystemExistsIndicator', cool.exists ? 'true' : 'false');
@@ -146,7 +153,7 @@ function buildCompXML(PROPS, RELS, DSS, c, n, job) {
   const SI = X(P, 'SITE'); const fz = String(V(c, 'fema') || '');
   if (fz) XV(X(X(SI, 'HAZARD_ZONES'), 'HAZARD_ZONE'), 'HazardZoneType', /^(A|V)/.test(fz) ? 'FEMASpecialFloodHazardArea' : 'None');
   XV(X(SI, 'SITE_DETAIL'), 'LandOwnedInCommonIndicator', CF._own ? 'false' : 'true');
-  const infl = uadInfluences(g('locFactors')); if (infl.length) { const S = X(SI, 'SITE_INFLUENCES'); infl.forEach(i => { const d = X(X(S, 'SITE_INFLUENCE'), 'SITE_INFLUENCE_DETAIL'); XV(d, 'SiteInfluenceType', i.t); if (i.other) XV(d, 'SiteInfluenceTypeOtherDescription', i.other); }); }
+  { const L = siParse(CF.loc); if (L.length) { const S = X(SI, 'SITE_INFLUENCES'); L.forEach(i => { const d = X(X(S, 'SITE_INFLUENCE'), 'SITE_INFLUENCE_DETAIL'); siXV(d, i, XV); }); } }   // each influence with its impact and proximity (her ▾ pick)
   const site = num(g('siteSf')); if (site) XV(X(SI, 'SITE_SIZE_LAYOUT'), 'LotSizeAreaMeasure', site >= 43560 ? (site / 43560).toFixed(2) : Math.round(site), { AreaUnitOfMeasureType: site >= 43560 ? 'Acres' : 'SquareFeet' });
   const views = uadViews(g('viewTypes')); if (views.length) { const SV = X(SI, 'SITE_VIEWS'); const rng = /limited|partial/i.test(g('viewRange') || '') ? 'Partial' : /panoramic|full/i.test(g('viewRange') || '') ? 'Full' : null; views.forEach(v => { const e = X(SV, 'SITE_VIEW'); XV(e, 'ViewRangeType', rng); XV(e, 'ViewType', v.t); if (v.other) XV(e, 'ViewTypeOtherDescription', v.other); }); }
   // DATA_SOURCES
