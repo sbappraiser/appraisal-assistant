@@ -719,5 +719,6 @@ function archHC(raw) {
   else if (generic && !cool) cool = 'Centralized';
   if (!cool && /evap/.test(t)) cool = 'Other: Evaporative';
   if (!cool && /\bnone\b|noine|noen|none$|heat only|heating only|\bfans\b|ventltn|no heat/.test(t)) cool = 'None';
+  if (!cool && (H.length || /^heat(ing)?$/.test(t)) && !/unk|\byes\b|other|mixed/.test(t)) cool = 'None';   // her rule (Oct 20 2026): only a heater listed (Wall Gas, Radiant, FWA) = no cooling
   return { heat, cool, known: !!(heat || cool) };
 }
