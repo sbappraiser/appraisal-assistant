@@ -6,7 +6,7 @@
    for past period ends DOM = period end − list date). Sale-to-list = sale price ÷ final list price.
    Trend rule (stated on the page): the current 3 months compared with the prior 7–12 months –
    more than 5% higher = Increasing, more than 5% lower = Declining, otherwise Stable; sales counts
-   are compared per month. Fewer than 3 sales (or listings) in either period → "few – your call".
+   are compared per month. Fewer than 3 sales (or listings) in either period → Stable, "too few to show a trend" (her rule, Oct 20 2026).
    Her rule: price per square foot is NOT a trend measure, so it is not on this page.
    ===================================================================== */
 const MC_ROWS = [
@@ -36,7 +36,7 @@ function mcCompute() {
     let t = '', why = '';
     if (x == null || y == null) { why = 'not enough data'; }
     else { const ch = key === 'stl' ? y - x : x === 0 ? (y > 0 ? 100 : 0) : (y / x - 1) * 100; const lim = 5; t = ch > lim ? 'Increasing' : ch < -lim ? 'Declining' : 'Stable'; why = key === 'stl' ? (ch >= 0 ? '+' : '') + Math.round(ch * 10) / 10 + ' points' : (ch >= 0 ? '+' : '') + Math.round(ch) + '%'; }
-    if (nBase < 3) why = (why ? why + ' · ' : '') + 'few – your call';
+    if (nBase < 3) { t = 'Stable'; why = (why && why !== 'not enough data' ? why + ' measured, but ' : '') + (nBase === 0 ? 'none in a period' : 'only ' + nBase + ' in a period') + ' – too few to show a trend'; }   // her rule (Oct 20 2026): 1 sale a period cannot show a trend
     trend[key] = { t: t || 'Stable', why, few: nBase < 3 || x == null || y == null }; });
   // the 2.6 one-liners (market area / top of the Sales Comparison Approach): actives on the effective date, sales in the past 12 months
   const act = rows.filter(r => statusAt(r, eff) === 'active' && r.listPrice), sold12 = rows.filter(r => r.saleDate && r.saleDate > isoAddMonths(eff, -12) && r.saleDate <= eff && r.salePrice);
@@ -65,7 +65,7 @@ function mcHTML(C) {
   const sel = (k, opts, sug) => `<select data-mct="${k}">${opts.map(o => `<option${(T[k] || sug) === o ? ' selected' : ''}>${o}</option>`).join('')}</select>`;
   const concPct = C.concKnown ? Math.round(C.conc / C.concKnown * 100) : null;
   return `<summary><b>1004MC – Market Conditions Addendum (UAD 2.6)</b> <small class="muted">from the ${C.micro ? 'Search Criteria search (box 2)' : '<span class="warnTxt">Market Area Boundary search (box 1) – load box 2 for the comparable search</span>'}</small></summary>
-    <p class="help">Periods end on the effective date (${h(shortDate(C.eff))}). Active listings are counted as of the end of each period. <b>Trend rule:</b> the current 3 months compared with the prior 7–12 months – more than 5% higher is Increasing, more than 5% lower is Declining, otherwise Stable (sales are compared per month). With fewer than 3 sales or listings in a period the suggestion says “few – your call”. Price per square foot is not used as a trend measure.</p>
+    <p class="help">Periods end on the effective date (${h(shortDate(C.eff))}). Active listings are counted as of the end of each period. <b>Trend rule:</b> the current 3 months compared with the prior 7–12 months – more than 5% higher is Increasing, more than 5% lower is Declining, otherwise Stable (sales are compared per month). With fewer than 3 sales or listings in a period the suggestion is <b>Stable</b> – too few to show a trend (you can still change it). Price per square foot is not used as a trend measure.</p>
     <div class="tableWrap"><table class="facts"><tr><th>Inventory analysis</th>${C.per.map(p => `<th class="t">${h(p.label)}<small class="sug">${h(shortDate(isoAddMonths(p.from, 0)))} – ${h(shortDate(p.to))}</small></th>`).join('')}<th>Overall trend</th></tr>
       ${MC_ROWS.map(([k, label, t], i) => `${i === 4 ? `<tr><th colspan="5">Median sale &amp; list price, DOM, sale/list %</th></tr>` : ''}<tr><td>${h(label)}</td>${C.per.map(p => `<td class="t">${mcFmt(p.v[k], t)}</td>`).join('')}<td>${sel(k, MC_TREND, C.trend[k].t)}<small class="sug${T[k] && T[k] !== C.trend[k].t ? ' warnTxt' : ''}">suggested ${C.trend[k].t}${C.trend[k].why ? ' (' + h(C.trend[k].why) + ')' : ''}</small></td></tr>`).join('')}
       <tr><td>Seller concessions reported in MLS (sales)</td>${C.per.map(p => `<td class="t">${p.concKnown ? p.conc + ' of ' + p.concKnown : '—'}</td>`).join('')}<td>${sel('conc', MC_TREND, 'Stable')}</td></tr>
