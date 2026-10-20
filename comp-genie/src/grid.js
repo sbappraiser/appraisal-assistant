@@ -683,6 +683,7 @@ async function buildFullReport(J) {
 /* her note (Oct 20 2026): no loan recorded with the deed = cash (Santa Barbara has many cash sales); a recorded loan stays as the CRS text until she picks the type */
 function termsText(f) { f = String(f || '').trim(); if (!f) return ''; if (/no loan|\(cash\?\)|^cash\b/i.test(f)) return 'Cash';
   if (/^loan:/i.test(f)) return /\bFHA\b/i.test(f) ? 'FHA' : /\bVA\b/.test(f) ? 'VA' : /USDA|rural/i.test(f) ? 'USDA Rural Development' : 'Conventional';   // a recorded loan (CRS / CORT lender) – the deed doesn't name the type; Conventional unless the lender line says FHA / VA
+  if (/\(agent remarks/i.test(f)) return termsText(f.replace(/\s*\(agent remarks.*$/i, '').replace(/^Seller financing$/i, 'Seller'));   // she clicked the MLS remarks value
   if (/^seller/i.test(f)) return 'Private';
   const m = f.match(/^(Conv|FHA|VA|USDA|Cash|Seller)\s*;\s*\d*/i); if (m) return termsText(m[1]);   // a 2.6 archive entry like Conv;0
   return f; }

@@ -171,7 +171,7 @@ function srcVals(c) { // canonical values per source for this comp
   const crsRec = crs && crs.lastSale ? (crs.lastSale.recorded || crs.lastSale.date) : '';
   if (crs && crs.lastSale && sale && sale.date && Math.abs(monthsBetween(crsRec, sale.date)) <= 2) crs = { ...crs, salePrice: crs.lastSale.price, saleDate: crsRec };
   if (crs && crs.salePrice) { const fin = crsFinancing(crs); if (fin) crs = { ...crs, financing: fin }; }
-  const finFix = o => o && /^\s*\d+\s*$/.test(String(o.financing || '')) ? { ...o, financing: 'MLS code ' + String(o.financing).trim() + ' – what does it mean?' } : o;
+  const finFix = o =>   /* Oct 20 2026: the Flexmls Financing number is not the terms – hidden (also in comps brought in before) */ o && /^\s*\d+\s*$/.test(String(o.financing || '')) ? { ...o, financing: remarkFinancing('', [o.privateRemarks, o.remarks].filter(Boolean).join(' • ')) } : o;
   return { arch: a ? a.v : null, mls: finFix(c.src.mls), pdf: lastRedOf(finFix(c.src.pdf)), crs, cort: c.src.cort[c.cortPick || 0] || null };
 }
 /* her note (Oct 19 2026): the CRS Mortgage History shows the buyer's loan – a loan recorded near the sale's recording date with the buyer as borrower */

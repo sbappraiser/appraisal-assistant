@@ -139,7 +139,7 @@ function mlsCanon(raw, G, g) {
     city: g('City') ? titleCase(g('City')) : '',
     status, listPrice: num(g('Price')), origList: num(g('Original List Price')), listDate: isoDate(g('Begin Date')), lastRed: isoDate(g('Price Change Date', 'Last Price Change Date', 'Price Change Timestamp')) || '',
     contractDate: isoDate(g('Under Contract Date')), saleDate: isoDate(g('Sold Date', 'COE')), salePrice: num(g('Sold Price')),
-    dom: num(g('Days On Market')), cdom: num(g('Cumulative DOM')), financing: g('Financing'), concessions: num(g('Seller Concessions')),
+    dom: num(g('Days On Market')), cdom: num(g('Cumulative DOM')), financing: remarkFinancing(g('Financing'), [g('Private Remarks'), g('Public Remarks')].filter(Boolean).join(' \u2022 ')), concessions: num(g('Seller Concessions')),
     saleType: saleType2, saleTypeNote: saleNote2,
     siteSf: lotSf || (acres ? Math.round(acres * 43560) : null), acres,
     topo: list('Location/Topo'), viewTypes: views.filter(v => !/^Setting$/.test(v)).join('; ') || (views.includes('Setting') ? 'Setting' : ''),
@@ -283,4 +283,14 @@ function remarkSaleType(t) {
     ['Relo', /relocation\s+(company|sale)|relo\s+(company|sale|addendum)|corporate[- ]owned/i], ['NonArm', /non[- ]arm|related\s+part(y|ies)|family\s+(sale|member|transfer)|inter[- ]?family/i]];
   for (const [type, re] of R) { const m = clean.match(re); if (m) { const i = m.index; return { type, words: (i > 30 ? '\u2026' : '') + t.slice(Math.max(0, i - 30), i + m[0].length + 30).replace(/\s+/g, ' ').trim() + '\u2026' }; } }
   return null;
+}
+
+/* her note (Oct 20 2026): the MLS Financing column is a Flexmls code number, not the terms – the MLS only knows the financing when the agent wrote it in the remarks at closing.
+   Shown in the MLS column for her reference only; the grid uses the recorded loan (CRS, CORT). */
+function remarkFinancing(code, rem) {
+  const c = String(code || '').trim(); if (c && !/^\d+$/.test(c)) return c;   // a real word from the export (e.g. "Conventional")
+  const t = String(rem || ''); const m = t.match(/\b(all[- ]cash|cash\s+(buyer|offer|sale|only|transaction)|paid\s+cash|FHA|VA\s+loan|\bVA\b(?=\s*(financ|buyer|offer))|conventional|USDA|seller\s+(carry|financ\w*|carried)|owner\s+(will\s+)?carry)\b/i);
+  if (!m) return '';
+  const w = m[0].toLowerCase(); const kind = /cash/.test(w) ? 'Cash' : /fha/.test(w) ? 'FHA' : /\bva\b/.test(w) ? 'VA' : /usda/.test(w) ? 'USDA' : /seller|owner/.test(w) ? 'Seller financing' : 'Conventional';
+  return kind + ' (agent remarks: \u201c' + t.slice(Math.max(0, m.index - 25), m.index + m[0].length + 25).replace(/\s+/g, ' ').trim() + '\u201d)';
 }
