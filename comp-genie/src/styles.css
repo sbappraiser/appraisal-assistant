@@ -238,3 +238,5 @@ table.cmp tr.flagrow th,table.cmp tr.flagrow td.using{background:#ffd6d6}.flagmk
 #detail,.detail{scroll-margin-top:var(--toph,120px)}
 .overcall{display:block;color:#d40000;font-weight:800;font-size:12px}
 small.rdays{display:block}
+.badge.flagok{background:var(--ok-l);color:var(--ok)}
+.flagbox .flags li .btn{margin-left:6px;color:#000;font-weight:600}.flagdone{font-size:13px;margin:4px 0}.flagdone li{color:#1a1a1a}
