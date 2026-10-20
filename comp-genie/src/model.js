@@ -99,7 +99,7 @@ const FIELDS = [
 ];
 const FIELD = Object.fromEntries(FIELDS.map(f => [f.k, f]));
 
-const SALE_TYPE_TEXT = { ArmLth: "Arm's length", Listing: 'Listing', REO: 'REO (bank owned)', Short: 'Short sale', Estate: 'Estate sale', CrtOrd: 'Court ordered (probate)', NonArm: "Non-arm's length", Relo: 'Relocation', Trust: 'Trust sale' };
+const SALE_TYPE_TEXT = { ArmLth: "Arm's length", Listing: 'Listing', REO: 'REO (bank owned)', Short: 'Short sale', Estate: 'Estate sale', CrtOrd: 'Court ordered (probate, divorce, bankruptcy)', NonArm: "Non-arm's length", Relo: 'Relocation', Trust: 'Trust sale' };
 function fmt(f, v) {
   if (blank(v)) return '';
   if (f.k === 'saleType') return SALE_TYPE_TEXT[v] || String(v);

@@ -24,7 +24,7 @@ function uadProjAmen(s) { const out = []; const add = (t, other) => { if (!out.s
 function uadSaleType(s) { return ({ ArmLth: 'TypicallyMotivated', Listing: 'TypicallyMotivated', REO: 'REOSale', Short: 'ShortSale', Estate: 'EstateSale', CrtOrd: 'CourtOrderedNonForeclosureSale', NonArm: 'SaleBetweenRelatedParties', Relo: 'RelocationSale', Trust: 'EstateSale' })[s] || (s ? 'Other' : 'TypicallyMotivated'); }
 function uadFinancing(s) {
   s = String(s || ''); if (!s) return {};
-  if (/\(cash\?\)|^MLS code/i.test(s)) return {};   // not confirmed – she types what it was
+  if (/^MLS code/i.test(s)) return {};   // (cash?) = no loan near the sale in the CRS mortgage history – cash (her note Oct 20 2026)   // not confirmed – she types what it was
   if (/cash|no loan/i.test(s)) return { none: true };
   if (/conv/i.test(s)) return { type: 'Conventional' }; if (/FHA/i.test(s)) return { type: 'FHA' }; if (/\bVA\b/i.test(s)) return { type: 'VA' };
   if (/USDA|rural/i.test(s)) return { type: 'USDARuralDevelopment' }; if (/private|seller/i.test(s)) return { type: 'Private' };

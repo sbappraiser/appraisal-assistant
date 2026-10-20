@@ -1159,6 +1159,8 @@ function mlsCanon(raw, G, g) {
   const typ = g('TYP'); const condoDet = has('Condo/CO-OP/PUD', /^Detached$/), condoAtt = has('Condo/CO-OP/PUD', /^Attached$/);
   const saleTypeTxt = [...(G['Pub Listing Details'] || []), ...(G['Pvt Listing Details'] || [])].filter(x => !/^(None|Standard)$/.test(x));
   const saleType = saleTypeTxt.some(x => /REO|Bank Owned|Foreclosure/i.test(x)) ? 'REO' : saleTypeTxt.some(x => /Short/i.test(x)) ? 'Short' : saleTypeTxt.some(x => /Probate|Court|Conservator/i.test(x)) ? 'CrtOrd' : saleTypeTxt.some(x => /Estate|Trust/i.test(x)) ? 'Estate' : saleTypeTxt.some(x => /Bankruptcy/i.test(x)) ? 'CrtOrd' : (status === 'Closed' ? 'ArmLth' : '');
+  let saleType2 = saleType, saleNote2 = saleTypeTxt.join('; ');
+  if (!saleType2 || saleType2 === 'ArmLth') { const R = remarkSaleType([g('Public Remarks'), g('Private Remarks')].filter(Boolean).join(' \u2022 ')); if (R) { saleType2 = R.type; saleNote2 = [saleNote2, 'Remarks: \u201c' + R.words + '\u201d'].filter(Boolean).join('; '); } }   // her note (Oct 20 2026): REO, estate, short sale, divorce … in the agent remarks
   const aduN = ['ADU #1: Type', 'ADU #2: Attached'].filter(k => raw[k]).length;
   const views = G['View'] || [];
   return {
@@ -1167,7 +1169,7 @@ function mlsCanon(raw, G, g) {
     status, listPrice: num(g('Price')), origList: num(g('Original List Price')), listDate: isoDate(g('Begin Date')), lastRed: isoDate(g('Price Change Date', 'Last Price Change Date', 'Price Change Timestamp')) || '',
     contractDate: isoDate(g('Under Contract Date')), saleDate: isoDate(g('Sold Date', 'COE')), salePrice: num(g('Sold Price')),
     dom: num(g('Days On Market')), cdom: num(g('Cumulative DOM')), financing: g('Financing'), concessions: num(g('Seller Concessions')),
-    saleType, saleTypeNote: saleTypeTxt.join('; '),
+    saleType: saleType2, saleTypeNote: saleNote2,
     siteSf: lotSf || (acres ? Math.round(acres * 43560) : null), acres,
     topo: list('Location/Topo'), viewTypes: views.filter(v => !/^Setting$/.test(v)).join('; ') || (views.includes('Setting') ? 'Setting' : ''),
     viewRange: views.includes('Panoramic') ? 'Panoramic' : views.includes('Partial/Filtered') ? 'Partial' : '',
@@ -1299,6 +1301,17 @@ function cortCanon(o) {
     cortRemarks: o.remarks, financing: o.lender ? (/SELLER/i.test(o.lender) ? 'Seller' : 'Loan: ' + o.lender + (num(o.loan) ? ' ' + money(o.loan) : '')) : 'No loan recorded',
     grantor: o.grantor, grantee: o.grantee, doc: o.instno, period: o.period, conf: num(o.ocr_conf_min), file: o.source_file,
   };
+}
+
+/* sale type from the agent remarks (Oct 20 2026) – first match wins; "not a short sale", "real estate" etc. are ignored */
+function remarkSaleType(t) {
+  t = String(t || ''); if (!t) return null;
+  const clean = t.replace(/\b(not|no|isn'?t|never)\s+(an?\s+)?(short\s+sale|reo|probate|bank[- ]owned|foreclosure|estate\s+sale|trust\s+sale|court\s+(confirmation|approval)|divorce)/gi, x => ' '.repeat(x.length)).replace(/real\s+estate/gi, x => ' '.repeat(x.length));
+  const R = [['REO', /\bREO\b|bank[- ]owned|lender[- ]owned|foreclosure|(?<!successor\s)trustee'?s?\s+sale/i], ['Short', /short[- ]sale|short[- ]pay|lender\s+approval\s+required/i],
+    ['CrtOrd', /probate|court\s+(confirmation|approval|ordered|order)|overbid|conservator|bankruptcy|IAEA|divorce|dissolution/i], ['Estate', /estate\s+sale|estate\s+of\b|heirs|inherited|successor\s+trustee|trust\s+sale|sold\s+by\s+(the\s+)?trust/i],
+    ['Relo', /relocation\s+(company|sale)|relo\s+(company|sale|addendum)|corporate[- ]owned/i], ['NonArm', /non[- ]arm|related\s+part(y|ies)|family\s+(sale|member|transfer)|inter[- ]?family/i]];
+  for (const [type, re] of R) { const m = clean.match(re); if (m) { const i = m.index; return { type, words: (i > 30 ? '\u2026' : '') + t.slice(Math.max(0, i - 30), i + m[0].length + 30).replace(/\s+/g, ' ').trim() + '\u2026' }; } }
+  return null;
 }
 
 /* ---------------- County "Permit History by Parcel" PDF parser ----------------

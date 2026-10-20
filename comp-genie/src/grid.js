@@ -268,6 +268,7 @@ function adjRows(J) { return J ? ADJ_ROWS.concat(customRows(J)) : ADJ_ROWS; }
 function lineOn(id, J) { const G = G0(J); if (GRID_KEEP.has(id)) return true; if (G.lines && id in G.lines) return !!G.lines[id];
   if (GRID_DEFAULT && GRID_DEFAULT.on && id in GRID_DEFAULT.on) return !!GRID_DEFAULT.on[id];
   if (/^cx_/.test(id)) return true;
+  if (id === 'xferTerms') return usedComps(J).some(c => { const t = compFacts(c, J).xferTerms; return t && !/typically/i.test(t); });   // shows itself when a comp is REO, estate, short sale …
   if (id === 'carport') return [subjFacts(J), ...usedComps(J).map(c => compFacts(c, J))].some(F => +F.carport > 0);
   if (id === 'bsmtUnf') return [subjFacts(J), ...usedComps(J).map(c => compFacts(c, J))].some(F => +F.bsmtUnf > 0);
   return GRID_BASE.has(id); }
@@ -302,7 +303,7 @@ function subjFacts(J) {
 function compFacts(c, J) {
   const g = k => V(c, k); const px = proximity(c, J);
   const F0 = { price: num(g('salePrice')), src: g('mls') ? 'MLS ' + g('mls') : (c.src.cort.length ? 'CORT' : c.src.arch.length ? 'Your archive' : ''), prox: px ? px.mi.toFixed(2) + ' mi ' + px.dir.replace(/([a-z])([A-Z])/, '$1 $2') : '',
-    terms: g('financing') || '', conc: num(g('concessions')), contract: g('contractDate') || '', sale: g('saleDate') || '', dom: g('dom'),
+    terms: termsText(g('financing')), xferTerms: g('saleType') && typeof PICK !== 'undefined' ? ((PICK.xferTerms.opts.find(o => o[0] === uadSaleType(g('saleType'))) || [])[1] || '') : '', conc: num(g('concessions')), contract: g('contractDate') || '', sale: g('saleDate') || '', dom: g('dom'),
     site: num(g('siteSf')), usable: acOf(num(g('usableSf'))), loc: [g('locRating'), g('locFactors')].filter(Boolean).join(': '), view: [g('viewRating'), g('viewTypes')].filter(Boolean).join(': '),
     topo: g('topo') || '', nbhd: g('nbhd') || '', land: g('landscaping') || '', style: g('style') || '', attach: g('attach') || '', levels: num(g('stories')), status: g('status') || '', listPrice: num(g('listPrice')), origList: num(g('origList')), listDate: g('listDate') || '', lastRed: g('lastRed') || '', cdom: num(g('cdom')), project: g('project') || '', hoa: num(g('hoa')), hoaAmen: g('hoaAmen') || '', landCommon: g('landCommon') || '', structure: g('structure') || '', unitPos: g('unitPos') || '', floor: g('floor') ?? null, year: num(g('yearBuilt')), q: g('quality') || '', c: g('condition') || '',
     rooms: num(g('rooms')), beds: num(g('beds')), full: num(g('full')), half: num(g('half')), gla: num(g('gla')), bsmt: num(g('bsmtFin')), garage: num(g('garage')), energy: g('energy') || '',
@@ -677,3 +678,6 @@ async function buildFullReport(J) {
   const fit = await fitReportSize(entries);
   return { xml, entries, charts: chartFiles.length, maps: mapFiles.length, fit };
 }
+
+/* her note (Oct 20 2026): no loan recorded with the deed = cash (Santa Barbara has many cash sales); a recorded loan stays as the CRS text until she picks the type */
+function termsText(f) { f = String(f || ''); if (/no loan|\(cash\?\)/i.test(f)) return 'Cash'; return f; }
