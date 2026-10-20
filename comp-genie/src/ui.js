@@ -478,7 +478,7 @@ function compsTable(J) {
       <td class="ck"><input type="checkbox" data-csel="${c.id}" ${CSEL.has(c.id) ? 'checked' : ''} aria-label="Select"></td>
       <td class="usecell"><button class="btn small${c.use ? '' : ' primary'}" data-quse="${c.id}" title="${c.use ? 'Take it off the grid' : 'Put it on the grid as the next comp'}">${c.use ? 'Remove' : '+ Grid'}</button><select data-use="${c.id}" aria-label="Use as comp number" title="Or pick its comp number">${'<option value="">–</option>'}${Array.from({ length: maxUse }, (_, i) => `<option ${c.use === i + 1 ? 'selected' : ''}>${i + 1}</option>`).join('')}</select>${!c.use && c.notUsed ? '<br><small class="nutag">analyzed – not used</small>' : ''}</td>
       <td>${fr ? `<img class="thumb" data-photo="${fr.id}" alt="">` : `<button type="button" class="nothumb" data-pickphoto="${c.id}" title="${archPhotoNames(c).length && AP.state !== 'ok' ? 'Your archive has a front photo of this one – click to connect your archive photos' : 'Click to add a photo: the MLS photos zip, or a picture of the front'}">📷</button>`}</td>
-      <td><b>${esc(compTitle(c))}</b>${c.use && fl.length ? ` <span class="badge flagred" title="${esc(fl.map(x => x.t).join('\n'))}">⚑ ${fl.length}</span>` : c.use && flAll.length ? ' <span class="badge flagok" title="All flags checked">✓</span>' : ''}<br><small>${esc(V(c, 'mls') ? 'MLS ' + V(c, 'mls') : '')}</small></td>
+      <td><b>${esc(compTitle(c))}</b>${c.use && fl.length ? ` <span class="badge flagred" title="${esc(fl.map(x => x.t).join('\n'))}">⚑ ${fl.length}</span>` : c.use && flAll.length ? ' <span class="badge flagok" title="All flags checked">✓</span>' : ''}<br><small>${esc(V(c, 'mls') ? 'MLS ' + V(c, 'mls') : '')}</small> <button class="btn xs" data-act="cpop" data-id="${c.id}" title="Open this comp in its own window you can move to another screen">↗ pop out</button></td>
       <td>${esc(statusText(st))}</td><td class="r">${money(V(c, 'salePrice') || V(c, 'listPrice'))}${!V(c, 'salePrice') && V(c, 'listPrice') ? '<br><small>list</small>' : ''}</td>
       <td>${esc(showDate(V(c, 'saleDate') || V(c, 'contractDate')))}</td><td class="r">${int(V(c, 'gla'))}</td><td>${(() => { const tg = (c.src.mls && c.src.mls.storyTags) || []; if (tg.length) return esc(tg.map(x => x.replace(/ Story$/i, '').replace(/-?Level$/i, ' level').replace(/^Tri level$/i, 'Tri-level')).join(', ')); const word = n => n === 1 ? 'Single' : n === 2 ? 'Two' : n === 3 ? 'Three' : n === 4 ? 'Four' : esc(n);
       const n = (c.src.mls && c.src.mls.stories) || (c.src.pdf && c.src.pdf.stories) || null; if (n) return word(n);
@@ -711,7 +711,7 @@ document.addEventListener('click', async e => {
     case 'cancel': app.confirm = null; render(); break;
     case 'rmall': app.confirm = 'rmall'; render(); break;
     case 'rmall-yes': app.job.comps = []; app.sel = null; app.confirm = null; await saveNow(); render(); toast('All comps removed – your files list is unchanged'); break;
-    case 'close': app.sel = null; render(); break;
+    case 'close': if (CPOP) { window.close(); break; } app.sel = null; render(); break;
     case 'backup': backupJob(); break;
     case 'nuok': app.nuAsk = null; render(); break;
     case 'sens-run': { app.sens = { job: app.job.id, res: sensRun(app.job) }; renderKeepFocus(); break; }
@@ -850,3 +850,14 @@ document.addEventListener('keydown', e => {
   if (d) d.classList.remove('over'); if (e.dataTransfer && e.dataTransfer.files.length) await ingest([...e.dataTransfer.files]);
 }));
 document.addEventListener('dragleave', e => { const d = $('#drop'); if (d && !e.relatedTarget) d.classList.remove('over'); });
+
+/* her ask (Oct 20 2026): a popped-out comp tells the main window when it closes; the main window then goes to the next comp on the grid that still has flags */
+if (CPOP) window.addEventListener('pagehide', () => { try { if (WBC) WBC.postMessage({ cpopClosed: CPOP.id, job: CPOP.job, from: WIN }); } catch (e) {} });
+if (!CPOP && !POP && WBC) WBC.addEventListener('message', e => { const d = e.data || {}; if (!d.cpopClosed || !app.job || d.job !== app.job.id) return;
+  const J = app.job; const L = [...J.comps].sort(compOrder); const i = L.findIndex(c => c.id === d.cpopClosed);
+  const open = c => c.use && compFlags(c, J).some(f => !flagChecked(c, f));
+  const next = [...L.slice(i + 1), ...L.slice(0, Math.max(0, i))].find(c => c.id !== d.cpopClosed && open(c));
+  if (J.ccDone) { J.ccDone = false; save(); } render();
+  setTimeout(() => { if (next) { const tr = document.querySelector(`table.comps tr[data-open="${CSS.escape(next.id)}"]`); if (tr) { tr.scrollIntoView({ behavior: 'smooth', block: 'center' }); tr.classList.add('nextflag'); const b = tr.querySelector('[data-act="cpop"]'); if (b) b.focus({ preventScroll: true }); setTimeout(() => tr.classList.remove('nextflag'), 6000); }
+      toast('Next comp with flags: ' + compTitle(next) + ' (comp ' + next.use + ') – press Enter to pop it out', 6000); }
+    else { const cc = document.getElementById('compsCard'); if (cc) cc.scrollIntoView({ behavior: 'smooth', block: 'start' }); toast('No more flags on the comps on your grid ✓', 5000); } }, 150); });

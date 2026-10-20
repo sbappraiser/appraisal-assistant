@@ -241,3 +241,4 @@ small.rdays{display:block}
 .badge.flagok{background:var(--ok-l);color:var(--ok)}
 .flagbox .flags li .btn{margin-left:6px;color:#000;font-weight:600}.flagdone{font-size:13px;margin:4px 0}.flagdone li{color:#1a1a1a}
 table.cmp tr.disrow th,table.cmp tr.disrow td{background:#fff36b}table.cmp tr.disrow td.srccell.on{background:#d4fcd4}
+table.comps tr.nextflag td{background:#ffe1a8!important;transition:background .3s}
