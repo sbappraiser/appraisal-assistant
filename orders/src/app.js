@@ -386,18 +386,23 @@ async function backup() {
   toast(`Backup saved to Downloads: ${B.orders} orders, ${B.clients} clients, ${B.docs} documents` + (B.jobs ? `, ${B.jobs} Comp genie assignments` : ''));
 }
 /* one backup zip: orders, clients, documents, her lists – and the Comp genie's assignments and settings (same site) */
-async function buildBackup() {
+const AB_DOCS = 'Appraisal Assistant documents';   // the automatic backup keeps each document once in this subfolder (Oct 20 2026: daily zips were ~80 MB each, 30 kept)
+async function buildBackup(docsDir) {
   const docs = await ODB.all('docs'); const enc = new TextEncoder();
   const meta = docs.map(d => ({ id: d.id, orderId: d.orderId, name: d.name, type: d.type, size: d.size, mime: d.mime, added: d.added, note: d.note, page: d.page, pages: d.pages, preview: d.preview, file: 'documents/' + d.id + '-' + G.safeName(d.name) }));
   const kv = {}; for (const k of ['mk:boundaries', 'mk:stats', 'mk:zillow', 'cmt:lib', 'reqs:client']) { const r = await ODB.get('kv', k); if (r) kv[k] = r.v; }   // saved market areas, SBMLS monthly statistics, Zillow figures, her comment library
   const data = { app: 'appraisal-assistant', version: 1, saved: new Date().toISOString(), contacts, letters, aiText, rates: store.get('rates', {}), docs: meta, kv };
+  if (docsDir) data.docsFolder = AB_DOCS;
   const entries = [{ name: 'orders.json', data: enc.encode(JSON.stringify(data, null, 1)) }];
-  for (const d of docs) entries.push({ name: meta.find(m => m.id === d.id).file, data: new Uint8Array(await d.blob.arrayBuffer()) });
+  if (docsDir) { const sub = await docsDir.getDirectoryHandle(AB_DOCS, { create: true }); const have = new Set(); for await (const [n] of sub.entries()) have.add(n);
+    for (const d of docs) { const fn = meta.find(m => m.id === d.id).file.replace(/^documents\//, ''); if (have.has(fn)) continue;   // written once; a document never changes after it is added
+      const fh = await sub.getFileHandle(fn, { create: true }); const w = await fh.createWritable(); await w.write(d.blob); await w.close(); } }
+  else for (const d of docs) entries.push({ name: meta.find(m => m.id === d.id).file, data: new Uint8Array(await d.blob.arrayBuffer()) });
   const gn = await genieExport(); if (gn) entries.push({ name: 'comp-genie.json', data: enc.encode(JSON.stringify(gn)) });
   const zip = await G.makeZip(entries);
   return { blob: zip instanceof Blob ? zip : new Blob([zip]), orders: letters.filter(realOrder).length, clients: contacts.length, docs: docs.length, jobs: gn ? gn.jobs.length : 0 };
 }
-async function restore(file) {
+async function restore(file, folder) {
   try {
     let d, files = null;
     if (/\.zip$/i.test(file.name)) { files = await G.readZip(file); const j = files.get('orders.json'); if (!j) throw new Error('That zip is not an Appraisal Assistant backup.'); d = JSON.parse(new TextDecoder().decode(j)); }
@@ -415,7 +420,14 @@ async function restore(file) {
       if (typeof mkLoad === 'function') await mkLoad(); if (typeof cmtLoad === 'function') { await cmtLoad(); cmtRender(); } if (typeof crLoad === 'function') await crLoad(); }
     let gj = 0; if (files && files.get('comp-genie.json')) { try { gj = await genieImport(JSON.parse(new TextDecoder().decode(files.get('comp-genie.json')))); } catch (e) { console.warn('genie restore', e); } }
     if (files && d.docs) { const have = new Set((await ODB.all('docs')).map(x => x.id));
-      for (const m of d.docs) { if (have.has(m.id)) continue; const u8 = files.get(m.file); if (!u8) continue; const { file: _f, ...rest } = m; await ODB.put('docs', { ...rest, blob: new Blob([u8], { type: m.mime || '' }) }); nd++; } }
+      let sub = null; const need = d.docsFolder && d.docs.some(m => !have.has(m.id) && !files.get(m.file));
+      if (need) { let dir = folder || (typeof AB !== 'undefined' && AB.dir) || null;   // this backup keeps its documents in the "Appraisal Assistant documents" folder next to it
+        try { if (dir && (await dir.queryPermission({ mode: 'read' })) !== 'granted' && (await dir.requestPermission({ mode: 'read' })) !== 'granted') dir = null; } catch (e) { dir = null; }
+        if (!dir && typeof window.showDirectoryPicker === 'function') { toast('Pick your backup folder (the one with the “' + d.docsFolder + '” folder in it) so the documents come back too.', 8000); try { dir = await window.showDirectoryPicker({ id: 'aa-backup', mode: 'read', startIn: 'documents' }); } catch (e) { dir = null; } }
+        try { sub = dir ? await dir.getDirectoryHandle(d.docsFolder) : null; } catch (e) { sub = null; toast('No “' + d.docsFolder + '” folder there – orders restored without their documents.', 8000); } }
+      for (const m of d.docs) { if (have.has(m.id)) continue; let u8 = files.get(m.file);
+        if (!u8 && sub) { try { u8 = new Uint8Array(await (await (await sub.getFileHandle(m.file.replace(/^documents\//, ''))).getFile()).arrayBuffer()); } catch (e) { u8 = null; } }
+        if (!u8) continue; const { file: _f, ...rest } = m; await ODB.put('docs', { ...rest, blob: new Blob([u8], { type: m.mime || '' }) }); nd++; } }
     contacts.sort((a, b) => (a.name || a.company || '').localeCompare(b.name || b.company || ''));
     store.set('contacts', contacts); store.set('aiText', aiText); renderLetters(); renderContacts();
     toast(`Restored ${nl} orders, ${nc} clients` + (files ? `, ${nd} documents` : '') + (na ? `, ${na} saved market areas` : '') + (gj ? `, ${gj} Comp genie assignments` : ''), 6000); if (typeof renderHome === 'function') renderHome();

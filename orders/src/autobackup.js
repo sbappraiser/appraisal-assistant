@@ -33,7 +33,7 @@ async function abRun(force) {
   if (!letters.some(realOrder)) { if (force) toast('Nothing to back up yet – the first backup is saved as soon as you have an order.', 6000); abRender(); return; }   // never write an empty backup over a good one
   AB.busy = true;
   try {
-    const B = await buildBackup();
+    const B = await buildBackup(AB.dir);
     const fh = await AB.dir.getFileHandle(abName(today), { create: true }); const w = await fh.createWritable(); await w.write(B.blob); await w.close();
     AB.last = { date: today, at: new Date().toISOString(), orders: B.orders, docs: B.docs, jobs: B.jobs, folder: AB.dir.name }; AB.dirty = false; AB.err = '';
     await ODB.put('kv', { id: 'ab:last', v: AB.last }); try { localStorage.setItem('aa.abLast', JSON.stringify(AB.last)); } catch (e) {}
@@ -61,7 +61,7 @@ async function abRestoreNewest() {
       try { const z = await G.readZip(fl); const j = z.get('orders.json'); const o = j && JSON.parse(new TextDecoder().decode(j)); if (o && (o.letters || []).some(realOrder)) { f = fl; nm = n; break; } } catch (e) {} }
     if (!f) { toast('The backups in that folder have no orders in them yet.', 6000); return; }
     AB.dir = d; await ODB.put('kv', { id: 'ab:dir', v: d }); AB.perm = await d.queryPermission({ mode: 'readwrite' }).catch(() => 'prompt');
-    toast('Restoring ' + nm + '…'); await restore(f); abRender();
+    toast('Restoring ' + nm + '…'); await restore(f, d); abRender();
   } catch (e) { if (e && e.name !== 'AbortError') toast('Could not restore: ' + (e.message || e), 6000); }
 }
 /* the card on the Home page */
@@ -72,7 +72,7 @@ function abCardHTML() {
   if (!abSupported()) body = `<p class="help">Automatic backup works in Chrome or Edge on a computer. Use <b>Back up</b> at the top instead.</p>`;
   else if (!AB.dir) body = `<p class="help warnTxt"><b>Automatic backup is off.</b> Your orders live only in this browser – if Chrome clears its site data they are gone. Pick a folder once (a folder in <b>OneDrive</b> is best, so it is also off this computer) and a backup is saved there by itself every day you work.</p><div class="row"><button type="button" class="btn primary" id="abChoose">Choose a backup folder…</button></div>`;
   else if (AB.perm !== 'granted') body = `<p class="help warnTxt"><b>Chrome needs your OK to keep backing up</b> to the folder “${h(AB.dir.name)}” (it asks again after a restart).</p><div class="row"><button type="button" class="btn primary" id="abAllow">Allow today’s backup</button><button type="button" class="btn ghost small" id="abChoose">Choose another folder</button></div>${last ? `<p class="help">${last}</p>` : ''}`;
-  else body = `<p class="help"><span class="ck">✓</span> Backing up to the folder <b>“${h(AB.dir.name)}”</b> – every day you work, the last ${AB_KEEP} days kept.${AB.busy ? ' Saving now…' : ''}</p>${last ? `<p class="help">${last}</p>` : ''}${AB.err ? `<p class="help warnTxt">The last backup did not save: ${h(AB.err)}</p>` : ''}<div class="row"><button type="button" class="btn small" id="abNow">Back up now</button><button type="button" class="btn ghost small" id="abChoose">Change folder</button></div>`;
+  else body = `<p class="help"><span class="ck">✓</span> Backing up to the folder <b>“${h(AB.dir.name)}”</b> – every day you work, the last ${AB_KEEP} days kept; each document is saved once in its “${AB_DOCS}” folder.${AB.busy ? ' Saving now…' : ''}</p>${last ? `<p class="help">${last}</p>` : ''}${AB.err ? `<p class="help warnTxt">The last backup did not save: ${h(AB.err)}</p>` : ''}<div class="row"><button type="button" class="btn small" id="abNow">Back up now</button><button type="button" class="btn ghost small" id="abChoose">Change folder</button></div>`;
   const rescue = empty ? `<div class="abempty"><p><b>No orders in this browser.</b> If Chrome cleared its data, bring everything back from your newest backup.</p><button type="button" class="btn primary" id="abRestore">Restore from my backup folder…</button> <small class="muted">or use Restore at the top to pick a backup file</small></div>` : '';
   return `<h3>Automatic backup</h3>${rescue}${body}`;
 }

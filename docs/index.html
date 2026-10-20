@@ -697,6 +697,7 @@ mark.blank{background:#fff3a8;padding:0 2px;border-radius:3px}.cmt textarea{widt
       <li>Your orders are kept inside Chrome. If Chrome clears its site data (a setting, a cleanup program, a new computer) they are gone – on Oct 19 2026 Chrome’s “Delete data sites have saved … when you close all windows” erased them on a restart.</li>
       <li>On the <b>Home</b> page, card <b>Automatic backup</b>: click <b>Choose a backup folder…</b> and pick (or make) a folder in <b>OneDrive</b>, e.g. OneDrive › Appraisal Assistant Backups. Click <b>View files</b> / <b>Save changes</b> when Chrome asks.</li>
       <li>From then on a backup is saved there by itself every day you work (about 1½ minutes after you save, and when you leave the page) – orders, clients, documents, your lists and your Comp genie assignments. Today’s file is replaced as you work; the last 30 days are kept.</li>
+      <li>Each document (PDFs, plans, iPad workfiles…) is saved <b>once</b>, in the <b>Appraisal Assistant documents</b> folder inside your backup folder; the daily backup file holds your orders, clients, lists and Comp genie assignments, so it stays small. Keep that folder with the backups. Older daily backups made before Oct 20, 2026 still hold a copy of every document – you can delete those once a new one has been saved. <b>Back up</b> at the top still makes one complete file with everything in it.</li>
       <li>After a restart Chrome may ask again: the Home page shows <b>Allow today’s backup</b> – one click.</li>
       <li>If Chrome ever comes up empty, the Home page shows <b>Restore from my backup folder…</b> – pick the folder and the newest backup comes back. The Comp genie’s archive and CORT table are not in the backup (drop their files again).</li>
       <li>Keep Chrome from clearing it: Settings › Privacy and security › Site settings › Additional content settings › On-device site data › “Allowed to save data on your device” › Add <b>[*.]sbappraiser.github.io</b>.</li></ol></details>
@@ -745,7 +746,7 @@ mark.blank{background:#fff3a8;padding:0 2px;border-radius:3px}.cmt textarea{widt
 </div>
 <div id="toast" role="status" hidden></div>
 <script>
-const BUILD='o1-1020-1828';
+const BUILD='o1-1020-1834';
 const G = (() => {
 /* ---------------- small helpers ---------------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -4441,7 +4442,7 @@ async function abRun(force) {
   if (!letters.some(realOrder)) { if (force) toast('Nothing to back up yet – the first backup is saved as soon as you have an order.', 6000); abRender(); return; }   // never write an empty backup over a good one
   AB.busy = true;
   try {
-    const B = await buildBackup();
+    const B = await buildBackup(AB.dir);
     const fh = await AB.dir.getFileHandle(abName(today), { create: true }); const w = await fh.createWritable(); await w.write(B.blob); await w.close();
     AB.last = { date: today, at: new Date().toISOString(), orders: B.orders, docs: B.docs, jobs: B.jobs, folder: AB.dir.name }; AB.dirty = false; AB.err = '';
     await ODB.put('kv', { id: 'ab:last', v: AB.last }); try { localStorage.setItem('aa.abLast', JSON.stringify(AB.last)); } catch (e) {}
@@ -4469,7 +4470,7 @@ async function abRestoreNewest() {
       try { const z = await G.readZip(fl); const j = z.get('orders.json'); const o = j && JSON.parse(new TextDecoder().decode(j)); if (o && (o.letters || []).some(realOrder)) { f = fl; nm = n; break; } } catch (e) {} }
     if (!f) { toast('The backups in that folder have no orders in them yet.', 6000); return; }
     AB.dir = d; await ODB.put('kv', { id: 'ab:dir', v: d }); AB.perm = await d.queryPermission({ mode: 'readwrite' }).catch(() => 'prompt');
-    toast('Restoring ' + nm + '…'); await restore(f); abRender();
+    toast('Restoring ' + nm + '…'); await restore(f, d); abRender();
   } catch (e) { if (e && e.name !== 'AbortError') toast('Could not restore: ' + (e.message || e), 6000); }
 }
 /* the card on the Home page */
@@ -4480,7 +4481,7 @@ function abCardHTML() {
   if (!abSupported()) body = `<p class="help">Automatic backup works in Chrome or Edge on a computer. Use <b>Back up</b> at the top instead.</p>`;
   else if (!AB.dir) body = `<p class="help warnTxt"><b>Automatic backup is off.</b> Your orders live only in this browser – if Chrome clears its site data they are gone. Pick a folder once (a folder in <b>OneDrive</b> is best, so it is also off this computer) and a backup is saved there by itself every day you work.</p><div class="row"><button type="button" class="btn primary" id="abChoose">Choose a backup folder…</button></div>`;
   else if (AB.perm !== 'granted') body = `<p class="help warnTxt"><b>Chrome needs your OK to keep backing up</b> to the folder “${h(AB.dir.name)}” (it asks again after a restart).</p><div class="row"><button type="button" class="btn primary" id="abAllow">Allow today’s backup</button><button type="button" class="btn ghost small" id="abChoose">Choose another folder</button></div>${last ? `<p class="help">${last}</p>` : ''}`;
-  else body = `<p class="help"><span class="ck">✓</span> Backing up to the folder <b>“${h(AB.dir.name)}”</b> – every day you work, the last ${AB_KEEP} days kept.${AB.busy ? ' Saving now…' : ''}</p>${last ? `<p class="help">${last}</p>` : ''}${AB.err ? `<p class="help warnTxt">The last backup did not save: ${h(AB.err)}</p>` : ''}<div class="row"><button type="button" class="btn small" id="abNow">Back up now</button><button type="button" class="btn ghost small" id="abChoose">Change folder</button></div>`;
+  else body = `<p class="help"><span class="ck">✓</span> Backing up to the folder <b>“${h(AB.dir.name)}”</b> – every day you work, the last ${AB_KEEP} days kept; each document is saved once in its “${AB_DOCS}” folder.${AB.busy ? ' Saving now…' : ''}</p>${last ? `<p class="help">${last}</p>` : ''}${AB.err ? `<p class="help warnTxt">The last backup did not save: ${h(AB.err)}</p>` : ''}<div class="row"><button type="button" class="btn small" id="abNow">Back up now</button><button type="button" class="btn ghost small" id="abChoose">Change folder</button></div>`;
   const rescue = empty ? `<div class="abempty"><p><b>No orders in this browser.</b> If Chrome cleared its data, bring everything back from your newest backup.</p><button type="button" class="btn primary" id="abRestore">Restore from my backup folder…</button> <small class="muted">or use Restore at the top to pick a backup file</small></div>` : '';
   return `<h3>Automatic backup</h3>${rescue}${body}`;
 }
@@ -4906,18 +4907,23 @@ async function backup() {
   toast(`Backup saved to Downloads: ${B.orders} orders, ${B.clients} clients, ${B.docs} documents` + (B.jobs ? `, ${B.jobs} Comp genie assignments` : ''));
 }
 /* one backup zip: orders, clients, documents, her lists – and the Comp genie's assignments and settings (same site) */
-async function buildBackup() {
+const AB_DOCS = 'Appraisal Assistant documents';   // the automatic backup keeps each document once in this subfolder (Oct 20 2026: daily zips were ~80 MB each, 30 kept)
+async function buildBackup(docsDir) {
   const docs = await ODB.all('docs'); const enc = new TextEncoder();
   const meta = docs.map(d => ({ id: d.id, orderId: d.orderId, name: d.name, type: d.type, size: d.size, mime: d.mime, added: d.added, note: d.note, page: d.page, pages: d.pages, preview: d.preview, file: 'documents/' + d.id + '-' + G.safeName(d.name) }));
   const kv = {}; for (const k of ['mk:boundaries', 'mk:stats', 'mk:zillow', 'cmt:lib', 'reqs:client']) { const r = await ODB.get('kv', k); if (r) kv[k] = r.v; }   // saved market areas, SBMLS monthly statistics, Zillow figures, her comment library
   const data = { app: 'appraisal-assistant', version: 1, saved: new Date().toISOString(), contacts, letters, aiText, rates: store.get('rates', {}), docs: meta, kv };
+  if (docsDir) data.docsFolder = AB_DOCS;
   const entries = [{ name: 'orders.json', data: enc.encode(JSON.stringify(data, null, 1)) }];
-  for (const d of docs) entries.push({ name: meta.find(m => m.id === d.id).file, data: new Uint8Array(await d.blob.arrayBuffer()) });
+  if (docsDir) { const sub = await docsDir.getDirectoryHandle(AB_DOCS, { create: true }); const have = new Set(); for await (const [n] of sub.entries()) have.add(n);
+    for (const d of docs) { const fn = meta.find(m => m.id === d.id).file.replace(/^documents\//, ''); if (have.has(fn)) continue;   // written once; a document never changes after it is added
+      const fh = await sub.getFileHandle(fn, { create: true }); const w = await fh.createWritable(); await w.write(d.blob); await w.close(); } }
+  else for (const d of docs) entries.push({ name: meta.find(m => m.id === d.id).file, data: new Uint8Array(await d.blob.arrayBuffer()) });
   const gn = await genieExport(); if (gn) entries.push({ name: 'comp-genie.json', data: enc.encode(JSON.stringify(gn)) });
   const zip = await G.makeZip(entries);
   return { blob: zip instanceof Blob ? zip : new Blob([zip]), orders: letters.filter(realOrder).length, clients: contacts.length, docs: docs.length, jobs: gn ? gn.jobs.length : 0 };
 }
-async function restore(file) {
+async function restore(file, folder) {
   try {
     let d, files = null;
     if (/\.zip$/i.test(file.name)) { files = await G.readZip(file); const j = files.get('orders.json'); if (!j) throw new Error('That zip is not an Appraisal Assistant backup.'); d = JSON.parse(new TextDecoder().decode(j)); }
@@ -4935,7 +4941,14 @@ async function restore(file) {
       if (typeof mkLoad === 'function') await mkLoad(); if (typeof cmtLoad === 'function') { await cmtLoad(); cmtRender(); } if (typeof crLoad === 'function') await crLoad(); }
     let gj = 0; if (files && files.get('comp-genie.json')) { try { gj = await genieImport(JSON.parse(new TextDecoder().decode(files.get('comp-genie.json')))); } catch (e) { console.warn('genie restore', e); } }
     if (files && d.docs) { const have = new Set((await ODB.all('docs')).map(x => x.id));
-      for (const m of d.docs) { if (have.has(m.id)) continue; const u8 = files.get(m.file); if (!u8) continue; const { file: _f, ...rest } = m; await ODB.put('docs', { ...rest, blob: new Blob([u8], { type: m.mime || '' }) }); nd++; } }
+      let sub = null; const need = d.docsFolder && d.docs.some(m => !have.has(m.id) && !files.get(m.file));
+      if (need) { let dir = folder || (typeof AB !== 'undefined' && AB.dir) || null;   // this backup keeps its documents in the "Appraisal Assistant documents" folder next to it
+        try { if (dir && (await dir.queryPermission({ mode: 'read' })) !== 'granted' && (await dir.requestPermission({ mode: 'read' })) !== 'granted') dir = null; } catch (e) { dir = null; }
+        if (!dir && typeof window.showDirectoryPicker === 'function') { toast('Pick your backup folder (the one with the “' + d.docsFolder + '” folder in it) so the documents come back too.', 8000); try { dir = await window.showDirectoryPicker({ id: 'aa-backup', mode: 'read', startIn: 'documents' }); } catch (e) { dir = null; } }
+        try { sub = dir ? await dir.getDirectoryHandle(d.docsFolder) : null; } catch (e) { sub = null; toast('No “' + d.docsFolder + '” folder there – orders restored without their documents.', 8000); } }
+      for (const m of d.docs) { if (have.has(m.id)) continue; let u8 = files.get(m.file);
+        if (!u8 && sub) { try { u8 = new Uint8Array(await (await (await sub.getFileHandle(m.file.replace(/^documents\//, ''))).getFile()).arrayBuffer()); } catch (e) { u8 = null; } }
+        if (!u8) continue; const { file: _f, ...rest } = m; await ODB.put('docs', { ...rest, blob: new Blob([u8], { type: m.mime || '' }) }); nd++; } }
     contacts.sort((a, b) => (a.name || a.company || '').localeCompare(b.name || b.company || ''));
     store.set('contacts', contacts); store.set('aiText', aiText); renderLetters(); renderContacts();
     toast(`Restored ${nl} orders, ${nc} clients` + (files ? `, ${nd} documents` : '') + (na ? `, ${na} saved market areas` : '') + (gj ? `, ${gj} Comp genie assignments` : ''), 6000); if (typeof renderHome === 'function') renderHome();
