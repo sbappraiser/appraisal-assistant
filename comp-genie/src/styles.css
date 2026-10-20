@@ -209,3 +209,6 @@ input.txt:focus,input:not([type=checkbox]):not([type=radio]):not([type=file]):fo
 input::placeholder,textarea::placeholder{color:#5a6672}
 .ccdone{color:var(--ok);font-weight:800}
 .files summary{cursor:pointer}
+.bulk{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin:8px 0;padding:6px 10px;background:#f4f7fa;border:1px solid var(--line);border-radius:8px;font-size:14px}.bulk .bsel{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+table.comps th.ck,table.comps td.ck{width:26px;text-align:center;padding-left:4px;padding-right:2px}table.comps td.ck input,table.comps th.ck input{width:17px;height:17px;cursor:pointer}
+.nutag{color:#7a3d00;font-weight:600;font-size:12px}

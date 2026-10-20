@@ -618,3 +618,4 @@ Decisions (her, Oct 19–20): "Exterior of dwelling" instead of left/right/side 
 - g2-1020-2003: blue * (REQ_STAR, .req) left of required lines (GRID_KEEP = F-1 always-displayed) on the grid and in ⚙ Grid lines – her ask.
 - g2-1020-2008: darker text (--ink #05090d, --muted #2b3642, grays darkened); focused field orange (#ffd29a, orange outline, also in Classic look); Comps considered ✓ Done – collapse / Show ▾ (J.ccDone).
 - Files in this assignment is a <details>: folded (✓ nothing else needed) unless crsNeedHTML/photoNeedHTML has something or a remove-file confirm is open.
+- g2-1020-2011: Comps considered select column (CSEL, not saved) + bulk bar (Select all / not on grid / none; Put on the grid; Analyzed – not used with one reason, default Design / style; also save to comp database). 'Grid all' renamed 'Grid the undecided (n)'; not-used rows tagged 'analyzed – not used'.
