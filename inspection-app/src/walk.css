@@ -2,10 +2,10 @@
 .wk { display: flex; flex-direction: column; gap: 14px; }
 .wk-route { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 6px; -webkit-overflow-scrolling: touch; }
 .wk-stop { flex: 0 0 auto; border: 2px solid #000; background: #fff; border-radius: 999px; padding: 8px 14px; font: 700 15px var(--font); color: #000; }
-.wk-stop.on { background: #000; color: #fff; }
+.wk-stop.on { background: var(--yellow); color: #000; border-width: 3px; box-shadow: 0 0 0 2px #000; }
 .wk-stop.part { border-color: var(--tangerine); }
-.wk-stop.done { background: var(--req); border-color: var(--go); }
-.wk-stop.on.done { background: #0a4d27; color: #fff; }
+.wk-stop.done { background: #8fe3ad; border-color: #0a7a35; }
+.wk-stop.on.done { background: var(--yellow); border-color: var(--go); }
 .wk-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
 .wk-head small { font: 700 13px var(--font); text-transform: uppercase; letter-spacing: .05em; color: #555; }
 .wk-head h2 { margin: 2px 0 0; font-size: 30px; line-height: 1.1; }

@@ -177,6 +177,7 @@ const DICT_NEED = [
   ['garage.*', null, ['garage', 'carport'], 'garage', true], ['interior.laundry', ['In Garage'], ['laundry', 'washer', 'dryer', 'hookup'], null, true], ['front.foundType', ['ConcretePerimeter'], ['foundation', 'raised', 'crawlspace'], null, true],
   ['amenities.walks', null, ['walk', 'walkway', 'path', 'pathway', 'walking'], null, false], ['amenities.fenceMat', null, ['fence', 'fencing'], null, false],
   ['site.view', null, ['view', 'views', 'overlook', 'vista'], null, false], ['site.viewMore', null, ['view', 'views', 'overlook', 'vista'], null, false],
+  ['systems.eff', ['Generator – Natural Gas', 'Generator – Propane', 'Generator – Diesel'], ['generator', 'backup'], null, false],
   ['street.*', null, ['street', 'road'], 'street', false], ['driveway.*', null, ['driveway', 'drive'], 'driveway', false]];
 const OUTSIDE_TABS = new Set(['street', 'driveway', 'front', 'garage', 'exterior', 'site', 'amenities']);
 const STRICT_CUE = new Set(['interior.intDoors', 'interior.extDoors', 'front.frontDoor']);
@@ -292,6 +293,22 @@ function dkLabelAnswers(text, put) {
     if (/ roof (?:is |was )?(?:observable|observed|visible|viewed) | roof observed /.test(sn) && !/ roof (?:is |was )?not /.test(sn)) put('front.roofObs', true);
     const ra = / roof (?:is |was )?(?:about |approximately |around |roughly )?(\d{1,2})(?: to (\d{1,2}))? years? old /.exec(dkNum(sn)); if (ra) { any = true; const y = +(ra[2] || ra[1]); put('front.roofAge', y < 1 ? 'LessThanOneYear' : y <= 10 ? 'OneToTenYears' : y <= 20 ? 'TenToTwentyYears' : 'TwentyOrMoreYears'); }
     if (/ roof (?:is |was )?(?:observable|observed|visible|viewed) | roof observed /.test(sn)) any = true;
+    // site influences ("site influence residential, neutral impact" – she may say site characteristic for it) and utilities
+    { const sv = dkNum(sn); const mark = ws => ws.split(' ').forEach(w => vocab.add(w));
+      if (/ site (?:characteristics?|influences?) | influences? /.test(sv)) { mark('site characteristic characteristics influence influences of with impact is are a an bordering borders onsite on offsite off typical');
+        const INF = [[/ high density residential /, 'HighDensityResidential'], [/ residential /, 'Residential'], [/ busy (?:road|roadway|street) /, 'BusyRoadway'], [/ commercial /, 'CommercialArea'], [/ golf course /, 'GolfCourse'], [/ (?:green|open) space /, 'GreenSpace'], [/ park /, 'Park'], [/ school /, 'School'],
+          [/ (?:overhead )?(?:power|transmission) lines? /, 'OverheadElectricPowerTransmissionLine'], [/ industrial /, 'IndustrialArea'], [/ rail(?:road| line) /, 'RailLine'], [/ airport /, 'Airport'], [/ agricultural /, 'Agricultural'], [/ historic district /, 'HistoricDistrict']];
+        let sv2 = sv; const got = []; INF.forEach(([rx, v]) => { if (rx.test(sv2)) { got.push(v); sv2 = sv2.replace(rx, ' '); } });
+        if (/ site characteristics? (?:affecting value )?(?:is |are )?(?:none|no |typical )/.test(sv) && !got.length) { put('site.siteFeat', 'None'); any = true; mark('none no affecting value'); }
+        else if (got.length) { got.forEach(v => put('site.influences', v)); any = true; mark('residential high density busy road roadway street commercial golf course green open space park school overhead power transmission line lines industrial rail railroad airport agricultural historic district');
+          const im = / (neutral|beneficial|adverse) | impact (?:is )?(neutral|beneficial|adverse) /.exec(sv); if (im) { const v = im[1] || im[2]; put('site.inflImpact', v[0].toUpperCase() + v.slice(1)); mark('neutral beneficial adverse'); }
+          const px = / (bordering|borders|onsite|on site|offsite|off site) /.exec(sv); if (px) put('site.inflProx', /^bord/.test(px[1]) ? 'Bordering' : /^on/.test(px[1]) ? 'Onsite' : 'Offsite'); } }
+      if (/ utilit(?:y|ies) | (?:public|private) (?:water|sewer|gas|electric|electricity) | septic | propane | well water | broadband | internet /.test(sv)) { mark('all the utilities utility are is public private water sewer sanitary gas natural electric electricity and septic well propane broadband high speed internet cable fiber available on a system tank');
+        if (/ (?:all )?(?:the )?utilities (?:are )?(?:all )?public | public utilities /.test(sv)) { ['elec', 'gas', 'waterUtil', 'sewer'].forEach(k => put('site.' + k, 'Public')); any = true; }
+        [[/ public (?:sanitary )?sewer | sewer (?:is )?public | public water and (?:sanitary )?sewer | public (?:water|gas|electric(?:ity)?)(?:,| and)* (?:\w+ )?(?:and )?sewer /, 'sewer', 'Public'], [/ public water | water (?:is )?public /, 'waterUtil', 'Public'], [/ public (?:natural )?gas | gas (?:is )?public /, 'gas', 'Public'], [/ public electric(?:ity)? | electric(?:ity)? (?:is )?public /, 'elec', 'Public'],
+          [/ septic /, 'sewer', 'NonPublic'], [/ well water | private well | on a well | water (?:is )?(?:from a |private )?well /, 'waterUtil', 'NonPublic'], [/ propane /, 'gas', 'NonPublic'], [/ no (?:natural )?gas /, 'gas', 'None']].forEach(([rx, k, v]) => { if (rx.test(sv)) { put('site.' + k, v); any = true; } });
+        if (/ septic /.test(sv)) put('site.sewerType', 'Septic'); if (/ well water | private well | on a well | water (?:is )?(?:from a |private )?well /.test(sv)) put('site.waterSrc', 'Well');
+        if (/ (?:broadband|high speed internet|internet|cable|fiber)(?: internet)? (?:is )?available | broadband /.test(sv) && !/ no (?:broadband|internet) /.test(sv)) { put('site.broadband', true); any = true; } } }
     if (any && dkNum(sn).trim().split(' ').every(w => !w || vocab.has(w) || /^\d+$/.test(w) || w.length < 2)) full.add(sn); });
   return full;
 }

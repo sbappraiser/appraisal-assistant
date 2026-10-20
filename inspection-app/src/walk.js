@@ -167,14 +167,25 @@ async function wkOpenSketch() { const b = document.getElementById('wkSketch'); i
 /* ---------- what is still needed at a place ---------- */
 function wkIssues(ins, P) { return computeIssues(ins).filter(x => !ins.overrides[x.key] && (x.sev === 'Required' || x.sev === 'Photo' || (x.sev === 'Recommended' && x.photo)) && P.iss && P.iss(x)); }
 function wkHeard(ins, P) {   // what her notes for this place would fill (not saved until Sort → Save)
-  const t = (wkData(ins).notes[P.key] || '').trim(); if (!t || !P.head) return { keys: new Set(), short: [] };
-  let R = null; const cp = JSON.parse(JSON.stringify(ins)); try { R = dictParse(P.head + ': ' + t, cp); } catch (e) { return { keys: new Set(), short: [] }; }
-  const keys = new Set(R.changes.filter(c => c.room === undefined).map(c => c.key.replace('.', ':')));
+  const t = (wkData(ins).notes[P.key] || '').trim(); if (!t || !P.head) return { keys: new Set(), autos: new Set(), short: [] };
+  let R = null; const cp = JSON.parse(JSON.stringify(ins)); try { R = dictParse(P.head + ': ' + t, cp); } catch (e) { return { keys: new Set(), autos: new Set(), short: [] }; }
+  const keys = new Set(R.changes.filter(c => c.room === undefined && !c.auto).map(c => c.key.replace('.', ':')));
+  const autos = new Set(R.changes.filter(c => c.room === undefined && c.auto).map(c => c.key.replace('.', ':')));   // "not said = No" (her rule) – not something she said
   let short = []; try { short = dkHeardShort(P.head + ': ' + t, cp); } catch (e) {}
-  return { keys, short };
+  return { keys, autos, short };
 }
-function wkStatus(ins, P) { const w = wkData(ins); const iss = wkIssues(ins, P).filter(x => x.sev !== 'Recommended'); const has = (w.notes[P.key] || '').trim() || ins.photos.some(p => p.walk === P.key) || (P.chooser && wkKids(ins, P).length);
-  return !has ? '' : iss.length ? 'part' : 'done'; }
+/* done = nothing required is left there (counting what her notes answer); started = she has notes, photos or answers there */
+let WK_REQ = null;
+function wkHasReq(P) { if (!WK_REQ) { WK_REQ = {}; try { const b = normalize(newInspection('x', 'x')); const I = computeIssues(b).filter(x => x.sev === 'Required' || x.sev === 'Photo'); WK_PLACES.forEach(q => { WK_REQ[q.key] = I.some(x => q.iss && q.iss(x)); }); } catch (e) {} } return P.g === 'item' ? true : !!WK_REQ[P.key]; }
+function wkStatus(ins, P) {
+  if (P.leave) return ''; const w = wkData(ins);
+  if (P.chooser) { const kids = wkKids(ins, P); if (!kids.length && !(w.notes[P.key] || '').trim()) return ''; const st = kids.map(k => wkStatus(ins, k)); return st.length && st.every(x => x === 'done') && !wkIssues(ins, P).some(x => x.sev !== 'Recommended' && !kids.some(k => k.iss(x))) ? 'done' : 'part'; }
+  const heard = (w.notes[P.key] || '').trim() ? wkHeard(ins, P) : { keys: new Set(), autos: new Set() };
+  const all = wkIssues(ins, P).filter(x => x.sev !== 'Recommended'); const left = all.filter(x => !(x.sev === 'Required' && (heard.keys.has(x.key) || heard.autos.has(x.key))));
+  const slots = (P.shots || []).filter(sh => sh.tg || sh.slot); const photoIn = ins.photos.some(p => p.walk === P.key || slots.some(sh => sh.slot ? (p.list === sh.slot.list && p.item === sh.slot.item) : (p.sec === sh.tg.sec && String(p.field || '').startsWith(sh.tg.base))));
+  const has = (w.notes[P.key] || '').trim() || photoIn || left.length < all.length || (P.g === 'item');
+  if (!left.length && (has || wkHasReq(P))) return has || !all.length ? 'done' : '';
+  return has ? 'part' : ''; }
 function wkKids(ins, P) { const lists = P.chooser === 'rooms' ? ['rooms', 'bedrooms', 'baths', 'kitchens', 'wetbars'] : P.chooser === 'buildings' ? ['adus', 'outbuildings'] : [P.chooser];
   return lists.flatMap(list => (ins.lists[list] || []).map(it => wkItemPlace(ins, 'L:' + list + ':' + it.id)).filter(Boolean)); }
 
@@ -210,12 +221,13 @@ function wkBodyHtml(ins, P) {
   if (P.chooser) return wkChooserHtml(ins, P);
   const shot = wkShot(ins, P); const iss = wkIssues(ins, P); const heard = wkHeard(ins, P);
   const photos = ins.photos.filter(p => p.walk === P.key).sort((a, b) => b.ts - a.ts);
-  const need = iss.filter(x => !(x.sev === 'Required' && heard.keys.has(x.key)));
+  const need = iss.filter(x => !(x.sev === 'Required' && (heard.keys.has(x.key) || heard.autos.has(x.key))));
+  const auto = iss.filter(x => x.sev === 'Required' && heard.autos.has(x.key) && !heard.keys.has(x.key));
   const got = iss.filter(x => x.sev === 'Required' && heard.keys.has(x.key));
   return `${P.parent ? `<button class="btn sm wk-back" data-wkgo="${P.parent}">‹ ${esc(wkPlace(ins, P.parent).t)}</button>` : ''}
     ${(P.shots || []).length > 1 ? `<div class="wk-shots"><span>Photo of:</span>${P.shots.map(s => `<button class="wchip ${shot && s.k === shot.k ? 'on' : ''}" data-wkshot="${esc(s.k)}">${esc(s.t)}</button>`).join('')}</div>` : ''}
     ${photos.length ? `<div class="dk-strip wk-strip">${photos.map(p => `<button class="thumb ${p.required ? 'req' : ''}" data-view="${p.id}"><img data-pid="${p.id}" alt=""><span>${esc(p.label)}</span></button>`).join('')}</div>` : ''}
-    <div class="wk-check">${need.length || got.length ? `<b>Needed here</b>${need.map(x => wkNeedHtml(ins, x)).join('')}${got.map(x => `<div class="wk-need ok">✓ ${esc(x.label)} <small>heard</small></div>`).join('')}` : `<div class="wk-need ok">✓ Nothing required is missing here${P.key === 'access' || P.key === 'front' || P.key === 'rear' ? '' : ''}</div>`}</div>
+    <div class="wk-check">${need.length || got.length ? `<b>Needed here</b>${need.map(x => wkNeedHtml(ins, x)).join('')}${got.map(x => `<div class="wk-need ok">✓ ${esc(x.label)} <small>heard</small></div>`).join('')}${auto.map(x => wkNeedHtml(ins, x).replace('</div><div class="wk-ans">', ` <small class="wk-auto">– you did not mention it, so it will be saved as <b>No</b>. Tap Yes if it applies.</small></div><div class="wk-ans">`)).join('')}` : `<div class="wk-need ok">✓ Nothing required is missing here${P.key === 'access' || P.key === 'front' || P.key === 'rear' ? '' : ''}</div>`}</div>
     ${wkNotesHtml(ins, P, heard)}
     ${P.interview ? `<div class="row"><button class="btn" data-wktab="interview">Open the Interview tab</button></div>` : ''}
     ${P.sketch ? `<p class="help">Sketching around the house? Tap <b>Sketch</b>: the photo and talk buttons stay on the sketch, and the photos are labeled “Exterior of dwelling” (or Front / Rear – tap the label on the camera).</p>` : ''}`;
