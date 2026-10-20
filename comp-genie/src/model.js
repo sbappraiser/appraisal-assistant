@@ -100,7 +100,7 @@ const FIELDS = [
 ];
 const FIELD = Object.fromEntries(FIELDS.map(f => [f.k, f]));
 
-const SALE_TYPE_TEXT = { ArmLth: "Arm's length", Listing: 'Listing', REO: 'REO (bank owned)', Short: 'Short sale', Estate: 'Estate sale', CrtOrd: 'Court ordered (probate, divorce, bankruptcy)', NonArm: "Non-arm's length", Relo: 'Relocation', Trust: 'Trust sale' };
+const SALE_TYPE_TEXT = { ArmLth: 'Typically motivated', Listing: 'Typically motivated (listing)', REO: 'REO sale', Short: 'Short sale', Estate: 'Estate sale', CrtOrd: 'Court ordered non-foreclosure sale', NonArm: 'Sale between related parties', Relo: 'Relocation sale', Trust: 'Estate sale' };   // her note Oct 20 2026: shown in the 3.6 words (ArmLth = Typically motivated)
 function fmt(f, v) {
   if (blank(v)) return '';
   if (f.k === 'saleType') return SALE_TYPE_TEXT[v] || String(v);

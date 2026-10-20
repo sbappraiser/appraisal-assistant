@@ -37,9 +37,10 @@ AREA_NAME = {'93108': 'Montecito', '93067': 'Summerland', '93013': 'Carpinteria'
              '93023': 'Ojai'}
 
 # ---------------------------------------------------------------- sale type / financing
-SALE_TYPES = [('listing', 'Listing'), ('armlth', 'ArmLth'), ('arms', 'ArmLth'), ('estate', 'Estate'), ('relo', 'Relo'),
-              ('reo', 'REO'), ('crtord', 'CrtOrd'), ('court', 'CrtOrd'), ('short', 'Short'), ('nonarm', 'NonArm'),
-              ('non-arm', 'NonArm'), ('trust', 'Trust')]
+# order matters: NonArmLth must not be read as ArmLth (Oct 20 2026)
+SALE_TYPES = [('listing', 'Listing'), ('nonarm', 'NonArm'), ('non-arm', 'NonArm'), ('armlth', 'ArmLth'), ('arms', 'ArmLth'), ('estate', 'Estate'), ('relo', 'Relo'),
+              ('reo', 'REO'), ('bankowned', 'REO'), ('crtord', 'CrtOrd'), ('court', 'CrtOrd'), ('probate', 'CrtOrd'), ('short', 'Short'),
+              ('trust', 'Trust')]
 
 def sale_type(v):
     v = clean(v)
