@@ -319,7 +319,7 @@ async function mkAddSearch(file, which, how) {
     rows.filter(r => r.twoUnits).forEach(r => { m.exclude = m.exclude || {}; m.exclude[r.mls] = true; });
     { const inf = mkCrsInfos({ rows: m.prev.rows }); if (inf.length && mode === 'add') mkCrsApply(m, which, inf); }
     mkChanged(); mkRender(true); toast(mode === 'add' ? `${rows.length} listing${rows.length === 1 ? '' : 's'} added – the search now has ${m.rows.length}` : `${rows.length} listings read from ${file.name}` + (which === 'micro' ? ' (comparable-sales search)' : ' (market area)'));
-    if (!(cur.docs || []).some(d => d.name === file.name)) addDocs([file]); // keep the search with the order's documents
+    if (!(cur.docs || []).some(d => d.name === file.name)) addDocs([file], 'marketSearch'); // keep the search with the order's documents
   } catch (e) { toast(e.message || 'Could not read that file'); }
 }
 /* CRS Data neighborhood sales list (Oct 20 2026). A sale that is also in the MLS search joins that listing (CRS details
@@ -369,7 +369,7 @@ async function mkAddCrs(file, text, which) {
   if (!String(m.file || '').split(' + ').includes(file.name)) m.file = m.file ? m.file + ' + ' + file.name : file.name;
   mkChanged(); mkRender(true);
   toast(`CRS list: ${list.length} sales – ${k.matched} joined to their MLS listing${k.filled ? ` (${k.filled} missing sale date${k.filled > 1 ? 's' : ''} filled from the recorded sale)` : ''}, ${k.fresh} not in this MLS search` + (k.inMacro ? ` (${k.inMacro} of them are in your macro MLS search, so outside your micro criteria – left unticked)` : '') + '.', 12000);
-  if (!(cur.docs || []).some(d => d.name === file.name)) addDocs([file]);
+  if (!(cur.docs || []).some(d => d.name === file.name)) addDocs([file], 'crsList');
 }
 /* where the two sources disagree – she decides which is right */
 function mkCrsDiff(r) {
@@ -416,6 +416,9 @@ function parseZillowText(t) {   // Zillow "Housing Market Overview" wording
 }
 function mkRender(redraft) {
   const box = $('#mkBody'); if (!box || !cur) return; const m = M();
+  { const used = new Set([M(), MI()].flatMap(q => String(q.file || '').split(' + ').map(x => x.trim()).filter(Boolean)));   // files used on this tab: filed under the right kind
+    let ch = false; (cur.docs || []).forEach(d => { if (!used.has(d.name)) return; const want = /prospect|crs/i.test(d.name) && !/customexport/i.test(d.name) ? 'crsList' : 'marketSearch'; if (d.type !== want && ['mls', 'other', ''].includes(d.type || '')) { d.type = want; ch = true; } });
+    if (ch) { saveLetter(true); if (typeof renderDocs === 'function') renderDocs(); } }
   [[M(), 'macro'], [MI(), 'micro']].forEach(([q, w]) => { if (q.crsV !== 2 && (q.rows || []).some(r => r.crs)) { mkCrsApply(q, w, mkCrsInfos(q)); mkChanged(); } });   // CRS lists loaded before Oct 20 2026 evening: joined again the right way
   const RA = mkCompute(); const R = MI().rows.length ? mkCompute(MI()) : RA; mkLast = R;
   if (redraft || m.comment == null) { if (R.rows.length || Object.keys(MK.stats).length) { if (!m.commentEdited) m.comment = mkCommentDraft(R); if (!m.criteriaEdited) m.criteria = mkCriteriaDraft(R); } }

@@ -8,7 +8,7 @@ const h = s => hesc(s ?? '');
 const DOC_TYPES = [
   ['Order and client', [['clientLetter', 'Client’s engagement letter / order'], ['myLetter', 'My engagement letter (signed)'], ['invoice', 'Invoice / payment'], ['ipadWorkfile', 'iPad inspection (Workfile package)'], ['email', 'Email (with its attachments)']]],
   ['Public record', [['crs', 'CRS property report'], ['permitsCounty', 'Permit history by parcel (County)'], ['permitsPdf', 'Permit records'], ['legal', 'Legal description'], ['deed', 'Deed (grant, trust transfer, quitclaim)'], ['prelim', 'Preliminary title report']]],
-  ['MLS and market', [['mls', 'MLS listing (subject)'], ['marketSearch', 'MLS market-area search'], ['mlsStats', 'SBMLS monthly statistics'], ['zillow', 'Zillow market page']]],
+  ['MLS and market', [['mls', 'MLS listing (subject)'], ['marketSearch', 'MLS market-area search'], ['crsList', 'CRS neighborhood sales list'], ['mlsStats', 'SBMLS monthly statistics'], ['zillow', 'Zillow market page']]],
   ['Plans and construction', [['floorplan', 'Floor plan (to trace in the sketch)'], ['plans', 'Plans'], ['specs', 'Specifications'], ['budget', 'Construction budget']]],
   ['HOA', [['condoQ', 'Condo questionnaire'], ['ccrs', 'CC&Rs'], ['hoaBudget', 'HOA budget'], ['bylaws', 'HOA bylaws'], ['minutes', 'HOA minutes']]],
   ['Sale', [['contract', 'Purchase contract'], ['counter', 'Counter offer'], ['addendum', 'Addendum'], ['disclosures', 'Disclosures'], ['leaseback', 'Leaseback / rent-back']]],
@@ -78,7 +78,7 @@ async function detectDocType(file) {
   if (isEmailFile(file)) return 'email';
   if (/\.zip$/i.test(file.name)) { if (/workfile/i.test(file.name)) return 'ipadWorkfile'; try { const z = await G.readZip(file); if (z.has('inspection-backup.json')) return 'ipadWorkfile'; } catch (e) {} return 'other'; }
   const t = await firstText(file);
-  if (/\.csv$/i.test(file.name)) return /Listing Number/i.test(t) ? 'mls' : 'other';
+  if (/\.csv$/i.test(file.name)) return /DATA_START/.test(t) && /Last Sale Amount/i.test(t) ? 'crsList' : /Listing Number/i.test(t) ? 'mls' : 'other';
   if (t) { for (const [re, k] of TEXT_RULES) if (re.test(t.slice(0, 3000))) return k; }
   for (const [re, k] of NAME_RULES) if (re.test(file.name.replace(/\.[a-z0-9]+$/i, ''))) return k;
   if (isImg(file)) return 'photo';
@@ -128,6 +128,7 @@ async function readDoc(meta, file) { // turns the readable kinds into facts; not
     } else if (meta.type === 'mls') {
       const rows = /\.csv$/i.test(file.name) ? G.parseMlsCsv(await G.readText(file)) : isPdf(file) ? G.parseMlsPdf(await G.pdfLines(file)) : [];
       const n = applyListings(rows, file.name); meta.note = n ? n + ' subject listing' + (n > 1 ? 's' : '') + ' found' : rows.length ? 'none of its ' + rows.length + ' listings is the subject' : 'no listings found';
+      if (!n && rows.length > 1 && /\.csv$/i.test(file.name)) { meta.type = 'marketSearch'; meta.note = rows.length + ' listings – an MLS search (Market tab), none is the subject'; }   // her search CSVs were filed as the subject's MLS listing
     } else if (meta.type === 'permitsCounty') {
       const P = G.parsePermits(await G.pdfLines(file)); if (!P.parcel && !P.accela.length && !P.zoning) { meta.note = 'not a County permit history'; return; }
       P.file = file.name; const apn = G.apnKey($('#f_apn').value);
@@ -433,7 +434,7 @@ function applyClientLetter(F) { // fills only empty boxes (type, form, client al
   return did;
 }
 
-const NO_ADDR_CHECK = ['photo', 'floorplan', 'marketSearch', 'mls', 'crs', 'zillow', 'mlsStats'];   // market pages (Zillow, SBMLS statistics) are not about one property
+const NO_ADDR_CHECK = ['photo', 'floorplan', 'marketSearch', 'crsList', 'mls', 'crs', 'zillow', 'mlsStats'];   // market pages (Zillow, SBMLS statistics) are not about one property
 async function checkDocAddress(meta, file) { // is this document for the order's property? (street number and street name on its first pages)
   const street = ($('#f_address').value || '').split(',')[0].trim(); if (!street || !isPdf(file) || NO_ADDR_CHECK.includes(meta.type)) return;
   const sp = G.splitAddr(street); const word = (sp.street.split(/\s+/).find(w => w.length > 2 && !/^(north|south|east|west|n|s|e|w)$/i.test(w)) || '').toLowerCase(); if (!sp.no || !word) return;
