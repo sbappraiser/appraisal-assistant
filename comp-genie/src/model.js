@@ -290,7 +290,7 @@ function compFlags(c, job) {
   { const ps = priorSales(c), cs = currentSale(c); const other = [...ps, ...(cs ? [{ date: cs.date, price: cs.price, src: cs.from }] : [])];   // a CORT line that another source agrees with (same date and price) is confirmed (Oct 20 2026)
     c.src.cort.forEach(t => { if (t.conf === null || t.conf >= 60) return; const ok = other.some(s => String(s.src || '').split('; ').some(x => !/^CORT/.test(x) && x !== 'cort') && s.date && t.saleDate && Math.abs(monthsBetween(s.date, t.saleDate)) <= 1 && (!t.salePrice || !s.price || Math.abs(s.price - t.salePrice) <= Math.max(1000, s.price * 0.01)));
       if (!ok) F.push({ sev: 'warn', t: `CORT line read with low confidence (${t.conf}) – check it against the scan ${t.file || ''}` }); }); }
-  if (disagree(c, 'gla')) F.push({ sev: 'info', t: 'Square footage differs between sources' });
+  if (disagree(c, 'gla') && !(c.pick && c.pick.gla) && blank((c.edit || {}).gla)) F.push({ sev: 'info', t: 'Square footage differs between sources – click the one to use' });   // resolved once she picks a source or types hers
   const a = archChosen(c); if (a && sale && !archMatches(a, sale) && a.v.saleDate) F.push({ sev: 'info', t: `Your archive has this property from an earlier sale (${showDate(a.v.saleDate)}); its sale facts are not used. House facts from your record ${monthsBetween(a.v.saleDate, sale.date) <= 24 ? 'are used' : 'are older than 2 years, so MLS is used first'}` });
   if (job && job.subject && job.subject.eff && sale && sale.date && monthsBetween(sale.date, job.subject.eff) > 12) F.push({ sev: 'warn', t: 'Sale is more than 12 months before the effective date' });
   return F;
