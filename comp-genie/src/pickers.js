@@ -60,7 +60,8 @@ const PK_ALIAS = { status: { closed: 'SettledSale', sold: 'SettledSale', settled
 function pkParse(spec, text) { const t = String(text || '').trim(); if (!t) return { vals: [], other: '', ok: true };
   const parts = spec.multi ? t.split(/;\s*|,\s*/) : [t]; const vals = []; let other = '', ok = true;
   const al = PK_ALIAS[Object.keys(PICK).find(k => PICK[k] === spec || PICK[k].title === spec.title)] || {};
-  parts.forEach(p => { const k = p.toLowerCase().replace(/[^a-z0-9]/g, ''); if (al[k] === '') return; const hit = (al[k] && spec.opts.find(o => o[0] === al[k])) || spec.opts.find(([v, l]) => v.toLowerCase() === k || l.toLowerCase().replace(/ \(.*\)$/, '').replace(/[^a-z0-9]/g, '') === k || l.toLowerCase().replace(/[^a-z0-9]/g, '') === k);
+  parts.forEach(p => { const om = p.match(/^other\s*:\s*(.+)$/i); if (om && spec.opts.some(o => o[0] === 'Other')) { vals.push('Other'); other = (other ? other + ', ' : '') + om[1].trim(); return; }   // "Other: Wall heater" (her 2.6 shorthand read into 3.6)
+    const k = p.toLowerCase().replace(/[^a-z0-9]/g, ''); if (al[k] === '') return; const hit = (al[k] && spec.opts.find(o => o[0] === al[k])) || spec.opts.find(([v, l]) => v.toLowerCase() === k || l.toLowerCase().replace(/ \(.*\)$/, '').replace(/[^a-z0-9]/g, '') === k || l.toLowerCase().replace(/[^a-z0-9]/g, '') === k);
     if (hit) vals.push(hit[0]); else if (spec.other) { vals.push('Other'); other = (other ? other + ', ' : '') + p; } else ok = false; });
   return { vals, other, ok }; }
 /* valid = empty, or every part is an allowed answer; "Other" words count only when they came from ▾ pick (marker), so a 2.6 code like DT2;Ranch turns red */

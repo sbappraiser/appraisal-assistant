@@ -312,6 +312,7 @@ function compFacts(c, J) {
     other: g('other') || [yes(g('horse')) ? 'Horse facilities' : ''].filter(Boolean).join(', '), _id: c.id, aduSf: g('aduSf'), aduBaths: g('aduBaths'),   // horse: the MLS says 'No' when the box is not ticked (it showed "Horse facilities" for every MLS comp)
     carport: num(g('carport')), bsmtUnf: !blank(g('bsmtSf')) ? Math.max(0, (+g('bsmtSf')) - (+(g('bsmtFin') || 0))) : null,
     heat: String(g('heating') || '').trim() || (String(g('heatCool') || '').includes(' / ') ? String(g('heatCool')).split(' / ')[0].trim() : (/cool/i.test(g('heatCool') || '') ? '' : String(g('heatCool') || '').trim())), cool: coolText(g('cooling') || g('heatCool')) || (/no cooling listed/i.test(g('heatCool') || '') ? 'None listed' : '') };
+  { const hc = val(c, 'heatCool'); if (hc.v && (hc.src === 'arch' || hc.src === 'edit') && !/ \/ /.test(String(hc.v))) { const A = archHC(hc.v); if (A.heat) F0.heat = A.heat; else if (!F0.heat) F0.heat = String(hc.v); if (A.cool) F0.cool = A.cool; } }   // her 2.6 Heating/Cooling line (FWA C/Air …) split into the 3.6 heating and cooling fields
   { const lr = val(c, 'locRating'); const E = c.edit || {}; if (lr.src === 'arch' && blank(E.locRating) && blank(E.locFactors)) { const A = archLoc36(g('locRating'), g('locFactors')); if (A.loc) F0.loc = A.loc; Object.entries(A.lines).forEach(([k, v]) => { if (blank(F0[k])) F0[k] = v; }); } }   // her 2.6 archive location in 3.6 terms
   adjRows(J).forEach(r => { const e = (c.edit || {})['grid_' + r[0]]; if (!blank(e)) F0[r[0]] = e; });   // her entries on lines with no source
   F0._fine = { q: fineOf(J, c.id, 'q'), c: fineOf(J, c.id, 'c') };
@@ -689,3 +690,34 @@ function termsText(f) { f = String(f || '').trim(); if (!f) return ''; if (/no l
   if (/^seller/i.test(f)) return 'Private';
   const m = f.match(/^(Conv|FHA|VA|USDA|Cash|Seller)\s*;\s*\d*/i); if (m) return termsText(m[1]);   // a 2.6 archive entry like Conv;0
   return f; }
+/* her 2.6 Heating/Cooling line → the 3.6 heating and cooling fields (her shorthand, Oct 20 2026):
+   FWA C/Air = forced warm air + central air · HeatPmp = heat pump (heats and cools) · Rdnt = radiant · Split = split system (heats and cools)
+   Wall = wall heater · BB / HWBB = baseboard · Indiv / Ind/Air = individual a/c · Gravity / Floor = gravity (floor furnace) · None = no cooling */
+function archHC(raw) {
+  const t0 = String(raw || '').replace(/ /g, ' ').replace(/^['"0]+/, '').trim(); const t = t0.toLowerCase(); if (!t) return { heat: '', cool: '' };
+  const H = []; const add = (k, re) => { const m = t.match(re); if (m && !H.some(h => h.k === k)) H.push({ k, i: m.index }); };
+  add('ForcedWarmAir', /fwa|\bfau\b|\bfag\b|\bfaw\b|forced (?:air|warm|solar)|hvac|central heat|gas fwa/);
+  add('Radiant', /radi(?!ator)|rdnt|rndt|rdmt|rdiant|radnt|randiant|hydronic|rdnt flr|radiant floor/);
+  add('Baseboard', /hwbb|\bbb\b|baseboard|bsbrd|bsbrd/);
+  add('Radiators', /radiator|boiler|\bhw\b|frcdh20/);
+  add('GravityAir', /grav|grvty|\bfloor\b(?! heat)/);
+  add('Other:Wall heater', /\bwall\b|\bwll\b|\bwal\b/);
+  add('Other:Heat pump', /heat ?pu?mp|htpmp|heatpump|heat pmp|\bhp\b/);
+  add('MiniSplit', /split|splt/);
+  add('Stove', /stove/); add('Fireplace', /fireplace/);
+  if (!H.length && /solar/.test(t)) H.push({ k: 'PassiveSolar', i: 0 });
+  if (!H.length && /^(elect|elec|electric)\b/.test(t)) H.push({ k: 'Other:Electric heat', i: 0 });
+  if (/radiant floor|rdnt flr|floor heat/.test(t)) { const g = H.findIndex(h => h.k === 'GravityAir'); if (g >= 0 && !/grav|grvty/.test(t)) H.splice(g, 1); }
+  H.sort((a, b) => a.i - b.i);
+  const LBL = { ForcedWarmAir: 'Forced warm air', Radiant: 'Radiant', Baseboard: 'Baseboard', Radiators: 'Radiators', GravityAir: 'Gravity air', MiniSplit: 'Mini split', Stove: 'Stove', Fireplace: 'Fireplace', PassiveSolar: 'Passive solar' };
+  const heat = H.length ? H.map(h => /^Other:/.test(h.k) ? 'Other: ' + h.k.slice(6) : LBL[h.k]).join('; ') : (/^(none|no heat)\b/.test(t) ? 'None' : '');
+  let cool = '';
+  if (/ind\/air|indiv|individual|window/.test(t)) cool = 'Individual';
+  const central = /c\s*\/\s*a+i?r|c\.air|\bcair\b|c\/ar\b|central(?! heat)|\bcac\b|hvac|fwa \/air|heat ?pu?mp|htpmp|heatpump|heat pmp|\bhp\b/.test(t), generic = /a\/c|\bac\b|a\/cir|cooling|\bair\b/.test(t), split = /split|splt/.test(t);
+  if (central) cool = 'Centralized';   // a heat pump cools through the ducts
+  else if (split && !cool) cool = 'Individual';   // a split / mini-split system cools room by room ("Split Heat/A/C" too)
+  else if (generic && !cool) cool = 'Centralized';
+  if (!cool && /evap/.test(t)) cool = 'Other: Evaporative';
+  if (!cool && /\bnone\b|noine|noen|none$|heat only|heating only|\bfans\b|ventltn|no heat/.test(t)) cool = 'None';
+  return { heat, cool, known: !!(heat || cool) };
+}

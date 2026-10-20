@@ -41,7 +41,7 @@ function uadHeat(s) {
   if (/wall/i.test(s) && !out.length) out.push('Other');
   return out;
 }
-function uadFuel(s) { return /propane/i.test(s) ? 'Propane' : /electric|elect/i.test(s) ? 'Electric' : /gas/i.test(s) ? 'NaturalGas' : ''; }
+function uadFuel(s) { return /propane/i.test(s) ? 'Propane' : /electric|elect|\belec\b|heat ?pu?mp|htpmp|heat pmp/i.test(s) ? 'Electric' : /gas/i.test(s) ? 'NaturalGas' : ''; }
 function uadCool(s) {
   const t = String(s || ''); const part = t.includes('/') ? t.split('/').slice(1).join('/') : t;
   if (/no cooling|none/i.test(part) && !/central|C\/Air|A\/C/i.test(part)) return { exists: false };
@@ -113,8 +113,8 @@ function buildCompXML(PROPS, RELS, DSS, c, n, job) {
   if (isAtt && stru) { const a = st.kids.find(k => k.tag === 'ARCHITECTURAL_DESIGN') || X(st, 'ARCHITECTURAL_DESIGN'); XV(a, 'StructuralDesignType', stru); }
   { const sd = X(st, 'STRUCTURE_DETAIL'); XV(sd, 'LivingUnitCount', 1); if (stru === 'RowhouseTownhouse' && !blank(CF.unitPos)) XV(sd, 'RowhouseTownhouseEndUnitIndicator', /end|corner/i.test(CF.unitPos) ? 'true' : 'false'); if (!blank(CF.levels)) XV(sd, 'StoriesCount', CF.levels); }
   const heats = CFx.heat && typeof PICK !== 'undefined' && pkParse(PICK.heat, CFx.heat).ok ? pkParse(PICK.heat, CFx.heat).vals.filter(v => v !== 'None') : uadHeat(g('heatCool')); if (heats.length || cool) { const sy = X(imp, 'SYSTEM');
-    if (cool && cool.exists) XV(X(X(sy, 'COOLING_SYSTEMS'), 'COOLING_SYSTEM'), 'CoolingSystemType', cool.type);
-    if (heats.length) { const hs = X(sy, 'HEATING_SYSTEMS'); heats.forEach(h => { const e = X(hs, 'HEATING_SYSTEM'); XV(e, 'HeatingFuelType', uadFuel(g('heatCool')) || null); XV(e, 'HeatingSystemType', h); if (h === 'Other') XV(e, 'HeatingSystemTypeOtherDescription', 'Wall furnace'); }); } }
+    if (cool && cool.exists) { const ce = X(X(sy, 'COOLING_SYSTEMS'), 'COOLING_SYSTEM'); XV(ce, 'CoolingSystemType', cool.type); if (cool.type === 'Other') XV(ce, 'CoolingSystemTypeOtherDescription', ((typeof PICK !== 'undefined' && pkParse(PICK.cool, CFx.cool).other) || 'Other').slice(0, 19)); }
+    if (heats.length) { const hs = X(sy, 'HEATING_SYSTEMS'); heats.forEach(h => { const e = X(hs, 'HEATING_SYSTEM'); XV(e, 'HeatingFuelType', uadFuel(g('heatCool')) || null); XV(e, 'HeatingSystemType', h); if (h === 'Other') XV(e, 'HeatingSystemTypeOtherDescription', ((CFx.heat && typeof PICK !== 'undefined' && pkParse(PICK.heat, CFx.heat).other) || 'Wall heater').slice(0, 19)); }); } }
   // INSPECTIONS (front photo)
   if (c.front) { const im = X(X(X(X(P, 'INSPECTIONS'), 'INSPECTION'), 'IMAGES'), 'IMAGE'); XV(im, 'ImageCategoryType', 'PropertyPhoto'); XV(im, 'ImageFileLocationIdentifier', '\\\\Images\\' + photoName(c)); XV(im, 'MIMETypeIdentifier', 'image/jpeg'); }
   // LISTING_INFORMATIONS
