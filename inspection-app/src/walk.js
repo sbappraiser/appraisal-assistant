@@ -228,7 +228,10 @@ function wkBodyHtml(ins, P) {
   return `${P.parent ? `<button class="btn sm wk-back" data-wkgo="${P.parent}">‹ ${esc(wkPlace(ins, P.parent).t)}</button>` : ''}
     ${(P.shots || []).length > 1 ? `<div class="wk-shots"><span>Photo of:</span>${P.shots.map(s => `<button class="wchip ${shot && s.k === shot.k ? 'on' : ''}" data-wkshot="${esc(s.k)}">${esc(s.t)}</button>`).join('')}</div>` : ''}
     ${photos.length ? `<div class="dk-strip wk-strip">${photos.map(p => `<button class="thumb ${p.required ? 'req' : ''}" data-view="${p.id}"><img data-pid="${p.id}" alt=""><span>${esc(p.label)}</span></button>`).join('')}</div>` : ''}
-    <div class="wk-check">${need.length || got.length ? `<b>Needed here</b>${need.map(x => wkNeedHtml(ins, x)).join('')}${got.map(x => `<div class="wk-need ok">✓ ${esc(x.label)} <small>heard</small></div>`).join('')}${auto.map(x => wkNeedHtml(ins, x).replace('</div><div class="wk-ans">', ` <small class="wk-auto">– you did not mention it, so it will be saved as <b>No</b>. Tap Yes if it applies.</small></div><div class="wk-ans">`)).join('')}` : `<div class="wk-need ok">✓ Nothing required is missing here${P.key === 'access' || P.key === 'front' || P.key === 'rear' ? '' : ''}</div>`}</div>
+    ${(() => { const req = need.filter(x => x.sev !== 'Recommended'), sug = need.filter(x => x.sev === 'Recommended');   // red until done; answered items disappear
+      return (req.length ? `<div class="wk-check need"><b>Needed here (${req.length})</b>${req.map(x => wkNeedHtml(ins, x)).join('')}</div>` : (got.length || (P.shots || []).length ? '<div class="wk-allset">✓ Everything required here is done</div>' : ''))
+        + (auto.length ? `<div class="wk-check auto"><b>You did not mention these, so they will be saved as No</b> <small>– tap Yes if one applies</small>${auto.map(x => wkNeedHtml(ins, x)).join('')}</div>` : '')
+        + (sug.length ? `<div class="wk-check sug"><b>Suggested</b>${sug.map(x => wkNeedHtml(ins, x)).join('')}</div>` : ''); })()}
     ${wkNotesHtml(ins, P, heard)}
     ${P.interview ? `<div class="row"><button class="btn" data-wktab="interview">Open the Interview tab</button></div>` : ''}
     ${P.g === 'item' && !(P.list === 'kitchens' && P.i === 0) ? `<div class="row"><button class="btn sm danger" data-wkdel="${esc(P.key)}">Remove this ${esc(P.t.replace(/ · .*$/, ''))}</button></div>` : ''}
@@ -274,7 +277,7 @@ function wkChooserHtml(ins, P) {
   return `${twins.map(a => `<p class="warn-box">You have ${a.length} × <b>${esc(a[0].t)}</b>. If that is one room, tap the extra one and <b>Remove</b> it (its notes and photos move to the one you keep).</p>`).join('')}
     ${kids.length ? `<div class="wk-kids">${kids.map(k => { const st = wkStatus(ins, k); return `<button class="wk-stop ${st}" data-wkgo="${esc(k.key)}">${st === 'done' ? '✓ ' : ''}${esc(k.t)}</button>`; }).join('')}</div>` : ''}
     <p class="help">${kids.length ? 'Tap one to go back to it, or add another:' : 'Tap what you are looking at (or say it with a colon: “Patio colon…”):'}</p>${add}
-    ${iss.length ? `<div class="wk-check"><b>Still needed</b>${iss.slice(0, 10).map(x => wkNeedHtml(ins, x)).join('')}${iss.length > 10 ? `<div class="wk-need">+ ${iss.length - 10} more</div>` : ''}</div>` : ''}
+    ${iss.length ? `<div class="wk-check need"><b>Still needed (${iss.length})</b>${iss.slice(0, 10).map(x => wkNeedHtml(ins, x)).join('')}${iss.length > 10 ? `<div class="wk-need">+ ${iss.length - 10} more</div>` : ''}</div>` : ''}
     ${wkNotesHtml(ins, P)}`;
 }
 /* never redraw while her finger is down: the redraw would swallow the tap (a tab or place she is tapping) */

@@ -59,3 +59,7 @@
 .wcam-bot { flex-direction: row; align-items: flex-end; }
 .wcam-right { display: flex; flex-direction: column; align-items: center; gap: 14px; }
 .wk-sent { margin-top: 6px; font-size: 15px; color: #0a4d27; background: #eefbf3; border: 1px solid #0fa84a; border-radius: 8px; padding: 6px 10px; }
+.wk-check.need { background: #ffe1e1; border: 3px solid #e00000; } .wk-check.need > b { color: #b00000; }
+.wk-check.auto { background: #f4f4f4; border: 2px dashed #888; } .wk-check.auto small { color: #555; }
+.wk-check.sug { background: #f7f9ff; border: 2px solid #9db4dd; }
+.wk-allset { border: 2px solid #0fa84a; background: #eefbf3; color: #0a4d27; font-weight: 700; border-radius: 12px; padding: 8px 14px; }
