@@ -62,6 +62,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-
 .client-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; }
 .client-actions { display: flex; gap: 6px; flex-wrap: wrap; } .client-actions select { width: auto; max-width: 220px; padding: 6px 8px; font-size: 13px; }
 .eyebrow { font: 600 12px var(--ui); text-transform: uppercase; letter-spacing: .07em; color: var(--muted); }
+#mkBody table.facts.uad th { color: #b00000; font-weight: 800; } #mkBody table.facts.uad th .sfn { color: #666; font-weight: 600; font-size: .85em; letter-spacing: 0; } #mkBody table.facts.uad th small { color: #555; }
 .eyebrow.mkhd { font: 700 15px var(--ui); color: #c00000; letter-spacing: .05em; } .eyebrow.mkhd b { font-weight: 800; }
 table.mcq th { color: #c00000 !important; font-size: 14px !important; font-weight: 800 !important; letter-spacing: .03em; }
 /* Market tab: darker reading text, and the boxes you fill in clearly boxes (her ask, Oct 20 2026) */
@@ -734,7 +735,7 @@ mark.blank{background:#fff3a8;padding:0 2px;border-radius:3px}.cmt textarea{widt
 </div>
 <div id="toast" role="status" hidden></div>
 <script>
-const BUILD='o1-1020-0746';
+const BUILD='o1-1020-0749';
 const G = (() => {
 /* ---------------- small helpers ---------------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -2784,23 +2785,23 @@ function mkRender(redraft) {
         <tr><th>Price trend</th><td>${Q.salesN < MK_MIN_SALES ? 'not enough competing sales to measure (' + Q.salesN + ') – the comment uses the broader market' : Q.salesN + ' competing sales'}</td></tr></table>` + mkTable(Q, MI(), 'micro'); })() : ''}
   </section>
   <section class="mkcard"><h3>3 · UAD 3.6 Market section</h3><p class="help">${MI().rows.length ? 'Search Result Metrics from the Search Criteria search (box 2).' : '<b class="warnTxt">Box 2 is empty</b> – these metrics use the Market Area Boundary search (box 1) for now.'}</p>
-    <table class="facts uad"><tr><th>17.003 Market Area Boundary</th><td><textarea data-mk="boundary" rows="3" maxlength="1250" placeholder="e.g. Samarkand market area: bounded by De la Vina St, State St, Las Positas Rd and Highway 101">${h(m.boundary || '')}</textarea>${cnt('boundary', 1250)}
+    <table class="facts uad"><tr><th>Market Area Boundary <span class="sfn">(17.003)</span></th><td><textarea data-mk="boundary" rows="3" maxlength="1250" placeholder="e.g. Samarkand market area: bounded by De la Vina St, State St, Las Positas Rd and Highway 101">${h(m.boundary || '')}</textarea>${cnt('boundary', 1250)}
       <div class="row"><select id="mkBndPick"><option value="">Use a saved area…</option>${MK.boundaries.map((b, i) => `<option value="${i}">${h(b.name)}</option>`).join('')}</select><button type="button" class="btn ghost small" id="mkBndSave">Save this area</button><button type="button" class="btn ghost small" data-copy="boundary">Copy</button></div></td></tr>
-    <tr><th>17.004 Search Criteria Description</th><td><textarea data-mk="criteria" rows="3" maxlength="1250">${h(m.criteria || '')}</textarea>${cnt('criteria', 1250)}<div class="row"><button type="button" class="btn ghost small" data-redraft="criteria">Draft again</button><button type="button" class="btn ghost small" data-copy="criteria">Copy</button></div></td></tr>
-    <tr><th>17.011 Sales in Past ___ Months (look-back)</th><td>${R.L}</td></tr>
-    <tr><th>17.005 Active Listings</th><td>${R.activeN}</td></tr>
-    <tr><th>17.007 / 17.008 / 17.009 Lowest / Median / Highest List Price</th><td>${R.activeN ? `${$m(R.activeLow)} / ${$m(R.activeMed)} / ${$m(R.activeHigh)}` : '<small class="muted">not needed when there are no actives</small>'}</td></tr>
-    <tr><th>17.006 Median Days on Market (actives)</th><td>${R.activeN ? Math.round(R.activeDom) : '<small class="muted">not needed when there are no actives</small>'}</td></tr>
-    <tr><th>17.010 Pending Sales</th><td>${R.pendingN}</td></tr>
-    <tr><th>17.012 Sales in Past ${R.L} Months</th><td>${R.salesN}</td></tr>
-    <tr><th>17.013 / 17.014 / 17.015 Lowest / Median / Highest Sale Price</th><td>${R.salesN ? `${$m(R.saleLow)} / ${$m(R.saleMed)} / ${$m(R.saleHigh)}` : '<small class="muted">not needed when there are no sales</small>'}</td></tr>
-    <tr><th>17.016 Distressed Market Competition</th><td>${sel('distress', [['false', 'No'], ['true', 'Yes']], R.rows.length ? R.suggest.distress : '')}${R.distressed.length ? `<small> ${R.distressed.length} REO / short sale / foreclosure listing${R.distressed.length > 1 ? 's' : ''}. Estate and trust sales are not distressed.</small>` : ''}</td></tr>
-    <tr><th>17.021 Demand/Supply</th><td>${sel('supply', SUPPLY, R.suggest.supply)}<small class="muted"> ${R.supply != null ? `${(Math.round(R.supply * 10) / 10)} months of supply (${R.activeN} actives ÷ ${(Math.round(R.perMonth * 100) / 100)} sales a month). Guide: under 4 shortage, 4–6 in balance, over 6 oversupply.` : 'No sales in the look-back period, so no months of supply.'}</small></td></tr>
-    <tr><th>17.022 Marketing Time</th><td>${sel('mktime', MKTIME, R.suggest.mktime)}<small class="muted"> ${R.saleDom != null ? `median ${Math.round(R.saleDom)} days on market (cumulative) for the sales` : ''}</small></td></tr>
-    <tr><th>17.018 Price Trend Source <small>one per line, 33 characters each</small></th><td><textarea data-mk="sources" rows="2">${h(sources.join('\n'))}</textarea></td></tr>
+    <tr><th>Search Criteria Description <span class="sfn">(17.004)</span></th><td><textarea data-mk="criteria" rows="3" maxlength="1250">${h(m.criteria || '')}</textarea>${cnt('criteria', 1250)}<div class="row"><button type="button" class="btn ghost small" data-redraft="criteria">Draft again</button><button type="button" class="btn ghost small" data-copy="criteria">Copy</button></div></td></tr>
+    <tr><th>Sales in Past ___ Months (look-back) <span class="sfn">(17.011)</span></th><td>${R.L}</td></tr>
+    <tr><th>Active Listings <span class="sfn">(17.005)</span></th><td>${R.activeN}</td></tr>
+    <tr><th>Lowest / Median / Highest List Price <span class="sfn">(17.007 / 17.008 / 17.009)</span></th><td>${R.activeN ? `${$m(R.activeLow)} / ${$m(R.activeMed)} / ${$m(R.activeHigh)}` : '<small class="muted">not needed when there are no actives</small>'}</td></tr>
+    <tr><th>Median Days on Market (actives) <span class="sfn">(17.006)</span></th><td>${R.activeN ? Math.round(R.activeDom) : '<small class="muted">not needed when there are no actives</small>'}</td></tr>
+    <tr><th>Pending Sales <span class="sfn">(17.010)</span></th><td>${R.pendingN}</td></tr>
+    <tr><th>Sales in Past ${R.L} Months <span class="sfn">(17.012)</span></th><td>${R.salesN}</td></tr>
+    <tr><th>Lowest / Median / Highest Sale Price <span class="sfn">(17.013 / 17.014 / 17.015)</span></th><td>${R.salesN ? `${$m(R.saleLow)} / ${$m(R.saleMed)} / ${$m(R.saleHigh)}` : '<small class="muted">not needed when there are no sales</small>'}</td></tr>
+    <tr><th>Distressed Market Competition <span class="sfn">(17.016)</span></th><td>${sel('distress', [['false', 'No'], ['true', 'Yes']], R.rows.length ? R.suggest.distress : '')}${R.distressed.length ? `<small> ${R.distressed.length} REO / short sale / foreclosure listing${R.distressed.length > 1 ? 's' : ''}. Estate and trust sales are not distressed.</small>` : ''}</td></tr>
+    <tr><th>Demand/Supply <span class="sfn">(17.021)</span></th><td>${sel('supply', SUPPLY, R.suggest.supply)}<small class="muted"> ${R.supply != null ? `${(Math.round(R.supply * 10) / 10)} months of supply (${R.activeN} actives ÷ ${(Math.round(R.perMonth * 100) / 100)} sales a month). Guide: under 4 shortage, 4–6 in balance, over 6 oversupply.` : 'No sales in the look-back period, so no months of supply.'}</small></td></tr>
+    <tr><th>Marketing Time <span class="sfn">(17.022)</span></th><td>${sel('mktime', MKTIME, R.suggest.mktime)}<small class="muted"> ${R.saleDom != null ? `median ${Math.round(R.saleDom)} days on market (cumulative) for the sales` : ''}</small></td></tr>
+    <tr><th>Price Trend Source <span class="sfn">(17.018)</span> <small>one per line, 33 characters each</small></th><td><textarea data-mk="sources" rows="2">${h(sources.join('\n'))}</textarea></td></tr>
     <tr><th>Your price-trend conclusion</th><td><select data-mk="trendConcl"><option value="">—</option><option value="increasing"${m.trendConcl === 'increasing' ? ' selected' : ''}>Increasing</option><option value="stable"${m.trendConcl === 'stable' ? ' selected' : ''}>Stable</option><option value="declining"${m.trendConcl === 'declining' ? ' selected' : ''}>Declining</option></select> ${(() => { const sg = mkTrendSuggest(R); return !m.trendConcl && sg ? `<small class="warnTxt">The chart suggests <b>${sg}</b> – the draft uses it until you pick.</small> <button type="button" class="btn small" data-mktrend="${sg}">Use ${sg}</button>` : '<small class="muted">used in the draft</small>'; })()}</td></tr>
     <tr><td colspan="2"><figure><canvas id="mkG0"></canvas><div class="row"><button type="button" class="btn small" data-png="mkG0">Save picture</button>${(() => { const w = [['market area boundary', mkCompute()], ...(MI().rows.length ? [['competing', R]] : [])].map(([n, X]) => { const d = X.S.map(r => r.saleDate).filter(Boolean).sort()[0]; return d && d > isoAddMonths(X.start, 3) ? `the ${n} search starts ${shortDate(d)}` : ''; }).filter(Boolean); return w.length ? `<p class="help warnTxt">The look-back is ${R.L} months, but ${w.join(' and ')} – export it again for the whole period so the earlier and later sales compare the same span.</p>` : ''; })()}<span class="help"><b>Goes into the SFREP file</b> with Comp genie › Full report (Price Trend Graph); the absorption chart below goes in too (Absorption Rate Graph). Raw medians mix different houses (size, quality, condition, lot, view). Use this to see the direction; for a measured rate that holds those level, open the Comp genie › <b>Market conditions support</b> – it groups your archive sales by usable lot, view, quality and size.</span></div></figure></td></tr>
-    <tr><th>17.019 Price Trend Analysis Commentary</th><td><textarea data-mk="comment" rows="10" maxlength="2500">${h(m.comment || '')}</textarea>${cnt('comment', 2500)}
+    <tr><th>Price Trend Analysis Commentary <span class="sfn">(17.019)</span></th><td><textarea data-mk="comment" rows="10" maxlength="2500">${h(m.comment || '')}</textarea>${cnt('comment', 2500)}
       <div class="row"><button type="button" class="btn ghost small" data-redraft="comment">Draft again</button><button type="button" class="btn ghost small" data-copy="comment">Copy</button></div>
       <p class="help">Drafted from the numbers on this page in your wording. Edit freely; your edits are kept until you press Draft again.</p></td></tr></table>
   </section>
