@@ -104,7 +104,8 @@ const SALE_TYPE_TEXT = { ArmLth: 'Typically motivated', Listing: 'Typically moti
 function fmt(f, v) {
   if (blank(v)) return '';
   if (f.k === 'saleType') return SALE_TYPE_TEXT[v] || (typeof PICK !== 'undefined' && (PICK.xferTerms.opts.find(o => o[0] === v) || [])[1]) || String(v);
-  if (f.k === 'status' && typeof statusText === 'function') return statusText(v);   // 3.6 words: Closed → Settled sale
+  if (f.k === 'status' && typeof statusText === 'function') return statusText(v);
+  if (['guest', 'barn', 'stable', 'horse', 'pool', 'spa', 'tennis', 'sport'].includes(f.k) && /^(no|n|false|0)$/i.test(String(v).trim())) return 'None';   // 3.6 says None, not No (her question Oct 20 2026)   // 3.6 words: Closed → Settled sale
   switch (f.t) {
     case 'money': return money(v);
     case 'int': return int(v);
