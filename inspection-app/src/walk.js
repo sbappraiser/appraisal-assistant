@@ -141,7 +141,7 @@ function wkHear(t) {
 }
 
 /* ---------- moving between places ---------- */
-function wkGo(key, quiet) { const ins = app.ins, w = wkData(ins); w.place = key; if (!quiet) { save(); wkRefresh(); window.scrollTo(0, 0); } if (wcamIsOpen()) wcamLabels(); }
+function wkGo(key, quiet) { const ins = app.ins, w = wkData(ins); if (w.place !== key) { WK.teachOpen = false; WK.teachSel = ''; } w.place = key; if (!quiet) { save(); wkRefresh(); window.scrollTo(0, 0); } if (wcamIsOpen()) wcamLabels(); }
 function wkNext() { const ins = app.ins, w = wkData(ins); const P = wkPlace(ins, w.place); const k = P.parent || P.key; const i = WK_ORDER.indexOf(k); wkGo(WK_ORDER[Math.min(WK_ORDER.length - 1, i + 1)]); }
 function wkMode() { try { return localStorage.getItem('uad-wk-talk') || 'keyboard'; } catch (e) { return 'keyboard'; } }
 function wkSetMode(m) { try { localStorage.setItem('uad-wk-talk', m); } catch (e) {} if (m === 'keyboard' && WSR.on) wsrStop(); }
@@ -238,6 +238,8 @@ function wkNotesHtml(ins, P, heard) {
   const w = wkData(ins); const t = w.notes[P.key] || '';
   return `<div class="wk-notes"><label><b>Notes for ${esc(P.t)}</b>${P.hint ? `<span class="help">${esc(P.hint)}</span>` : ''}
     <textarea class="txt" id="wkNote" rows="4" placeholder="Talk, or tap here and use the keyboard microphone">${esc(t)}</textarea></label>
+    <div class="row"><button class="btn sm" id="wkTeachBtn">🎓 Teach a word</button><span class="help">Wrong word? Select it in the box (or it uses the last word), tap Teach, type what you meant.</span></div>
+    <div class="dk-teach" id="dkTeachBox" hidden>${typeof dkTeachHtml === 'function' ? dkTeachHtml() : ''}</div>
     ${heard && heard.short.length ? `<div class="wk-heard"><b>I heard:</b> ${heard.short.map(esc).join(' · ')}</div>` : ''}
     ${(() => { const sl = w.sentLen[P.key] || 0; if (!sl || !t.trim()) return ''; const rest = t.slice(sl).trim(); return `<div class="wk-sent">${rest ? `✓ Sorted into the inspection, except the newest part: “${esc(rest.slice(0, 120))}${rest.length > 120 ? '…' : ''}”` : '✓ All of this has been sorted into the inspection – no need to say it again.'}</div>`; })()}</div>`;
 }
@@ -295,6 +297,15 @@ function bindWalk(root) {
   root.querySelectorAll('[data-wkshot]').forEach(b => b.onclick = () => { w.shot[w.place] = b.dataset.wkshot; save(); wkRefresh(); });
   root.querySelectorAll('[data-wklv]').forEach(b => b.onclick = () => { w.level = b.dataset.wklv; save(); wkRefresh(); });
   root.querySelectorAll('[data-wktab]').forEach(b => b.onclick = () => goTab(b.dataset.wktab));
+  { const tbtn = root.querySelector('#wkTeachBtn'), tb = root.querySelector('#dkTeachBox'), box = root.querySelector('#wkNote');
+    const bindT = () => { const sv = tb.querySelector('#dkTsave'); if (sv) sv.onclick = () => { const h = tb.querySelector('#dkTh').value.trim(), m = tb.querySelector('#dkTm').value.trim(); if (h.length < 2) return toast('Type what the iPad writes (2 letters or more)');
+        const L = dkTeachList().filter(x => x.heard.toLowerCase() !== h.toLowerCase()); L.push({ heard: h, meant: m, t: Date.now() }); if (!dkTeachSave(L)) return toast('Could not save on this iPad');
+        Object.keys(w.notes).forEach(k => { const v = w.notes[k] || '', sl = w.sentLen[k] || 0; const nv = v.slice(0, sl) + dkTeachApply(v.slice(sl)); if (nv !== v) w.notes[k] = nv; }); save();
+        toast('Learned: “' + h + '” means “' + m + '” – on every inspection on this iPad'); WK.teachOpen = false; WK.teachSel = ''; wkRefresh(); };
+      tb.querySelectorAll('[data-dktdel]').forEach(b => b.onclick = () => { const L = dkTeachList(); const x = L[+b.dataset.dktdel]; if (!x || !confirm('Forget “' + x.heard + '” → “' + x.meant + '”?')) return; L.splice(+b.dataset.dktdel, 1); dkTeachSave(L); tb.innerHTML = dkTeachHtml(); bindT(); }); };
+    if (tbtn && tb && box) { tbtn.onclick = () => { const st = box.selectionStart, en = box.selectionEnd; const sel = st != null && en > st ? box.value.slice(st, en).trim() : (box.value.replace(/[.,;:!?\s]+$/, '').match(/(\S+)$/) || [, ''])[1];
+      tb.hidden = !tb.hidden; WK.teachOpen = !tb.hidden; WK.teachSel = sel ? sel.replace(/[.,;:!?]+$/, '') : ''; if (!tb.hidden) { const h = tb.querySelector('#dkTh'); if (h && WK.teachSel) h.value = WK.teachSel; } }; bindT();
+      if (WK.teachOpen) { tb.hidden = false; const h = tb.querySelector('#dkTh'); if (h && !h.value && WK.teachSel) h.value = WK.teachSel; } } }
   root.querySelectorAll('[data-wkdel]').forEach(b => b.onclick = () => wkRemove(ins, b.dataset.wkdel));
   root.querySelectorAll('button[data-wkans]').forEach(b => b.onclick = () => wkAnswer(ins, b.dataset.wkans, b.dataset.v));
   root.querySelectorAll('select[data-wkans]').forEach(b => b.onchange = () => { if (b.value) wkAnswer(ins, b.dataset.wkans, b.value); });
