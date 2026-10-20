@@ -64,7 +64,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-
 .eyebrow { font: 600 12px var(--ui); text-transform: uppercase; letter-spacing: .07em; color: var(--muted); }
 #mkBody table.facts.uad th { color: #b00000; font-weight: 800; } #mkBody table.facts.uad th .sfn { color: #666; font-weight: 600; font-size: .85em; letter-spacing: 0; } #mkBody table.facts.uad th small { color: #555; }
 .mkdiff { display: block; color: #1f5fa8; font-weight: 700; font-size: 12px; } .mkcrsbox { margin-top: 10px; border: 2px solid #1f5fa8; background: #f2f7ff; border-radius: 10px; padding: 8px 12px; font-size: 14px; } .mkcrs { color: #1f5fa8 !important; font-weight: 700; } .mkcrsok { color: #1f5fa8; font-weight: 700; }
-.eyebrow.mkhd { font: 700 15px var(--ui); color: #c00000; letter-spacing: .05em; } .eyebrow.mkhd b { font-weight: 800; }
+.verTop { font-weight: 700; color: #b00000; } .eyebrow.mkhd { font: 700 15px var(--ui); color: #c00000; letter-spacing: .05em; } .eyebrow.mkhd b { font-weight: 800; }
 table.mcq th { color: #c00000 !important; font-size: 14px !important; font-weight: 800 !important; letter-spacing: .03em; }
 /* Market tab: darker reading text, and the boxes you fill in clearly boxes (her ask, Oct 20 2026) */
 #mkBody { --muted: color-mix(in srgb, var(--ink) 78%, var(--panel)); color: var(--ink); }
@@ -210,7 +210,7 @@ mark.blank{background:#fff3a8;padding:0 2px;border-radius:3px}.cmt textarea{widt
 </head>
 <body>
 <header class="top">
-  <div class="brand"><h1>Appraisal Assistant</h1><small>Jennifer Heath, LLC · orders, documents and engagement letters</small></div>
+  <div class="brand"><h1>Appraisal Assistant</h1><small>Jennifer Heath, LLC · orders, documents and engagement letters · <b class="verTop" id="buildTop"></b></small></div>
   <nav class="tabs" aria-label="Sections">
     <button type="button" data-tab="home" aria-selected="true">Home</button>
     <button type="button" data-tab="saved" aria-selected="false">All files</button>

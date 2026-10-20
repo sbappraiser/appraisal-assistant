@@ -165,3 +165,5 @@ tr.landon td { background: #eefbf3; }
 .detail .dmore .dphotos{flex:0 1 520px}.detail .dmore .hero{max-height:150px;width:auto;display:block;margin-bottom:6px}
 .detail .dmore .strip img{max-height:56px}
 .detail .dmore .flags li{break-inside:avoid}
+
+.pill.ver{font-weight:700;color:#b00000;border-color:#e3b3b3;background:#fff}

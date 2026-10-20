@@ -492,7 +492,7 @@ async function start() {
   cur = pick ? { ...NEW_FIELDS, ...JSON.parse(JSON.stringify(pick)) } : (!letters.length && draft && draft.id) ? { ...blankLetter(), ...draft } : blankLetter();
   writeForm(cur); render(); renderLetters(); renderContacts();
   showTab(q && pick ? 'letter' : 'home');
-  $('#build').textContent = 'Version ' + BUILD; $('#rdBuild').textContent = BUILD;
+  $('#build').textContent = 'Version ' + BUILD; { const bt = $('#buildTop'); if (bt) bt.textContent = 'Version ' + BUILD; } $('#rdBuild').textContent = BUILD;
   abStart();
   $('#helpSearch').addEventListener('input', e => { const q = e.target.value.trim().toLowerCase(); document.querySelectorAll('.help-page details').forEach(d => { const hit = !q || d.textContent.toLowerCase().includes(q); d.hidden = !hit; d.open = !!q && hit; }); });
   $('#rdClose').onclick = closeReader; $('#rdPrev').onclick = () => { RD.page--; rdPage(); }; $('#rdNext').onclick = () => { RD.page++; rdPage(); }; $('#rdOpen').onclick = () => openDoc(RD.id);
