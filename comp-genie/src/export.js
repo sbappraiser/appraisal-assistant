@@ -73,10 +73,14 @@ function buildCompXML(PROPS, RELS, DSS, c, n, job) {
   XV(ad, 'CityName', g('city') || ARCH.zipCity[g('zip')] || ''); XV(ad, 'PostalCode', zip9(c)); XV(ad, 'StateCode', 'CA');
   // CAR_STORAGES
   const cs = X(P, 'CAR_STORAGES'); let any = false;
-  const gar = num(g('garage')); if (gar) { any = true; const d = X(X(cs, 'CAR_STORAGE'), 'CAR_STORAGE_DETAIL'); const gt = String(g('garageType') || ''); XV(d, 'CarStorageAttachmentType', /built/i.test(gt) ? 'BuiltIn' : /detach/i.test(gt) ? 'Detached' : /attach/i.test(gt) ? 'Attached' : null); XV(d, 'CarStorageType', 'Garage'); XV(d, 'ParkingSpacesCount', gar); }
-  const cp = num(g('carport')); if (cp) { any = true; const d = X(X(cs, 'CAR_STORAGE'), 'CAR_STORAGE_DETAIL'); XV(d, 'CarStorageType', 'Carport'); XV(d, 'ParkingSpacesCount', cp); }
-  const dw = num(g('driveway')); if (dw) { any = true; const d = X(X(cs, 'CAR_STORAGE'), 'CAR_STORAGE_DETAIL'); XV(d, 'CarStorageType', 'Driveway'); XV(d, 'ParkingSpacesCount', dw); XV(d, 'TenOrMoreParkingSpacesIndicator', dw >= 10 ? 'true' : 'false'); }
-  if (!any && gar === 0) XV(X(X(cs, 'CAR_STORAGE'), 'CAR_STORAGE_DETAIL'), 'CarStorageType', 'None');
+  const VS = c.edit && Array.isArray(c.edit.vs) && c.edit.vs.length ? c.edit.vs : null;   // her ▾ pick rows: every type, with attachment / driveway surface (Oct 20 2026)
+  if (VS) VS.forEach(x => { any = true; const d = X(X(cs, 'CAR_STORAGE'), 'CAR_STORAGE_DETAIL'); if (['Garage', 'Carport'].includes(x.t) && x.a) XV(d, 'CarStorageAttachmentType', x.a); XV(d, 'CarStorageType', x.t);
+    if (['Driveway', 'SharedDriveway'].includes(x.t)) { if (x.s) XV(d, 'ImprovedSurfaceMaterialType', x.s); XV(d, 'TenOrMoreParkingSpacesIndicator', +x.n >= 10 ? 'true' : 'false'); if (+x.n < 10) XV(d, 'ParkingSpacesCount', +x.n); } else XV(d, 'ParkingSpacesCount', +x.n); });
+  else if (c.edit && c.edit.vsNone) { any = true; XV(X(X(cs, 'CAR_STORAGE'), 'CAR_STORAGE_DETAIL'), 'CarStorageType', 'None'); }
+  const gar = VS || (c.edit && c.edit.vsNone) ? 0 : num(g('garage')); if (gar) { any = true; const d = X(X(cs, 'CAR_STORAGE'), 'CAR_STORAGE_DETAIL'); const gt = String(g('garageType') || ''); XV(d, 'CarStorageAttachmentType', /built/i.test(gt) ? 'BuiltIn' : /detach/i.test(gt) ? 'Detached' : /attach/i.test(gt) ? 'Attached' : null); XV(d, 'CarStorageType', 'Garage'); XV(d, 'ParkingSpacesCount', gar); }
+  const cp = VS || (c.edit && c.edit.vsNone) ? 0 : num(g('carport')); if (cp) { any = true; const d = X(X(cs, 'CAR_STORAGE'), 'CAR_STORAGE_DETAIL'); XV(d, 'CarStorageType', 'Carport'); XV(d, 'ParkingSpacesCount', cp); }
+  const dw = VS || (c.edit && c.edit.vsNone) ? 0 : num(g('driveway')); if (dw) { any = true; const d = X(X(cs, 'CAR_STORAGE'), 'CAR_STORAGE_DETAIL'); XV(d, 'CarStorageType', 'Driveway'); XV(d, 'ParkingSpacesCount', dw); XV(d, 'TenOrMoreParkingSpacesIndicator', dw >= 10 ? 'true' : 'false'); }
+  if (!any && !VS && gar === 0) XV(X(X(cs, 'CAR_STORAGE'), 'CAR_STORAGE_DETAIL'), 'CarStorageType', 'None');
   // COMPARABLE: your adjustments from the grid (if any), then the detail
   const CMP = X(P, 'COMPARABLE'); const gt = gridAdjustXML(CMP, c, job);
   const cd = X(CMP, 'COMPARABLE_DETAIL'); const px = proximity(c, job);
