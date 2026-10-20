@@ -582,7 +582,7 @@ mark.blank{background:#fff3a8;padding:0 2px;border-radius:3px}.cmt textarea{widt
       <li>In either table, untick a listing that does not belong (two units on one lot, a different market); click a column heading (List price, Sale price, $ / sq ft, DOM, Sq ft, dates) to sort, and again to reverse.</li>
       <li>Check the UAD 3.6 Market section in box 3. Pick Demand/Supply, Marketing Time and Distressed Market Competition (suggestions are shown). Type or pick the Market Area Boundary; <b>Save this area</b> to reuse it.</li>
       <li>Edit the search criteria and price trend comment, then <b>Copy</b> into SFREP.</li><li>Save each graph with <b>Save picture</b> for the report.</li>
-      <li>Once a month, drop the SBMLS Monthly MLS Statistics PDF in box 5 (South Coast trends). Type the Zillow figures for the city.</li></ol></details>
+      <li>Once a month, drop the SBMLS Monthly MLS Statistics PDF in box 5 (South Coast trends).</li></ol></details>
     <details><summary>1004MC market conditions (UAD 2.6)</summary><ol>
       <li>Load the <b>Search Criteria</b> search in box 2 of the Market tab (box 1 is used until you do). Untick the listings that do not compete.</li>
       <li>Open <b>1004MC – Market Conditions Addendum</b> under box 3 (it opens by itself when the order's report form is UAD 2.6).</li>
@@ -734,7 +734,7 @@ mark.blank{background:#fff3a8;padding:0 2px;border-radius:3px}.cmt textarea{widt
 </div>
 <div id="toast" role="status" hidden></div>
 <script>
-const BUILD='o1-1020-0730';
+const BUILD='o1-1020-0743';
 const G = (() => {
 /* ---------------- small helpers ---------------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -2597,8 +2597,6 @@ function mkCommentDraft(R) {
   parts.push([1, R.activeN ? `There ${R.activeN === 1 ? 'is 1 active competing listing' : 'are ' + R.activeN + ' active competing listings'} and ${R.pendingN} pending sale${R.pendingN === 1 ? '' : 's'}` + (R.supply != null ? `, about ${(Math.round(R.supply * 10) / 10)} months of supply` : '') + (R.saleDom != null ? `; the sales had a median marketing time of ${Math.round(R.saleDom)} days.` : '.')
     : `There are no active competing listings and ${R.pendingN} pending sale${R.pendingN === 1 ? '' : 's'}, indicating limited supply` + (R.saleDom != null ? `; the sales had a median marketing time of ${Math.round(R.saleDom)} days.` : '.')]);
   if (S && S.ytd && S.ytd.medSale) { const y = S.ytd; parts.push([3, `South Coast ${segName} statistics (SBMLS Districts 05-35) through ${monthName(st.ym)} show the median sales price ${y.medSale.v1 >= y.medSale.v0 ? 'up' : 'down'} about ${Math.abs(Math.round((y.medSale.v1 / y.medSale.v0 - 1) * 1000) / 10)}% from the same period of ${y.medSale.y0 || (y.sold && y.sold.y0) || 'the prior year'}.`]); }
-  const zk = mkZKey(); const z = zk && MK.zillow[zk];
-  if (z && z.value && z.change != null && z.change !== '') parts.push([5, `Zillow reports a one-year change of ${z.change >= 0 ? '+' : ''}${z.change}% for ${zk.startsWith('zip:') ? 'ZIP code ' + zk.slice(4) : mkCity()} (context only).`]);
   parts.push([2, `Price per square foot was not relied on as a trend measure because it does not reflect differences in lot utility, quality, condition, features and view.`]);
   if (TC) parts.push([1, `Market values are considered ${TC} as of the effective date.`]);
   parts.push([1, `No forecast of future market conditions or value is intended.`]);
@@ -2726,8 +2724,8 @@ async function mkAddStats(file) {
   try { toast('Reading the statistics PDF…'); const st = parseStatsPdf(await pdfItems(file)); st.file = file.name; MK.stats[st.ym] = st; await mkSave('stats');
     const n = Object.keys(st.he.monthly).length; mkRender(); toast(`SBMLS statistics for ${monthName(st.ym)} loaded (${n} months of medians)` + (st.warn.some(x => (mkSeg() === 'condo') === /condo/i.test(x)) ? ' – see the note about its charts' : ''), 5000); }
   catch (e) { console.error(e);
-    if (/zillow/i.test(file.name)) { await mkAddZillow(file); return; }
-    toast((e.message || 'Could not read that PDF') + ' This box is for the monthly statistics report from SBAOR. A Zillow page goes under Zillow below.', 7000); }
+    if (/zillow/i.test(file.name)) { toast('That looks like a Zillow page. This box is for the SBMLS monthly statistics report.', 7000); return; }
+    toast((e.message || 'Could not read that PDF') + ' This box is for the monthly statistics report from SBAOR. ', 7000); }
 }
 async function mkAddZillow(file) {   // kept with the order's documents; a PDF saved from Chrome (Print › Save as PDF) has text, so its figures fill in
   await addDocs([file], 'zillow'); let got = {};
@@ -2758,11 +2756,11 @@ function mkRender(redraft) {
   const sel = (k, list, sug) => `<select data-mk="${k}">${['', ...list.map(x => x[0])].map(v => `<option value="${v}"${pick(k) === v ? ' selected' : ''}>${v ? list.find(x => x[0] === v)[1] : '—'}</option>`).join('')}</select>${sug ? ` <small class="${m[k] && m[k] !== sug ? 'warnTxt' : 'muted'}">suggested: ${h((list.find(x => x[0] === sug) || [, ''])[1])}</small>` : ''}`;
   { // snapshot for the full report (Comp genie reads it from this order)
     const U = { eff: R.eff, L: R.L, boundary: m.boundary || '', criteria: m.criteria || '', comment: m.comment || '', activeN: R.activeN, activeLow: R.activeLow, activeMed: R.activeMed, activeHigh: R.activeHigh, activeDom: R.activeDom,
-      pendingN: R.pendingN, salesN: R.salesN, saleLow: R.saleLow, saleMed: R.saleMed, saleHigh: R.saleHigh, supply: pick('supply'), mktime: pick('mktime'), distress: pick('distress'), sources: m.sources || ['SBMLS'] };
+      pendingN: R.pendingN, salesN: R.salesN, saleLow: R.saleLow, saleMed: R.saleMed, saleHigh: R.saleHigh, supply: pick('supply'), mktime: pick('mktime'), distress: pick('distress'), sources: (m.sources || ['SBMLS']).filter(x => x !== 'Zillow') };
     if (R.rows.length && JSON.stringify(U) !== JSON.stringify(m.uad)) { m.uad = U; mkChanged(); } }
   const typesAll = [...new Set((m.rows || []).map(r => r.typ).filter(Boolean))];
-  const st = mkStatsFor(R.eff); const city = mkCity(); const zKey = mkZKey(); const z = MK.zillow[zKey] || {}; const zipNow = (String(readForm().zip || '').match(/\d{5}/) || [''])[0];
-  const sources = m.sources || ['SBMLS'].concat(z.value ? ['Zillow'] : []);
+  const st = mkStatsFor(R.eff); const city = mkCity(); 
+  const sources = (m.sources || ['SBMLS']).filter(x => x !== 'Zillow');
   const cnt = (id, max) => `<span class="cnt" data-cnt="${id}" data-max="${max}"></span>`;
   box.innerHTML = `
   <div class="mkgrid">
@@ -2812,15 +2810,11 @@ function mkRender(redraft) {
     <figure><canvas id="mkG2"></canvas><div class="row"><button type="button" class="btn small" data-png="mkG2">Save picture</button></div></figure>
     <figure><canvas id="mkG3"></canvas><div class="row"><button type="button" class="btn small" data-png="mkG3">Save picture</button></div></figure>
   </section>
-  <section class="mkcard"><h3>5 · Big picture: SBMLS monthly statistics and Zillow</h3>
+  <section class="mkcard"><h3>5 · Big picture: SBMLS monthly statistics</h3>
     <div class="drop" id="mkStatsDrop"><div><span class="eyebrow">SBMLS Monthly MLS Statistics PDF</span><p class="help">The monthly statistics report from the Santa Barbara Association of REALTORS® (Summary of Stats for Home Estate/PUD Districts 05–35 and condos: sales, pendings, new and active listings, median and average prices, days on market, year-to-date comparisons). Load each month's PDF once; every order uses it. ${Object.keys(MK.stats).length ? 'Loaded: ' + Object.keys(MK.stats).sort().map(monthName).join(', ') + '.' : 'None loaded yet.'}${st ? ' This order uses <b>' + monthName(st.ym) + '</b>.' : ''}</p></div>
       <label class="btn" for="mkStatsFile">Choose PDF<input type="file" id="mkStatsFile" accept=".pdf,application/pdf"></label></div>
     ${st ? mkStatsTable(st[mkSeg()], st.ym) : ''}${(() => { const segW = mkSeg() === 'condo' ? /condo/i : /^(?!.*condo)/i; const w = st && st.warn ? st.warn.filter(x => segW.test(x)) : []; return w.length ? `<p class="help warnTxt">${w.map(h).join(' ')} This month's own totals from its Summary of Stats page were used instead.</p>` : ''; })()}
-    <h4>Zillow – ${h(zKey.startsWith('zip:') ? 'ZIP ' + zKey.slice(4) : (city || 'the subject’s city'))}</h4><div class="zby"><label class="check"><input type="radio" name="zby" value="zip" ${zKey.startsWith('zip:') ? 'checked' : ''} ${zipNow ? '' : 'disabled'}>Subject's ZIP code${zipNow ? ' (' + zipNow + ')' : ''} – best for unincorporated areas</label><label class="check"><input type="radio" name="zby" value="city" ${zKey.startsWith('zip:') ? '' : 'checked'}>Zillow's city page for the mailing city${city ? ' (' + h(city) + ')' : ''}</label></div>${/Unincorporated/.test(readForm().jurisdiction || '') ? '<p class="help">This property is in ' + h(readForm().jurisdiction) + ' (from the County permit history), so the mailing city is not its city – use the ZIP code.</p>' : ''}<p class="help">Type the figures from Zillow's page for this ZIP code or city. They are kept for it and used for every order there. In the comment, ZIP-code data is described as supporting context.</p>
-    <div class="drop" id="mkZilDrop"><div><span class="eyebrow">Zillow page (PDF or picture)</span><p class="help">Keep the Zillow page with this order (workfile, or a market exhibit). On zillow.com search the ZIP code (for example 93111), choose Single family and 5-yr, then save the page. To have the figures fill in, save the page from Chrome with <b>Print › Save as PDF</b> (set Pages to Custom 1-2 to keep just the overview and graph) (a Snagit or screenshot PDF is only a picture, so type its figures instead).${(cur.docs || []).filter(d => d.type === 'zillow').map(d => `<br>Kept: <button type="button" class="lnk" data-zopen="${d.id}">${h(d.name)}</button>`).join('')}</p></div>
-      <label class="btn" for="mkZilFile">Choose file<input type="file" id="mkZilFile" accept=".pdf,image/*"></label></div>
-    <div class="grid3 zil"><label>As of<input type="date" data-z="asOf" value="${h(z.asOf || '')}"></label><label>Typical home value ($)<input data-z="value" inputmode="numeric" value="${h(z.value ? Number(z.value).toLocaleString() : '')}"></label><label>1-year change (%)<input data-z="change" inputmode="decimal" value="${h(z.change ?? '')}"></label>
-      <label>Median sale price ($)<input data-z="medSale" inputmode="numeric" value="${h(z.medSale ? Number(z.medSale).toLocaleString() : '')}"></label><label>Sale-to-list ratio<input data-z="stl" inputmode="decimal" value="${h(z.stl || '')}"></label><label>Median days to pending<input data-z="dtp" inputmode="numeric" value="${h(z.dtp || '')}"></label></div>
+    ${(cur.docs || []).filter(d => d.type === 'zillow').map(d => `<p class="help mkzold">Zillow page kept with this order: <button type="button" class="lnk" data-zopen="${d.id}">${h(d.name)}</button> <button type="button" class="mkx" data-zdel="${d.id}" title="Remove this file from the order">✕ Remove this file</button></p>`).join('')}
   </section></div>
   <div class="formEnd"><button type="button" class="btn" id="mkSaveBtn">Save</button><a class="btn primary" id="mkGenie" href="${h(genieURL(cur))}" target="aa-genie">Save and open the Comp genie →</a><button type="button" class="btn ghost" id="mkOrderBtn">Back to the order</button><span class="savedAt" data-saved></span></div>`;
   // graphs
@@ -2862,11 +2856,8 @@ function mkRender(redraft) {
   $('#mkPsf').onchange = e => { m.perSf = e.target.checked; mkChanged(); drawPriceTrend($('#mkG1'), R, m.perSf); };
   $('#mkBndPick').onchange = e => { const b = MK.boundaries[e.target.value]; if (b) { m.boundary = b.text; mkChanged(); mkRender(); } };
   $('#mkBndSave').onclick = () => { const t = (m.boundary || '').trim(); if (!t) { toast('Type the boundary first'); return; } const name = prompt('Name for this market area (for example "Samarkand")'); if (!name) return; const i = MK.boundaries.findIndex(b => b.name === name); if (i >= 0) MK.boundaries[i].text = t; else MK.boundaries.push({ name, text: t }); MK.boundaries.sort((a, b) => a.name.localeCompare(b.name)); mkSave('boundaries'); mkRender(); toast('Saved “' + name + '” for later orders'); };
-  $('#mkZilFile').onchange = e => { const f = e.target.files[0]; e.target.value = ''; if (f) mkAddZillow(f); };
-  { const zd = $('#mkZilDrop'); ['dragover', 'dragleave', 'drop'].forEach(ev => zd.addEventListener(ev, e => { e.preventDefault(); zd.classList.toggle('over', ev === 'dragover'); if (ev === 'drop' && e.dataTransfer.files[0]) mkAddZillow(e.dataTransfer.files[0]); })); }
   box.querySelectorAll('[data-zopen]').forEach(b => b.onclick = () => openDoc(b.dataset.zopen));
-  box.querySelectorAll('input[name=zby]').forEach(r => r.onchange = () => { m.zillowBy = r.value; mkChanged(); mkRender(!m.commentEdited); });
-  box.querySelectorAll('[data-z]').forEach(i => i.onchange = () => { if (!zKey) { toast('Fill in the property address first'); return; } const zz = MK.zillow[zKey] = MK.zillow[zKey] || {}; const k = i.dataset.z; { const n = Number(String(i.value).replace(/[$,%\s+]/g, '')); zz[k] = k === 'asOf' ? i.value : (i.value.trim() === '' || !isFinite(n) || /^[-–—]+$/.test(i.value.trim())) ? '' : n; i.value = k === 'asOf' ? i.value : zz[k] === '' ? '' : k === 'value' || k === 'medSale' ? Number(zz[k]).toLocaleString() : String(zz[k]); } mkSave('zillow'); if (!m.commentEdited) { m.comment = mkCommentDraft(mkLast || mkCompute()); const t = box.querySelector('textarea[data-mk=comment]'); if (t) t.value = m.comment; mkCounts(); mkChanged(); } });
+  box.querySelectorAll('[data-zdel]').forEach(b => b.onclick = async () => { const d = (cur.docs || []).find(x => x.id === b.dataset.zdel); if (!d || !confirm('Remove “' + d.name + '” from this order?')) return; await removeDoc(d.id); mkRender(); });
   mkCounts(); if (typeof mcMount === 'function') mcMount(R);
 }
 function mkCounts() { document.querySelectorAll('[data-cnt]').forEach(s => { const t = document.querySelector(`textarea[data-mk="${s.dataset.cnt}"]`); const n = t ? t.value.length : 0, max = +s.dataset.max; s.textContent = `${n.toLocaleString()} of ${max.toLocaleString()} characters`; s.className = 'cnt' + (n > max ? ' over' : n > max * 0.92 ? ' near' : ''); }); }
