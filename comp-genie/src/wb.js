@@ -23,9 +23,10 @@ const CPOP = (() => { const q = new URLSearchParams(location.search); return q.g
 let WBC = null; try { WBC = new BroadcastChannel('comp-genie'); } catch (e) {}
 function wbNotify() { if (WBC && app.job) try { WBC.postMessage({ job: app.job.id, from: WIN }); } catch (e) {} }
 if (WBC) WBC.onmessage = async e => {
-  const d = e.data || {}; if (!app.job || d.from === WIN || d.job !== app.job.id) return;
+  const d = e.data || {}; if (d.job && d.from !== WIN && !app.jobs.some(x => x.id === d.job)) { const nj = await DB.get('jobs', d.job); if (nj) app.jobs.unshift(nj); }   // an assignment started in another window
+  if (!app.job || d.from === WIN || d.job !== app.job.id) return;
   const j = await DB.get('jobs', app.job.id); if (!j) return;
-  const i = app.jobs.findIndex(x => x.id === j.id); if (i >= 0) app.jobs[i] = j; app.job = j;
+  const i = app.jobs.findIndex(x => x.id === j.id); if (i >= 0) app.jobs[i] = j; else app.jobs.unshift(j); app.job = j;
   // keep what she is typing in this window: put it back after the redraw
   const a = document.activeElement; const dirty = a && /^(INPUT|TEXTAREA)$/.test(a.tagName) && a.value !== a.defaultValue ? [FOCUS_KEYS.map(k => [k, a.getAttribute(k)]).find(x => x[1]), a.value] : null;
   render(); if (dirty && dirty[0]) { const el = document.querySelector(`[${dirty[0][0]}="${CSS.escape(dirty[0][1])}"]`); if (el) { el.value = dirty[1]; el.focus({ preventScroll: true }); } }

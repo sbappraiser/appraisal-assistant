@@ -140,6 +140,7 @@ async function jobFromOrder(o) {
   const parts = String(o.address || '').split(',').map(x => x.trim());
   const sub = { addr: parts[0] || '', city: parts[1] || '', zip: ((parts[2] || '').match(/\d{5}/) || [''])[0], apn: o.apn || '', lat: o.lat || '', lon: o.lon || '', eff: o.effective || todayISO() };
   if (o.unit) sub.unit = o.unit;
+  if (app.job) await saveNow(); app.jobs = (await DB.all('jobs')).sort((a, b) => b.updated - a.updated);   // Oct 20 2026: a window open since yesterday did not know the assignment made in another window and started a second one – always look at what is saved
   let j = app.jobs.find(x => x.orderId === o.id);
   if (!j) {   // Oct 20 2026: never start a second assignment for a property she already has one for – an assignment with the same subject (address or APN) that is not tied to another order is this one
     const ak = addrKey(parts[0] || ''), pk = apnKey(o.apn || ''); const ids = new Set((app.orders || []).map(x => x.id));
