@@ -282,7 +282,7 @@ function bindWalk(root) {
     else if (c[0] === 'w') key = 'L:waterFeatures:' + wkMake(ins, { list: 'waterFeatures', type: LISTS.waterFeatures.fields[0].o[i][0] }).id;
     save(); wkGo(key); });
   const mr = root.querySelector('#wkMoreRoom'); if (mr) mr.onchange = () => { if (!mr.value) return; const it = wkMake(ins, { list: 'rooms', type: mr.value }); save(); wkGo('L:rooms:' + it.id); };
-  const ta = root.querySelector('#wkNote'); if (ta) { ta.oninput = () => { w.notes[w.place] = ta.value; save(); }; ta.onblur = () => { const v = ta.value; const P = wkPlace(ins, w.place);
+  const ta = root.querySelector('#wkNote'); if (ta) { ta.oninput = () => { w.notes[w.place] = ta.value; save(); }; ta.onblur = () => { const v = wkClean(ta.value); w.notes[w.place] = v; const P = wkPlace(ins, w.place);
     if (/:/.test(v) && !(P.head && new RegExp('^\\s*' + P.head + ':', 'i').test(v))) { w.notes[w.place] = ''; wkFile(ins, v); } save(); setTimeout(() => wkRefresh(), 50); }; }
 }
 /* notes → the Dictate box, place by place, only what was not sent before */

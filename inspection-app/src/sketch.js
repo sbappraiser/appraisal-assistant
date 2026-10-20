@@ -890,7 +890,7 @@ function renderPanel() {
       ${[['↖', -1, -1], ['↑', 0, -1], ['↗', 1, -1], ['←', -1, 0], ['ang'], ['→', 1, 0], ['↙', -1, 1], ['↓', 0, 1], ['↘', 1, 1]].map(x => x[0] === 'ang' ? `<button class="key arr angle" id="skAngle">∠ Angle</button>` : `<button class="key arr" data-dx="${x[1]}" data-dy="${x[2]}">${x[0]}</button>`).join('')}
     </div>`}
     <div class="acts">
-      <button class="btn primary big" id="skNew">+ New area</button>
+      ${SK.mode === 'start' ? `<button class="btn primary big" id="skStartHere2" ${SK.cursor ? '' : 'disabled'}>${SK.cursor ? '📍 Start here' : 'Tap the sketch, then Start here'}</button>` : '<button class="btn primary big" id="skNew">+ New area</button>'}
       <button class="btn big" id="skClose" ${a ? '' : 'disabled'}>Close area</button>
       <button class="btn big" id="skDone" ${a ? '' : 'disabled'}>Stop (leave open)</button>
       <div class="two"><button class="btn big" id="skLabel">Aa Label</button><button class="btn big" id="skSym">◫ Symbol</button></div>
@@ -908,7 +908,7 @@ function renderPanel() {
   on('skBs', backspace);
   on('skAngle', () => { if (!curArea()) return toast('Start an area first'); const ld = lastDir(); SK.dial = { ang: SK.lastAngle ?? (ld ?? 0) }; renderPanel(); });
   on('skNew', openDefs); on('skClose', closeArea); on('skDone', () => finishArea(false)); on('skLabel', () => openLabels()); on('skFit', () => { fitView(); draw(); }); on('skCenter', centreNow);
-  on('skJump', jumpCorner); on('skStartHere', () => placeStart(SK.cursor, true)); on('skCurOff', () => { SK.cursor = null; draw(); renderPanel(); });
+  on('skJump', jumpCorner); on('skStartHere', () => placeStart(SK.cursor, true)); on('skStartHere2', () => placeStart(SK.cursor, true)); on('skCurOff', () => { SK.cursor = null; draw(); renderPanel(); });
   on('skNewHere', () => openDefs(true)); on('skLabelHere', () => openLabels(null, SK.cursor));
   on('skCancelStart', () => { SK.mode = 'select'; SK.cursor = null; renderPanel(); draw(); }); on('skCancelLabel', () => { SK.mode = 'select'; renderPanel(); });
   on('skWallSet', () => { const v = parseFloat(document.getElementById('skWallLen').value); const ar = SK.sk.areas.find(x => x.id === sel.id); setWallLength(ar, sel.i, Math.round(v * 10) / 10); });
