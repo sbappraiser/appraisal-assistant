@@ -551,7 +551,8 @@ async function ingestInspection(files, name) {
     view: [(D.site.view || []).join(', '), D.site.viewImpact].filter(Boolean).join(' – '), loc: [(D.site.influences || []).join(', '), D.site.inflImpact].filter(Boolean).join(' – '),
     topo: (D.site.topo || []).join(', '), energy: (D.systems.renew || []).filter(x => x !== 'None').join(', '),
     pool: (L.waterFeatures || []).map(w => w.type).filter(Boolean).join(', ') || 'None', courts: (D.amenities.rec || []).filter(x => /court/i.test(x)).join(', '), porch: (L.outdoorLiving || []).map(o => o.type).filter(Boolean).join(', '),
-    adu: [...(L.adus || []).map(a => a.ident || 'ADU'), ...(L.outbuildings || []).filter(o => o.real !== false).map(o => o.label || o.type)].filter(Boolean).join(', '), hasXml: !!xmlName };
+    adu: [...(L.adus || []).map(a => a.ident || 'ADU'), ...(L.outbuildings || []).filter(o => o.real !== false).map(o => o.label || o.type)].filter(Boolean).join(', '), hasXml: !!xmlName,
+    sk: { gar: (T.gar || []).map(x => ({ name: x.name, sf: x.sf })), adu: (T.adu || []).map(x => ({ name: x.name, sf: x.sf })), ob: (T.ob || []).map(x => ({ name: x.name, sf: x.sf })), agNon: T.agNon || 0, bgNon: T.bgNon || 0 } };
   if (!s.addr && D.property.addr) s.addr = D.property.addr;
   if (!s.lat && crs.lat) { s.lat = crs.lat; s.lon = crs.lng; }
   if (!s.apn && crs.apn) s.apn = crs.apn;

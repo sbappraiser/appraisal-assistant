@@ -165,6 +165,7 @@ function writeReportXML(doc, NS, J, SUBJ, VA, SVC) {
   const path = (el, ...tags) => tags.reduce((p, t) => child(p, t), el);
   const tf = (k, def) => { const v = R[k]; return v === 'true' ? 'true' : v === 'false' ? 'false' : def; };
   const VR = child(VA, 'VALUATION_REPORT');
+  if (typeof costXML === 'function') costXML(J, VR, child, set);   // her cost approach (costapp.js)
   const comment = (cat, text, max) => { if (!text) return; const VC = child(VR, 'VALUATION_COMMENTARIES');
     for (const c of VC.children) { const ct = [...c.children].find(k => k.localName === 'ValuationAnalysisCategoryType'); if (ct && ct.textContent === cat) { const tx = [...c.children].find(k => k.localName === 'ValuationCommentText'); if (tx) tx.textContent = text.slice(0, max); return; } }
     const c = add(VC, 'VALUATION_COMMENTARY'); set(c, 'ValuationAnalysisCategoryType', cat); set(c, 'ValuationCommentText', text.slice(0, max)); };
