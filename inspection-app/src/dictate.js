@@ -27,6 +27,11 @@ const DICT_HEAR = [ // 6k: what the iPad heard → what she said (from her Oct 2
 const dkCount = tok => (m, n, off, s) => /\b(?:of|added|addition|bedroom|bathroom|bath|number|no|both|the|these|those|new|extra|additional)\s*$/.test(s.slice(Math.max(0, off - 16), off)) ? m : tok + n;
 const DICT_PRE = [ // numbers, ratings, levels, counts – turned into one word each so they cannot be misread
   [/\b(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\b/g, (m, w) => String(NUMW[w])], [/\b(first|second|third|fourth|fifth)\b/g, (m, w) => ORDW[w]],
+  // 6x: cars that can park in the driveway ("2 cars can park in the driveway", "driveway holds 3 cars", "2 car driveway", "parking for 2 cars")
+  [/\b(\d{1,2})\s+(?:cars?|vehicles?)\s+(?:can\s+|could\s+|will\s+)?(?:be\s+)?(?:park(?:ed)?|fit)\s+(?:in|on)\s+(?:the\s+)?driveway\b/g, 'drivecars$1 driveway'],
+  [/\bdriveway\s+(?:that\s+)?(?:parks|holds|fits|has room for|for|can hold|can fit|can park|accommodates|with room for|with parking for)\s+(?:up to\s+)?(\d{1,2})\s+(?:cars?|vehicles?)\b/g, 'driveway drivecars$1'],
+  [/\b(\d{1,2})[ -]?car\s+driveway\b/g, 'drivecars$1 driveway'], [/\bparking for (\d{1,2})\s+(?:cars?|vehicles?)\s+(?:in|on)\s+(?:the\s+)?driveway\b/g, 'drivecars$1 driveway'],
+  [/\b(cars?|vehicles?|can|could|to)\s+park\b/g, '$1 carpark'], [/\b(?:room|space|parking)\s+for\s+(\d{1,2})\s+(?:cars?|vehicles?)\b/g, 'parkcars$1'], [/\b(?:driveway\s+(?:is\s+)?not shared|not shared|no shared driveway|private driveway)\b/g, 'drivenotshared'],
   [/\b(\d)\.5\s+bath(?:room)?s?\b/g, 'bathcount$1 halfcount1'], [/\b(\d)\s+and a half\s+bath(?:room)?s?\b/g, 'bathcount$1 halfcount1'],
   [/\b([1-9])\s+half\s+bath(?:room)?s?\b/g, dkCount('halfcount')], [/\b([1-9])\s+(?:full\s+)?bath(?:room)?s\b/g, dkCount('bathcount')], [/\b(1)\s+(?:full\s+)?bath(?:room)?\b(?=\s*(?:and|,|$|\.))/g, dkCount('bathcount')], [/\b([1-9])\s+bedrooms?\b/g, dkCount('bedcount')],
   [/\b(?:front door|front entry|entry door|front entrance|threshold|entry)\b(?:\s+(?:is|sits|elevation|height|threshold|about|approximately|around|roughly|at|less than|under|below|just))*\s+(\d+(?:\.\d+)?|a)(?:\s+\1)?\s*(feet|foot|ft|inches|inch)\b(?:\s+(?:above|off|from)\s+(?:the\s+)?(?:grade|ground|finished grade))?/g, (m, n, u) => 'frontelev' + Math.round((n === 'a' ? 1 : +n) * (/^in/.test(u) ? 1 : 12))],
@@ -303,7 +308,7 @@ function dictParse(text, ins) {
   const report = new Set(); let inRep = false;
   sentW.forEach((ws, k) => { const w = ws.map(t => t.w).join(' '); if (REPORT_RX.test(w)) inRep = true; else if (inRep && !UPDATE_RX.test(w)) inRep = false; if (inRep && ws.length) report.add(k); });
   T.forEach((t, j) => { if (report.has(sentOf[j])) t.rep = true; });
-  const SPECIAL = /^(qrate|crate)[1-6]$|^ceilht(\d+|2story)$|^stories[1-4]$|^garcar[1-9]$|^islands[1-9]$|^fpcount[1-9]$|^bedcount[1-9]$|^bathcount[1-9]$|^halfcount[1-9]$|^lvl(\d|b1)$|^fireplace$|^frontelev\d+$/;
+  const SPECIAL = /^(qrate|crate)[1-6]$|^ceilht(\d+|2story)$|^stories[1-4]$|^garcar[1-9]$|^islands[1-9]$|^fpcount[1-9]$|^bedcount[1-9]$|^bathcount[1-9]$|^halfcount[1-9]$|^lvl(\d|b1)$|^fireplace$|^frontelev\d+$|^drivecars\d+$|^parkcars\d+$|^drivenotshared$/;
   // pass 1: longest match wins; on a tie: room > item > area > cue > value
   const marks = []; let tabs = [], pref = [], inside = false;
   for (let i = 0; i < n; i++) { const t = T[i]; if (t.br || t.rep) continue;
@@ -394,6 +399,9 @@ function dictParse(text, ins) {
       if (/^frontelev/.test(s)) { const inch = +s.slice(9); const B = ['UpToOneFoot', 'OneToTwoFeet', 'TwoToThreeFeet', 'ThreeToFourFeet', 'FourToFiveFeet', 'FiveToSixFeet', 'SixToSevenFeet', 'SevenToEightFeet', 'EightToNineFeet', 'NineToTenFeet'];
         put('front.frontElev', inch <= 0 ? 'GroundLevel' : inch >= 120 ? 'TenOrMoreFeet' : B[Math.ceil(inch / 12) - 1]); return; }
       if (/^ceilht/.test(s)) { put('interior.ceilH', CEIL_CODE(s.slice(6))); return; }
+      if (/^drivecars/.test(s)) { put('driveway.driveSpaces', +s.slice(9)); return; }
+      if (/^parkcars/.test(s)) { const tb = (m.tabs || [])[0]; if (tb === 'garage') { put('garage.hasGarage', true); put('garage.garSpaces', +s.slice(8)); } else put('driveway.driveSpaces', +s.slice(8)); return; }
+      if (s === 'drivenotshared') { put('driveway.driveShared', false); return; }
       if (/^stories/.test(s)) { put('front.stories', +num); return; }
       if (/^garcar/.test(s)) { const nx = T.slice(m.i + 1, m.i + 3).map(t => t.s); if (nx.includes('carport')) put('garage.carport', +num); else { put('garage.hasGarage', true); put('garage.garSpaces', +num); } return; }
       if (/^islands/.test(s)) { const ri = room !== null && rooms[room].list === 'kitchens' ? room : startRoom({ list: 'kitchens', props: {}, i: m.i }); put('L:kitchens.islands', +num, ri); return; }

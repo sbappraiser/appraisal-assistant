@@ -257,8 +257,14 @@ function wkChooserHtml(ins, P) {
     <p class="help">${kids.length ? 'Tap one to go back to it, or add another:' : 'Tap what you are looking at (or say it with a colon: “Patio colon…”):'}</p>${add}
     ${iss.length ? `<div class="wk-check"><b>Still needed</b>${iss.slice(0, 10).map(x => wkNeedHtml(ins, x)).join('')}${iss.length > 10 ? `<div class="wk-need">+ ${iss.length - 10} more</div>` : ''}</div>` : ''}`;
 }
+/* never redraw while her finger is down: the redraw would swallow the tap (a tab or place she is tapping) */
+const WKP = { down: false, pend: null };
+document.addEventListener('pointerdown', () => { WKP.down = true; }, true);
+const wkUp = () => { setTimeout(() => { WKP.down = false; if (WKP.pend) { const l = WKP.pend; WKP.pend = null; setTimeout(() => wkRefresh(l === 'light'), 350); } }, 0); };
+document.addEventListener('pointerup', wkUp, true); document.addEventListener('pointercancel', wkUp, true);
 function wkRefresh(light) {
-  if (app.tab !== 'walk') return; const main = $('#main'); if (!main) return;
+  if (app.tab !== 'walk') return;
+  if (WKP.down) { WKP.pend = WKP.pend === 'full' || !light ? 'full' : 'light'; return; } const main = $('#main'); if (!main) return;
   const a = document.activeElement; if (light && a && a.id === 'wkNote') { const b = document.getElementById('wkBody'); const ins = app.ins; const P = wkPlace(ins, wkData(ins).place); if (a.value !== (wkData(ins).notes[P.key] || '')) a.value = wkData(ins).notes[P.key] || ''; return; }
   main.innerHTML = renderWalk(); bindWalk(main); fillThumbs(main); wkMicState(); refreshChrome();
 }
@@ -283,7 +289,7 @@ function bindWalk(root) {
     save(); wkGo(key); });
   const mr = root.querySelector('#wkMoreRoom'); if (mr) mr.onchange = () => { if (!mr.value) return; const it = wkMake(ins, { list: 'rooms', type: mr.value }); save(); wkGo('L:rooms:' + it.id); };
   const ta = root.querySelector('#wkNote'); if (ta) { ta.oninput = () => { w.notes[w.place] = ta.value; save(); }; ta.onblur = () => { const v = wkClean(ta.value); w.notes[w.place] = v; const P = wkPlace(ins, w.place);
-    if (/:/.test(v) && !(P.head && new RegExp('^\\s*' + P.head + ':', 'i').test(v))) { w.notes[w.place] = ''; wkFile(ins, v); } save(); setTimeout(() => wkRefresh(), 50); }; }
+    if (/:/.test(v) && !(P.head && new RegExp('^\\s*' + P.head + ':', 'i').test(v))) { w.notes[w.place] = ''; wkFile(ins, v); } save(); setTimeout(() => wkRefresh(), 400); }; }
 }
 /* notes → the Dictate box, place by place, only what was not sent before */
 function wkSort() {

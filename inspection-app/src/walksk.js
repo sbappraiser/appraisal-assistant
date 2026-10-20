@@ -83,5 +83,6 @@ function wskNewItem(list, it) { SK.ins.lists = SK.ins.lists || {}; (SK.ins.lists
   if (!/^(front|exterior|rear|garage|L:(adus|outbuildings):)/.test(WSK.place)) WSK.place = 'exterior';
   const rs = renderShell; renderShell = function () { rs(); wskMount(); };
   const ps = placeStart; placeStart = function (ft, exact) { const def = SK.pendingDef; ps(ft, exact); try { wskAreaPlace(def); } catch (e) {} };
-  const gb = goBack; goBack = async function () { wsrStop(); wcamClose(true); return gb(); };
+  const back = WSK.place0 = q.get('place') || ''; const gb = goBack;
+  goBack = async function () { wsrStop(); wcamClose(true); if (back) { try { await wskUpdate(ins => { ins.walk = ins.walk || {}; ins.walk.place = back; return { check: c => c && c.walk && c.walk.place === back }; }); } catch (e) {} } return gb(); };
 })();
