@@ -10,7 +10,7 @@ function wkClean(t) {
   let s = String(t || '');
   try { if (typeof dkTeachApply === 'function') s = dkTeachApply(s); else { const L = JSON.parse(localStorage.getItem('uad-dk-teach') || '[]'); (L || []).forEach(x => { if (x && x.heard) s = s.replace(new RegExp('\\b' + x.heard.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'gi'), x.meant || ''); }); } } catch (e) {}
   s = s.replace(/\b(?:hi|high|upper)\s+([QqCc])\s*-?\s*([1-6])\b/g, (m, l, d) => l.toUpperCase() + d + '+').replace(/\b(?:low|lower)\s+([QqCc])\s*-?\s*([1-6])\b/g, (m, l, d) => l.toUpperCase() + d + '-')
-    .replace(/\b([QqCc])\s*([1-6])\s+plus\b/g, (m, l, d) => l.toUpperCase() + d + '+').replace(/\b([QqCc])\s*([1-6])\s+minus\b/g, (m, l, d) => l.toUpperCase() + d + '-').replace(/\b(?:mille|millie|mealie|milley|mielle|mila|milla|meela|meila|myla)\b/gi, 'Miele').replace(/(^|[^0-9 ] *| )voltage\b(?! (?:panel|outlet|outlets|wiring|service|line|lines|meter))/gi, '$1vaulted');
+    .replace(/\b([QqCc])\s*([1-6])\s+plus\b/g, (m, l, d) => l.toUpperCase() + d + '+').replace(/\b([QqCc])\s*([1-6])\s+minus\b/g, (m, l, d) => l.toUpperCase() + d + '-').replace(/\b(?:mille|millie|mealie|milley|mielle|mila|milla|meela|meila|myla)\b/gi, 'Miele').replace(/\b(?:(?:wind|wine|wayne|wane|wain|whine) ?scot(?:t)?ing|wind coating|wine coating|wayne coating|wane coating|wainscotting)\b/gi, 'wainscoting').replace(/(^|[^0-9 ] *| )voltage\b(?! (?:panel|outlet|outlets|wiring|service|line|lines|meter))/gi, '$1vaulted');
   return s.replace(WK_COLON, ': ').replace(/\s+:/g, ':').replace(/:\s*/g, ': ').replace(/\s{2,}/g, ' ').trim();
 }
 
