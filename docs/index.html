@@ -63,7 +63,15 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-
 .client-actions { display: flex; gap: 6px; flex-wrap: wrap; } .client-actions select { width: auto; max-width: 220px; padding: 6px 8px; font-size: 13px; }
 .eyebrow { font: 600 12px var(--ui); text-transform: uppercase; letter-spacing: .07em; color: var(--muted); }
 .eyebrow.mkhd { font: 700 15px var(--ui); color: #c00000; letter-spacing: .05em; } .eyebrow.mkhd b { font-weight: 800; }
-table.mcq th { color: #c00000 !important; font-size: 14px !important; font-weight: 800 !important; letter-spacing: .03em; background: #fff1f1; border-left: 4px solid #c00000; padding-left: 10px !important; }
+table.mcq th { color: #c00000 !important; font-size: 14px !important; font-weight: 800 !important; letter-spacing: .03em; }
+/* Market tab: darker reading text, and the boxes you fill in clearly boxes (her ask, Oct 20 2026) */
+#mkBody { --muted: color-mix(in srgb, var(--ink) 78%, var(--panel)); color: var(--ink); }
+#mkBody .help, #mkBody small, #mkBody .muted, #mkBody th { color: var(--muted); }
+#mkBody .help { font-size: 14px; } #mkBody table.facts th { color: var(--ink); font-weight: 600; }
+#mkBody input:not([type=checkbox]):not([type=radio]):not([type=file]), #mkBody select, #mkBody textarea {
+  background: var(--panel) !important; color: var(--ink); border: 2px solid color-mix(in srgb, var(--ink) 55%, var(--panel)) !important; border-radius: 6px; font-size: 15px; box-shadow: inset 0 1px 2px rgba(0,0,0,.08); }
+#mkBody input:focus, #mkBody select:focus, #mkBody textarea:focus { outline: 3px solid #f0a020; outline-offset: 1px; border-color: #b36b00 !important; }
+#mkBody select { padding: 3px 6px; min-height: 30px; } #mkBody textarea { padding: 8px 10px; line-height: 1.45; }
 .btn { font: 600 14px var(--ui); border: 1px solid var(--line); background: var(--panel); color: var(--ink); border-radius: 8px; padding: 9px 14px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
 .btn:hover { border-color: var(--accent); }
 .btn.primary { background: var(--accent-fill); color: var(--accent-ink); border-color: #000; }
@@ -726,7 +734,7 @@ mark.blank{background:#fff3a8;padding:0 2px;border-radius:3px}.cmt textarea{widt
 </div>
 <div id="toast" role="status" hidden></div>
 <script>
-const BUILD='o1-1020-0726';
+const BUILD='o1-1020-0730';
 const G = (() => {
 /* ---------------- small helpers ---------------- */
 const $ = (s, r = document) => r.querySelector(s);
