@@ -25,12 +25,12 @@ const WK_PLACES = [
   { key: 'exterior', g: 'Outside', t: 'Exterior of dwelling', say: ['exterior of dwelling', 'exterior of the dwelling', 'exterior of house', 'exterior', 'side of dwelling', 'side of house'], head: 'Exterior', shots: [{ k: 'ex', t: 'Exterior of dwelling', ext: true }], iss: x => x.tab === 'exterior' && !/Rear/i.test(x.label), hint: 'Photos as you sketch around the house. Walls, windows, foundation, doors, anything worth noting.', sketch: true },
   { key: 'rear', g: 'Outside', t: 'Rear of dwelling', say: ['rear of dwelling', 'rear of the dwelling', 'rear of house', 'rear of the house', 'rear elevation', 'back of house', 'dwelling rear', 'rear'], head: 'Rear', shots: [{ k: 'rr', t: 'Dwelling rear', tg: WKF('exterior', 'photoRear') }], iss: x => x.tab === 'exterior' && /Rear/i.test(x.label), hint: 'Rear of the house, decks or balconies off it, defects.' },
   { key: 'yards', g: 'Outside', t: 'Side & rear yards', say: ['side yard', 'side yards', 'rear yard', 'rear yards', 'back yard', 'backyard', 'yards', 'yard'], head: 'Rear yard', shots: [{ k: 'ld', t: 'Yard', tg: WKF('amenities', 'photoLand'), lab: 'Rear yard' }, { k: 'sd', t: 'Side yard', tg: WKF('site', 'photoSite'), lab: 'Side yard' }], iss: () => false, hint: 'Lawn, trees, walkways, fencing, retaining walls, drainage.' },
-  { key: 'outdoor', g: 'Outside', t: 'Patios, porches & decks', chooser: 'outdoorLiving', iss: x => x.tab === 'amenities' && x.group === 'olv' },
-  { key: 'water', g: 'Outside', t: 'Pool, spa & water features', chooser: 'waterFeatures', iss: x => x.tab === 'amenities' && x.group === 'wf' },
+  { key: 'outdoor', g: 'Outside', t: 'Patios, porches & decks', chooser: 'outdoorLiving', head: 'Outdoor', hint: 'Start with what it is: “Patio colon covered flagstone patio…”, “Deck colon…”. A new one is added for you.', iss: x => x.tab === 'amenities' && x.group === 'olv' },
+  { key: 'water', g: 'Outside', t: 'Pool, spa & water features', chooser: 'waterFeatures', head: 'Outdoor', hint: 'Start with what it is: “Pool colon gunite, heated, automatic cover…”, “Spa colon…”. A new one is added for you.', iss: x => x.tab === 'amenities' && x.group === 'wf' },
   { key: 'site', g: 'Outside', t: 'Site, landscaping & drainage', say: ['site', 'landscaping', 'landscape', 'drainage', 'irrigation', 'hardscape', 'topography'], head: 'Site', shots: [{ k: 'si', t: 'Site', tg: WKF('site', 'photoSite') }, { k: 'ld', t: 'Landscaping', tg: WKF('amenities', 'photoLand') }], iss: x => (x.tab === 'site' && x.group !== 'view') || (x.tab === 'amenities' && (x.group === 'land' || x.group === 'rec')), hint: 'Topography, drainage, irrigation, landscaping (how much, what quality), retaining walls, sport court, solar.' },
   { key: 'view', g: 'Outside', t: 'View', say: ['view', 'views'], head: 'View', shots: [{ k: 'vw', t: 'View', tg: WKF('site', 'photoView') }], iss: x => x.tab === 'site' && x.group === 'view', hint: 'Ocean, mountain, city lights; full or partial; beneficial, neutral or adverse.' },
-  { key: 'buildings', g: 'Other buildings', t: 'ADU & outbuildings', chooser: 'buildings', iss: x => x.tab === 'buildings' },
-  { key: 'rooms', g: 'Inside', t: 'Rooms', chooser: 'rooms', iss: x => x.tab === 'interior' && ['rooms', 'beds', 'baths', 'kitchens', 'wetbars', 'levels'].includes(x.group) },
+  { key: 'buildings', g: 'Other buildings', t: 'ADU & outbuildings', chooser: 'buildings', head: 'Outbuilding', hint: 'Start with the building: “ADU colon…”, “Guest house colon…”, “Shed colon…”.', iss: x => x.tab === 'buildings' },
+  { key: 'rooms', g: 'Inside', t: 'Rooms', chooser: 'rooms', head: 'Interior', hint: 'Start with the room: “Bedroom 2 colon carpet…”, “Kitchen colon…”, “Level 2 colon” to change floors.', iss: x => x.tab === 'interior' && ['rooms', 'beds', 'baths', 'kitchens', 'wetbars', 'levels'].includes(x.group) },
   { key: 'interiorAll', g: 'Inside', t: 'Whole house (ceilings, floors, features)', say: ['whole house', 'throughout', 'interior'], head: 'Interior', shots: [{ k: 'in', t: 'Interior', extra: 'interior' }], iss: x => x.tab === 'interior' && ['unit', 'finish', 'feat', 'noncont'].includes(x.group), hint: 'Ceiling heights, flooring, recessed lighting, crown molding, fireplaces, quality and condition.' },
   { key: 'attic', g: 'Inside', t: 'Attic', say: ['attic'], head: 'Attic', shots: [{ k: 'at', t: 'Attic', tg: WKF('interior', 'photoAttic') }], iss: x => x.tab === 'interior' && x.group === 'attic', hint: 'Access, finished or unfinished, insulation.' },
   { key: 'systems', g: 'Inside', t: 'Water heater & systems', say: ['water heater', 'systems', 'heating', 'furnace', 'hvac', 'electrical panel', 'solar panels', 'solar'], head: 'Systems', shots: [{ k: 'wh', t: 'Water heater', tg: WKF('systems', 'photoWH') }, { k: 'so', t: 'Solar', tg: WKF('systems', 'photoSolar') }], iss: x => x.tab === 'systems', hint: 'Water heater (strapped?), heating type and fuel, central air, solar owned or leased.' },
@@ -255,7 +255,8 @@ function wkChooserHtml(ins, P) {
   const iss = wkIssues(ins, P);
   return `${kids.length ? `<div class="wk-kids">${kids.map(k => { const st = wkStatus(ins, k); return `<button class="wk-stop ${st}" data-wkgo="${esc(k.key)}">${st === 'done' ? '✓ ' : ''}${esc(k.t)}</button>`; }).join('')}</div>` : ''}
     <p class="help">${kids.length ? 'Tap one to go back to it, or add another:' : 'Tap what you are looking at (or say it with a colon: “Patio colon…”):'}</p>${add}
-    ${iss.length ? `<div class="wk-check"><b>Still needed</b>${iss.slice(0, 10).map(x => wkNeedHtml(ins, x)).join('')}${iss.length > 10 ? `<div class="wk-need">+ ${iss.length - 10} more</div>` : ''}</div>` : ''}`;
+    ${iss.length ? `<div class="wk-check"><b>Still needed</b>${iss.slice(0, 10).map(x => wkNeedHtml(ins, x)).join('')}${iss.length > 10 ? `<div class="wk-need">+ ${iss.length - 10} more</div>` : ''}</div>` : ''}
+    ${wkNotesHtml(ins, P)}`;
 }
 /* never redraw while her finger is down: the redraw would swallow the tap (a tab or place she is tapping) */
 const WKP = { down: false, pend: null };
@@ -270,6 +271,7 @@ function wkRefresh(light) {
 }
 function bindWalk(root) {
   const ins = app.ins, w = wkData(ins);
+  { const rt = root.querySelector('#wkRoute'), on = rt && rt.querySelector('.wk-stop.on'); if (on) { const c = () => { rt.scrollLeft = on.offsetLeft - rt.clientWidth / 2 + on.offsetWidth / 2; }; c(); requestAnimationFrame(c); } }   // the place she is in stays highlighted in the middle
   const on = (id, fn) => { const b = root.querySelector('#' + id); if (b) b.onclick = fn; };
   on('wkCam', wkOpenCam); on('wkMic', wkTalk); on('wkSketch', wkOpenSketch); on('wkNext', wkNext); on('wkSort', wkSort);
   root.querySelectorAll('[data-wkgo]').forEach(b => b.onclick = () => wkGo(b.dataset.wkgo));
