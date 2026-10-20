@@ -608,3 +608,8 @@ Decisions (her, Oct 19–20): "Exterior of dwelling" instead of left/right/side 
 - g2-1020-19xx: fitReportSize has a 4th step (900 px / 0.70) for very large reports. Her workfile after the de-duplication: 39.4 MB (was 77).
 - o1-1020-1937: documents list – her search CSVs were filed as "MLS listing (subject)" and the CRS list as Other. Now a CSV with several listings and none the subject = MLS market-area search; a CRS Prospecting export = new kind 'crsList' (CRS neighborhood sales list); files dropped in the Market tab are added with that kind; files already used on the Market tab are re-filed when the tab opens.
 - g2-1020-1954: transfer terms ▾ pick suggests from the CRS mortgage-history text (No loan recorded → Cash; Loan: lender $ → Conventional, with the note that the deed does not give the loan type); still red until she confirms.
+
+## Comp genie g2-1020-1959 – sale type from remarks, no loan = cash (Oct 20 2026)
+- Her note: REO, Estate, Short Sale, Divorce … in the MLS remarks should fill Ownership transfer terms; "No loan recorded" = Cash (many cash sales).
+- sources.js remarkSaleType(): Listing Details first; if none/arm's length, scans Public + Private Remarks. Negations ("not a short sale") and "real estate" ignored; bare "estate" ignored (SB luxury listings say "estate"). Divorce/dissolution/probate/bankruptcy/court confirmation/overbid → CrtOrd (CourtOrderedNonForeclosureSale) – she confirms. saleTypeNote gets the remark snippet (shows in flags).
+- grid.js compFacts: xferTerms from saleType (picker label); line auto-shows when any used comp isn't TypicallyMotivated. termsText(): "No loan…"/"(cash?)" → Cash. export.js uadFinancing: (cash?) now = no financing.
