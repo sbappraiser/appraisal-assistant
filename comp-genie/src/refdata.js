@@ -63,6 +63,42 @@ const median = a => { const v = a.filter(x => typeof x === 'number' && isFinite(
 const isRemodel = p => /remodel|renovat|addition/i.test(String(p.f['Project type'] || '')) && !/new construction|rebuild/i.test(String(p.f['Project type'] || ''));
 function refAreaGuess(J) { const t = [J.subject.addr, J.subject.city, J.subject.zip, (subjFacts(J) || {}).nbhd].join(' ');
   return /93108|montecito/i.test(t) ? 'Montecito' : /hope ranch/i.test(t) ? 'Hope Ranch-Foothills' : /goleta|93117|93111/i.test(t) ? 'Goleta' : /carpinteria|93013/i.test(t) ? 'Carpinteria' : /summerland|93067/i.test(t) ? 'Summerland' : ''; }
+/* her land sale choices for this assignment (Oct 20 2026): filters, the sales she ticks, the site value and its comment */
+function landJob(J) { const L = J.land = J.land || {}; L.use = L.use || []; if (!L.f) { L.f = { years: 5 }; const s = (subjFacts(J) || {}).site; if (s) { L.f.minSite = Math.round(s / 2); L.f.maxSite = Math.round(s * 2); } } return L; }
+/* Noleta (93111) is part of Goleta (her rule) */
+function landInArea(x, area) { if (x.area === area) return true; const t = [x.nbhd, x.addr, x.source, x.note].join(' ');
+  if (/^goleta/i.test(area)) return /\b(?:goleta|noleta|93117|93111)\b/i.test(t); return new RegExp('\\b' + area.replace(/[-–].*$/, '').trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i').test(String(x.nbhd || '')); }
+function landUsedHTML(J) {
+  const LD = landJob(J); const U = (app.land || []).filter(x => LD.use.includes(x.id)); if (!U.length) return '';
+  const pr = U.map(x => x.price), psf = U.map(x => x.site ? x.price / x.site : null).filter(Boolean), pua = U.map(x => x.usable ? x.price / (x.usable / 43560) : null).filter(Boolean);
+  const rng = a => a.length ? money(Math.min(...a)) + ' to ' + money(Math.max(...a)) : '';
+  const draft = landDraft(J, U); LD.lastDraft = draft; const cm = LD.comment != null ? LD.comment : draft;
+  return `<div class="landused"><h3>Land sales used for the site value (${U.length})</h3>
+    <p class="help">Prices ${rng(pr)}${psf.length ? ' · ' + rng(psf) + ' per site sq ft (median ' + money(median(psf)) + ')' : ''}${pua.length ? ' · ' + rng(pua) + ' per usable acre (median ' + money(median(pua)) + ')' : ''}.</p>
+    <div class="row"><label>Site value $<input class="txt num" data-landv="1" value="${LD.value ? Math.round(LD.value).toLocaleString() : ''}" inputmode="numeric" style="width:10em"></label><span class="help">Method: sales comparison. Your choice – the app does not pick it.</span></div>
+    <label class="fld"><span>Site value comment for the Cost Approach <small>${cm.length.toLocaleString()} / 2,500 characters – read and edit it</small></span><textarea class="txt" data-landc="1" rows="6">${esc(cm)}</textarea></label>
+    <div class="row"><button class="btn sm" data-landcopy="1">Copy the comment</button><button class="btn sm ghost" data-landredraft="1">Write it again from the ticked sales</button></div>
+    <p class="help">In SFREP › Cost Approach: type the site value and paste this comment. The ticked sales and your value are saved with this assignment.</p></div>`;
+}
+function landDraft(J, U) {
+  const LD = landJob(J); const ym = U.map(x => x.ym).filter(Boolean).sort(); const psf = U.map(x => x.site ? x.price / x.site : null).filter(Boolean), pua = U.map(x => x.usable ? x.price / (x.usable / 43560) : null).filter(Boolean);
+  const one = x => `${x.addr || x.apn} (${x.ym ? x.ym.replace(/^(\d{4})-(\d{2})$/, '$2/$1') : 'date n/a'}, ${money(x.price)}${x.site ? ', ' + int(x.site) + ' sq ft site' : ''}${x.usable ? ', ' + (x.usable / 43560).toFixed(2) + ' usable acres' : ''})`;
+  let t = `The site value was estimated by sales comparison. ${U.length} land sale${U.length > 1 ? 's' : ''}${ym.length ? ' from ' + ym[0].replace(/^(\d{4})-(\d{2})$/, '$2/$1') + (ym.length > 1 ? ' to ' + ym[ym.length - 1].replace(/^(\d{4})-(\d{2})$/, '$2/$1') : '') : ''} were considered: ${U.map(one).join('; ')}.`;
+  if (psf.length) t += ` They indicate ${money(Math.min(...psf))} to ${money(Math.max(...psf))} per square foot of site area (median ${money(median(psf))})${pua.length ? ` and ${money(Math.min(...pua))} to ${money(Math.max(...pua))} per usable acre (median ${money(median(pua))})` : ''}.`;
+  t += LD.value ? ` The subject site value is estimated at ${money(LD.value)}.` : ' The subject site value is estimated at $___.';
+  return t.length > 2500 ? t.slice(0, 2497) + '…' : t;
+}
+async function landRedraw() { const c = $('#refCard'); if (c && app.job) { const y = window.scrollY; c.innerHTML = refHTML(app.job); window.scrollTo(0, y); } try { await saveNow(); } catch (e) {} }
+document.addEventListener('change', e => { const t = e.target; if (!t.dataset || !app.job) return; const LD = landJob(app.job);
+  if (t.dataset.landuse !== undefined) { const id = t.dataset.landuse; LD.use = t.checked ? [...new Set([...LD.use, id])] : LD.use.filter(x => x !== id); if (LD.comment != null && LD.comment === LD.lastDraft) LD.comment = null; landRedraw(); }
+  else if (t.dataset.landf !== undefined) { const k = t.dataset.landf; const v = k === 'years' ? +t.value : num(String(t.value).replace(/[^0-9.]/g, '')); LD.f[k] = v || (k === 'years' ? 0 : null); landRedraw(); }
+  else if (t.dataset.landv !== undefined) { LD.value = num(String(t.value).replace(/[^0-9.]/g, '')) || null; if (LD.comment == null || LD.comment === LD.lastDraft) LD.comment = null; landRedraw(); }
+  else if (t.dataset.landc !== undefined) { LD.comment = t.value; saveNow(); } });
+document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('[data-landreset],[data-landclear],[data-landcopy],[data-landredraft]'); if (!b || !app.job) return; const LD = landJob(app.job);
+  if (b.dataset.landreset) { const s = (subjFacts(app.job) || {}).site; LD.f = { years: 5 }; if (s) { LD.f.minSite = Math.round(s / 2); LD.f.maxSite = Math.round(s * 2); } landRedraw(); }
+  else if (b.dataset.landclear) { LD.f = { years: 0 }; landRedraw(); }
+  else if (b.dataset.landredraft) { LD.comment = null; landRedraw(); }
+  else if (b.dataset.landcopy) { const ta = document.querySelector('[data-landc]'); const v = ta ? ta.value : ''; try { navigator.clipboard.writeText(v).then(() => toast('Comment copied – paste it in SFREP › Cost Approach')); } catch (x) { ta.select(); document.execCommand('copy'); toast('Comment copied'); } } });
 function refHTML(J) {
   { /* a condo has no land value of its own: the card stays closed unless she opens it (her Encina question, Oct 19 2026) */
     const condo = typeof gridMode === 'function' && gridMode(J) === 'condo'; const RS = app.ref || {}; const open = RS.openFor === J.id ? true : RS.closedFor === J.id ? false : !condo;
@@ -73,12 +109,21 @@ function refHTML(J) {
   if (!L.length && !C) return `<h2>Land sales and construction costs</h2><p class="help">Drop your <b>Land Sales by Market Area.xlsx</b> and your <b>Construction_Cost_Database.xlsx</b> on this page once. They are kept in this browser and shared with the cost approach.</p>`;
   const areas = [...new Set(L.map(x => x.area))].sort();
   let body = '';
-  if (R.tab === 'land') { const q = R.q.toLowerCase(); const rows = L.filter(x => (!R.area || x.area === R.area) && (!q || [x.nbhd, x.addr, x.apn, x.zoning, x.note].join(' ').toLowerCase().includes(q))).sort((a, b) => String(b.ym).localeCompare(String(a.ym)));
-    const pua = rows.map(x => x.usable ? x.price / (x.usable / 43560) : null), psf = rows.map(x => x.site ? x.price / x.site : null);
-    body = `<div class="row"><label>Area <select data-refarea="1"><option value="">All areas</option>${areas.map(a => `<option ${a === R.area ? 'selected' : ''}>${esc(a)}</option>`).join('')}</select></label><input class="txt" data-refq="1" value="${esc(R.q)}" placeholder="market area, street, APN, zoning…" style="width:22em">
-      <span class="help">${rows.length} sale${rows.length === 1 ? '' : 's'}${median(pua) ? ' · median ' + money(median(pua)) + ' per usable acre' : ''}${median(psf) ? ' · median ' + money(median(psf)) + ' per site sq ft' : ''}</span></div>
-      <div class="tablewrap" style="max-height:420px;overflow:auto"><table class="tbl"><thead><tr><th>Market area</th><th>Address</th><th>APN</th><th>Sold</th><th class="r">Price</th><th class="r">Site</th><th class="r">Usable</th><th class="r">$/site sf</th><th class="r">$/usable ac</th><th>Zoning</th><th>Source</th><th>Check</th></tr></thead><tbody>
-      ${rows.map(x => `<tr><td>${esc(x.nbhd || '')}</td><td>${esc(x.addr || '')}</td><td>${esc(x.apn || '')}</td><td>${esc(x.ym || '')}</td><td class="r">${money(x.price)}</td><td class="r">${x.site ? int(x.site) + ' sf' : ''}</td><td class="r">${x.usable ? (x.usable / 43560).toFixed(2) + ' ac' : ''}</td><td class="r">${x.site ? money(x.price / x.site) : ''}</td><td class="r">${x.usable ? money(x.price / (x.usable / 43560)) : ''}</td><td>${esc(x.zoning || '')}</td><td><small>${esc(String(x.source || '').slice(0, 40))}</small></td><td><small>${esc(x.check || '')}</small></td></tr>`).join('')}</tbody></table></div>`; }
+  if (R.tab === 'land') { const LD = landJob(J); const F = LD.f; const q = R.q.toLowerCase(); const ys = F.years ? new Date().getFullYear() - F.years : 0;
+    const rows = L.filter(x => (!R.area || landInArea(x, R.area)) && (!q || [x.nbhd, x.addr, x.apn, x.zoning, x.note, x.area].join(' ').toLowerCase().includes(q))
+      && (!F.minSite || !x.site || x.site >= F.minSite) && (!F.maxSite || !x.site || x.site <= F.maxSite) && (!ys || (+String(x.ym).slice(0, 4) || 0) >= ys)
+      && (!F.minP || x.price >= F.minP) && (!F.maxP || x.price <= F.maxP) || LD.use.includes(x.id)).sort((a, b) => (LD.use.includes(b.id) - LD.use.includes(a.id)) || String(b.ym).localeCompare(String(a.ym)));
+    const pua = rows.map(x => x.usable ? x.price / (x.usable / 43560) : null), psf = rows.map(x => x.site ? x.price / x.site : null); const sub = subjFacts(J) || {};
+    const nf = v => v ? Math.round(v).toLocaleString() : '';
+    body = `<div class="row"><label>Area <select data-refarea="1"><option value="">All areas</option>${areas.map(a => `<option ${a === R.area ? 'selected' : ''}>${esc(a)}</option>`).join('')}</select></label><input class="txt" data-refq="1" value="${esc(R.q)}" placeholder="ZIP, market area, street, APN, zoning…" style="width:20em"></div>
+      <div class="row landf"><label>Site from <input class="txt num" data-landf="minSite" value="${nf(F.minSite)}" inputmode="numeric"> to <input class="txt num" data-landf="maxSite" value="${nf(F.maxSite)}" inputmode="numeric"> sq ft</label>
+        <label>Sold in the last <select data-landf="years">${[[1, '1 year'], [2, '2 years'], [3, '3 years'], [5, '5 years'], [10, '10 years'], [0, 'any time']].map(([v, l]) => `<option value="${v}" ${+F.years === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+        <label>Price from $<input class="txt num" data-landf="minP" value="${nf(F.minP)}" inputmode="numeric"> to $<input class="txt num" data-landf="maxP" value="${nf(F.maxP)}" inputmode="numeric"></label>
+        <button class="btn sm ghost" data-landreset="1">Like the subject</button><button class="btn sm ghost" data-landclear="1">Clear filters</button></div>
+      <p class="help">${rows.length} sale${rows.length === 1 ? '' : 's'}${median(pua) ? ' · median ' + money(median(pua)) + ' per usable acre' : ''}${median(psf) ? ' · median ' + money(median(psf)) + ' per site sq ft' : ''} · subject site ${sub.site ? int(sub.site) + ' sq ft' : 'not known yet'}. “Like the subject” = site ½ to 2 × the subject's, sold in the last 5 years. Tick <b>Use</b> for the sales you rely on for the site value.</p>
+      <div class="tablewrap" style="max-height:420px;overflow:auto"><table class="tbl"><thead><tr><th>Use</th><th>Market area</th><th>Address</th><th>APN</th><th>Sold</th><th class="r">Price</th><th class="r">Site</th><th class="r">Usable</th><th class="r">$/site sf</th><th class="r">$/usable ac</th><th>Zoning</th><th>Source</th><th>Check</th></tr></thead><tbody>
+      ${rows.map(x => `<tr${LD.use.includes(x.id) ? ' class="landon"' : ''}><td><input type="checkbox" data-landuse="${esc(x.id)}" ${LD.use.includes(x.id) ? 'checked' : ''} aria-label="Use this sale"></td><td>${esc(x.nbhd || x.area || '')}</td><td>${esc(x.addr || '')}</td><td>${esc(x.apn || '')}</td><td>${esc(x.ym || '')}</td><td class="r">${money(x.price)}</td><td class="r">${x.site ? int(x.site) + ' sf' : ''}</td><td class="r">${x.usable ? (x.usable / 43560).toFixed(2) + ' ac' : ''}</td><td class="r">${x.site ? money(x.price / x.site) : ''}</td><td class="r">${x.usable ? money(x.price / (x.usable / 43560)) : ''}</td><td>${esc(x.zoning || '')}</td><td><small>${esc(String(x.source || '').slice(0, 40))}</small></td><td><small>${esc(x.check || '')}</small></td></tr>`).join('')}</tbody></table></div>
+      ${landUsedHTML(J)}`; }
   else if (C) { const ps = C.projects.filter(p => !R.newOnly || !isRemodel(p));
     const v = (p, k) => num(p.s[k]); const rows = ps.map(p => ({ p, bd: v(p, 'Building direct $/SF GLA – indexed'), tot: v(p, 'Total budget – indexed') && num(p.f['GLA (SF) – appraisal']) ? v(p, 'Total budget – indexed') / num(p.f['GLA (SF) – appraisal']) : null, ex: v(p, 'Existing-site basis $/SF GLA – indexed'), gar: v(p, 'Garage – $/SF garage'), pool: v(p, 'Pool & spa'), land: v(p, 'Landscaping & irrigation') })).sort((a, b) => (b.bd || 0) - (a.bd || 0));
     body = `<div class="row"><label class="check"><input type="checkbox" data-refnew="1" ${R.newOnly ? 'checked' : ''}> New construction only (remodels are partial scope – components only)</label>
