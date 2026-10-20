@@ -60,7 +60,8 @@ function mkCompute(src) {   // src: the market-area search (default) or the comp
   const m = M(), eff = mkEff(), L = +m.lookback || 12, start = isoAddMonths(eff, -L); src = src || m;
   const nearToday = daysBetween(eff, todayISO()) <= 3; // current assignment: MLS days on market are as of the export
   const types = src.types; const out = { eff, start, L, rows: [] };
-  (src.rows || []).forEach(r => {
+  (src.rows || []).forEach(r0 => {
+    const fx = (src.fix || {})[r0.mls]; const r = fx ? { ...r0, ...fx, typed: true } : r0;   // sale date / price she typed for a closed row the CSV left blank
     const s = statusAt(r, eff); let use = s && !(src.exclude || {})[r.mls] && (!types || types.includes(r.typ));
     if (s === 'sold' && r.saleDate <= start) use = false;
     if (s === 'closed – no sale date') use = false;   // shown, but it cannot be counted without a sale date
@@ -279,7 +280,7 @@ function mkTable(R, src, which) {
   return `<div class="tableWrap"><table class="facts mkrows"><tr><th></th>${th('addr', 'Address')}${th('at', 'On ' + h(shortDate(R.eff)))}${th('listDate', 'Listed')}${th('listPrice', 'List price')}${th('contractDate', 'Contract')}${th('saleDate', 'Sold')}${th('salePrice', 'Sale price')}${th('ppsf', '$ / sq ft')}${th('domAt', 'DOM')}${th('gla', 'Sq ft')}<th>Notes</th></tr>
     ${rows.map(r => `<tr class="${r.use ? '' : 'off'}">
       <td><input type="checkbox" ${inc}="${h(r.mls)}" ${(src.exclude || {})[r.mls] ? '' : 'checked'} title="Use this listing" aria-label="Use ${h(r.addr)}"></td><td>${h(r.addr)}${r.unit ? ' #' + h(r.unit) : ''}<small>MLS ${h(r.mls)} · ${h(r.typ)}</small></td>
-      <td>${r.at === 'closed – no sale date' ? '<b class="warnTxt" title="The MLS shows it closed, but this CSV row has no sold date or sold price, so it cannot be counted. Check the export columns (Sold Date, Sold Price) or that listing in Flexmls.">closed – no sale date or price in the CSV</b>' : h(r.at || 'not on the market')}</td><td>${h(shortDate(r.listDate))}</td><td>${h($m(r.listPrice))}</td><td>${h(shortDate(r.contractDate))}</td><td>${h(shortDate(r.saleDate))}</td><td>${h($m(r.salePrice))}</td><td>${r.salePrice && r.gla ? h($m(r.salePrice / r.gla)) : ''}</td><td>${h(r.domAt ?? '')}</td><td>${r.gla ? Math.round(r.gla).toLocaleString() : ''}</td>
+      <td>${r.at === 'closed – no sale date' ? `<b class="warnTxt">closed – no sale date or price in the CSV</b><span class="mkfix">Sold <input type="date" data-mkfix="${which}|${h(r.mls)}|saleDate" aria-label="Sold date"> for $<input class="num" inputmode="numeric" data-mkfix="${which}|${h(r.mls)}|salePrice" placeholder="sold price" aria-label="Sold price"></span>` : h(r.at || 'not on the market') + (r.typed ? `<small>sale typed by you · <a href="#" data-mkunfix="${which}|${h(r.mls)}">undo</a></small>` : '')}</td><td>${h(shortDate(r.listDate))}</td><td>${h($m(r.listPrice))}</td><td>${h(shortDate(r.contractDate))}</td><td>${h(shortDate(r.saleDate))}</td><td>${h($m(r.salePrice))}</td><td>${r.salePrice && r.gla ? h($m(r.salePrice / r.gla)) : ''}</td><td>${h(r.domAt ?? '')}</td><td>${r.gla ? Math.round(r.gla).toLocaleString() : ''}</td>
       <td>${[r.twoUnits ? 'two units? (left out)' : '', r.distressed ? '<b>distressed: ' + h(r.details.join(', ')) + '</b>' : r.details.length ? h(r.details.join(', ')) : ''].filter(Boolean).join(' · ')}</td></tr>`).join('')}</table></div>`;
 }
 async function mkAddSearch(file, which) {
@@ -400,6 +401,9 @@ function mkRender(redraft) {
   box.querySelectorAll('[data-mkinc2]').forEach(cb => cb.onchange = () => { const q = MI(); q.exclude = q.exclude || {}; if (cb.checked) delete q.exclude[cb.dataset.mkinc2]; else q.exclude[cb.dataset.mkinc2] = true; mkChanged(); mkRender(true); });
   $('#mkStatsFile').onchange = e => { const f = e.target.files[0]; e.target.value = ''; if (f) mkAddStats(f); };
   const fd = $('#mkFromDocs'); if (fd) fd.onclick = async () => { const d = cur.docs.find(d => d.type === 'marketSearch' && /\.csv$/i.test(d.name)); const f = await docFile(d.id); if (f) mkAddSearch(f); };
+  box.querySelectorAll('[data-mkfix]').forEach(inp => inp.onchange = () => { const [w, mls, k] = inp.dataset.mkfix.split('|'); const q = w === 'micro' ? MI() : m; q.fix = q.fix || {}; const f = q.fixDraft = q.fixDraft || {}; f[mls] = f[mls] || {};
+    f[mls][k] = k === 'salePrice' ? G.num(inp.value) : inp.value; if (f[mls].saleDate && f[mls].salePrice) { q.fix[mls] = { saleDate: f[mls].saleDate, salePrice: f[mls].salePrice }; delete f[mls]; if (q.exclude) delete q.exclude[mls]; mkChanged(); mkRender(true); toast('Counted as a closed sale with the date and price you typed'); } });
+  box.querySelectorAll('[data-mkunfix]').forEach(a => a.onclick = e => { e.preventDefault(); const [w, mls] = a.dataset.mkunfix.split('|'); const q = w === 'micro' ? MI() : m; if (q.fix) delete q.fix[mls]; mkChanged(); mkRender(true); });
   box.querySelectorAll('[data-mkinc]').forEach(cb => cb.onchange = () => { m.exclude = m.exclude || {}; if (cb.checked) delete m.exclude[cb.dataset.mkinc]; else m.exclude[cb.dataset.mkinc] = true; mkChanged(); mkRender(true); });
   box.querySelectorAll('[data-mktype]').forEach(cb => cb.onchange = () => { m.types = [...box.querySelectorAll('[data-mktype]:checked')].map(x => x.dataset.mktype); mkChanged(); mkRender(true); });
   box.querySelectorAll('select[data-mk]').forEach(s => s.onchange = () => { const k = s.dataset.mk; if (k === 'lookback') { m.lookback = +s.value; mkChanged(); mkRender(true); return; } m[k] = s.value; mkChanged(); mkRender(k === 'trendConcl' && !m.commentEdited); });
