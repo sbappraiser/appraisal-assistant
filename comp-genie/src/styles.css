@@ -245,3 +245,4 @@ table.comps tr.nextflag td{background:#ffe1a8!important;transition:background .3
 /* her ask Oct 20 2026: Comps considered column names stay at the top while she scrolls the list */
 #compsCard .tablewrap{max-height:calc(100vh - var(--toph,64px) - 24px);overflow:auto;border-top:1px solid var(--line)}
 table.comps thead th{position:sticky;top:0;z-index:3;background:#fff;box-shadow:0 1px 0 #9aa6b2}
+select.qcsel{font-weight:700;margin:2px 4px 2px 0}
