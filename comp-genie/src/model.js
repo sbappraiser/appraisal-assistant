@@ -177,7 +177,8 @@ function srcVals0(c) { // canonical values per source for this comp
   if (crs && crs.salePrice) { const fin = crsFinancing(crs); if (fin) crs = { ...crs, financing: fin }; }
   const finFix = o =>   /* Oct 20 2026: the Flexmls Financing number is not the terms – hidden (also in comps brought in before) */ o && /^\s*\d+\s*$/.test(String(o.financing || '')) ? { ...o, financing: remarkFinancing('', [o.privateRemarks, o.remarks].filter(Boolean).join(' • ')) } : o;
   const sfFix = o => o && /^measured$/i.test(String(o.sfSource || '').trim()) ? { ...o, sfSource: 'MLS' } : o;   // MLS data brought in before Oct 20 2026
-  return { arch: a ? a.v : null, mls: sfFix(finFix(c.src.mls)), pdf: lastRedOf(sfFix(finFix(c.src.pdf))), crs, cort: c.src.cort[c.cortPick || 0] || null };
+  const histOnly = o => { if (!o || !offMlsSale(c)) return o; const x = { ...o }; ['status', 'listPrice', 'origList', 'listDate', 'lastRed', 'dom', 'cdom', 'financing', 'concessions', 'saleType', 'saleTypeNote', 'contractDate', 'salePrice', 'saleDate'].forEach(k => delete x[k]); return x; };   // a cancelled / expired listing is not this sale – keep only its house facts
+  return { arch: a ? a.v : null, mls: histOnly(sfFix(finFix(c.src.mls))), pdf: histOnly(lastRedOf(sfFix(finFix(c.src.pdf)))), crs, cort: c.src.cort[c.cortPick || 0] || null };
 }
 /* her note (Oct 19 2026): the CRS Mortgage History shows the buyer's loan – a loan recorded near the sale's recording date with the buyer as borrower */
 function crsFinancing(crs) {
@@ -296,6 +297,8 @@ function compFlags0(c, job) {
     F.push({ sev: 'warn', t: `${SRC[s].short} sale price ${money(mp)} differs from the public record ${money(used.v)} (${SRC[used.src].short}) – the public record is used; explain the difference (e.g. negotiated ${money(mp)} with a credit for repairs, commission not taken, agent was the buyer)` }); });   // her rule: the public record is dominant
   { const lp = num(V(c, 'listPrice')) || num(V(c, 'origList')), pr = num(V(c, 'salePrice')), dm = num(V(c, 'cdom')) || num(V(c, 'dom')); if (pr && lp && pr > lp && /closed|sold|settled/i.test(String(V(c, 'status') || 'Closed'))) { const t = `Sold ${money(pr - lp)} over the list price (${(pr / lp * 100).toFixed(1)}%)`;
     if (dm !== null && dm >= 30) F.push({ sev: 'warn', t: t + ` after ${dm} days on market – call the agent to find out why` }); else F.push({ sev: 'info', t: t + (dm !== null ? ` in ${dm} days on market` : '') + (dm !== null && dm <= 14 ? ' – likely multiple offers' : '') }); } }
+  { if (offMlsSale(c)) { const was = [...(c.mlsOther || []), ...[c.src.mls, c.src.pdf].filter(Boolean)].filter(o => !o.saleDate && o.mls).map(o => `MLS ${o.mls} (${o.status || 'off market'}${o.listPrice ? ', ' + money(o.listPrice) : ''})`);
+    F.push({ sev: 'info', t: `Sold without an MLS listing (public record only)${was.length ? '; earlier listing ' + was.join(', ') : ''} – 3.6: Listing status Settled sale, Days on market 0, no list price, contract date Unknown; verify the sale and pick the sale type (Typically motivated, or Other: Private sale)` }); } }
   const dom = V(c, 'dom'), cdom = V(c, 'cdom'); if (dom && cdom && cdom > dom + 30) F.push({ sev: 'info', t: `Relisted: ${dom} days on this listing, ${cdom} cumulative` });
   const op = V(c, 'origList'); if (op && price && price < op * 0.85) F.push({ sev: 'info', t: `Sold ${Math.round((1 - price / op) * 100)}% under the original list price` });
   { const ps = priorSales(c), cs = currentSale(c); const other = [...ps, ...(cs ? [{ date: cs.date, price: cs.price, src: cs.from }] : [])];   // a CORT line that another source agrees with (same date and price) is confirmed (Oct 20 2026)
@@ -325,3 +328,6 @@ function remodelAfter(c, priorDate) {
   const S = c.src.mls || c.src.pdf; const w = S ? [S.mlsCondition, S.remodel, S.remarks].filter(Boolean).join(' ') : '';
   const mm = w.match(/remodel\w*|renovat\w*|rebuilt|completely updated|fully updated/i); return mm ? 'MLS: ' + mm[0].toLowerCase() : '';
 }
+
+/* the comp sold without an MLS listing for this sale (her Oct 20 2026 case: 719 Camino Cascada – cancelled in the MLS, sold later off-market): the sale is from public record */
+function offMlsSale(c) { const s = currentSale(c); if (!s || !/crs|cort/.test(s.from || '')) return false; return ![c.src.mls, c.src.pdf].some(o => o && (o.saleDate || o.contractDate || /Pending|Active/i.test(o.status || ''))); }

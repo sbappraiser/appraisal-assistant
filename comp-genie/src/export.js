@@ -118,7 +118,7 @@ function buildCompXML(PROPS, RELS, DSS, c, n, job) {
   // INSPECTIONS (front photo)
   if (c.front) { const im = X(X(X(X(P, 'INSPECTIONS'), 'INSPECTION'), 'IMAGES'), 'IMAGE'); XV(im, 'ImageCategoryType', 'PropertyPhoto'); XV(im, 'ImageFileLocationIdentifier', '\\\\Images\\' + photoName(c)); XV(im, 'MIMETypeIdentifier', 'image/jpeg'); }
   // LISTING_INFORMATIONS
-  const li = X(X(X(P, 'LISTING_INFORMATIONS'), 'LISTING_INFORMATION'), 'LISTING_INFORMATION_DETAIL'); XV(li, 'DaysOnMarketCount', g('dom')); XV(li, 'FinalListPriceAmount', list); XV(li, 'ListingStatusType', status);
+  const li = X(X(X(P, 'LISTING_INFORMATIONS'), 'LISTING_INFORMATION'), 'LISTING_INFORMATION_DETAIL'); XV(li, 'DaysOnMarketCount', blank(g('dom')) ? (CF.offMls ? 0 : null) : g('dom')); XV(li, 'FinalListPriceAmount', list); XV(li, 'ListingStatusType', status);
   // LOCATION
   if (!blank(g('lat')) && !blank(g('lon'))) { const gi = X(X(P, 'LOCATION_IDENTIFIER'), 'GEOSPATIAL_INFORMATION'); XV(gi, 'LatitudeIdentifier', (+g('lat')).toFixed(6)); XV(gi, 'LongitudeIdentifier', (+g('lon')).toFixed(6)); }
   XV(X(X(P, 'NEIGHBORHOOD'), 'NEIGHBORHOOD_DETAIL'), 'NeighborhoodName', g('nbhd'));
