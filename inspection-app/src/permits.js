@@ -52,5 +52,6 @@ function permitItems(P) {
   const out = [];
   (P.accela || []).forEach(a => { const tags = PERMIT_TAGS.filter(([re]) => re.test(a.project || '')).map(t => t[1]); out.push({ year: yr(a.filed), date: a.filed, what: a.project || '(no project name)', dept: { B: 'Building', P: 'Planning', E: 'Enforcement', F: 'Fire', PW: 'Public Works', C: 'Cannabis' }[a.dept] || a.dept, status: a.status, tags, num: a.num }); });
   (P.lix || []).forEach(l => { const tags = PERMIT_TAGS.filter(([re]) => re.test(l.desc || '')).map(t => t[1]); out.push({ year: yr(l.issued), date: l.issued, what: l.desc, dept: 'Building (LIX)', status: l.status, tags, num: l.app }); });
-  return out.sort((a, b) => (+a.year || 0) - (+b.year || 0));
+  const key = d => { const m = String(d || '').match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/); if (!m) return 0; let y = +m[3]; if (y < 100) y += y > 40 ? 1900 : 2000; return y * 10000 + +m[1] * 100 + +m[2]; };
+  return out.sort((a, b) => key(b.date) - key(a.date) || (+b.year || 0) - (+a.year || 0));   // newest first (her ask, Oct 20 2026)
 }

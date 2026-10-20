@@ -63,3 +63,5 @@
 .wk-check.auto { background: #f4f4f4; border: 2px dashed #888; } .wk-check.auto small { color: #555; }
 .wk-check.sug { background: #f7f9ff; border: 2px solid #9db4dd; }
 .wk-allset { border: 2px solid #0fa84a; background: #eefbf3; color: #0a4d27; font-weight: 700; border-radius: 12px; padding: 8px 14px; }
+.wchip.miss { background: #ffe1e1; border-color: #e00000; color: #b00000; } .wchip.miss.on { background: #e00000; color: #fff; }
+.wk-need.ph.req { color: #b00000; } .wk-take { margin-left: 8px; background: #e00000; color: #fff; border-color: #900; }

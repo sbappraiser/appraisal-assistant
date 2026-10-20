@@ -226,7 +226,7 @@ function wkBodyHtml(ins, P) {
   const auto = iss.filter(x => x.sev === 'Required' && heard.autos.has(x.key) && !heard.keys.has(x.key));
   const got = iss.filter(x => x.sev === 'Required' && heard.keys.has(x.key));
   return `${P.parent ? `<button class="btn sm wk-back" data-wkgo="${P.parent}">‹ ${esc(wkPlace(ins, P.parent).t)}</button>` : ''}
-    ${(P.shots || []).length > 1 ? `<div class="wk-shots"><span>Photo of:</span>${P.shots.map(s => `<button class="wchip ${shot && s.k === shot.k ? 'on' : ''}" data-wkshot="${esc(s.k)}">${esc(s.t)}</button>`).join('')}</div>` : ''}
+    ${(P.shots || []).length > 1 ? `<div class="wk-shots"><span>Photo of:</span>${P.shots.map(s => `<button class="wchip ${shot && s.k === shot.k ? 'on' : ''} ${wkShotMissing(ins, s) ? 'miss' : ''}" data-wkshot="${esc(s.k)}">${wkShotMissing(ins, s) ? '📷 ' : ''}${esc(s.t)}</button>`).join('')}</div>` : ''}
     ${photos.length ? `<div class="dk-strip wk-strip">${photos.map(p => `<button class="thumb ${p.required ? 'req' : ''}" data-view="${p.id}"><img data-pid="${p.id}" alt=""><span>${esc(p.label)}</span></button>`).join('')}</div>` : ''}
     ${(() => { const req = need.filter(x => x.sev !== 'Recommended'), sug = need.filter(x => x.sev === 'Recommended');   // red until done; answered items disappear
       return (req.length ? `<div class="wk-check need"><b>Needed here (${req.length})</b>${req.map(x => wkNeedHtml(ins, x)).join('')}</div>` : (got.length || (P.shots || []).length ? '<div class="wk-allset">✓ Everything required here is done</div>' : ''))
@@ -251,7 +251,8 @@ function wkFieldOf(ins, x) { const m = /^([a-z]+):([A-Za-z0-9]+)$/.exec(x.key ||
   const n = /^([a-zA-Z]+):([^:]+):([A-Za-z0-9]+)$/.exec(x.key || ''); if (n && LISTS[n[1]]) { const it = (ins.lists[n[1]] || []).find(i => i.id === n[2]); const f = it && LISTS[n[1]].fields.find(f => f.k === n[3]); if (f) return { f, d: it, list: n[1] }; } return null; }
 function wkNeedHtml(ins, x) {
   const lab = esc(x.label.replace(/ photo$/, '')); const head = `${x.photo ? '📷' : '•'} ${lab}${x.sev === 'Recommended' ? ' <small>(suggested)</small>' : ''}`;
-  if (x.photo || x.sev !== 'Required') return `<div class="wk-need ${x.photo ? 'ph' : ''}">${head}</div>`;
+  if (x.photo) { const P = wkPlace(ins, wkData(ins).place); const sh = (P.shots || []).find(s => wkShotIssue(s, x)); return `<div class="wk-need ph ${x.sev === 'Photo' ? 'req' : ''}">${head}${sh ? ` <button class="btn sm wk-take" data-wktake="${esc(sh.k)}">📷 Take it</button>` : ''}</div>`; }
+  if (x.sev !== 'Required') return `<div class="wk-need">${head}</div>`;
   const F = wkFieldOf(ins, x); if (!F) return `<div class="wk-need">${head}</div>`; const f = F.f;
   let O = f.t === 'yn' ? [['__y', 'Yes'], ['__n', 'No']] : ['one', 'multi', 'sel'].includes(f.t) ? optsOf(f, F.d, ins) : null;
   if (!O) return `<div class="wk-need">${head}</div>`;
@@ -259,6 +260,10 @@ function wkNeedHtml(ins, x) {
     : `<select class="txt" data-wkans="${esc(x.key)}"><option value="">Pick…</option>${O.map(([v, l]) => `<option value="${esc(v)}">${esc(l)}</option>`).join('')}</select>`;
   return `<div class="wk-need q"><div>${head}</div><div class="wk-ans">${btns}</div></div>`;
 }
+/* is this place's photo still missing / does a checklist photo line belong to this shot */
+function wkShotIssue(sh, x) { if (sh.slot) return x.item === sh.slot.item && x.key.endsWith(':photo:' + sh.slot.slot); if (sh.tg) return x.key.startsWith(sh.tg.sec + ':' + sh.tg.base); return false; }
+function wkShotMissing(ins, sh) { if (sh.slot) return !!sh.slot.required && !photosInSlot(ins, sh.slot).length;
+  if (sh.tg) { const sec = SECTIONS.find(s => s.id === sh.tg.sec); let f = null; sec.groups.forEach(g => g.fields.forEach(x => { if (x.k === sh.tg.base) f = x; })); if (!f) return false; let req = false; try { req = typeof f.req === 'function' ? !!f.req(ins.data[sh.tg.sec] || {}, ins) : !!f.req; } catch (e) {} return req && !photosInSlot(ins, { sec: sh.tg.sec, field: f.k }).length; } return false; }
 function wkAnswer(ins, key, v) {
   const F = wkFieldOf(ins, { key }); if (!F) return; const f = F.f; let val = v === '__y' ? true : v === '__n' ? false : v;
   if (f.t === 'multi') { const cur = Array.isArray(F.d[f.k]) ? F.d[f.k] : []; F.d[f.k] = cur.includes(val) ? cur.filter(z => z !== val) : [...cur, val]; } else F.d[f.k] = val;
@@ -309,6 +314,7 @@ function bindWalk(root) {
     if (tbtn && tb && box) { tbtn.onclick = () => { const st = box.selectionStart, en = box.selectionEnd; const sel = st != null && en > st ? box.value.slice(st, en).trim() : (box.value.replace(/[.,;:!?\s]+$/, '').match(/(\S+)$/) || [, ''])[1];
       tb.hidden = !tb.hidden; WK.teachOpen = !tb.hidden; WK.teachSel = sel ? sel.replace(/[.,;:!?]+$/, '') : ''; if (!tb.hidden) { const h = tb.querySelector('#dkTh'); if (h && WK.teachSel) h.value = WK.teachSel; } }; bindT();
       if (WK.teachOpen) { tb.hidden = false; const h = tb.querySelector('#dkTh'); if (h && !h.value && WK.teachSel) h.value = WK.teachSel; } } }
+  root.querySelectorAll('[data-wktake]').forEach(b => b.onclick = () => { w.shot[w.place] = b.dataset.wktake; save(); wkOpenCam(); });
   root.querySelectorAll('[data-wkdel]').forEach(b => b.onclick = () => wkRemove(ins, b.dataset.wkdel));
   root.querySelectorAll('button[data-wkans]').forEach(b => b.onclick = () => wkAnswer(ins, b.dataset.wkans, b.dataset.v));
   root.querySelectorAll('select[data-wkans]').forEach(b => b.onchange = () => { if (b.value) wkAnswer(ins, b.dataset.wkans, b.value); });
