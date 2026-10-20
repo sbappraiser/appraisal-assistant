@@ -49,15 +49,21 @@ function mcLines(C) {
   return [`There are ${C.act.length} comparable propert${C.act.length === 1 ? 'y' : 'ies'} currently offered for sale in the subject market area` + (C.act.length ? ` ranging in price from ${$m(lo(lp))} to ${$m(hi(lp))}.` : '.'),
     `There are ${C.sold12.length} comparable sale${C.sold12.length === 1 ? '' : 's'} in the subject market area within the past twelve months` + (C.sold12.length ? ` ranging in sale price from ${$m(lo(sp))} to ${$m(hi(sp))}.` : '.')];
 }
+/* 1004MC summary in her words (Oct 20 2026): "SBMLS was used for the 1004MC. Search parameters include … The search resulted in
+   3 closed sales, 1 pending sale and 1 active listing." One sale a period is too few to show a trend. */
 function mcSummaryDraft(C) {
-  const m = M(), [a, , c] = C.per, pick = k => (m.mc && m.mc.trend && m.mc.trend[k]) || C.trend[k].t; const out = [];
-  out.push(`The data are from an SBMLS search of comparable properties competing with the subject (see the search criteria), as of the effective date of ${shortDate(C.eff)}.`);
-  out.push(`There were ${C.allS} comparable sale${C.allS === 1 ? '' : 's'} in the past 12 months: ${a.nS} in the prior 7–12 months, ${C.per[1].nS} in the prior 4–6 months and ${c.nS} in the current 3 months; absorption is considered ${pick('absorb').toLowerCase()}.`);
-  out.push(c.v.supply != null ? `There ${c.nA === 1 ? 'is' : 'are'} ${c.nA} active comparable listing${c.nA === 1 ? '' : 's'}, about ${(Math.round(c.v.supply * 10) / 10).toFixed(1)} month${Math.round(c.v.supply * 10) === 10 ? '' : 's'} of supply in the current period (${pick('supply').toLowerCase()}).` : `There ${c.nA === 1 ? 'is' : 'are'} ${c.nA} active comparable listing${c.nA === 1 ? '' : 's'}; with no sales in the current 3 months, months of supply cannot be measured.`);
-  if (a.v.medSale != null && c.v.medSale != null) out.push(`The median comparable sale price was ${$m(a.v.medSale)} in the prior 7–12 months and ${$m(c.v.medSale)} in the current 3 months. Medians of a small number of sales reflect the mix of properties sold rather than a change in value, and price per square foot is not a reliable trend measure (it does not account for differences in lot utility, quality, condition, bathrooms, features, view and other amenities).`);
+  const m = M(), [a, b, c] = C.per, pick = k => (m.mc && m.mc.trend && m.mc.trend[k]) || C.trend[k].t; const out = []; const pl = (n, w) => n + ' ' + w + (n === 1 ? '' : 's');
+  const R = MI().rows.length ? mkCompute(MI()) : mkCompute(); const crit = String(m.criteria || '').trim().replace(/\s+/g, ' ');
+  out.push('SBMLS was used for the 1004MC.');
+  if (crit) { const w1 = crit.split(/\s/)[0]; out.push(/^(search|the search|the appraiser)/i.test(crit) ? crit.replace(/([^.])$/, '$1.') : 'Search parameters include ' + (/^[A-Z0-9]{2,}$/.test(w1.replace(/[^A-Za-z0-9]/g, '')) ? crit : crit.charAt(0).toLowerCase() + crit.slice(1)).replace(/([^.])$/, '$1.')); }
+  out.push(`The search resulted in ${pl(C.allS, 'closed sale')} in the past 12 months, ${pl(R.pendingN, 'pending sale')} and ${pl(R.activeN, 'active listing')} as of the effective date of ${shortDate(C.eff)}.`);
+  const few = Math.min(a.nS, b.nS, c.nS) < 3; const meds = [a, b, c].map(p => p.v.medSale).filter(v => v != null).map($m);
+  if (few) out.push(`With ${a.nS}, ${b.nS} and ${c.nS} sale${c.nS === 1 ? '' : 's'} in the three periods, the data are too few to show a trend` + (meds.length > 1 ? `; the median sale prices (${meds.join(', ')}) reflect differences in the properties sold rather than a change in market conditions.` : '.'));
+  else { out.push(`Absorption is considered ${pick('absorb').toLowerCase()}` + (c.v.supply != null ? `, with about ${(Math.round(c.v.supply * 10) / 10).toFixed(1)} months of supply in the current period (${pick('supply').toLowerCase()}).` : '.'));
+    if (a.v.medSale != null && c.v.medSale != null) out.push(`The median sale price was ${$m(a.v.medSale)} in the prior 7–12 months and ${$m(c.v.medSale)} in the current 3 months (${pick('medSale').toLowerCase()}).`); }
   if (C.concKnown) out.push(`${C.conc} of ${C.concKnown} sales reported seller concessions in MLS.`);
-  out.push(C.reo ? `${C.reo} of the sales ${C.reo === 1 ? 'was a' : 'were'} REO / short sale${C.reo === 1 ? '' : 's'}.` : 'No REO or short sales were found among the comparable sales.');
-  const TC = { increasing: 'increasing', stable: 'stable', declining: 'declining' }[m.trendConcl]; if (TC) out.push(`Overall, market values are considered ${TC} as of the effective date.`);
+  out.push(C.reo ? `${C.reo} of the sales ${C.reo === 1 ? 'was a' : 'were'} REO / short sale${C.reo === 1 ? '' : 's'}.` : 'No REO or short sales were found.');
+  const TC = { increasing: 'increasing', stable: 'stable', declining: 'declining' }[m.trendConcl || (typeof mkTrendSuggest === 'function' ? mkTrendSuggest(R) : '')]; if (TC) out.push(`Market values are considered ${TC} as of the effective date.`);
   return out.join(' ');
 }
 function mcHTML(C) {

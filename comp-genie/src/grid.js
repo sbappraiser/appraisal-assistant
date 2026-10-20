@@ -458,7 +458,7 @@ async function exportFullReport(anyway) {   // the pre-check runs first; "Export
   if (!anyway) { const T = await precheckRun(J, true); const must = T.items.filter(x => x.sev === 'Must fix').length;
     if (must || T.items.length) { renderKeepFocus(); const c = $('#preCard'); if (c) c.scrollIntoView({ behavior: 'smooth', block: 'start' }); toast(must ? `Pre-check: ${must} to fix before export` : `Pre-check: ${T.items.length} to look at – then press Export now`); return; } }
   const r = await buildFullReport(J); if (r.err) { toast(r.err); return; }
-  download(await makeZip(r.entries), jobBase() + ' - Full report SFREP.zip'); toast('Saved to your Downloads folder');
+  download(await makeZip(r.entries), jobBase() + ' - Full report SFREP.zip'); toast('Saved to your Downloads folder' + (r.charts ? ` – with ${r.charts} market chart${r.charts > 1 ? 's' : ''}` : ' – no market charts (open the order’s Market tab once so they are kept)'), 6000);
 }
 async function buildFullReport(J) {
   const used = usedComps(J); if (!used.length) return { err: 'Pick comps first' };
@@ -490,9 +490,17 @@ async function buildFullReport(J) {
   if (!blank(G.value) || G.note) { const sca = child(child(VR, 'APPROACH_TO_VALUE'), 'SALES_COMPARISON_APPROACH'); const det = child(sca, 'SALES_COMPARISON_APPROACH_DETAIL');
     if (G.note) leaf(det, 'SalesComparisonCommentDescription', G.note.slice(0, 10000)); if (!blank(G.value)) leaf(det, 'ValueIndicatedBySalesComparisonAmount', Math.round(num(G.value))); }
   writeReportXML(sub, NS, J, SUBJ, VA, SVC);   // assignment, legal, zoning, H&BU, market, contract, value (report.js)
+  // market charts from the order's Market tab → subject exhibits (UAD image types Price Trend Graph, Absorption Rate Graph)
+  const chartFiles = []; { const o = typeof orderOf === 'function' ? orderOf(J) : null; const CH = o && o.market && o.market.charts;
+    if (CH && (CH.trend || CH.absorb)) { const IMS = child(child(child(SUBJ, 'INSPECTIONS'), 'INSPECTION'), 'IMAGES');
+      [['trend', 'PriceTrendGraph', 'Price trend – market area and competing sales', 'Market Price Trend.jpg'], ['absorb', 'AbsorptionRateGraph', 'Absorption rate – competing sales', 'Market Absorption Rate.jpg']].forEach(([k, cat, cap, fn]) => {
+        const d = CH[k]; if (!d || !/^data:image\/jpeg;base64,/.test(d)) return; const im = sub.createElementNS(NS, 'IMAGE'); IMS.appendChild(im);
+        leaf(im, 'ImageCaptionCommentDescription', cap); leaf(im, 'ImageCategoryType', cat); leaf(im, 'ImageFileLocationIdentifier', '\\\\Images\\' + fn); leaf(im, 'MIMETypeIdentifier', 'image/jpeg');
+        const bin = atob(d.split(',')[1]); const u8 = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i); chartFiles.push({ name: 'Images/' + fn, data: u8 }); }); } }
   const xml = '<?xml version="1.0" encoding="UTF-8"?>\n<!--Subject from the UAD Field Inspection app, comps and adjustment grid from Comp Genie, for import into Appraise-It Pro (Home > Import Forms).-->\n' + new XMLSerializer().serializeToString(sub.documentElement);
   const entries = [{ name: jobBase() + ' - Full report.xml', data: xml }];
   for (const [k, v] of files) if (/^SFREP\/Images\//i.test(k)) entries.push({ name: k.replace(/^SFREP\//i, ''), data: v });
   for (const c of used) { const fr = frontOf(c); if (fr) { const r = await DB.get('photos', fr.id); if (r) entries.push({ name: 'Images/' + photoName(c), data: r.blob }); } }
-  return { xml, entries };
+  entries.push(...chartFiles);
+  return { xml, entries, charts: chartFiles.length };
 }

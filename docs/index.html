@@ -725,7 +725,7 @@ mark.blank{background:#fff3a8;padding:0 2px;border-radius:3px}.cmt textarea{widt
 </div>
 <div id="toast" role="status" hidden></div>
 <script>
-const BUILD='o1-1020-0720';
+const BUILD='o1-1020-0725';
 const G = (() => {
 /* ---------------- small helpers ---------------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -2792,7 +2792,7 @@ function mkRender(redraft) {
     <tr><th>17.022 Marketing Time</th><td>${sel('mktime', MKTIME, R.suggest.mktime)}<small class="muted"> ${R.saleDom != null ? `median ${Math.round(R.saleDom)} days on market (cumulative) for the sales` : ''}</small></td></tr>
     <tr><th>17.018 Price Trend Source <small>one per line, 33 characters each</small></th><td><textarea data-mk="sources" rows="2">${h(sources.join('\n'))}</textarea></td></tr>
     <tr><th>Your price-trend conclusion</th><td><select data-mk="trendConcl"><option value="">—</option><option value="increasing"${m.trendConcl === 'increasing' ? ' selected' : ''}>Increasing</option><option value="stable"${m.trendConcl === 'stable' ? ' selected' : ''}>Stable</option><option value="declining"${m.trendConcl === 'declining' ? ' selected' : ''}>Declining</option></select> ${(() => { const sg = mkTrendSuggest(R); return !m.trendConcl && sg ? `<small class="warnTxt">The chart suggests <b>${sg}</b> – the draft uses it until you pick.</small> <button type="button" class="btn small" data-mktrend="${sg}">Use ${sg}</button>` : '<small class="muted">used in the draft</small>'; })()}</td></tr>
-    <tr><td colspan="2"><figure><canvas id="mkG0"></canvas><div class="row"><button type="button" class="btn small" data-png="mkG0">Save picture</button>${(() => { const w = [['market area boundary', mkCompute()], ...(MI().rows.length ? [['competing', R]] : [])].map(([n, X]) => { const d = X.S.map(r => r.saleDate).filter(Boolean).sort()[0]; return d && d > isoAddMonths(X.start, 3) ? `the ${n} search starts ${shortDate(d)}` : ''; }).filter(Boolean); return w.length ? `<p class="help warnTxt">The look-back is ${R.L} months, but ${w.join(' and ')} – export it again for the whole period so the earlier and later sales compare the same span.</p>` : ''; })()}<span class="help">Raw medians mix different houses (size, quality, condition, lot, view). Use this to see the direction; for a measured rate that holds those level, open the Comp genie › <b>Market conditions support</b> – it groups your archive sales by usable lot, view, quality and size.</span></div></figure></td></tr>
+    <tr><td colspan="2"><figure><canvas id="mkG0"></canvas><div class="row"><button type="button" class="btn small" data-png="mkG0">Save picture</button>${(() => { const w = [['market area boundary', mkCompute()], ...(MI().rows.length ? [['competing', R]] : [])].map(([n, X]) => { const d = X.S.map(r => r.saleDate).filter(Boolean).sort()[0]; return d && d > isoAddMonths(X.start, 3) ? `the ${n} search starts ${shortDate(d)}` : ''; }).filter(Boolean); return w.length ? `<p class="help warnTxt">The look-back is ${R.L} months, but ${w.join(' and ')} – export it again for the whole period so the earlier and later sales compare the same span.</p>` : ''; })()}<span class="help"><b>Goes into the SFREP file</b> with Comp genie › Full report (Price Trend Graph); the absorption chart below goes in too (Absorption Rate Graph). Raw medians mix different houses (size, quality, condition, lot, view). Use this to see the direction; for a measured rate that holds those level, open the Comp genie › <b>Market conditions support</b> – it groups your archive sales by usable lot, view, quality and size.</span></div></figure></td></tr>
     <tr><th>17.019 Price Trend Analysis Commentary</th><td><textarea data-mk="comment" rows="10" maxlength="2500">${h(m.comment || '')}</textarea>${cnt('comment', 2500)}
       <div class="row"><button type="button" class="btn ghost small" data-redraft="comment">Draft again</button><button type="button" class="btn ghost small" data-copy="comment">Copy</button></div>
       <p class="help">Drafted from the numbers on this page in your wording. Edit freely; your edits are kept until you press Draft again.</p></td></tr></table>
@@ -2816,6 +2816,9 @@ function mkRender(redraft) {
   <div class="formEnd"><button type="button" class="btn" id="mkSaveBtn">Save</button><a class="btn primary" id="mkGenie" href="${h(genieURL(cur))}" target="aa-genie">Save and open the Comp genie →</a><button type="button" class="btn ghost" id="mkOrderBtn">Back to the order</button><span class="savedAt" data-saved></span></div>`;
   // graphs
   drawTrendBoth($('#mkG0'), RA, MI().rows.length ? R : null); drawPriceTrend($('#mkG1'), R, !!m.perSf); drawAbsorption($('#mkG2'), R); drawMacro($('#mkG3'), mkSeg());
+  // the price trend and absorption charts go into the SFREP file (Comp genie › Full report): kept with the order as pictures (Oct 20 2026)
+  try { const c0 = $('#mkG0'), c2 = $('#mkG2'); const t = c0 ? c0.toDataURL('image/jpeg', 0.9) : '', a = c2 ? c2.toDataURL('image/jpeg', 0.9) : ''; const ch = m.charts || {};
+    if ((t || a) && (ch.trend !== t || ch.absorb !== a)) { m.charts = { trend: t, absorb: a, at: new Date().toISOString() }; saveLetter(true, true); } } catch (e) {}
   // wiring
   const dz = $('#mkDrop'); ['dragover', 'dragleave', 'drop'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.toggle('over', ev === 'dragover'); if (ev === 'drop' && e.dataTransfer.files[0]) mkAddSearch(e.dataTransfer.files[0]); }));
   const sz = $('#mkStatsDrop'); ['dragover', 'dragleave', 'drop'].forEach(ev => sz.addEventListener(ev, e => { e.preventDefault(); sz.classList.toggle('over', ev === 'dragover'); if (ev === 'drop' && e.dataTransfer.files[0]) mkAddStats(e.dataTransfer.files[0]); }));
@@ -3895,15 +3898,21 @@ function mcLines(C) {
   return [`There are ${C.act.length} comparable propert${C.act.length === 1 ? 'y' : 'ies'} currently offered for sale in the subject market area` + (C.act.length ? ` ranging in price from ${$m(lo(lp))} to ${$m(hi(lp))}.` : '.'),
     `There are ${C.sold12.length} comparable sale${C.sold12.length === 1 ? '' : 's'} in the subject market area within the past twelve months` + (C.sold12.length ? ` ranging in sale price from ${$m(lo(sp))} to ${$m(hi(sp))}.` : '.')];
 }
+/* 1004MC summary in her words (Oct 20 2026): "SBMLS was used for the 1004MC. Search parameters include … The search resulted in
+   3 closed sales, 1 pending sale and 1 active listing." One sale a period is too few to show a trend. */
 function mcSummaryDraft(C) {
-  const m = M(), [a, , c] = C.per, pick = k => (m.mc && m.mc.trend && m.mc.trend[k]) || C.trend[k].t; const out = [];
-  out.push(`The data are from an SBMLS search of comparable properties competing with the subject (see the search criteria), as of the effective date of ${shortDate(C.eff)}.`);
-  out.push(`There were ${C.allS} comparable sale${C.allS === 1 ? '' : 's'} in the past 12 months: ${a.nS} in the prior 7–12 months, ${C.per[1].nS} in the prior 4–6 months and ${c.nS} in the current 3 months; absorption is considered ${pick('absorb').toLowerCase()}.`);
-  out.push(c.v.supply != null ? `There ${c.nA === 1 ? 'is' : 'are'} ${c.nA} active comparable listing${c.nA === 1 ? '' : 's'}, about ${(Math.round(c.v.supply * 10) / 10).toFixed(1)} month${Math.round(c.v.supply * 10) === 10 ? '' : 's'} of supply in the current period (${pick('supply').toLowerCase()}).` : `There ${c.nA === 1 ? 'is' : 'are'} ${c.nA} active comparable listing${c.nA === 1 ? '' : 's'}; with no sales in the current 3 months, months of supply cannot be measured.`);
-  if (a.v.medSale != null && c.v.medSale != null) out.push(`The median comparable sale price was ${$m(a.v.medSale)} in the prior 7–12 months and ${$m(c.v.medSale)} in the current 3 months. Medians of a small number of sales reflect the mix of properties sold rather than a change in value, and price per square foot is not a reliable trend measure (it does not account for differences in lot utility, quality, condition, bathrooms, features, view and other amenities).`);
+  const m = M(), [a, b, c] = C.per, pick = k => (m.mc && m.mc.trend && m.mc.trend[k]) || C.trend[k].t; const out = []; const pl = (n, w) => n + ' ' + w + (n === 1 ? '' : 's');
+  const R = MI().rows.length ? mkCompute(MI()) : mkCompute(); const crit = String(m.criteria || '').trim().replace(/\s+/g, ' ');
+  out.push('SBMLS was used for the 1004MC.');
+  if (crit) { const w1 = crit.split(/\s/)[0]; out.push(/^(search|the search|the appraiser)/i.test(crit) ? crit.replace(/([^.])$/, '$1.') : 'Search parameters include ' + (/^[A-Z0-9]{2,}$/.test(w1.replace(/[^A-Za-z0-9]/g, '')) ? crit : crit.charAt(0).toLowerCase() + crit.slice(1)).replace(/([^.])$/, '$1.')); }
+  out.push(`The search resulted in ${pl(C.allS, 'closed sale')} in the past 12 months, ${pl(R.pendingN, 'pending sale')} and ${pl(R.activeN, 'active listing')} as of the effective date of ${shortDate(C.eff)}.`);
+  const few = Math.min(a.nS, b.nS, c.nS) < 3; const meds = [a, b, c].map(p => p.v.medSale).filter(v => v != null).map($m);
+  if (few) out.push(`With ${a.nS}, ${b.nS} and ${c.nS} sale${c.nS === 1 ? '' : 's'} in the three periods, the data are too few to show a trend` + (meds.length > 1 ? `; the median sale prices (${meds.join(', ')}) reflect differences in the properties sold rather than a change in market conditions.` : '.'));
+  else { out.push(`Absorption is considered ${pick('absorb').toLowerCase()}` + (c.v.supply != null ? `, with about ${(Math.round(c.v.supply * 10) / 10).toFixed(1)} months of supply in the current period (${pick('supply').toLowerCase()}).` : '.'));
+    if (a.v.medSale != null && c.v.medSale != null) out.push(`The median sale price was ${$m(a.v.medSale)} in the prior 7–12 months and ${$m(c.v.medSale)} in the current 3 months (${pick('medSale').toLowerCase()}).`); }
   if (C.concKnown) out.push(`${C.conc} of ${C.concKnown} sales reported seller concessions in MLS.`);
-  out.push(C.reo ? `${C.reo} of the sales ${C.reo === 1 ? 'was a' : 'were'} REO / short sale${C.reo === 1 ? '' : 's'}.` : 'No REO or short sales were found among the comparable sales.');
-  const TC = { increasing: 'increasing', stable: 'stable', declining: 'declining' }[m.trendConcl]; if (TC) out.push(`Overall, market values are considered ${TC} as of the effective date.`);
+  out.push(C.reo ? `${C.reo} of the sales ${C.reo === 1 ? 'was a' : 'were'} REO / short sale${C.reo === 1 ? '' : 's'}.` : 'No REO or short sales were found.');
+  const TC = { increasing: 'increasing', stable: 'stable', declining: 'declining' }[m.trendConcl || (typeof mkTrendSuggest === 'function' ? mkTrendSuggest(R) : '')]; if (TC) out.push(`Market values are considered ${TC} as of the effective date.`);
   return out.join(' ');
 }
 function mcHTML(C) {
