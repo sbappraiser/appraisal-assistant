@@ -288,7 +288,7 @@ function compFlags0(c, job) {
     if (p.fallthroughs) F.push({ sev: 'info', t: `Escrow fell through ${p.fallthroughs} time${p.fallthroughs > 1 ? 's' : ''} before this sale` });
     const dupes = (p.listings || []).filter(h => h.mls !== p.mls && /Closed/i.test(h.status) && sale && h.date && Math.abs(monthsBetween(h.date, sale.date)) < 1);
     if (dupes.length) F.push({ sev: 'info', t: 'Also closed under MLS ' + dupes.map(d => d.mls).join(', ') + ' (same sale listed twice)' });
-    if (/^yes/i.test(p.concessionsYN || '') && blank(V(c, 'concessions'))) F.push({ sev: 'warn', t: 'MLS says seller concessions: Yes, amount not stated – verify' });
+
   }
   // a recorded price that differs from the price being used (credits, personal property, recording errors)
   const used = val(c, 'salePrice'); const Sv = srcVals(c);
@@ -300,6 +300,7 @@ function compFlags0(c, job) {
     if (dm !== null && dm >= 30) F.push({ sev: 'warn', t: t + ` after ${dm} days on market – call the agent to find out why` }); else F.push({ sev: 'info', t: t + (dm !== null ? ` in ${dm} days on market` : '') + (dm !== null && dm <= 14 ? ' – likely multiple offers' : '') }); } }
   { if (offMlsSale(c)) { const was = [...(c.mlsOther || []), ...[c.src.mls, c.src.pdf].filter(Boolean)].filter(o => !o.saleDate && o.mls).map(o => `MLS ${o.mls} (${o.status || 'off market'}${o.listPrice ? ', ' + money(o.listPrice) : ''})`);
     F.push({ sev: 'info', t: `Sold without an MLS listing (public record only)${was.length ? '; earlier listing ' + was.join(', ') : ''} – 3.6: Listing status Settled sale, Days on market 0, no list price, contract date Unknown; verify the sale and pick the sale type (Typically motivated, or Other: Private sale)` }); } }
+  if (/^y/i.test(V(c, 'concessionsYN') || '') && blank(V(c, 'concessions'))) F.push({ sev: 'warn', t: 'MLS says seller concessions: Yes, amount not stated – verify with the agent and type it on the Known sales concessions line' });   // CSV or printout
   const dom = V(c, 'dom'), cdom = V(c, 'cdom'); if (dom && cdom && cdom > dom + 30) F.push({ sev: 'info', t: `Relisted: ${dom} days on this listing, ${cdom} cumulative` });
   const op = V(c, 'origList'); if (op && price && price < op * 0.85) F.push({ sev: 'info', t: `Sold ${Math.round((1 - price / op) * 100)}% under the original list price` });
   { const ps = priorSales(c), cs = currentSale(c); const other = [...ps, ...(cs ? [{ date: cs.date, price: cs.price, src: cs.from }] : [])];   // a CORT line that another source agrees with (same date and price) is confirmed (Oct 20 2026)

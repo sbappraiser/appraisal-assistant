@@ -661,3 +661,4 @@ Decisions (her, Oct 19–20): "Exterior of dwelling" instead of left/right/side 
 - g2-1020-2338: amenity lines on the comp page show 'None' for the MLS 'No' (display only; yes() unchanged).
 - g2-1020-2338: a ▾ pick on a comp-page line counts as her value – yellow clears (heatCool ← grid_heat/grid_cool, saleType ← grid_xferTerms, financing ← terms, garage/carport ← vs, quality/condition ← pk); Heating / cooling's Your value shows the picked 3.6 'heating / cooling'.
 - g2-1020-2343: PICK.sfSource (MLS floor plan, MLS, Agent, Permit, Files, Appraiser, Public records, Builder, Seller, Other) on the comp page; saves c.edit.sfSource. Not a 3.6 field.
+- g2-1020-2357: MLS CSV 'Seller Concessions' is Y/N – concessionsYN from it; concAmount() takes the amount from public/private remarks; N → 0; Y with no amount flags (CSV or printout).

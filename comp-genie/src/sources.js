@@ -140,7 +140,7 @@ function mlsCanon(raw, G, g) {
     city: g('City') ? titleCase(g('City')) : '',
     status, listPrice: num(g('Price')), origList: num(g('Original List Price')), listDate: isoDate(g('Begin Date')), lastRed: isoDate(g('Price Change Date', 'Last Price Change Date', 'Price Change Timestamp')) || '',
     contractDate: isoDate(g('Under Contract Date')), saleDate: isoDate(g('Sold Date', 'COE')), salePrice: num(g('Sold Price')),
-    dom: num(g('Days On Market')), cdom: num(g('Cumulative DOM')), financing: remarkFinancing(g('Financing'), [g('Private Remarks'), g('Public Remarks')].filter(Boolean).join(' \u2022 ')), concessions: num(g('Seller Concessions')),
+    dom: num(g('Days On Market')), cdom: num(g('Cumulative DOM')), financing: remarkFinancing(g('Financing'), [g('Private Remarks'), g('Public Remarks')].filter(Boolean).join(' \u2022 ')), concessionsYN: /^y/i.test(g('Seller Concessions')) ? 'Yes' : /^n/i.test(g('Seller Concessions')) ? 'No' : '', concessions: concAmount(g('Seller Concessions'), [g('Private Remarks'), g('Public Remarks')].filter(Boolean).join(' \u2022 ')),
     saleType: saleType2, saleTypeNote: saleNote2,
     siteSf: lotSf || (acres ? Math.round(acres * 43560) : null), acres,
     topo: list('Location/Topo'), viewTypes: views.filter(v => !/^Setting$/.test(v)).join('; ') || (views.includes('Setting') ? 'Setting' : ''),
@@ -302,3 +302,10 @@ function zip9(c) { const z = String(V(c, 'zip') || '').match(/\d{5}/); if (!z) r
   for (const s of ['crs', 'arch', 'mls', 'pdf', 'cort']) { const o = S[s]; if (!o) continue; const m = String(o.zip || '').match(/^(\d{5})-?(\d{4})$/); if (m && m[1] === z[0]) return z[0] + '-' + m[2];
     if (o.zip4 && /^\d{4}$/.test(o.zip4) && String(o.zip || '').slice(0, 5) === z[0]) return z[0] + '-' + o.zip4; }
   return z[0]; }
+
+/* seller concessions (her question Oct 20 2026): the Flexmls CSV column is only Y / N – the amount is taken from the agent's remarks when it is written there
+   ("seller credit of $10,000", "$15,000 toward closing costs", "concessions: $8,500"); "N" = none known (0) */
+function concAmount(yn, rem) { const v = String(yn || '').trim(); if (/^\$?[\d,]+$/.test(v) && num(v.replace(/[$,]/g, '')) > 1) return num(v.replace(/[$,]/g, ''));
+  const t = String(rem || ''); const m = t.match(/(?:seller|sellers'?)?\s*(?:credit|concession|concessions|paid|contribut\w*)[^$\d.]{0,40}\$\s?([\d,]{3,})/i) || t.match(/\$\s?([\d,]{3,})\s*(?:seller\s*)?(?:credit|concession|toward|towards|for)\s*(?:the\s*)?(?:buyer'?s?\s*)?(?:closing|non-recurring|repairs|credit)/i);
+  if (m) { const n = num(m[1].replace(/,/g, '')); if (n && n < 500000) return n; }
+  return /^n/i.test(v) ? 0 : null; }
