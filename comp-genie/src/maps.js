@@ -93,6 +93,7 @@ async function makeLocationMap(J, kind) {
   if (!sp.lat || !sp.lon) { toast('The subject has no latitude / longitude yet – drop the subject’s CRS report (or your iPad workfile) first', 7000); return; }
   const list = kind === 'rent' ? (J.rentals || []).filter(r => r.use) : usedComps(J);
   if (!list.length) { toast(kind === 'rent' ? 'Add the rentals first (Income approach)' : 'Put comps on the grid first'); return; }
+  if (kind === 'rent') { MAPS.busy = 'Finding the rentals on the map…'; mapsRender(); const miss = await geocodeRentals(J); if (miss.length) toast('Not found on the map: ' + miss.join(', '), 8000); }
   if (kind !== 'rent') { const g = await geocodeMissing(J, list); if (g.miss.length) toast('Not found on the map: ' + g.miss.join(', ') + ' – add its latitude / longitude (CRS report) and make the map again', 8000); }
   const W = 1700, H = 2200; const cv = document.createElement('canvas'); cv.width = W; cv.height = H; const ctx = cv.getContext('2d');
   const items = [{ kind: 'subj', p: sp, lines: ['Subject', ...addrLines(S.addr + (S.unit ? ' #' + S.unit : ''), S.city, S.zip)] }];

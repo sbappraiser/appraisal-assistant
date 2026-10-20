@@ -392,6 +392,7 @@ function renderPage() {
   <section class="card" id="mapCard"></section>
   <section class="card" id="refCard">${refHTML(J)}</section>
   <section class="card" id="costCard">${costHTML(J)}</section>
+  <section class="card" id="incomeCard">${incomeHTML(J)}</section>
   <section class="card" id="nuCard">${notUsedHTML(J)}</section>
   <section class="card" id="timeCard">${timeHTML(J)}</section>
   <section class="card" id="supCard">${supHTML(J)}</section>
