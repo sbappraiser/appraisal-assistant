@@ -85,6 +85,25 @@ function archLabel(a) {
 /* ---------------- 2. MLS export (flexmls CSV) ---------------- */
 const MLS_STATUS = { A: 'Active', P: 'Pending', C: 'Closed', X: 'Expired', W: 'Withdrawn', K: 'Cancelled', U: 'Under Contract', S: 'Closed' };
 const SF_SOURCE = { M: 'Measured', P: 'Public Records', O: 'Other/See Remarks', A: 'Appraisal', B: 'Builder', S: 'Seller' };
+/* ---------------- CRS Data "Prospecting" export (a neighborhood sales search, Oct 20 2026) ----------------
+   CRITERIA lines, then "DATA_START", then a header row. Owner names and mailing addresses are never kept. */
+const isCrsExport = text => /^\s*"?DATA_START"?\s*$/m.test(String(text || '')) && /Last Sale Amount/i.test(String(text || ''));
+function parseCrsExport(text) {
+  const lines = String(text || '').split(/\r?\n/); const k = lines.findIndex(l => /^\s*"?DATA_START"?\s*$/.test(l)); if (k < 0) return [];
+  const rows = parseCSV(lines.slice(k + 1).join('\n')); if (rows.length < 2) return [];
+  const H = rows[0].map(x => String(x).trim().toLowerCase()); const ix = n => H.indexOf(n.toLowerCase());
+  return rows.slice(1).map(r => { const g = (...ns) => { for (const n of ns) { const i = ix(n); if (i >= 0 && String(r[i] || '').trim() !== '') return String(r[i]).trim(); } return ''; };
+    const addr = titleCase(g('Property Address')); const lotSf = num(String(g('Lot Sq. Feet')).replace(/,/g, '')); const acres = num(g('Acreage'));
+    return { _src: 'crslist', apn: g('APN'), addr, city: titleCase(g('Property City')), zip: (g('Property Zip').match(/\d{5}/) || [''])[0],
+      gla: num(g('Total Square Footage')), yearBuilt: num(g('Year Built')), lotSf: lotSf || (acres ? Math.round(acres * 43560) : null), acres,
+      saleDate: isoDate(g('Last Sale Date')), salePrice: num(String(g('Last Sale Amount')).replace(/[$,]/g, '')), doc: g('Warranty Deed Document Number'),
+      landUse: g('Land Use', 'Improvement Type'), subdivision: g('Subdivision') };
+  }).filter(r => r.addr || r.apn);
+}
+/* the same row as a CRS record for a comp (fromList: still ask her for the CRS report itself – beds, baths, lat/long) */
+const crsFromList = r => Object.assign(crsCanon({ addr: r.addr, city: r.city, zip: r.zip, apn: r.apn, sqftAssessor: r.gla, yearBuilt: r.yearBuilt, lotSf: r.lotSf, acres: r.acres, landUse: r.landUse,
+  sales: r.salePrice || r.saleDate ? [{ recorded: r.saleDate, amount: r.salePrice, doc: r.doc, instrument: 'Grant Deed' }] : [] }), { fromList: true });
+
 function parseMlsCsv(text) {
   const rows = parseCSV(text); if (rows.length < 2) return [];
   const H = rows[0].map(h => h.trim()); const ix = {}; H.forEach((h, i) => { ix[h.toLowerCase()] = i; });

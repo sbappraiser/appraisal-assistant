@@ -5,7 +5,7 @@ import pathlib, time, shutil
 here = pathlib.Path(__file__).parent; root = here.parent; src = here / 'src'; out = root / 'docs'; out.mkdir(exist_ok=True)
 BUILD = 'o1-' + time.strftime('%m%d-%H%M')
 shared = '\n'.join((root / p).read_text() for p in ['comp-genie/src/util.js', 'comp-genie/src/crs.js', 'comp-genie/src/sources.js', 'inspection-app/src/permits.js'])
-G = ('const G = (() => {\n' + shared + '\nreturn { parseCRS, crsCanon, parseMlsCsv, parseMlsPdf, parsePermits, permitItems: typeof permitItems === "function" ? permitItems : null,'
+G = ('const G = (() => {\n' + shared + '\nreturn { parseCRS, crsCanon, parseMlsCsv, isCrsExport, parseCrsExport, parseMlsPdf, parsePermits, permitItems: typeof permitItems === "function" ? permitItems : null,'
      ' pdfLines, pdfFirstText, readText, parseCSV, isoDate, showDate, num, money, titleCase, addrKey, splitAddr, apnKey, fmtApn, makeZip, readZip, safeName };\n})();\n')
 js = 'const BUILD=' + repr(BUILD) + ';\n' + G + '\n'.join((root / 'engagement-letter-writer/src' / f).read_text() for f in ['clauses.js', 'letter.js']) + '\n' + '\n'.join((src / f).read_text() for f in ['store.js', 'addr.js', 'docs.js', 'email.js', 'market.js', 'reader.js', 'permitsai.js', 'reqs.js', 'books.js', 'mc.js', 'comments.js', 'wizard.js', 'status.js', 'autobackup.js', 'app.js']) + '\n' + (root / 'comp-genie/src/helpwrite.js').read_text()
 import subprocess, tempfile   # never publish a page whose script does not even parse (Oct 19 2026: one bad comment stopped the whole hub)

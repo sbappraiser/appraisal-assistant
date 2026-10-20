@@ -81,11 +81,11 @@ const microIn = (J, M) => (J.files || []).some(f => f.kind === 'MLS export' && f
 /* after the comps are on the grid: which still need their CRS report (one drop takes them all; each is matched by APN or address) */
 function crsNeedHTML(J) {
   const used = J.comps.filter(c => c.use).sort((a, b) => a.use - b.use); if (!used.length) return '';
-  const need = used.filter(c => !c.src.crs);
+  const need = used.filter(c => !c.src.crs || c.src.crs.fromList);
   if (!need.length) return `<p class="help crsok"><b class="ok">✓</b> CRS reports are in for all ${used.length} comps on the grid.</p>`;
   return `<div class="crsneed"><b>Upload the CRS report for each comp on the grid</b> <small>(${need.length} of ${used.length} still needed)</small>
     <ul>${need.map(c => `<li>Comp ${c.use} – ${esc(c.label || c.mls || '')}${c.apn ? ` <small>APN ${esc(c.apn)}</small>` : ''}${c.mls ? ` <small>MLS ${esc(c.mls)}</small>` : ''}</li>`).join('')}</ul>
-    <label class="btn primary">Choose CRS PDFs<input type="file" multiple accept=".pdf,application/pdf" data-act="files" hidden></label> <span class="help">Pick them all at once (or drop them in the box below) – each one finds its comp by APN or address and leaves this list.</span></div>`;
+    <label class="btn primary">Choose CRS PDFs<input type="file" multiple accept=".pdf,application/pdf" data-act="files" hidden></label> <span class="help">Pick them all at once (or drop them in the box below) – each one finds its comp by APN or address and leaves this list.${need.some(c => c.src.crs && c.src.crs.fromList) ? ' (A sale from your CRS neighborhood list has only its sale, size, year and lot – the CRS report adds beds, baths and location.)' : ''}</span></div>`;
 }
 function microToGrid(rows) {
   const J = app.job; if (!J || J.comps.some(c => c.use)) return 0;
@@ -95,13 +95,25 @@ function microToGrid(rows) {
   return n;
 }
 async function pullMicro(o, quiet) {
-  const M = orderMicro(o); if (!M || !app.job) return ''; const by = new Map(); let missing = 0;
+  const M = orderMicro(o); if (!M || !app.job) return ''; const by = new Map(); const crsRows = []; let missing = 0;
   for (const d of M.docs) { const rec = await readOrderDoc(d.id); if (!rec || !rec.blob) { missing++; continue; }
-    parseMlsCsv(await readText(new File([rec.blob], d.name))).forEach(r => by.set(r.mls || (r.addr + '|' + by.size), r)); }
-  if (!by.size) { if (!quiet) toast('The search file was not found in the Appraisal Assistant'); return ''; }
-  const rows = [...by.values()].filter(r => !M.exclude[r.mls]);
-  const note = ingestMls(rows, M.file); const left = Object.keys(M.exclude).length; const onGrid = microToGrid(rows); save(); render();
-  if (!quiet) toast(`Added your Search Criteria search: ${rows.length} listings` + (onGrid ? `, ${onGrid} put on the grid` : '') + (left ? ` (${left} you unticked on the Market tab left out)` : '') + (missing ? ` – ${missing} file${missing > 1 ? 's were' : ' was'} not found` : ''), 6000);
+    const text = await readText(new File([rec.blob], d.name));
+    if (isCrsExport(text)) { parseCrsExport(text).forEach(r => crsRows.push(r)); continue; }   // a CRS Data neighborhood sales list
+    parseMlsCsv(text).forEach(r => by.set(r.mls || (r.addr + '|' + by.size), r)); }
+  if (!by.size && !crsRows.length) { if (!quiet) toast('The search file was not found in the Appraisal Assistant'); return ''; }
+  const all = [...by.values()]; const rows = all.filter(r => !M.exclude[r.mls]);
+  const note = rows.length ? ingestMls(rows, M.file) : '';
+  // CRS list: a sale that is also in the MLS search joins that comp (its unticked listings stay out); the rest come in as CRS-only comps
+  const same = (a, b) => (apnKey(a.apn) && apnKey(a.apn) === apnKey(b.apn)) || (a.addr && b.addr && addrKey(a.addr) === addrKey(b.addr));
+  const crsIn = []; let crsNew = 0;
+  if (crsRows.length) { const fid = uid();
+    crsRows.forEach(r => { const id = 'CRS:' + (apnKey(r.apn) || addrKey(r.addr)); if (M.exclude[id]) return; const twin = all.find(x => same(x, r)); if (twin && M.exclude[twin.mls]) return;
+      const seed = { mls: twin ? twin.mls : '', apn: r.apn, key: r.addr ? addrKey(r.addr) : '', label: r.addr }; const was = findComp(seed);
+      if (was && was.src.crs && !was.src.crs.fromList) { crsIn.push({ ...r, mls: seed.mls }); return; }   // her CRS report is already on it
+      const { isNew } = upsertComp(seed, 'crs', crsFromList(r), fid); if (isNew) crsNew++; crsIn.push({ ...r, mls: seed.mls, status: 'Closed' }); });
+    logFile(M.file.split(' + ').filter(n => /crs|prospect/i.test(n)).join(' + ') || 'CRS list', 'CRS report', crsIn.length, fid); }
+  const left = Object.keys(M.exclude).length; const onGrid = microToGrid([...rows, ...crsIn.map(r => ({ ...r, status: 'Closed' }))]); save(); render();
+  if (!quiet) toast(`Added your Search Criteria search: ${rows.length} listings` + (crsRows.length ? ` and ${crsIn.length} CRS sales (${crsNew} not in the MLS search)` : '') + (onGrid ? `, ${onGrid} put on the grid` : '') + (left ? ` (${left} you unticked on the Market tab left out)` : '') + (missing ? ` – ${missing} file${missing > 1 ? 's were' : ' was'} not found` : ''), 7000);
   return note;
 }
 window.addEventListener('focus', async () => { const o = await readOrders(); if (o.length !== (app.orders || []).length) { app.orders = o; render(); } else app.orders = o; });
