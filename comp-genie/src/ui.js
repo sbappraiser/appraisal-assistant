@@ -165,7 +165,7 @@ function jobStatus(J) {   // for the green check on the Appraisal Assistant's Co
 }
 async function saveNow() { if (!app.job) return; app.job.updated = Date.now(); app.job.status = jobStatus(app.job);
   if (app.job.orderId && window.parent !== window) { try { window.parent.postMessage({ type: 'aa-genie-status', order: app.job.orderId, n: app.job.status.n }, location.origin); } catch (e) {} }
-  await DB.put('jobs', app.job); if (!POP && !CPOP) await DB.put('kv', { id: 'lastJob', v: app.job.id }); wbNotify(); }
+  await DB.put('jobs', app.job); if (!POP && !CPOP) await DB.put('kv', { id: 'lastJob', v: app.job.id }); wbNotify(); if (!POP && !CPOP) snapMaybe(app.job); }
 
 /* ---------------- photos ---------------- */
 app.photos = []; // [{id, mls, n, name}] for this job (blobs stay in storage)
@@ -385,7 +385,7 @@ function renderPage() {
     <label class="jobsel">Assignment <select data-act="pickjob" id="jobpick"><option value="">All assignments (start page)</option>${app.jobs.map(j => `<option value="${j.id}" ${j.id === J.id ? 'selected' : ''}>${esc(jobLabel(j))}</option>`).join('')}</select></label>
     <button class="btn" data-act="newjob">New assignment</button>
     ${(app.orders || []).some(o => !ORDER_DONE.includes(o.stage || 'New')) ? `<select data-act="fromorder" aria-label="Start from an order"><option value="">From an order…</option>${app.orders.filter(o => !ORDER_DONE.includes(o.stage || 'New')).sort((a, b) => String(b.orderDate || '').localeCompare(String(a.orderDate || ''))).map(o => `<option value="${o.id}">${esc(orderName(o))}</option>`).join('')}</select>` : ''}
-    <button class="btn" data-act="backup" title="Save this assignment to a file">Back up</button><label class="btn" title="Bring back an assignment from your Appraisal Assistant daily backup (.zip) or a Comp genie backup – as a copy, nothing here is changed">Restore from a backup…<input type="file" accept=".zip,.gz,.json" data-act="files" hidden></label>
+    <button class="btn" data-act="backup" title="Save this assignment to a file">Back up</button><button class="btn" data-act="snaps" title="Every assignment is saved here automatically as you work (every 20 minutes, the last 12 kept, plus one a day for 2 weeks) – bring back an earlier version as a copy">Earlier versions…</button><label class="btn" title="Bring back an assignment from your Appraisal Assistant daily backup (.zip) or a Comp genie backup – as a copy, nothing here is changed">Restore from a backup…<input type="file" accept=".zip,.gz,.json" data-act="files" hidden></label>
     ${app.confirm === 'deljob' ? `<span class="confirm">Delete “${esc(J.name)}”? <button class="btn danger solid" data-act="deljob-yes">Delete</button><button class="btn" data-act="cancel">Keep</button></span>` : `<button class="btn danger" data-act="deljob">Delete</button>`}
   </header>
   ${ARCH.loaded ? '' : `<section class="card notice"><b>Load your comp archive${app.jobs.some(j => j.comps.length) ? ' in this browser' : ' once'}.</b> ${app.jobs.some(j => j.comps.length) ? 'Each browser (Chrome, Firefox, Edge) keeps its own copy, and this one has none yet. ' : ''}Drop <i>Comp Archive.json.gz</i> and <i>CORT Sales.csv</i> anywhere on this page (or <label class="link">choose it<input type="file" multiple data-act="files" hidden></label>). It is saved on this computer only; nothing is uploaded.</section>`}
@@ -713,7 +713,8 @@ document.addEventListener('click', async e => {
       await DB.put('kv', { id: 'mlsLink', v: MLSLINK }); app.mlsSet = false; render(); toast('Saved – every comp now has Open in MLS'); break; }
     case 'openjob': { const j = app.jobs.find(x => x.id === t.dataset.id); if (!j) break; app.home = false; app.job = j; app.sel = null; await DB.put('kv', { id: 'lastJob', v: j.id }); await loadPhotos(); render.top = true; render(); window.scrollTo(0, 0); break; }
     case 'deljob': app.confirm = 'deljob'; render(); break;
-    case 'deljob-yes': { const id = app.job.id; await DB.del('jobs', id); for (const p of await DB.byJob(id)) await DB.del('photos', p.id); app.jobs = app.jobs.filter(j => j.id !== id); app.job = app.jobs[0] || null; app.confirm = null; app.home = true; await loadPhotos(); render.top = true; render(); window.scrollTo(0, 0); toast('Assignment deleted'); break; }
+    case 'snaps': snapPick(); break;
+    case 'deljob-yes': { await snapTake(app.job, 'before delete'); const id = app.job.id; await DB.del('jobs', id); for (const p of await DB.byJob(id)) await DB.del('photos', p.id); app.jobs = app.jobs.filter(j => j.id !== id); app.job = app.jobs[0] || null; app.confirm = null; app.home = true; await loadPhotos(); render.top = true; render(); window.scrollTo(0, 0); toast('Assignment deleted'); break; }
     case 'cancel': app.confirm = null; render(); break;
     case 'rmall': app.confirm = 'rmall'; render(); break;
     case 'rmall-yes': app.job.comps = []; app.sel = null; app.confirm = null; await saveNow(); render(); toast('All comps removed – your files list is unchanged'); break;
@@ -872,13 +873,30 @@ if (!CPOP && !POP && WBC) WBC.addEventListener('message', e => { const d = e.dat
 function backupPick(z, fname) {
   let g = null; try { g = JSON.parse(new TextDecoder().decode(z.get('comp-genie.json'))); } catch (e) {} if (!g || !Array.isArray(g.jobs) || !g.jobs.length) { toast('That backup has no Comp genie assignments'); return; }
   const when = t => t ? new Date(t).toLocaleString([], { month: 'numeric', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' }) : '';
-  const rows = g.jobs.slice().sort((a, b) => (b.updated || 0) - (a.updated || 0)).map(j => { const cs = j.comps || []; return `<tr><td><b>${esc(j.name)}</b><br><small>${esc((j.subject || {}).addr || '')}</small></td><td>${esc(when(j.created))}</td><td>${esc(when(j.updated))}</td><td class="r">${cs.length}</td><td class="r">${cs.filter(c => c.use).length}</td><td class="r">${cs.filter(c => c.src && c.src.crs && !c.src.crs.fromList).length}</td><td><button class="btn sm primary" data-bkrestore="${esc(j.id)}">Bring back as a copy</button></td></tr>`; }).join('');
+  const JL = g.jobs.slice().sort((a, b) => (b.updated || 0) - (a.updated || 0)); const rows = JL.map((j, ix) => { const cs = j.comps || []; return `<tr><td><b>${esc(j.name)}</b><br><small>${esc((j.subject || {}).addr || '')}</small></td><td>${esc(when(j.created))}</td><td>${esc(when(j.updated))}</td><td class="r">${cs.length}</td><td class="r">${cs.filter(c => c.use).length}</td><td class="r">${cs.filter(c => c.src && c.src.crs && !c.src.crs.fromList).length}</td><td><button class="btn sm primary" data-bkrestore="${ix}">Bring back as a copy</button></td></tr>`; }).join('');
   const bg = document.createElement('div'); bg.className = 'sheetbg';
   bg.innerHTML = `<div class="sheet"><h2>Assignments in your backup <small>${esc(fname)} · saved ${esc(when(g.saved))}</small></h2><p class="help">Pick the one to bring back. It comes in as a <b>copy</b> named “… (from backup)” – your assignments here are not changed. Photos are not in this backup; drop the MLS photos zip again if you want them.</p>
     <div class="tablewrap"><table class="mini"><tr><th>Assignment</th><th>Started</th><th>Last changed</th><th class="r">Comps</th><th class="r">On grid</th><th class="r">CRS reports</th><th></th></tr>${rows}</table></div><p><button class="btn" data-bkclose="1">Close</button></p></div>`;
   document.body.appendChild(bg);
   bg.addEventListener('click', async e => { const t = e.target; if (t.dataset.bkclose || t === bg) { bg.remove(); return; }
-    if (t.dataset.bkrestore) { const src = g.jobs.find(j => j.id === t.dataset.bkrestore); if (!src) return; const j = JSON.parse(JSON.stringify(src)); j.id = uid(); j.name = src.name + ' (from backup ' + new Date(g.saved || Date.now()).toLocaleDateString() + ')'; j.restoredFrom = src.id;   // keeps its order link and comes first, so opening the order opens this copy
+    if (t.dataset.bkrestore) { const src = JL[+t.dataset.bkrestore]; if (!src) return; const j = JSON.parse(JSON.stringify(src)); j.id = uid(); j.name = src.name.replace(/ \(before delete\)$/, '') + ' (from ' + new Date(src.updated || g.saved || Date.now()).toLocaleString([], { month: 'numeric', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + ')'; j.restoredFrom = src.id;   // keeps its order link and comes first, so opening the order opens this copy
       app.jobs.unshift(j); app.job = j; app.sel = null; app.home = false; await saveNow(); j.comps.forEach(c => { c.src = c.src || {}; c.src.arch = c.src.arch || []; c.src.cort = c.src.cort || []; attachArchive(c); attachCort(c); }); await saveNow(); bg.remove(); render();
       toast(`Brought back “${src.name}” as a copy: ${j.comps.length} comps, ${j.comps.filter(c => c.use).length} on the grid. Opening the order now opens this copy – when you are happy with it, delete the other one.`, 9000); } });
 }
+
+/* ---- earlier versions kept in this browser (Oct 20 2026, after her grid was lost with no backup): a copy of the assignment every 20 minutes while she works
+   (the last 12), the first one of each day (14 days) and one before a delete. "Earlier versions…" brings one back as a copy. ---- */
+const SNAP_GAP = 20 * 60e3, SNAP_KEEP = 12, SNAP_DAYS = 14;
+async function snapIdx() { const r = await DB.get('kv', 'snapidx'); return (r && r.v) || []; }
+async function snapTake(j, why) { if (!j || !(j.comps || []).length) return false; const at = Date.now(); const key = 'snap:' + j.id + ':' + at;
+  await DB.put('kv', { id: key, v: JSON.parse(JSON.stringify(j)) });
+  let L = await snapIdx(); L.push({ key, job: j.id, name: j.name, at, why: why || '', comps: j.comps.length, grid: j.comps.filter(c => c.use).length, crs: j.comps.filter(c => c.src && c.src.crs && !c.src.crs.fromList).length });
+  const mine = L.filter(x => x.job === j.id).sort((a, b) => b.at - a.at); const day = d => new Date(d).toDateString(); const keep = new Set();
+  mine.slice(0, SNAP_KEEP).forEach(x => keep.add(x.key)); const seen = new Set(); mine.slice().reverse().forEach(x => { if (!seen.has(day(x.at)) && at - x.at < SNAP_DAYS * 864e5) { seen.add(day(x.at)); keep.add(x.key); } }); mine.filter(x => x.why).forEach(x => { if (at - x.at < 30 * 864e5) keep.add(x.key); });
+  for (const x of mine) if (!keep.has(x.key)) await DB.del('kv', x.key);
+  L = L.filter(x => x.job !== j.id || keep.has(x.key)); await DB.put('kv', { id: 'snapidx', v: L }); return true; }
+let SNAP_LAST = {};
+async function snapMaybe(j) { try { const t = SNAP_LAST[j.id] || ((await snapIdx()).filter(x => x.job === j.id).sort((a, b) => b.at - a.at)[0] || {}).at || 0; if (Date.now() - t < SNAP_GAP) { SNAP_LAST[j.id] = t; return; } if (await snapTake(j)) SNAP_LAST[j.id] = Date.now(); } catch (e) { console.warn('snapshot', e); } }
+async function snapPick() { const L = (await snapIdx()).sort((a, b) => b.at - a.at); if (!L.length) { toast('No earlier versions saved yet – they start being kept as you work from now on', 6000); return; }
+  const jobs = []; for (const x of L.slice(0, 60)) { const r = await DB.get('kv', x.key); if (r && r.v) { const j = r.v; j.updated = x.at; j.name = j.name + (x.why ? ' (' + x.why + ')' : ''); jobs.push(j); } }
+  const z = new Map([['comp-genie.json', new TextEncoder().encode(JSON.stringify({ app: 'comp-genie', saved: new Date().toISOString(), jobs }))]]); backupPick(z, 'earlier versions kept in this browser'); }

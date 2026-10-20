@@ -97,7 +97,7 @@ async function genieExport() {
   try { if (indexedDB.databases) { const l = await indexedDB.databases(); if (!l.some(x => x.name === 'appraisal-assistant')) return null; } } catch (e) {}
   const d = await genieDB(false); if (!d) return null;
   try { if (!d.objectStoreNames.contains('jobs')) return null;
-    const jobs = await gTx(d, 'jobs', 'readonly', s => s.getAll()) || []; const kv = (await gTx(d, 'kv', 'readonly', s => s.getAll()) || []).filter(x => !GENIE_SKIP.has(x.id));
+    const jobs = await gTx(d, 'jobs', 'readonly', s => s.getAll()) || []; const kv = (await gTx(d, 'kv', 'readonly', s => s.getAll()) || []).filter(x => !GENIE_SKIP.has(x.id) && !/^snap/.test(x.id));
     return { app: 'comp-genie', saved: new Date().toISOString(), jobs, kv };
   } catch (e) { return null; } finally { d.close(); }
 }
