@@ -34,7 +34,8 @@ function drComp(J, c, t) {
   if (!cd) sim.push('condition'); else adj.push(`${dir(cd).toLowerCase()} adjustment of ${$m(Math.abs(cd))} was made for its ${sup(cd)} ${drTier(J, c.id, 'c', C) || 'condition'} rating`);
   const simTxt = sim.length ? `similar ${sim.length > 1 ? sim.slice(0, -1).join(', ') + ' and ' + sim.at(-1) : sim[0]}` : '';
   s.push(`The residence has ${simTxt}${simTxt && adj.length ? ', but ' : ''}${adj.length ? adj.join(', and ') : ''}.`.replace('has , but', 'has').replace(/^The residence has \.$/, ''));
-  const rem = V(c, 'remodel'); if (rem && /\d{4}/.test(String(rem))) s.push(`The residence was remodeled in ${String(rem).match(/'?\d{2,4}(\s*[-–/]\s*'?\d{2,4})?/)[0]}.`);
+  const rem = V(c, 'remodel'); { const m = String(rem || '').match(/(?:'(\d{2})|\b((?:19|20)\d{2}))\s*(?:[-–]\s*'?(\d{2,4}))?\s*(?:rmdl|rmd|remodel|reno|renovat|rebuild|rbld|update|updt)/i);   // '26 Rmdl → 2026 (her shorthand)
+    if (m) { const y = m[2] || (+m[1] > 30 ? '19' : '20') + m[1]; const rb = /rebuild|rbld/i.test(m[0]); s.push(`The residence was ${rb ? 'rebuilt' : 'remodeled'} in ${y}.`); } }
   const gla = A('gla'), bs = A('bsmt');
   if (!blank(S.gla) && !blank(C.gla)) { const d = (+C.gla) - (+S.gla); s.push(Math.abs(d) < 100 ? 'It has similar gross living area.' : `It is ${d > 0 ? 'superior' : 'inferior'} in gross living area.`); }
   if (bs) s.push(`${dir(bs)} adjustment of ${$m(Math.abs(bs))} was made for its ${bs > 0 ? 'smaller' : 'larger'} below-grade finished area.`);
