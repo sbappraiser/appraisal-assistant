@@ -111,18 +111,25 @@ async function pullMicro(o, quiet) {
     parseMlsCsv(text).forEach(r => by.set(r.mls || (r.addr + '|' + by.size), r)); }
   if (!by.size && !crsRows.length) { if (!quiet) toast('The search file was not found in the Appraisal Assistant'); return ''; }
   const all = [...by.values()]; const rows = all.filter(r => !M.exclude[r.mls]);
+  // her note (Oct 20 2026): a CRS sale that is not in the micro search is often in the macro (Market Area Boundary) MLS search – take its MLS data from there
+  const macroRows = []; { const ma = o && o.market; const names = ma && ma.file ? String(ma.file).split(' + ').map(x => x.trim()).filter(Boolean) : [];
+    for (const n of names) { const d = (o.docs || []).find(x => x.name === n); if (!d || M.docs.some(x => x.id === d.id)) continue; const rec = await readOrderDoc(d.id); if (!rec || !rec.blob) continue;
+      const tx = await readText(new File([rec.blob], d.name)); if (isCrsExport(tx)) continue; parseMlsCsv(tx).forEach(r => { if (!by.has(r.mls)) macroRows.push(r); }); } }
+  const macroUsed = new Map();
   const note = rows.length ? ingestMls(rows, M.file) : '';
   // CRS list: a sale that is also in the MLS search joins that comp (its unticked listings stay out); the rest come in as CRS-only comps
   const same = (a, b) => (apnKey(a.apn) && apnKey(a.apn) === apnKey(b.apn)) || (a.addr && b.addr && addrKey(a.addr) === addrKey(b.addr));
   const crsIn = []; let crsNew = 0;
   if (crsRows.length) { const fid = uid();
-    crsRows.forEach(r => { const id = 'CRS:' + (apnKey(r.apn) || addrKey(r.addr)); if (M.exclude[id]) return; const twin = all.filter(x => same(x, r)).sort((x, y) => { const sc = z => z.saleDate ? (r.saleDate ? Math.abs(new Date(z.saleDate) - new Date(r.saleDate)) / 864e5 : 500) : /Pend|Contract/i.test(z.status || '') ? 2e5 : 3e5; return sc(x) - sc(y); })[0];   // a house with several listings: the closed one nearest the recorded sale if (twin && M.exclude[twin.mls]) return;
+    crsRows.forEach(r => { const id = 'CRS:' + (apnKey(r.apn) || addrKey(r.addr)); if (M.exclude[id]) return; const twin = [...all, ...macroRows.filter(x => x.saleDate && (!r.saleDate || Math.abs(new Date(x.saleDate) - new Date(r.saleDate)) <= 90 * 864e5))].filter(x => same(x, r)).sort((x, y) => { const sc = z => z.saleDate ? (r.saleDate ? Math.abs(new Date(z.saleDate) - new Date(r.saleDate)) / 864e5 : 500) : /Pend|Contract/i.test(z.status || '') ? 2e5 : 3e5; return sc(x) - sc(y); })[0];   // a house with several listings: the closed one nearest the recorded sale if (twin && M.exclude[twin.mls]) return;
+      if (twin && !all.includes(twin)) macroUsed.set(twin.mls, twin);
       const seed = { mls: twin ? twin.mls : '', apn: r.apn, key: r.addr ? addrKey(r.addr) : '', label: r.addr }; const was = findComp(seed);
       if (was && was.src.crs && !was.src.crs.fromList) { crsIn.push({ ...r, mls: seed.mls }); return; }   // her CRS report is already on it
       const { isNew } = upsertComp(seed, 'crs', crsFromList(r), fid); if (isNew) crsNew++; crsIn.push({ ...r, mls: seed.mls, status: 'Closed' }); });
     logFile(M.file.split(' + ').filter(n => /crs|prospect/i.test(n)).join(' + ') || 'CRS list', 'CRS report', crsIn.length, fid); }
+  if (macroUsed.size) ingestMls([...macroUsed.values()], 'Macro search: ' + String(o.market.file || 'MLS export'));   // the MLS data for CRS sales that were only in the macro search
   await archPhotoFill(false); const left = Object.keys(M.exclude).length; const onGrid = microToGrid([...rows, ...crsIn.map(r => ({ ...r, status: 'Closed' }))]); save(); render();
-  if (!quiet) toast(`Added your Search Criteria search: ${rows.length} listings` + (crsRows.length ? ` and ${crsIn.length} CRS sales (${crsNew} not in the MLS search)` : '') + (onGrid ? `, ${onGrid} put on the grid` : '') + (left ? ` (${left} you unticked on the Market tab left out)` : '') + (missing ? ` – ${missing} file${missing > 1 ? 's were' : ' was'} not found` : ''), 7000);
+  if (!quiet) toast(`Added your Search Criteria search: ${rows.length} listings` + (crsRows.length ? ` and ${crsIn.length} CRS sales (${crsNew} not in the MLS search)` : '') + (macroUsed.size ? `; MLS data for ${macroUsed.size} of them from your macro search` : '') + (onGrid ? `, ${onGrid} put on the grid` : '') + (left ? ` (${left} you unticked on the Market tab left out)` : '') + (missing ? ` – ${missing} file${missing > 1 ? 's were' : ' was'} not found` : ''), 7000);
   return note;
 }
 window.addEventListener('focus', async () => { const o = await readOrders(); if (o.length !== (app.orders || []).length) { app.orders = o; render(); } else app.orders = o; });
