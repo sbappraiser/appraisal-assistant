@@ -725,7 +725,7 @@ mark.blank{background:#fff3a8;padding:0 2px;border-radius:3px}.cmt textarea{widt
 </div>
 <div id="toast" role="status" hidden></div>
 <script>
-const BUILD='o1-1020-0705';
+const BUILD='o1-1020-0711';
 const G = (() => {
 /* ---------------- small helpers ---------------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -2635,6 +2635,33 @@ function drawPriceTrend(cv, R, perSf) {
   line.forEach(p => { g.beginPath(); g.arc(p.x, p.y, 5, 0, Math.PI * 2); g.fillStyle = GC.line; g.fill(); });
   if (S.length < 12) { g.fillStyle = GC.muted; g.font = 'italic 18px Inter, Arial, sans-serif'; g.fillText(`Few sales (${S.length}): read the trend with care.`, L, f.H - 22); }
 }
+/* macro (market area boundary) and micro (competing properties) side by side, for her price-trend conclusion (Oct 20 2026).
+   Sale prices, not price per sq ft (her rule). Each line = median by quarter (or month when there are 3+ sales a month). */
+function trendChange(R) {   // median of the first third of the period vs the last third
+  const S = R.S.filter(r => r.salePrice && r.saleDate).sort((a, b) => a.saleDate.localeCompare(b.saleDate)); if (S.length < 6) return null;
+  const k = Math.max(2, Math.floor(S.length / 3)); const a = median(S.slice(0, k).map(r => r.salePrice)), b = median(S.slice(-k).map(r => r.salePrice));
+  const months = Math.max(1, (Date.parse(S[S.length - k / 2 | 0].saleDate) - Date.parse(S[k / 2 | 0].saleDate)) / 2629800000);
+  return { a, b, pct: (b / a - 1) * 100, perMo: ((b / a) ** (1 / months) - 1) * 100, n: S.length, months };
+}
+function drawTrendBoth(cv, RA, RM) {
+  const sets = [['Macro – market area boundary', RA, '#9aa7b4', '#5b6876'], ...(RM && RM !== RA ? [['Micro – competing properties', RM, '#f2b366', '#c0392b']] : [])];
+  const all = sets.flatMap(([, R]) => R.S.filter(r => r.salePrice && r.saleDate)); const R0 = RA;
+  const f = chartFrame(cv, 'Price trend – macro and micro market', `SBMLS · sale prices in the ${R0.L} months to ${shortDate(R0.eff)} · dots = sales, lines = median by ${all.length / Math.max(1, R0.L) < 6 ? 'quarter' : 'month'}`);
+  const { g, L, R: RR, B } = f; if (!all.length) { g.fillStyle = GC.muted; g.font = '24px Inter, Arial, sans-serif'; g.fillText('No sales in the look-back period.', L, 300); return; }
+  const vs = all.map(r => r.salePrice); const Y = yAxis(f, niceTicks(Math.min(...vs), Math.max(...vs)), moneyShort);
+  const t0 = Date.parse(R0.start), t1 = Date.parse(R0.eff); const X = iso => L + (Date.parse(iso) - t0) / (t1 - t0) * (RR - L);
+  const ms = monthsSpan(R0.start, R0.eff); g.fillStyle = GC.muted; g.font = '18px Inter, Arial, sans-serif'; g.textAlign = 'center';
+  ms.forEach((ym, i) => { const step = ms.length > 14 ? 3 : 1; if (i % step) return; const [y, m] = ym.split('-').map(Number); g.fillText(MON3[m - 1] + (m === 1 || i === 0 ? ' ' + String(y).slice(2) : ''), X(ym + '-15'), B + 30); }); g.textAlign = 'left';
+  sets.forEach(([name, R, dot, line], si) => { const S = R.S.filter(r => r.salePrice && r.saleDate); const few = S.length / Math.max(1, R.L) < 3;
+    S.forEach(r => { g.beginPath(); g.arc(X(r.saleDate), Y(r.salePrice), si ? 7 : 5, 0, Math.PI * 2); g.fillStyle = dot; g.fill(); });
+    const bucket = r => { const [y, m] = r.saleDate.split('-').map(Number); return few ? y + '-Q' + Math.ceil(m / 3) : r.saleDate.slice(0, 7); };
+    const G = {}; S.forEach(r => { (G[bucket(r)] = G[bucket(r)] || []).push(r); });
+    const pts = Object.keys(G).sort().map(k => { const rs = G[k]; const mid = rs.map(r => Date.parse(r.saleDate)).reduce((a, b) => a + b, 0) / rs.length; return { x: L + (mid - t0) / (t1 - t0) * (RR - L), y: Y(median(rs.map(r => r.salePrice))) }; });
+    if (pts.length > 1) { g.strokeStyle = line; g.lineWidth = 4; g.beginPath(); pts.forEach((p, i) => i ? g.lineTo(p.x, p.y) : g.moveTo(p.x, p.y)); g.stroke(); }
+    pts.forEach(p => { g.beginPath(); g.arc(p.x, p.y, 6, 0, Math.PI * 2); g.fillStyle = line; g.fill(); });
+    const tc = trendChange(R); const txt = `${name}: ${S.length} sales` + (tc ? ` · median ${moneyShort(tc.a)} → ${moneyShort(tc.b)} (${tc.pct >= 0 ? '+' : ''}${tc.pct.toFixed(1)}%, about ${tc.perMo >= 0 ? '+' : ''}${tc.perMo.toFixed(2)}% a month)` : ' · too few sales to read a change');
+    g.font = '600 18px Inter, Arial, sans-serif'; const w = g.measureText(txt).width; const yy = 134 + si * 30; g.fillStyle = 'rgba(255,255,255,.9)'; g.fillRect(L + 6, yy - 20, w + 34, 28); g.fillStyle = line; g.fillRect(L + 12, yy - 10, 16, 6); g.fillText(txt, L + 34, yy); });
+}
 function drawAbsorption(cv, R) {
   const ms = monthsSpan(isoAddMonths(R.eff, -R.L + 1), R.eff); const cnt = ms.map(ym => R.S.filter(r => r.saleDate.slice(0, 7) === ym).length);
   const f = chartFrame(cv, 'Absorption rate – closed sales per month', `SBMLS · ${R.salesN} sales in ${R.L} months = ${(Math.round(R.perMonth * 10) / 10)} per month · ${R.activeN} active listings` + (R.supply != null ? ` = about ${(Math.round(R.supply * 10) / 10)} months of supply` : ''));
@@ -2768,6 +2795,7 @@ function mkRender(redraft) {
     <tr><th>17.022 Marketing Time</th><td>${sel('mktime', MKTIME, R.suggest.mktime)}<small class="muted"> ${R.saleDom != null ? `median ${Math.round(R.saleDom)} days on market (cumulative) for the sales` : ''}</small></td></tr>
     <tr><th>17.018 Price Trend Source <small>one per line, 33 characters each</small></th><td><textarea data-mk="sources" rows="2">${h(sources.join('\n'))}</textarea></td></tr>
     <tr><th>Your price-trend conclusion</th><td><select data-mk="trendConcl"><option value="">—</option><option value="increasing"${m.trendConcl === 'increasing' ? ' selected' : ''}>Increasing</option><option value="stable"${m.trendConcl === 'stable' ? ' selected' : ''}>Stable</option><option value="declining"${m.trendConcl === 'declining' ? ' selected' : ''}>Declining</option></select> <small class="muted">added as the last sentence of the draft</small></td></tr>
+    <tr><td colspan="2"><figure><canvas id="mkG0"></canvas><div class="row"><button type="button" class="btn small" data-png="mkG0">Save picture</button><span class="help">Raw medians mix different houses (size, quality, condition, lot, view). Use this to see the direction; for a measured rate that holds those level, open the Comp genie › <b>Market conditions support</b> – it groups your archive sales by usable lot, view, quality and size.</span></div></figure></td></tr>
     <tr><th>17.019 Price Trend Analysis Commentary</th><td><textarea data-mk="comment" rows="10" maxlength="2500">${h(m.comment || '')}</textarea>${cnt('comment', 2500)}
       <div class="row"><button type="button" class="btn ghost small" data-redraft="comment">Draft again</button><button type="button" class="btn ghost small" data-copy="comment">Copy</button></div>
       <p class="help">Drafted from the numbers on this page in your wording. Edit freely; your edits are kept until you press Draft again.</p></td></tr></table>
@@ -2790,7 +2818,7 @@ function mkRender(redraft) {
   </section></div>
   <div class="formEnd"><button type="button" class="btn" id="mkSaveBtn">Save</button><a class="btn primary" id="mkGenie" href="${h(genieURL(cur))}" target="aa-genie">Save and open the Comp genie →</a><button type="button" class="btn ghost" id="mkOrderBtn">Back to the order</button><span class="savedAt" data-saved></span></div>`;
   // graphs
-  drawPriceTrend($('#mkG1'), R, !!m.perSf); drawAbsorption($('#mkG2'), R); drawMacro($('#mkG3'), mkSeg());
+  drawTrendBoth($('#mkG0'), RA, MI().rows.length ? R : null); drawPriceTrend($('#mkG1'), R, !!m.perSf); drawAbsorption($('#mkG2'), R); drawMacro($('#mkG3'), mkSeg());
   // wiring
   const dz = $('#mkDrop'); ['dragover', 'dragleave', 'drop'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.toggle('over', ev === 'dragover'); if (ev === 'drop' && e.dataTransfer.files[0]) mkAddSearch(e.dataTransfer.files[0]); }));
   const sz = $('#mkStatsDrop'); ['dragover', 'dragleave', 'drop'].forEach(ev => sz.addEventListener(ev, e => { e.preventDefault(); sz.classList.toggle('over', ev === 'dragover'); if (ev === 'drop' && e.dataTransfer.files[0]) mkAddStats(e.dataTransfer.files[0]); }));
