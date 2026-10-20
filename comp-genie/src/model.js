@@ -285,7 +285,7 @@ function compFlags(c, job) {
 }
 function proximity(c, job) {
   const s = job && job.subject; if (!s) return null;
-  const a = { lat: num(s.lat), lon: num(s.lon) }, b = { lat: num(V(c, 'lat')), lon: num(V(c, 'lon')) };
+  const a = { lat: num(s.lat), lon: num(s.lon) }, b = num(V(c, 'lat')) ? { lat: num(V(c, 'lat')), lon: num(V(c, 'lon')) } : (c.geo ? { lat: c.geo.lat, lon: c.geo.lon } : { lat: null, lon: null });   // c.geo: found by address for the map
   const mi = milesBetween(a, b); if (mi === null) return null;
   return { mi, dir: directionOf(a, b) };
 }

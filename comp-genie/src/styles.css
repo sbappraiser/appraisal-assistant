@@ -180,3 +180,6 @@ table.si td{padding:4px}table.si select{font-size:13px}
 td.subj input::placeholder{color:#2f3f4d;opacity:1}td.subj input:placeholder-shown{background:#f4f8fb}
 
 .glines #glNew{width:280px;flex:0 0 auto}
+
+.maps{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;margin:10px 0}.mapbox{border:1px solid var(--line);border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:6px;background:#fff}
+.mapbox img{width:100%;height:auto;border:1px solid #ccd;border-radius:6px}.mapempty{height:160px;display:flex;align-items:center;justify-content:center;background:#f3f5f7;border-radius:6px;color:#889}

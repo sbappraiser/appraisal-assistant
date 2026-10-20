@@ -581,7 +581,25 @@ async function exportFullReport(anyway) {   // the pre-check runs first; "Export
   if (!anyway) { const T = await precheckRun(J, true); const must = T.items.filter(x => x.sev === 'Must fix').length;
     if (must || T.items.length) { renderKeepFocus(); const c = $('#preCard'); if (c) c.scrollIntoView({ behavior: 'smooth', block: 'start' }); toast(must ? `Pre-check: ${must} to fix before export` : `Pre-check: ${T.items.length} to look at – then press Export now`); return; } }
   const r = await buildFullReport(J); if (r.err) { toast(r.err); return; }
-  download(await makeZip(r.entries), jobBase() + ' - Full report SFREP.zip'); toast('Saved to your Downloads folder' + (r.charts ? ` – with ${r.charts} market chart${r.charts > 1 ? 's' : ''}` : ' – no market charts (open the order’s Market tab once so they are kept)'), 6000);
+  const zip = await makeZip(r.entries); const mb = b => (b / 1048576).toFixed(1) + ' MB'; const zs = zip.size || zip.byteLength || 0;
+  download(zip, jobBase() + ' - Full report SFREP.zip'); if (r.fit && r.fit.shrunk) toast(`The photos made the report ${mb(r.fit.before)}; ${r.fit.shrunk} report photos were made smaller so it is ${mb(zs)} (UCDP allows 60 MB). Your workfile keeps the full-size photos.`, 10000);
+  else if (zs > 60 * 1048576) toast(`The report file is ${mb(zs)} – over UCDP’s 60 MB. Untick some extra photos (Send to SFREP) on the iPad and export again.`, 12000);
+  if (!(r.fit && r.fit.shrunk) && zs <= 60 * 1048576) toast('Saved to your Downloads folder (' + mb(zs) + ')' + (r.charts ? ` – with ${r.charts} market chart${r.charts > 1 ? 's' : ''}` : ' – no market charts (open the order’s Market tab once so they are kept)'), 6000);
+}
+/* UCDP: a UAD 3.6 ZIP may not be over 60 MB (FAQ, Uniform Collateral Data Portal). When the photos push the report over
+   about 55 MB, the report copies of the photos are made smaller (her workfile keeps the full-size ones); maps and charts stay as they are. */
+const REPORT_MAX = 55 * 1024 * 1024;
+const entrySize = e => e.data instanceof Blob ? e.data.size : e.data && e.data.byteLength != null ? e.data.byteLength : new Blob([e.data]).size;
+async function shrinkJpeg(data, max, q) { const blob = data instanceof Blob ? data : new Blob([data], { type: 'image/jpeg' }); let bm; try { bm = await createImageBitmap(blob); } catch (e) { return null; }
+  const s = Math.min(1, max / Math.max(bm.width, bm.height)); if (s >= 1 && blob.size < 400000) return null; const cv = document.createElement('canvas'); cv.width = Math.round(bm.width * s); cv.height = Math.round(bm.height * s);
+  cv.getContext('2d').drawImage(bm, 0, 0, cv.width, cv.height); const out = await new Promise(r => cv.toBlob(r, 'image/jpeg', q)); return out && out.size < blob.size ? out : null; }
+async function fitReportSize(entries) {
+  const total = () => entries.reduce((t, e) => t + entrySize(e), 0); const before = total(); if (before <= REPORT_MAX) return { before, after: before, shrunk: 0 };
+  let shrunk = 0; const keep = /Images\/(Location Map|Rental Map|Aerial View|Flood Map|Market )/i;
+  for (const [max, q] of [[1800, 0.82], [1400, 0.78], [1100, 0.74]]) {
+    for (const e of entries) { if (!/^Images\/.*\.jpe?g$/i.test(e.name) || keep.test(e.name)) continue; const sm = await shrinkJpeg(e.data, max, q); if (sm) { e.data = sm; shrunk++; } }
+    if (total() <= REPORT_MAX) break; }
+  return { before, after: total(), shrunk };
 }
 async function buildFullReport(J) {
   const used = usedComps(J); if (!used.length) return { err: 'Pick comps first' };
@@ -623,10 +641,15 @@ async function buildFullReport(J) {
         const d = CH[k]; if (!d || !/^data:image\/jpeg;base64,/.test(d)) return; const im = sub.createElementNS(NS, 'IMAGE'); IMS.appendChild(im);
         leaf(im, 'ImageCaptionCommentDescription', cap); leaf(im, 'ImageCategoryType', cat); leaf(im, 'ImageFileLocationIdentifier', '\\\\Images\\' + fn); leaf(im, 'MIMETypeIdentifier', 'image/jpeg');
         const bin = atob(d.split(',')[1]); const u8 = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i); chartFiles.push({ name: 'Images/' + fn, data: u8 }); }); } }
+  // her maps and exhibits (Maps card): location map, rental map, aerial view, flood map
+  const mapFiles = []; { const L = typeof mapsForReport === 'function' ? await mapsForReport(J) : []; if (L.length) { const IMS = child(child(child(SUBJ, 'INSPECTIONS'), 'INSPECTION'), 'IMAGES');
+    for (const m of L) { const im = sub.createElementNS(NS, 'IMAGE'); IMS.appendChild(im); leaf(im, 'ImageCaptionCommentDescription', m.cap); leaf(im, 'ImageCategoryType', m.cat); leaf(im, 'ImageFileLocationIdentifier', '\\\\Images\\' + m.file); leaf(im, 'MIMETypeIdentifier', 'image/jpeg');
+      mapFiles.push({ name: 'Images/' + m.file, data: m.blob }); } } }
   const xml = '<?xml version="1.0" encoding="UTF-8"?>\n<!--Subject from the UAD Field Inspection app, comps and adjustment grid from Comp Genie, for import into Appraise-It Pro (Home > Import Forms).-->\n' + new XMLSerializer().serializeToString(sub.documentElement);
   const entries = [{ name: jobBase() + ' - Full report.xml', data: xml }];
   for (const [k, v] of files) if (/^SFREP\/Images\//i.test(k)) entries.push({ name: k.replace(/^SFREP\//i, ''), data: v });
   for (const c of used) { const fr = frontOf(c); if (fr) { const r = await DB.get('photos', fr.id); if (r) entries.push({ name: 'Images/' + photoName(c), data: r.blob }); } }
-  entries.push(...chartFiles);
-  return { xml, entries, charts: chartFiles.length };
+  entries.push(...chartFiles, ...mapFiles);
+  const fit = await fitReportSize(entries);
+  return { xml, entries, charts: chartFiles.length, maps: mapFiles.length, fit };
 }
