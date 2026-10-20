@@ -620,7 +620,7 @@ async function shrinkJpeg(data, max, q) { const blob = data instanceof Blob ? da
 async function fitReportSize(entries) {
   const total = () => entries.reduce((t, e) => t + entrySize(e), 0); const before = total(); if (before <= REPORT_MAX) return { before, after: before, shrunk: 0 };
   let shrunk = 0; const keep = /Images\/(Location Map|Rental Map|Aerial View|Flood Map|Market )/i;
-  for (const [max, q] of [[1800, 0.82], [1400, 0.78], [1100, 0.74]]) {
+  for (const [max, q] of [[1800, 0.82], [1400, 0.78], [1100, 0.74], [900, 0.7]]) {
     for (const e of entries) { if (!/^Images\/.*\.jpe?g$/i.test(e.name) || keep.test(e.name)) continue; const sm = await shrinkJpeg(e.data, max, q); if (sm) { e.data = sm; shrunk++; } }
     if (total() <= REPORT_MAX) break; }
   return { before, after: total(), shrunk };
