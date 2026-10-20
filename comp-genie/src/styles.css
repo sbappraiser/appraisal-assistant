@@ -202,3 +202,4 @@ body.classic table.grid input.bad{background:#ffc9c9!important}
 body.classic table.grid .btn.xs{padding:0 4px;font-size:10.5px;border-radius:2px}
 body.classic table.grid td.subj{background:#f4f4f4}body.classic table.grid tr.tot td,body.classic table.grid tr.tot th{background:#fff;font-weight:700}
 small.vsx{display:block;color:#3b4a57;font-size:11px}
+.req{color:#1f5fd6;font-weight:800;font-size:1.2em;margin-right:3px;cursor:help}
