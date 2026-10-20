@@ -319,7 +319,8 @@ async function ingestJson(f) {
   if (data && data.app === 'comp-genie-job') {
     const j = data.job; j.id = uid(); j.name = j.name + ' (restored)'; app.jobs.unshift(j); app.job = j; app.sel = null; await saveNow(); await loadPhotos();
     j.comps.forEach(c => { attachArchive(c); attachCort(c); });
-    return 'Assignment restored: ' + j.name;
+    let added = 0; if (Array.isArray(data.myComps) && data.myComps.length) { const rec = await DB.get('kv', 'mycomps'); const list = (rec && rec.v) || []; data.myComps.forEach(r => { const i = list.findIndex(x => x.key === r.key); if (i < 0) { list.push(r); added++; } else if ((r.saved || 0) > (list[i].saved || 0)) list[i] = r; }); await DB.put('kv', { id: 'mycomps', v: list }); }
+    return 'Assignment restored: ' + j.name + (added ? ` · ${added} comp${added === 1 ? '' : 's'} added back to your comp database` : '');
   }
   throw new Error('not a comp archive or a Comp Genie backup');
 }
@@ -421,7 +422,7 @@ function bulkBarHTML(J) { if (!J.comps.length) return '';
   return `<div class="bulk"><b>Select:</b> <button class="lnk" data-act="csel" data-w="all">all ${J.comps.length}</button> · <button class="lnk" data-act="csel" data-w="off">not on the grid (${off})</button> · <button class="lnk" data-act="csel" data-w="none">none</button>
     ${n ? `<span class="bsel"><b>${n} selected:</b> <button class="btn sm primary" data-act="bulkgrid">Put on the grid</button>
       <button class="btn sm" data-act="bulknu">Analyzed – not used</button> reason <select data-bulkreason>${NOTUSED_REASONS.map(([v, l]) => `<option value="${v}" ${v === 'DesignOrStyleVariance' ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>
-      <label class="inl"><input type="checkbox" data-bulkdb> also save to my comp database</label></span>` : '<small class="muted">tick comps in the first column, or use a quick select</small>'}</div>`; }
+      <label class="inl"><input type="checkbox" data-bulkdb> also save to my comp database</label> <button class="btn sm" data-act="bulkdb" title="Save the ticked comps to your comp database (on this computer; merged into your archive at the next rebuild) – they stay where they are">Save to my comp database</button></span>` : '<small class="muted">tick comps in the first column, or use a quick select</small>'}</div>`; }
 const compsCardHTML = J => J.ccDone ? `<div class="row"><h2 style="margin:0"><span class="ccdone">✓</span> Comps considered <small>${J.comps.length} · done</small></h2><span class="grow"></span><button class="btn sm" data-act="ccopen" title="Show the list again">Show ▾</button></div>`
   : `<div class="row"><h2 style="margin:0">Comps considered <small>${J.comps.length}</small></h2><span class="grow"></span>${J.comps.length ? `<button class="btn sm" data-act="ccdone" title="Mark the list finished and fold it away (Show ▾ brings it back)" style="color:var(--ok);border-color:#8fcca0">✓ Done – collapse</button>` : ''}${(() => { const n = J.comps.filter(c => !c.use && !c.notUsed).length; return n ? `<button class="btn sm primary" data-act="gridall" title="Puts on the grid every comp that is not on the grid yet and not already listed under Analyzed – not used, in closing-date order">Grid the undecided (${n})</button>` : ''; })()}${J.comps.filter(c => c.use).length > 1 && !gridInDateOrder(J) ? `<button class="btn sm" data-act="gridorder" title="Comp 1 = the most recent closing, as in this list">Number the grid in closing-date order</button>` : ''}${J.comps.length ? (app.confirm === 'rmall' ? `<span class="confirm">Remove all ${J.comps.length} comps from this assignment? <button class="btn danger solid sm" data-act="rmall-yes">Remove all</button><button class="btn sm" data-act="cancel">Keep</button></span>` : `<button class="btn sm danger" data-act="rmall">Remove all comps</button>`) : ''}</div>${bulkBarHTML(J)}${compsTable(J)}`;
 /* Redraw only what depends on a typed value, so the field you are in (and the next one you Tab to) is never replaced. */
@@ -601,7 +602,8 @@ async function exportPhotos() {
   download(await makeZip(entries), jobBase() + ' - Comp photos.zip');
 }
 async function backupJob() {
-  const blob = await gzipBlob(JSON.stringify({ app: 'comp-genie-job', version: 1, job: app.job }));
+  const my = await DB.get('kv', 'mycomps');   // her comp database rides along in every backup (Oct 20 2026), so it is never only in this browser
+  const blob = await gzipBlob(JSON.stringify({ app: 'comp-genie-job', version: 1, job: app.job, myComps: (my && my.v) || [] }));
   download(blob, safeName(app.job.name) + ' - Comp Genie backup.json.gz');
 }
 
@@ -732,6 +734,7 @@ document.addEventListener('click', async e => {
     case 'bulkgrid': { const J = app.job; const ord = !J.comps.some(c => c.use) || gridInDateOrder(J); let n = Math.max(0, ...J.comps.map(c => c.use || 0));
       const add = J.comps.filter(c => CSEL.has(c.id) && !c.use).sort(compOrder); add.forEach(c => { c.use = ++n; delete c.notUsed; }); if (ord) gridDateOrder(J); CSEL.clear(); save(); render();
       toast(`${add.length} comp${add.length === 1 ? '' : 's'} put on the grid` + (ord ? ' in closing-date order' : ''), 6000); break; }
+    case 'bulkdb': { const L = app.job.comps.filter(c => CSEL.has(c.id)); for (const c of L) await saveToMyDb(c); CSEL.clear(); save(); render(); toast(`${L.length} comp${L.length === 1 ? '' : 's'} saved to your comp database – each with its sources, your notes, flags and any adjustments`, 6000); break; }
     case 'bulknu': { const J = app.job; const why = ($('[data-bulkreason]') || {}).value || 'Other'; const db = ($('[data-bulkdb]') || {}).checked; const ord = gridInDateOrder(J);
       const L = J.comps.filter(c => CSEL.has(c.id)); L.forEach(c => { markNotUsed(c); if (!c.notUsed.reasons.includes(why)) c.notUsed.reasons.push(why); }); if (ord) gridDateOrder(J);
       let k = 0; if (db) for (const c of L) k += await saveToMyDb(c) ? 1 : 0; CSEL.clear(); save(); render();

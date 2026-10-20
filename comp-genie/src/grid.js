@@ -469,7 +469,8 @@ async function saveToMyDb(c) {   // her own comp database: kept on this computer
   const rec = await DB.get('kv', 'mycomps'); const list = (rec && rec.v) || []; const J = app.job;
   const values = Object.fromEntries(FIELDS.map(f => [f.k, V(c, f.k)]).filter(([, v]) => !blank(v)));
   const key = (values.addr || compTitle(c)) + '|' + (values.saleDate || values.contractDate || '');
-  const row = { key, saved: Date.now(), job: J.name, title: compTitle(c), values, sources: sourcesOf(c), notUsed: c.notUsed || null, adjustments: J.grid && J.grid.cells ? J.grid.cells[c.id] || null : null,
+  const strip = o => o ? JSON.parse(JSON.stringify(o, (k, v) => (/photo|image|blob|thumb/i.test(k) || v instanceof Blob) ? undefined : v)) : null;   // the data from each source, without photos (Oct 20 2026)
+  const row = { key, saved: Date.now(), job: J.name, title: compTitle(c), values, sources: sourcesOf(c), sourceData: { mls: strip(c.src.mls), pdf: strip(c.src.pdf), crs: strip(c.src.crs), cort: strip(c.src.cort), archRecords: (c.src.arch || []).map(a => a.rec) }, notes: c.notes || '', flags: compFlags(c, J).map(f => f.t), edits: strip(c.edit), notUsed: c.notUsed || null, adjustments: J.grid && J.grid.cells ? J.grid.cells[c.id] || null : null,
     tiers: { q: fineOf(J, c.id, 'q'), c: fineOf(J, c.id, 'c') }, landscaping: values.landscaping || null, compNo: c.use || null };   // her low / mid / high tiers: her database only, never UAD
   // her rule (Oct 19 2026): no duplicate entries – the same comp, only more aged or with the prior sales re-checked, replaces the saved one; anything else is kept as a new version
   const fam = x => x.key === key || String(x.key).startsWith(key + '|v');
