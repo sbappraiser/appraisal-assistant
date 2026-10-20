@@ -83,7 +83,10 @@ function uadPick(who, id) {
       else if (t.dataset.pkclose || t === bg) bg.remove(); else if (t.dataset.pksave) { bg.remove(); pkSave(J, who, 'view', vwText(L)); } });
     return; }
   const S = PICK[id]; const now = F[id] != null ? String(F[id]) : ''; const mk = c ? (c.edit || {})['pk_' + id] : (G0(J).subj || {})['pk_' + id]; const strict = pkParse({ ...S, other: 0 }, now); const cur = mk === now ? pkParse(S, now) : { ...strict, vals: strict.ok ? strict.vals : [], other: '' }; let vals = cur.vals.slice(), other = cur.other;
-  const draw = () => { bg.innerHTML = `<div class="sheet uadpick"><h2>${esc(S.title)} – ${esc(name)}</h2>${!cur.ok ? `<p class="help warnTxt">Now: “${esc(F[id])}” – not a UAD 3.6 answer. Pick one.</p>` : ''}
+  // the CRS mortgage history only says whether a loan was recorded – suggest, she confirms the type
+  let sugg = ''; if (id === 'terms' && !strict.ok && !vals.length) { if (/no loan/i.test(now)) { vals = ['Cash']; sugg = 'No loan was recorded with the deed (CRS mortgage history) – usually a cash sale. Confirm, or pick the financing if the MLS or agent says otherwise.'; }
+    else if (/loan:/i.test(now)) { vals = ['Conventional']; sugg = 'A loan was recorded (CRS mortgage history: ' + now.replace(/^Loan:\s*/i, '') + '). The deed does not say the loan type – Conventional is suggested; pick FHA, VA … if the MLS or agent says so.'; } }
+  const draw = () => { bg.innerHTML = `<div class="sheet uadpick"><h2>${esc(S.title)} – ${esc(name)}</h2>${!cur.ok || (!strict.ok && now) ? `<p class="help warnTxt">Now: “${esc(now)}” – not a UAD 3.6 answer. ${sugg ? esc(sugg) : 'Pick one.'}</p>` : ''}
     <div class="pkgrid"><div class="pkopts">${S.opts.map(([v, l, hlp]) => `<label class="check pk"><input type="${S.multi ? 'checkbox' : 'radio'}" name="pk" value="${esc(v)}" ${vals.includes(v) ? 'checked' : ''}> <b>${esc(l)}</b>${hlp ? `<small>${esc(hlp)}</small>` : ''}</label>`).join('')}
       ${S.other ? `<label class="fld" ${vals.includes('Other') ? '' : 'hidden'} id="pkOther"><span>Other – describe (up to ${S.other} characters)</span><input class="txt" maxlength="${S.other}" value="${esc(other)}" data-pkother="1"></label>` : ''}</div>
       <div class="pkguide"><b>UAD guidance</b><p>${esc(S.help || '')}</p></div></div>
