@@ -153,3 +153,15 @@ tr.landon td { background: #eefbf3; }
 .crsneed { border: 3px solid #c00000; background: #fff3f3; border-radius: 12px; padding: 10px 14px; margin: 10px 0; } .crsneed > b { color: #b00000; } .crsneed ul { margin: 6px 0 10px; padding-left: 22px; } .crsok { margin: 8px 0; }
 
 .photoneed{border-left:4px solid #e08a00;padding-left:10px;margin:8px 0}
+
+/* comp page: only one short line stays at the top while she scrolls; flags and photos scroll away (her note, Oct 20 2026: on the landscape monitor the header covered most of the screen) */
+.detail .dstick{padding:8px 16px 8px}
+.detail .dline{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px}
+.detail .dline h2{margin:0;font-size:20px}.detail .dline .big{font-size:15px}.detail .dline label{font-size:14px}
+.detail .dline .mini-hero{height:38px;width:auto;border-radius:4px;cursor:zoom-in}
+.detail .dmore{display:flex;flex-wrap:wrap;gap:8px 24px;align-items:flex-start;margin-bottom:8px}
+.detail .dmore .dinfo{flex:1 1 420px;min-width:0}
+.detail .dmore .flags{columns:2 340px;column-gap:28px;margin:6px 0}
+.detail .dmore .dphotos{flex:0 1 520px}.detail .dmore .hero{max-height:150px;width:auto;display:block;margin-bottom:6px}
+.detail .dmore .strip img{max-height:56px}
+.detail .dmore .flags li{break-inside:avoid}
