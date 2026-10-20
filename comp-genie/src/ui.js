@@ -248,7 +248,7 @@ async function ingest(files) {
     try {
       app.busy = 'Reading ' + f.name + '…'; renderBusy();
       const low = f.name.toLowerCase();
-      if (low.endsWith('.zip')) { const z = await readZip(f); if (z.has('comp-genie.json')) { backupPick(z, f.name); continue; } notes.push(z.has('inspection-backup.json') ? await ingestInspection(z, f.name) : await ingestPhotos(f, z)); }
+      if (low.endsWith('.zip')) { const z = await readZip(f); if (z.has('comp-genie.json')) { backupPick(z, f.name); continue; } if (z.has('orders.json')) { notes.push(f.name + ': this Appraisal Assistant backup has no Comp genie assignments in it – try the backup from the day before'); continue; } notes.push(z.has('inspection-backup.json') ? await ingestInspection(z, f.name) : await ingestPhotos(f, z)); }
       else if (low.endsWith('.csv')) {
         const text = await readText(f); const head = text.slice(0, 2000).toLowerCase();
         if (head.includes('listing number')) notes.push(ingestMls(parseMlsCsv(text), f.name));
@@ -385,7 +385,7 @@ function renderPage() {
     <label class="jobsel">Assignment <select data-act="pickjob" id="jobpick"><option value="">All assignments (start page)</option>${app.jobs.map(j => `<option value="${j.id}" ${j.id === J.id ? 'selected' : ''}>${esc(jobLabel(j))}</option>`).join('')}</select></label>
     <button class="btn" data-act="newjob">New assignment</button>
     ${(app.orders || []).some(o => !ORDER_DONE.includes(o.stage || 'New')) ? `<select data-act="fromorder" aria-label="Start from an order"><option value="">From an order…</option>${app.orders.filter(o => !ORDER_DONE.includes(o.stage || 'New')).sort((a, b) => String(b.orderDate || '').localeCompare(String(a.orderDate || ''))).map(o => `<option value="${o.id}">${esc(orderName(o))}</option>`).join('')}</select>` : ''}
-    <button class="btn" data-act="backup" title="Save this assignment to a file">Back up</button>
+    <button class="btn" data-act="backup" title="Save this assignment to a file">Back up</button><label class="btn" title="Bring back an assignment from your Appraisal Assistant daily backup (.zip) or a Comp genie backup – as a copy, nothing here is changed">Restore from a backup…<input type="file" accept=".zip,.gz,.json" data-act="files" hidden></label>
     ${app.confirm === 'deljob' ? `<span class="confirm">Delete “${esc(J.name)}”? <button class="btn danger solid" data-act="deljob-yes">Delete</button><button class="btn" data-act="cancel">Keep</button></span>` : `<button class="btn danger" data-act="deljob">Delete</button>`}
   </header>
   ${ARCH.loaded ? '' : `<section class="card notice"><b>Load your comp archive${app.jobs.some(j => j.comps.length) ? ' in this browser' : ' once'}.</b> ${app.jobs.some(j => j.comps.length) ? 'Each browser (Chrome, Firefox, Edge) keeps its own copy, and this one has none yet. ' : ''}Drop <i>Comp Archive.json.gz</i> and <i>CORT Sales.csv</i> anywhere on this page (or <label class="link">choose it<input type="file" multiple data-act="files" hidden></label>). It is saved on this computer only; nothing is uploaded.</section>`}
