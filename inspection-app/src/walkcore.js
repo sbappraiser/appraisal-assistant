@@ -23,8 +23,8 @@ async function wcamOpen(o) {   // o: { to(): label, chips(): [{k, t, on}], onChi
     <div class="wcam-msg" hidden></div>
     <div class="wcam-bot">
       <label class="btn wcam-ipad">iPad camera<input type="file" accept="image/*" capture="environment" hidden></label>
-      <button class="wcam-shut" aria-label="Take the photo"><span></span></button>
-      <button class="btn primary wcam-done">Done <small class="wcam-n"></small></button>
+      <div class="wcam-right"><button class="wcam-shut" aria-label="Take the photo"><span></span></button>
+      <button class="btn primary wcam-done">Done <small class="wcam-n"></small></button></div>
     </div><div class="wcam-flash"></div>`;
   document.body.appendChild(el); WCAM.el = el; wcamLabels();
   el.querySelector('.wcam-done').onclick = () => wcamClose();

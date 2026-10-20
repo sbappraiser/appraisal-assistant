@@ -497,3 +497,9 @@ Decisions (her, Oct 19–20): "Exterior of dwelling" instead of left/right/side 
 - Dictate parser: "public street / private road" → Primary access; "access is typical / not typical" → Access typical for market.
 - Interview place reminds her: pause listening during the owner conversation unless they agree to be recorded (California all-party consent), then dictate a summary ("Owner reports …").
 - Tested in Chromium with a fake camera and a mock speech recognizer (pause/restart, headings, photos to slots, sketch photos filed on return, square fill, other end, inside). Needs her field test on the iPad: in-app camera quality, listening reliability with a Bluetooth mic, Safari permissions.
+
+- 6x (Oct 20 2026, her first try): hands-free listening got many words wrong and the roof/wall items were not understood.
+  - Talk now defaults to the KEYBOARD microphone (more accurate; localStorage uad-wk-talk = keyboard | listen; switch on the tab). Talk focuses the place's note box.
+  - Checklist questions can be answered with one tap (chips; a picker when more than 9 choices; Yes/No for yes-no) – wkNeedHtml / wkAnswer write straight to the field.
+  - Dictate parser (both tabs): "<field name> <answer>" for every one/yes-no/multi/count field on the dictation tabs (dkLabelAnswers: "Roof estimated age 10 to 20 years", "Roof condition typical wear and tear", "Converted area no", "Foundation material poured concrete"); component conditions with the part ("windows and foundation typical wear and tear", "all exterior components …", "stucco and trim damaged but functional"); "roof is visible / observable"; "roof is about 15 years old". A sentence that is only such an answer is not copied into the notes. Her 5 sample dictations sort exactly as before.
+  - Camera: shutter moved to the lower right, above Done (thumb).

@@ -142,13 +142,17 @@ function wkHear(t) {
 /* ---------- moving between places ---------- */
 function wkGo(key, quiet) { const ins = app.ins, w = wkData(ins); w.place = key; if (!quiet) { save(); wkRefresh(); window.scrollTo(0, 0); } if (wcamIsOpen()) wcamLabels(); }
 function wkNext() { const ins = app.ins, w = wkData(ins); const P = wkPlace(ins, w.place); const k = P.parent || P.key; const i = WK_ORDER.indexOf(k); wkGo(WK_ORDER[Math.min(WK_ORDER.length - 1, i + 1)]); }
+function wkMode() { try { return localStorage.getItem('uad-wk-talk') || 'keyboard'; } catch (e) { return 'keyboard'; } }
+function wkSetMode(m) { try { localStorage.setItem('uad-wk-talk', m); } catch (e) {} if (m === 'keyboard' && WSR.on) wsrStop(); }
+function wkTalk() { if (WSR.on) return wkListen(false); if (wkMode() === 'listen') return wkListen(true);
+  const ta = document.getElementById('wkNote'); if (ta) { ta.focus(); try { ta.setSelectionRange(ta.value.length, ta.value.length); } catch (e) {} toast('Now tap the 🎤 on the keyboard and talk. Tap Done on the keyboard when you finish.'); } }
 function wkListen(on) {
   WK.listen = on;
   if (on) { if (!wsrStart(wkHear, wkMicState)) { WK.listen = false; const ta = document.getElementById('wkNote'); if (ta) { ta.focus(); toast('Tap the microphone on the keyboard and talk – your words go to this place'); } } }
   else wsrStop(); wkMicState();
 }
 function wkMicState() {
-  const b = document.getElementById('wkMic'), it = document.getElementById('wkInterim'); if (b) { b.classList.toggle('on', !!WSR.on); b.querySelector('b').textContent = WSR.on ? 'Listening… tap to stop' : 'Talk'; }
+  const b = document.getElementById('wkMic'), it = document.getElementById('wkInterim'); if (b) { b.classList.toggle('on', !!WSR.on); b.querySelector('b').textContent = WSR.on ? 'Listening… tap to stop' : wkMode() === 'keyboard' ? 'Talk (keyboard 🎤)' : 'Talk'; }
   if (it) { it.textContent = WSR.on ? (WSR.interim || 'Say a place and "colon" to move: "Driveway colon concrete, 2 cars"…') : WSR.err === 'not allowed' ? 'Listening is not allowed – iPad Settings › Safari › Microphone › Allow (and Siri & Dictation on). Or use the keyboard microphone in the box below.' : ''; it.hidden = !it.textContent; }
 }
 function wkOpenCam() {
@@ -190,9 +194,10 @@ function renderWalk() {
     <div class="wk-head"><div><small>${esc(P.g === 'item' ? (wkPlace(ins, P.parent).t) : P.g)}</small><h2 id="wkTitle">${esc(P.t)}</h2></div><button class="btn" id="wkNext">Next place ›</button></div>
     <div class="wk-big">
       <button class="wk-b cam" id="wkCam">${CAM_SVG}<b>Photo</b></button>
-      <button class="wk-b mic ${WSR.on ? 'on' : ''}" id="wkMic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg><b>${WSR.on ? 'Listening… tap to stop' : 'Talk'}</b></button>
+      <button class="wk-b mic ${WSR.on ? 'on' : ''}" id="wkMic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg><b>${WSR.on ? 'Listening… tap to stop' : wkMode() === 'keyboard' ? 'Talk (keyboard 🎤)' : 'Talk'}</b></button>
       <button class="wk-b sk" id="wkSketch"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><path d="M4 20V8l8-4 8 4v12z"/><path d="M4 20h16"/></svg><b>Sketch</b></button>
     </div>
+    <div class="wk-mode"><span>Talk uses:</span><button class="wchip sm ${wkMode() === 'keyboard' ? 'on' : ''}" data-wkmode="keyboard">Keyboard microphone (more accurate)</button><button class="wchip sm ${wkMode() === 'listen' ? 'on' : ''}" data-wkmode="listen">Hands-free listening</button></div>
     <p class="wk-interim" id="wkInterim" hidden></p>
     <div id="wkBody">${wkBodyHtml(ins, P)}</div>
     <div class="wk-foot"><button class="btn primary" id="wkSort">Sort my notes into the inspection ›</button><span class="help">Your notes go to the 🎤 Dictate tab with each place as a heading: tap “1. Sort my notes”, check the list, then “2. Save to appraisal file”.</span></div>
@@ -210,7 +215,7 @@ function wkBodyHtml(ins, P) {
   return `${P.parent ? `<button class="btn sm wk-back" data-wkgo="${P.parent}">‹ ${esc(wkPlace(ins, P.parent).t)}</button>` : ''}
     ${(P.shots || []).length > 1 ? `<div class="wk-shots"><span>Photo of:</span>${P.shots.map(s => `<button class="wchip ${shot && s.k === shot.k ? 'on' : ''}" data-wkshot="${esc(s.k)}">${esc(s.t)}</button>`).join('')}</div>` : ''}
     ${photos.length ? `<div class="dk-strip wk-strip">${photos.map(p => `<button class="thumb ${p.required ? 'req' : ''}" data-view="${p.id}"><img data-pid="${p.id}" alt=""><span>${esc(p.label)}</span></button>`).join('')}</div>` : ''}
-    <div class="wk-check">${need.length || got.length ? `<b>Needed here</b>${need.map(x => `<div class="wk-need ${x.photo ? 'ph' : ''}">${x.photo ? '📷' : '•'} ${esc(x.label.replace(/ photo$/, ''))}${x.sev === 'Recommended' ? ' <small>(suggested)</small>' : ''}</div>`).join('')}${got.map(x => `<div class="wk-need ok">✓ ${esc(x.label)} <small>heard</small></div>`).join('')}` : `<div class="wk-need ok">✓ Nothing required is missing here${P.key === 'access' || P.key === 'front' || P.key === 'rear' ? '' : ''}</div>`}</div>
+    <div class="wk-check">${need.length || got.length ? `<b>Needed here</b>${need.map(x => wkNeedHtml(ins, x)).join('')}${got.map(x => `<div class="wk-need ok">✓ ${esc(x.label)} <small>heard</small></div>`).join('')}` : `<div class="wk-need ok">✓ Nothing required is missing here${P.key === 'access' || P.key === 'front' || P.key === 'rear' ? '' : ''}</div>`}</div>
     ${wkNotesHtml(ins, P, heard)}
     ${P.interview ? `<div class="row"><button class="btn" data-wktab="interview">Open the Interview tab</button></div>` : ''}
     ${P.sketch ? `<p class="help">Sketching around the house? Tap <b>Sketch</b>: the photo and talk buttons stay on the sketch, and the photos are labeled “Exterior of dwelling” (or Front / Rear – tap the label on the camera).</p>` : ''}`;
@@ -220,6 +225,24 @@ function wkNotesHtml(ins, P, heard) {
   return `<div class="wk-notes"><label><b>Notes for ${esc(P.t)}</b>${P.hint ? `<span class="help">${esc(P.hint)}</span>` : ''}
     <textarea class="txt" id="wkNote" rows="4" placeholder="Talk, or tap here and use the keyboard microphone">${esc(t)}</textarea></label>
     ${heard && heard.short.length ? `<div class="wk-heard"><b>I heard:</b> ${heard.short.map(esc).join(' · ')}</div>` : ''}</div>`;
+}
+/* a checklist line; a question can be answered right here with one tap (no dictation needed) */
+function wkFieldOf(ins, x) { const m = /^([a-z]+):([A-Za-z0-9]+)$/.exec(x.key || ''); if (m) { const sec = SECTIONS.find(s => s.id === m[1]); if (!sec) return null; for (const g of sec.groups) for (const f of g.fields) if (f.k === m[2]) return { f, d: ins.data[m[1]], sec: m[1] }; return null; }
+  const n = /^([a-zA-Z]+):([^:]+):([A-Za-z0-9]+)$/.exec(x.key || ''); if (n && LISTS[n[1]]) { const it = (ins.lists[n[1]] || []).find(i => i.id === n[2]); const f = it && LISTS[n[1]].fields.find(f => f.k === n[3]); if (f) return { f, d: it, list: n[1] }; } return null; }
+function wkNeedHtml(ins, x) {
+  const lab = esc(x.label.replace(/ photo$/, '')); const head = `${x.photo ? '📷' : '•'} ${lab}${x.sev === 'Recommended' ? ' <small>(suggested)</small>' : ''}`;
+  if (x.photo || x.sev !== 'Required') return `<div class="wk-need ${x.photo ? 'ph' : ''}">${head}</div>`;
+  const F = wkFieldOf(ins, x); if (!F) return `<div class="wk-need">${head}</div>`; const f = F.f;
+  let O = f.t === 'yn' ? [['__y', 'Yes'], ['__n', 'No']] : ['one', 'multi', 'sel'].includes(f.t) ? optsOf(f, F.d, ins) : null;
+  if (!O) return `<div class="wk-need">${head}</div>`;
+  const btns = O.length <= 9 ? O.map(([v, l]) => `<button class="wchip sm" data-wkans="${esc(x.key)}" data-v="${esc(v)}">${esc(l)}</button>`).join('')
+    : `<select class="txt" data-wkans="${esc(x.key)}"><option value="">Pick…</option>${O.map(([v, l]) => `<option value="${esc(v)}">${esc(l)}</option>`).join('')}</select>`;
+  return `<div class="wk-need q"><div>${head}</div><div class="wk-ans">${btns}</div></div>`;
+}
+function wkAnswer(ins, key, v) {
+  const F = wkFieldOf(ins, { key }); if (!F) return; const f = F.f; let val = v === '__y' ? true : v === '__n' ? false : v;
+  if (f.t === 'multi') { const cur = Array.isArray(F.d[f.k]) ? F.d[f.k] : []; F.d[f.k] = cur.includes(val) ? cur.filter(z => z !== val) : [...cur, val]; } else F.d[f.k] = val;
+  save(); wkRefresh(); toast(f.l + ': ' + (val === true ? 'Yes' : val === false ? 'No' : labelFor(f, val, F.d)));
 }
 function wkChooserHtml(ins, P) {
   const w = wkData(ins); const kids = wkKids(ins, P);
@@ -232,7 +255,7 @@ function wkChooserHtml(ins, P) {
   const iss = wkIssues(ins, P);
   return `${kids.length ? `<div class="wk-kids">${kids.map(k => { const st = wkStatus(ins, k); return `<button class="wk-stop ${st}" data-wkgo="${esc(k.key)}">${st === 'done' ? '✓ ' : ''}${esc(k.t)}</button>`; }).join('')}</div>` : ''}
     <p class="help">${kids.length ? 'Tap one to go back to it, or add another:' : 'Tap what you are looking at (or say it with a colon: “Patio colon…”):'}</p>${add}
-    ${iss.length ? `<div class="wk-check"><b>Still needed</b>${iss.slice(0, 10).map(x => `<div class="wk-need ${x.photo ? 'ph' : ''}">${x.photo ? '📷' : '•'} ${esc(x.label)}</div>`).join('')}${iss.length > 10 ? `<div class="wk-need">+ ${iss.length - 10} more</div>` : ''}</div>` : ''}`;
+    ${iss.length ? `<div class="wk-check"><b>Still needed</b>${iss.slice(0, 10).map(x => wkNeedHtml(ins, x)).join('')}${iss.length > 10 ? `<div class="wk-need">+ ${iss.length - 10} more</div>` : ''}</div>` : ''}`;
 }
 function wkRefresh(light) {
   if (app.tab !== 'walk') return; const main = $('#main'); if (!main) return;
@@ -242,11 +265,14 @@ function wkRefresh(light) {
 function bindWalk(root) {
   const ins = app.ins, w = wkData(ins);
   const on = (id, fn) => { const b = root.querySelector('#' + id); if (b) b.onclick = fn; };
-  on('wkCam', wkOpenCam); on('wkMic', () => wkListen(!WSR.on)); on('wkSketch', wkOpenSketch); on('wkNext', wkNext); on('wkSort', wkSort);
+  on('wkCam', wkOpenCam); on('wkMic', wkTalk); on('wkSketch', wkOpenSketch); on('wkNext', wkNext); on('wkSort', wkSort);
   root.querySelectorAll('[data-wkgo]').forEach(b => b.onclick = () => wkGo(b.dataset.wkgo));
   root.querySelectorAll('[data-wkshot]').forEach(b => b.onclick = () => { w.shot[w.place] = b.dataset.wkshot; save(); wkRefresh(); });
   root.querySelectorAll('[data-wklv]').forEach(b => b.onclick = () => { w.level = b.dataset.wklv; save(); wkRefresh(); });
   root.querySelectorAll('[data-wktab]').forEach(b => b.onclick = () => goTab(b.dataset.wktab));
+  root.querySelectorAll('button[data-wkans]').forEach(b => b.onclick = () => wkAnswer(ins, b.dataset.wkans, b.dataset.v));
+  root.querySelectorAll('select[data-wkans]').forEach(b => b.onchange = () => { if (b.value) wkAnswer(ins, b.dataset.wkans, b.value); });
+  root.querySelectorAll('[data-wkmode]').forEach(b => b.onclick = () => { wkSetMode(b.dataset.wkmode); wkRefresh(); });
   root.querySelectorAll('[data-lvtab]').forEach(b => b.onclick = () => { if (b.dataset.lvtab === 'attention') return goTab('attention'); goTab(b.dataset.lvtab, b.dataset.lvanchor || null, b.dataset.lvgroup || null); });
   const rf = root.querySelector('#dkLvRefresh'); if (rf) rf.onclick = () => wkRefresh();
   root.querySelectorAll('[data-wkadd]').forEach(b => b.onclick = () => { const c = b.dataset.wkadd, i = +c.slice(1); let key;

@@ -247,6 +247,49 @@ function dkLines(text) { return String(text || '').replace(/:[ \t]*\n+\s*/g, ': 
 function dkSpoken(text) {   // her taught words first; then spoken commands: "accept" ends a sentence, "scratch that" drops the sentence it is in
   return dkTeachApply(text).replace(/[^.!?\n]*\bscratch that\b[.!,]?/gi, '').replace(/\s*\baccept\b[.,!]?/gi, '.').replace(/\.(\s*\.)+/g, '.');
 }
+
+/* ---- "<field name> <answer>" and component conditions (6x) ---- */
+const dkNorm = x => ' ' + String(x || '').toLowerCase().replace(/\([^)]*\)/g, ' ').replace(/&/g, ' and ').replace(/[’']/g, '').replace(/(\d)\s*-\s*(\d)/g, '$1 to $2').replace(/[^a-z0-9+ ]+/g, ' ').replace(/\s+/g, ' ').trim() + ' ';
+const DK_NUMW = { one: '1', two: '2', three: '3', four: '4', five: '5', six: '6', ten: '10', twenty: '20', fifteen: '15', thirty: '30' };
+const dkNum = x => x.replace(/\b(one|two|three|four|five|six|ten|fifteen|twenty|thirty)\b/g, m => DK_NUMW[m]);
+const DK_COND = [[/ damaged (?:and |but )?(?:still )?functional /, 'DamagedAndFunctional'], [/ damaged (?:and )?(?:non ?functional|not functional|not working) /, 'DamagedAndNonfunctional'], [/ (?:new or like new|like new|brand new|new condition) /, 'NewOrLikeNew'], [/ no finish /, 'NoFinish'],
+  [/ (?:typical|normal|average) wear(?: and tear)? | wear and tear | typical condition | twt /, 'TypicalWearAndTear']];
+const DK_PARTS = [['front.roofCond', / roof /], ['front.wallsCond', / (?:exterior walls?|walls?|siding|stucco|trim) /], ['front.winCond', / windows? /], ['front.foundCond', / foundation /]];
+let DK_LABELS = null;
+function dkLabelFields() {
+  if (DK_LABELS) return DK_LABELS; const out = [];
+  SECTIONS.forEach(sec => { if (!DICT_TABS.includes(sec.id)) return; sec.groups.forEach(g => g.fields.forEach(f => { if (!['one', 'yn', 'multi', 'count'].includes(f.t) || f.link) return;
+    const lab = dkNorm(f.l).trim(); if (lab.length < 8 || /^(material|type|features|notes?|condition)$/.test(lab)) return; out.push({ key: sec.id + '.' + f.k, lab, f, sec: sec.id }); })); });
+  return (DK_LABELS = out.sort((a, b) => b.lab.length - a.lab.length));
+}
+function dkAnswer(f, rest) {
+  rest = dkNum(rest).replace(/^ (?:is|are|was|were|equals|of|about|approximately|around) /, ' ');
+  if (f.t === 'yn') { if (/^ (?:yes|yeah|yep|true|present|observable|observed|visible|typical) /.test(rest)) return [true]; if (/^ (?:no|none|nope|false|not) /.test(rest)) return [false]; return []; }
+  if (f.t === 'count') { const m = /^ (\d{1,2}) /.exec(rest); return m ? [+m[1]] : []; }
+  const O = (typeof optsOf === 'function' ? optsOf(f, {}) : f.o) || []; const hits = [];
+  if (O.some(o => o[0] === 'TypicalWearAndTear')) { const c = DK_COND.find(([rx]) => rx.test(rest.slice(0, 40))); if (c) return [c[1]]; }
+  if (O.some(o => o[0] === 'OneToTenYears')) { const m = / (\d{1,2})(?: to (\d{1,2}))? years?/.exec(rest), lt = / less than (?:a|1) years? | brand new | new roof /.test(rest); if (lt) return ['LessThanOneYear'];
+    if (m) { const y = +(m[2] || m[1]); return [y < 1 ? 'LessThanOneYear' : y <= 10 ? 'OneToTenYears' : y <= 20 ? 'TenToTwentyYears' : 'TwentyOrMoreYears']; } if (/ (?:20|twenty) (?:or more|plus)| over 20 /.test(rest)) return ['TwentyOrMoreYears']; }
+  const cand = O.map(([v, l]) => ({ v, n: [dkNorm(l), dkNorm(v.replace(/([a-z])([A-Z])/g, '$1 $2'))] })).sort((a, b) => Math.max(...b.n.map(x => x.length)) - Math.max(...a.n.map(x => x.length)));
+  let r = rest; for (let k = 0; k < 4; k++) { const c = cand.find(c => c.n.some(n => n.trim() && r.startsWith(n))); if (!c) break; hits.push(c.v); if (f.t !== 'multi') break; const n = c.n.find(n => n.trim() && r.startsWith(n)); r = r.slice(n.length - 1).replace(/^ (?:and|with|plus) /, ' '); }
+  return hits;
+}
+const DK_LBL_STOP = new Set('a an the is are was were and of from to with yes no not none years year old about approximately around roughly typical normal average wear tear condition roof walls wall exterior trim siding stucco windows window foundation components component parts all every visible observable observed viewed street like new damaged but functional nonfunctional non finish brand'.split(' '));
+function dkLabelAnswers(text, put) {
+  const full = new Set();
+  String(text || '').split(/[.;!?\n]+/).forEach(raw => { const sn = dkNorm(raw); if (sn.length < 6) return; const vocab = new Set(DK_LBL_STOP); let any = false;
+    const colon = /^\s*([^:]{2,30}):/.exec(raw); if (colon) dkNorm(colon[1]).trim().split(' ').forEach(w => vocab.add(w));
+    if (/\b(?:owner|seller|tenant|agent)s? (?:reports?|reported|said|says|states?|mentioned)/.test(sn)) return;
+    let used = false;
+    dkLabelFields().forEach(L => { const i = sn.indexOf(' ' + L.lab + ' '); if (i < 0) return; const rest = sn.slice(i + L.lab.length + 1); const v = dkAnswer(L.f, rest); if (v.length) { v.forEach(x => put(L.key, x)); used = true; any = true;
+      L.lab.split(' ').forEach(w => vocab.add(w)); const O = (typeof optsOf === 'function' ? optsOf(L.f, {}) : L.f.o) || []; v.forEach(x => { const o = O.find(o => o[0] === x); if (o) dkNorm(o[1]).trim().split(' ').forEach(w => vocab.add(w)); String(x).toLowerCase().split(/(?=[a-z])/).forEach(w => vocab.add(w)); vocab.add(String(x).toLowerCase()); }); } });
+    const c = DK_COND.find(([rx]) => rx.test(sn)); if (c && !used) { any = true; const all = / (?:all|every) (?:exterior )?(?:components?|parts?)| exterior components? /.test(sn); DK_PARTS.forEach(([k, rx]) => { if (all || rx.test(sn)) put(k, c[1]); }); }
+    if (/ roof (?:is |was )?(?:observable|observed|visible|viewed) | roof observed /.test(sn) && !/ roof (?:is |was )?not /.test(sn)) put('front.roofObs', true);
+    const ra = / roof (?:is |was )?(?:about |approximately |around |roughly )?(\d{1,2})(?: to (\d{1,2}))? years? old /.exec(dkNum(sn)); if (ra) { any = true; const y = +(ra[2] || ra[1]); put('front.roofAge', y < 1 ? 'LessThanOneYear' : y <= 10 ? 'OneToTenYears' : y <= 20 ? 'TenToTwentyYears' : 'TwentyOrMoreYears'); }
+    if (/ roof (?:is |was )?(?:observable|observed|visible|viewed) | roof observed /.test(sn)) any = true;
+    if (any && dkNum(sn).trim().split(' ').every(w => !w || vocab.has(w) || /^\d+$/.test(w) || w.length < 2)) full.add(sn); });
+  return full;
+}
 function dictParse(text, ins) {
   text = dkLines(dkSpoken(text));
   const IX = dictIndex(); const T = dictTokens(text); const n = T.length;
@@ -423,11 +466,16 @@ function dictParse(text, ins) {
   // the rooms as they are in the inspection now
   if (ins) rooms.forEach(r => { const L = ins.lists[r.list] || []; const ex = dkExisting(ins, r);
     if (ex) { r.existingId = ex.id; r.name = LISTS[r.list].name(ex, L.indexOf(ex), L); } });
+  // 6x (Oct 20 2026): her way of going down the checklist – "<field name> <answer>" ("Roof estimated age 10 to 20 years",
+  // "Roof condition typical wear and tear", "Converted area no", "Exterior quality Q4"), plus component conditions said
+  // with the part ("windows and foundation typical wear and tear"). A sentence that is only that does not go to the notes.
+  const dkUsed = dkLabelAnswers(text, put);
   // leftovers: a sentence with words that were not used goes, as she said it, into the notes of the room or area she was in – nothing is lost
   const stAt = j => { let st = { room: null, tabs: [] }; for (const o of marks) { if (o.i > j) break; if (o.st) st = o.st; } return st; };
   const sub = t => !DICT_FILLER.has(t.s) && !DICT_FILLER.has(t.w) && !NOTE_NOISE.has(t.s) && !/^\d+$/.test(t.s) && t.s.length >= 3;
   const left = []; const noted = new Set();
   T.forEach((t, j) => { if (t.br || t.rep || t.item) return; const mk = marks.find(m => j >= m.i && j < m.i + m.len); if (mk && !mk.unused) return; if (!sub(t)) return;
+    if (dkUsed.has(dkNorm(sentText(sentOf[j])))) return;
     left.push(t.w); const k = sentOf[j]; if (noted.has(k)) return; noted.add(k); const st = stAt(j);
     if (mk && mk.negSec) put(NOTE_KEY[mk.negSec], sentText(k)); else if (st.room !== null && LISTS[rooms[st.room].list].fields.some(f => f.k === 'note')) put('L:' + rooms[st.room].list + '.note', sentText(k), st.room); else put(NOTE_KEY[st.tabs[0]] || 'front.note', sentText(k)); });
   { const fw = T.filter(t => !t.rep && !t.br).map(t => t.s).join(' ');
@@ -441,6 +489,7 @@ function dictParse(text, ins) {
     // 6w: property access – "public street / private road", "access is typical / not typical"
     if (/\bprivate (?:street|road|lane|drive)\b/.test(fw)) put('street.primaryAccess', 'PrivateStreet'); else if (/\bpublic (?:street|road)\b/.test(fw)) put('street.primaryAccess', 'PublicStreet');
     if (/\baccess (?:is )?(?:not|isnt|is not) typical|\batypical access|\baccess (?:is )?atypical/.test(fw)) put('street.accessTypical', false); else if (/\baccess (?:is )?typical|\btypical access\b/.test(fw)) put('street.accessTypical', true); }
+
   // her rule (Oct 2026): if she does not say a defect there is no defect → the defect questions are answered No (she can change them in the list)
   const DEFECT_RX = /\b(?:defects?|damaged?|cracks?|cracked|cracking|leaks?|leaking|rot|rotted|rotting|termites?|broken|peeling|deferred maintenance|needs? (?:repair|replacing|replacement)|water stains?|mold|mildew|missing|inoperable|not working)\b/;
   const defectSaid = sentW.some((ws, k) => { if (report.has(k)) return false; const w = ws.map(t => t.w).join(' ').replace(/\bno (?:visible |apparent |observed |known )?(?:defects?|damage|deferred maintenance|deficienc(?:y|ies))(?:[\s,]+(?:or |and )?(?:defects?|damage|deficienc(?:y|ies)|deferred maintenance))*\b/g, '').replace(/\b(?:deferred maintenance|defects?|damage|functional obsolescence)(?:[\s,:]+(?:and\s+)?(?:deferred maintenance|defects?|damage))*[\s,:]*(?:none|no|not observed|none observed|n\/?a)\b/g, ''); return DEFECT_RX.test(w); });
