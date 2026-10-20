@@ -242,3 +242,6 @@ small.rdays{display:block}
 .flagbox .flags li .btn{margin-left:6px;color:#000;font-weight:600}.flagdone{font-size:13px;margin:4px 0}.flagdone li{color:#1a1a1a}
 table.cmp tr.disrow th,table.cmp tr.disrow td{background:#fff36b}table.cmp tr.disrow td.srccell.on{background:#d4fcd4}
 table.comps tr.nextflag td{background:#ffe1a8!important;transition:background .3s}
+/* her ask Oct 20 2026: Comps considered column names stay at the top while she scrolls the list */
+#compsCard .tablewrap{max-height:calc(100vh - var(--toph,64px) - 24px);overflow:auto;border-top:1px solid var(--line)}
+table.comps thead th{position:sticky;top:0;z-index:3;background:#fff;box-shadow:0 1px 0 #9aa6b2}
