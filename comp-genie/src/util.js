@@ -46,7 +46,8 @@ function addrKey(no, street, unit) {
   const base = String(no || '').toLowerCase().replace(/-.*$/, '') + '|' + w.join(' ');
   return unit ? base + '#' + String(unit).toLowerCase() : base;
 }
-const apnKey = s => { const d = String(s || '').replace(/\D/g, ''); return d.length >= 8 ? d.slice(0, 9) : ''; };
+const apnKey = s => { const g = String(s || '').match(/\d+/g) || []; if (g.length === 3 && g.every(x => x.length <= 3)) return g.map(x => x.padStart(3, '0')).join('');   // CORT sometimes drops a zero: 069-172-27 = 069-172-027 (her note Oct 20 2026)
+  const d = g.join(''); return d.length >= 8 ? d.slice(0, 9) : ''; };
 const fmtApn = s => { const d = String(s || '').replace(/\D/g, ''); return d.length >= 8 ? `${d.slice(0, 3)}-${d.slice(3, 6)}-${d.slice(6, 9)}` : String(s || ''); };
 
 /* ---------------- distance and direction from the subject ---------------- */

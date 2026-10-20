@@ -132,6 +132,7 @@ const normCmp = (f, v) => {
   return String(v).toLowerCase().replace(/[^a-z0-9]+/g, '');
 };
 function sameVal(f, a, b) {
+  if (f.k === 'apn' && apnKey(a) && apnKey(a) === apnKey(b)) return true;   // 069-172-27 (CORT) = 069-172-027 (CRS)
   const x = normCmp(f, a), y = normCmp(f, b); if (x === null || y === null) return true;
   if (typeof x === 'number') { if (f.t === 'num6') return Math.abs(x - y) < 0.002; if (f.t === 'site') return Math.abs(x - y) <= Math.max(500, 0.03 * Math.max(x, y)); return Math.abs(x - y) <= Math.max(f.t === 'money' ? 1 : 0, 0.005 * Math.max(Math.abs(x), Math.abs(y))); }
   return x === y;
@@ -199,6 +200,11 @@ function lastRedOf(p) {
 function defaultOrder(c, f) {
   const a = archChosen(c), sale = currentSale(c); const matched = a && archMatches(a, sale);
   const recent = a && (matched || (a.v.saleDate && sale && sale.date && Math.abs(monthsBetween(a.v.saleDate, sale.date)) <= 24) || (!a.v.saleDate && a.entered && monthsBetween(a.entered, todayISO()) <= 24));
+  /* her rule (Oct 20 2026): address, city, ZIP, site size, sale price, sale date and year built default to the public record (CRS Data, then the recorded CORT deed);
+     lenders want them to match public records, with a comment when something differs. Room count, beds, baths, sq ft and condition keep the old order. */
+  if (['addr', 'city', 'zip', 'zip4', 'apn', 'siteSf', 'yearBuilt'].includes(f.k)) { const rest = (f.kind === 'site' || f.kind === 'phys' ? (recent ? ['arch', 'mls', 'pdf'] : ['mls', 'pdf', 'arch']) : ['arch', 'mls', 'pdf']); return ['crs', ...rest, 'cort']; }
+  if (f.k === 'salePrice' || f.k === 'saleDate') { const t = c.src.cort[c.cortPick || 0]; const cortOk = t && t.saleDate && sale && sale.date && Math.abs(monthsBetween(t.saleDate, sale.date)) <= 2;   // CRS only carries this sale when its last recorded sale is this one (srcVals)
+    return ['crs', ...(cortOk ? ['cort'] : []), ...(matched ? ['arch', 'mls', 'pdf'] : ['mls', 'pdf'])]; }
   switch (f.kind) {
     case 'sale': if (f.k === 'financing') return matched ? ['arch', 'crs', 'cort'] : ['crs', 'cort'];   // Oct 20 2026: MLS is not a good source for financing – only the recorded loan (CRS, CORT) or her own archive   // her note: the recorded loan (CRS mortgage history, CORT lender) shows the financing
       return matched ? ['arch', 'mls', 'pdf', 'cort', 'crs'] : ['mls', 'pdf', 'cort', ...(sale && sale.from === 'crs' ? ['crs'] : [])];   // a sale only in CRS (not in the MLS): its recorded sale
@@ -283,6 +289,8 @@ function compFlags(c, job) {
   const used = val(c, 'salePrice'); const Sv = srcVals(c);
   ['crs', 'cort'].forEach(s => { const rp = Sv[s] && Sv[s].salePrice; if (used.v && rp && used.src !== s && Math.abs(rp - used.v) > Math.max(1000, used.v * 0.002) && (s !== 'cort' || !sale || !Sv.cort.saleDate || Math.abs(monthsBetween(Sv.cort.saleDate, sale.date)) <= 2))
     F.push({ sev: 'warn', t: `Recorded price (${SRC[s].short}) ${money(rp)} differs from the price used, ${money(used.v)} (${SRC[used.src].short}) – explain in the report which is the effective sale price and why (credit, personal property, recording error)` }); });
+  if (used.v && ['crs', 'cort'].includes(used.src)) ['mls', 'pdf'].forEach(s => { const mp = Sv[s] && Sv[s].salePrice; if (mp && Math.abs(mp - used.v) > Math.max(1000, used.v * 0.002) && !F.some(x => /differs from the public record/.test(x.t)))
+    F.push({ sev: 'warn', t: `${SRC[s].short} sale price ${money(mp)} differs from the public record ${money(used.v)} (${SRC[used.src].short}) – the public record is used; explain the difference (e.g. negotiated ${money(mp)} with a credit for repairs, commission not taken, agent was the buyer)` }); });   // her rule: the public record is dominant
   { const lp = num(V(c, 'listPrice')) || num(V(c, 'origList')), pr = num(V(c, 'salePrice')), dm = num(V(c, 'cdom')) || num(V(c, 'dom')); if (pr && lp && pr > lp && /closed|sold|settled/i.test(String(V(c, 'status') || 'Closed'))) { const t = `Sold ${money(pr - lp)} over the list price (${(pr / lp * 100).toFixed(1)}%)`;
     if (dm !== null && dm >= 30) F.push({ sev: 'warn', t: t + ` after ${dm} days on market – call the agent to find out why` }); else F.push({ sev: 'info', t: t + (dm !== null ? ` in ${dm} days on market` : '') + (dm !== null && dm <= 14 ? ' – likely multiple offers' : '') }); } }
   const dom = V(c, 'dom'), cdom = V(c, 'cdom'); if (dom && cdom && cdom > dom + 30) F.push({ sev: 'info', t: `Relisted: ${dom} days on this listing, ${cdom} cumulative` });
@@ -290,6 +298,10 @@ function compFlags(c, job) {
   { const ps = priorSales(c), cs = currentSale(c); const other = [...ps, ...(cs ? [{ date: cs.date, price: cs.price, src: cs.from }] : [])];   // a CORT line that another source agrees with (same date and price) is confirmed (Oct 20 2026)
     c.src.cort.forEach(t => { if (t.conf === null || t.conf >= 60) return; const ok = other.some(s => String(s.src || '').split('; ').some(x => !/^CORT/.test(x) && x !== 'cort') && s.date && t.saleDate && Math.abs(monthsBetween(s.date, t.saleDate)) <= 1 && (!t.salePrice || !s.price || Math.abs(s.price - t.salePrice) <= Math.max(1000, s.price * 0.01)));
       if (!ok) F.push({ sev: 'warn', t: `CORT line read with low confidence (${t.conf}) – check it against the scan ${t.file || ''}` }); }); }
+  { const Sv2 = srcVals(c); const m = Sv2.mls || Sv2.pdf, r = Sv2.crs; if (m && r) {   // her note: public-record rooms / beds / baths / sq ft are often wrong, MLS ones too – and an ADU or outbuilding is sometimes counted in
+    const dif = [['rooms', 'Room count'], ['beds', 'Bedrooms'], ['bathsTotal', 'Baths']].filter(([k]) => !blank(m[k]) && !blank(r[k]) && +m[k] !== +r[k] && !(c.pick && c.pick[k]) && blank((c.edit || {})[k])).map(([k, l]) => `${l}: MLS ${m[k]}, public record ${r[k]}`);
+    if (dif.length) F.push({ sev: 'info', t: dif.join(' · ') + ' – check (an ADU or outbuilding counted in?) and click the one to use' });
+    const dg = num(m.gla) && num(r.gla) ? Math.abs(num(m.gla) - num(r.gla)) : 0, ad = num(V(c, 'aduSf')) || num(V(c, 'otherSf')); if (dg > 100 && ad && Math.abs(dg - ad) <= Math.max(50, ad * 0.1)) F.push({ sev: 'warn', t: `The sq ft difference (${dg.toLocaleString()}) is about the ADU / outbuilding size (${ad.toLocaleString()}) – one source may include it` }); } }
   if (disagree(c, 'gla') && !(c.pick && c.pick.gla) && blank((c.edit || {}).gla)) F.push({ sev: 'info', t: 'Square footage differs between sources – click the one to use' });   // resolved once she picks a source or types hers
   const a = archChosen(c); if (a && sale && !archMatches(a, sale) && a.v.saleDate) F.push({ sev: 'info', t: `Your archive has this property from an earlier sale (${showDate(a.v.saleDate)}); its sale facts are not used. House facts from your record ${monthsBetween(a.v.saleDate, sale.date) <= 24 ? 'are used' : 'are older than 2 years, so MLS is used first'}` });
   if (job && job.subject && job.subject.eff && sale && sale.date && monthsBetween(sale.date, job.subject.eff) > 12) F.push({ sev: 'warn', t: 'Sale is more than 12 months before the effective date' });
