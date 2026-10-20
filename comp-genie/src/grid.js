@@ -238,8 +238,8 @@ const ARCH_SI = [[/^res(idential)?$/, 'Residential'], [/^(bsyrd|busy ?road|some 
   [/^(wtrfr|waterfront|nrwtr|near water|ocean|lake|creek)/, 'BodyOfWater'], [/^(adjprk|prklnd|park|adjacent park|nearpark)/, 'Park'], [/^(glfcse|golf)/, 'GolfCourse'], [/^(adjpwr|pwrln|power)/, 'OverheadElectricPowerTransmissionLine'],
   [/^(pubtrn|transit)/, 'PublicTransportationHub'], [/^(train|rail)/, 'RailLine'], [/^(schl|school|adjschl)/, 'School'], [/^(agri|farm)/, 'Agricultural'], [/^airport/, 'Airport'], [/^(hidens|high density|apts|apartments)/, 'HighDensityResidential']];
 const ARCH_LINE = [[/^(shrdrv|shared ?dr)/, 'primaryAccess', 'Shared driveway'], [/^(prvtln|private ?lane|pvtln)/, 'streetAccess', 'Private lane'], [/^(prvtrd|private ?road|pvtrd)/, 'streetAccess', 'Private road'],
-  [/^(drvesmn?t|driveway easement)/, 'easement', 'Driveway easement'], [/^(esmt|easement)/, 'easement', 'Easement'], [/^(fldzne?|flood ?zone|fldwy|floodway)/, 'hazard', 'Flood zone'],
-  [/^(interlot|interior lot)/, 'siteChar', 'Interior lot'], [/^(flaglot|flag lot)/, 'siteChar', 'Flag lot'], [/^(secondrow|second row)/, 'siteChar', 'Second row'], [/^(lotstoamenity)/, 'siteChar', 'Lots to amenity']];
+  [/^(drvesmn?t|driveway easement)/, 'easement', 'Driveway easement'], [/^(esmt|easement)/, 'easement', 'Easement'], [/^(fldzne?|fldzn|flood ?zone|fldwy|fldway|floodway)/, 'hazard', 'FEMA special flood hazard area'],
+  [/^(interlot|interior lot)/, 'siteChar', 'Other: Interior lot'], [/^(flaglot|flag lot)/, 'siteChar', 'Other: Flag lot'], [/^(secondrow|second row)/, 'siteChar', 'Other: Second row'], [/^(lotstoamenity)/, 'siteChar', 'Other: Lots to amenity']];
 const SI_BAD = new Set(['BusyRoadway', 'IndustrialArea', 'OverheadElectricPowerTransmissionLine', 'RailLine', 'Airport', 'HighPressureGasLine', 'OilOrGasWell']), SI_GOOD = new Set(['BodyOfWater', 'GolfCourse', 'Park', 'GreenSpace']);
 function archLoc36(rating, factors) {
   const imp0 = /^b/i.test(rating) ? 'Beneficial' : /^a/i.test(rating) ? 'Adverse' : 'Neutral'; const L = [], lines = {};
@@ -269,6 +269,7 @@ function adjRows(J) { return J ? ADJ_ROWS.concat(customRows(J)) : ADJ_ROWS; }
 function lineOn(id, J) { const G = G0(J); if (GRID_KEEP.has(id)) return true; if (G.lines && id in G.lines) return !!G.lines[id];
   if (GRID_DEFAULT && GRID_DEFAULT.on && id in GRID_DEFAULT.on) return !!GRID_DEFAULT.on[id];
   if (/^cx_/.test(id)) return true;
+  if (id === 'hazard') return [subjFacts(J), ...usedComps(J).map(c => compFacts(c, J))].some(F => F.hazard && !/^none$/i.test(String(F.hazard).trim()));   // F-1: shows when the subject or any comp is in a hazard zone
   if (id === 'xferTerms') return usedComps(J).some(c => { const t = compFacts(c, J).xferTerms; return t && !/typically/i.test(t); });   // shows itself when a comp is REO, estate, short sale …
   if (id === 'carport') return [subjFacts(J), ...usedComps(J).map(c => compFacts(c, J))].some(F => +F.carport > 0);
   if (id === 'bsmtUnf') return [subjFacts(J), ...usedComps(J).map(c => compFacts(c, J))].some(F => +F.bsmtUnf > 0);
@@ -295,7 +296,7 @@ function subjFacts(J) {
   const f = { price: '', ppsf: '', src: 'Inspection ' + (I.inspDate ? showDate(I.inspDate) : ''), prox: '', terms: '', conc: '', contract: '', sale: '', dom: '',
     site: I.siteSf || num(crs.lotSf) || null, usable: I.usableAc ?? null, loc: I.loc || '', view: I.view || '', topo: I.topo || '', nbhd: I.nbhd || '', land: I.land || '',
     style: I.style || '', attach: I.attach || '', levels: I.levels ?? null, status: '', listPrice: '', origList: '', listDate: '', lastRed: '', redDays: '', cdom: '', project: I.project || '', hoa: I.hoa ?? null, hoaAmen: I.hoaAmen || '', landCommon: '', structure: I.structure || '', unitPos: I.unitPos || '', floor: I.floor ?? null, year: I.year || num(crs.yearBuilt) || null, q: I.q || '', c: I.c || '', rooms: I.rooms ?? null, beds: I.beds ?? null, full: I.full ?? null, half: I.half ?? null,
-    gla: I.gla ?? null, bsmt: I.bsmt ?? null, bsmtUnf: I.bsmtUnf ?? null, garage: I.garage ?? null, carport: I.carport ?? null, heat: I.heat || '', cool: I.cool || '', func: I.func || '', constr: I.constr || '', energy: I.energy || '', pool: I.pool || '', courts: I.courts || '', porch: I.porch || '', adu: I.adu || '', other: I.other || '' };
+    gla: I.gla ?? null, bsmt: I.bsmt ?? null, bsmtUnf: I.bsmtUnf ?? null, garage: I.garage ?? null, carport: I.carport ?? null, heat: I.heat || '', cool: I.cool || '', func: I.func || '', constr: I.constr || '', energy: I.energy || '', pool: I.pool || '', courts: I.courts || '', porch: I.porch || '', adu: I.adu || '', other: I.other || '', primaryAccess: I.primaryAccess || '', siteChar: I.siteChar || '', hazard: I.hazard || (J.subject.femaZone ? (/^(A|V)/i.test(J.subject.femaZone) ? 'FEMA special flood hazard area' : 'None') : (crs.fema ? (/^(A|V)/i.test(crs.fema) ? 'FEMA special flood hazard area' : 'None') : '')) };
   Object.entries(T).forEach(([k, v]) => { if (!blank(v)) f[k] = v; });
   f._fine = { q: fineOf(J, 'subj', 'q'), c: fineOf(J, 'subj', 'c') };
   f._own = landOwned(J, f); if (blank(f.landCommon)) f.landCommon = f._own ? 'No' : 'Yes';
@@ -314,6 +315,7 @@ function compFacts(c, J) {
     heat: String(g('heating') || '').trim() || (String(g('heatCool') || '').includes(' / ') ? String(g('heatCool')).split(' / ')[0].trim() : (/cool/i.test(g('heatCool') || '') ? '' : String(g('heatCool') || '').trim())), cool: coolText(g('cooling') || g('heatCool')) || (/no cooling listed/i.test(g('heatCool') || '') ? 'None listed' : '') };
   { const hc = val(c, 'heatCool'); if (hc.v && (hc.src === 'arch' || hc.src === 'edit') && !/ \/ /.test(String(hc.v))) { const A = archHC(hc.v); if (A.heat) F0.heat = A.heat; else if (!F0.heat) F0.heat = String(hc.v); if (A.cool) F0.cool = A.cool; } }   // her 2.6 Heating/Cooling line (FWA C/Air …) split into the 3.6 heating and cooling fields
   { const lr = val(c, 'locRating'); const E = c.edit || {}; if (lr.src === 'arch' && blank(E.locRating) && blank(E.locFactors)) { const A = archLoc36(g('locRating'), g('locFactors')); if (A.loc) F0.loc = A.loc; Object.entries(A.lines).forEach(([k, v]) => { if (blank(F0[k])) F0[k] = v; }); } }   // her 2.6 archive location in 3.6 terms
+  { if (blank(F0.hazard)) F0.hazard = hazardOf(c); }   // her note Oct 20 2026: FldZne / FldZn / FldWy / Fldway in her archive, or the CRS FEMA zone (X = none)
   adjRows(J).forEach(r => { const e = (c.edit || {})['grid_' + r[0]]; if (!blank(e)) F0[r[0]] = e; });   // her entries on lines with no source
   F0._fine = { q: fineOf(J, c.id, 'q'), c: fineOf(J, c.id, 'c') };
   if (g('viewRange') && F0.view && !/limited|panoram/i.test(F0.view)) F0.view += ' – ' + g('viewRange');
@@ -578,6 +580,9 @@ async function ingestInspection(files, name) {
     topo: (D.site.topo || []).join(', '), energy: (D.systems.renew || []).filter(x => x !== 'None').join(', '),
     pool: (L.waterFeatures || []).map(w => w.type).filter(Boolean).join(', ') || 'None', courts: (D.amenities.rec || []).filter(x => /court/i.test(x)).join(', '), porch: (L.outdoorLiving || []).map(o => o.type).filter(Boolean).join(', '),
     adu: [...(L.adus || []).map(a => a.ident || 'ADU'), ...(L.outbuildings || []).filter(o => o.real !== false).map(o => o.label || o.type)].filter(Boolean).join(', '), hasXml: !!xmlName,
+    primaryAccess: (() => { const v = (D.street || {}).primaryAccess; const o = typeof PICK !== 'undefined' && PICK.primaryAccess.opts.find(x => x[0] === v); return o ? o[1].replace(/ \(.*\)$/, '') : (v || ''); })(),
+    siteChar: ((D.site || {}).siteFeat || []).map(v => { const o = typeof PICK !== 'undefined' && PICK.siteChar.opts.find(x => x[0] === v); return o ? o[1].replace(/ \(.*\)$/, '') : v; }).join('; '),
+    hazard: ((D.site || {}).hazard || []).map(v => v === 'None' ? 'None' : v === 'FEMASpecialFloodHazardArea' ? 'FEMA special flood hazard area' : 'Other: ' + (v === 'Other' ? (D.site.hazardOther || 'Other') : v)).join('; '),
     sk: { gar: (T.gar || []).map(x => ({ name: x.name, sf: x.sf })), adu: (T.adu || []).map(x => ({ name: x.name, sf: x.sf })), ob: (T.ob || []).map(x => ({ name: x.name, sf: x.sf })), agNon: T.agNon || 0, bgNon: T.bgNon || 0 } };
   if (!s.addr && D.property.addr) s.addr = D.property.addr;
   if (!s.lat && crs.lat) { s.lat = crs.lat; s.lon = crs.lng; }
@@ -721,4 +726,17 @@ function archHC(raw) {
   if (!cool && /\bnone\b|noine|noen|none$|heat only|heating only|\bfans\b|ventltn|no heat/.test(t)) cool = 'None';
   if (!cool && (H.length || /^heat(ing)?$/.test(t)) && !/unk|\byes\b|other|mixed/.test(t)) cool = 'None';   // her rule (Oct 20 2026): only a heater listed (Wall Gas, Radiant, FWA) = no cooling
   return { heat, cool, known: !!(heat || cool) };
+}
+
+/* hazard zone for a comp: her 2.6 archive words first (location factors, verification source), then the CRS FEMA zone (A… / V… = special flood hazard area, X / B / C / D = none) */
+const FLOOD_WORDS = /\b(fld ?zne?|fldzn|fld ?wy|fldway|flood ?zone|flood ?way|floodway|fema flood|sfha)\b/i;
+const FIRE_WORDS = /\b(fire ?zne?|fire ?zone|vhfhsz|fire hazard|hi fire|high fire)\b/i;
+function hazardOf(c) {
+  const a = archChosen(c) || (c.src.arch || [])[0]; const words = a && a.v ? [a.v.locRating, a.v.locFactors, a.v.verification].filter(Boolean).join(' ; ') : '';
+  const out = [];
+  if (FLOOD_WORDS.test(words)) out.push('FEMA special flood hazard area');
+  if (FIRE_WORDS.test(words)) out.push('Other: Very high fire hazard severity zone');
+  const fz = String(V(c, 'fema') || '').trim().toUpperCase();
+  if (!out.length && fz) out.push(/^(A|V)/.test(fz) ? 'FEMA special flood hazard area' : 'None');
+  return out.join('; ');
 }
