@@ -169,3 +169,12 @@ tr.landon td { background: #eefbf3; }
 .pill.ver{font-weight:700;color:#b00000;border-color:#e3b3b3;background:#fff}
 
 button.nothumb{border:1px dashed #b8c2cc;cursor:pointer;padding:0}button.nothumb:hover{background:#fff3e0;opacity:1}
+
+/* grid line picker */
+.glines{border:1px solid var(--line);border-radius:12px;padding:8px 14px;margin:8px 0 12px;background:#fbfcfd}.glines summary{font-weight:700;cursor:pointer}
+.glgrid>div{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:2px 18px}.glsec{display:contents}.glsec>b{grid-column:1/-1;margin-top:8px;color:#a35a00}
+label.gl{display:flex;gap:6px;align-items:baseline;font-size:13px}label.gl small{color:#7a8794;font-size:11px;margin-left:auto}
+small.uadn{color:#7a8794;font-weight:400;font-size:10.5px}
+.sheetbg{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:50;display:flex;align-items:flex-start;justify-content:center;padding-top:8vh}.sheetbg .sheet{max-width:760px;width:94%}
+table.si td{padding:4px}table.si select{font-size:13px}
+td.subj input::placeholder{color:#2f3f4d;opacity:1}td.subj input:placeholder-shown{background:#f4f8fb}

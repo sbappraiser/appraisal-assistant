@@ -9,7 +9,7 @@ const SENS_LABEL = { gla: 'Living area', usableAc: 'Usable lot area', bed: 'Bedr
   pool: 'Pool', spa: 'Spa', pond: 'Pond', lake: 'Lake', tennis: 'Tennis court', sport: 'Sport court', qStep: 'Quality', qPct: 'Quality', cStep: 'Condition', cPct: 'Condition',
   viewStep: 'View', viewPct: 'View', landStep: 'Landscaping', aduSf: 'ADU / guest sq ft', aduBath: 'ADU / guest baths' };
 const PCT_KEYS = ['timePct', 'qPct', 'cPct', 'viewPct'];
-const rowsWith = k => ADJ_ROWS.filter(r => r[3] && (k === 'halfBath' ? r[4] === 'bath' : [].concat(r[4] || []).includes(k)));
+const rowsWith = k => adjRows(app.job).filter(r => r[3] && rowShown(r, app.job) && (k === 'halfBath' ? r[4] === 'bath' : [].concat(r[4] || []).includes(k)));
 function niceStep(x) { const p = Math.pow(10, Math.floor(Math.log10(x))); for (const m of [1, 2, 2.5, 5, 10]) if (m * p >= x) return m * p; return 10 * p; }
 const sdOf = a => { const m = a.reduce((s, x) => s + x, 0) / a.length; return Math.sqrt(a.reduce((s, x) => s + (x - m) ** 2, 0) / a.length); };
 const medOf = a => { const s = [...a].sort((x, y) => x - y); const n = s.length; return n % 2 ? s[(n - 1) / 2] : (s[n / 2 - 1] + s[n / 2]) / 2; };
@@ -39,7 +39,7 @@ function sensRun(J) {
   const P = medOf(prices), ppsf = medOf(F.filter(C => C.price && C.gla).map(C => C.price / C.gla).concat([0]).filter(Boolean)) || 0;
   const own = (c, row) => { const v = (G.cells[c.id] || {})[row[0]]; return blank(v) ? null : +v; };
   const rowAmt = (i, row) => { const o = own(used[i], row); if (o !== null) return o; return rateAmount(row, S, F[i], J) || 0; };
-  const adjAll = () => used.map((c, i) => (F[i].price || 0) + ADJ_ROWS.filter(r => r[3]).reduce((t, r) => t + rowAmt(i, r), 0));
+  const adjAll = () => used.map((c, i) => (F[i].price || 0) + adjRows(app.job).filter(r => r[3] && rowShown(r, app.job)).reduce((t, r) => t + rowAmt(i, r), 0));
   const base = adjAll().filter((x, i) => F[i].price); const out = { at: Date.now(), n: base.length, sd: sdOf(base), spread: Math.max(...base) - Math.min(...base), med: medOf(base), lines: [] };
   const R = G.rates;
   sensKeys(J).forEach(k => {

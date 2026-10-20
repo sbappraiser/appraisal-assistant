@@ -14,7 +14,7 @@ async function start() {
   const last = await DB.get('kv', 'lastJob');
   app.job = ((POP || CPOP) && app.jobs.find(j => j.id === (POP || CPOP).job)) || app.jobs.find(j => last && j.id === last.v) || app.jobs[0] || null;
   app.orders = await readOrders();
-  await archPhotoInit();
+  await archPhotoInit(); try { const gl = await DB.get('kv', 'gridLines'); if (gl && gl.v) GRID_DEFAULT = gl.v; } catch (e) {}
   const oq = new URLSearchParams(location.search).get('order');
   if (new URLSearchParams(location.search).get('embed')) document.body.classList.add('embed');   // inside the Appraisal Assistant's Comp genie tab
   if (CPOP) app.sel = CPOP.id;
@@ -593,6 +593,8 @@ async function backupJob() {
 /* ---------------- events ---------------- */
 function openComp(id) { app.sel = id; render(); const d = $('#detail'); if (d) d.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
 document.addEventListener('click', async e => {
+  { const lp = e.target.closest('[data-locpick]'); if (lp) { e.stopPropagation(); locPick(lp.dataset.locpick); return; } }
+  { const gl = e.target.closest('[data-glinedel]'); if (gl) { e.preventDefault(); const G = G0(app.job); G.custom = (G.custom || []).filter(x => x.id !== gl.dataset.glinedel); save(); render(); return; } }
   { const pp = e.target.closest('[data-pickphoto]'); if (pp) { e.stopPropagation(); const c = app.job && app.job.comps.find(x => x.id === pp.dataset.pickphoto); if (!c) return;
       if (archPhotoNames(c).length && AP.state !== 'ok') { await archPhotoConnect(); return; }
       const inp = document.createElement('input'); inp.type = 'file'; inp.multiple = true; inp.accept = '.zip,image/*';
@@ -703,6 +705,11 @@ document.addEventListener('click', async e => {
       app.revOpen = true; REVLOG.push({ id: 'r' + Date.now().toString(36), text: t.trim(), word: (($('#revWord') || {}).value || '').trim(), client: (($('#revClient') || {}).value || '').trim(), added: todayISO(), on: true }); await revSave();
       if (app.pre && app.pre.job === app.job.id) await precheckRun(app.job, app.pre.wantExport); renderKeepFocus(); toast('Added – every pre-check will remind you'); break; }
     case 'archphotos': await archPhotoConnect(); break;
+    case 'glopen': app.glOpen = !app.glOpen; break;
+    case 'gladd': { const n = ($('#glNew') || {}).value; const nm = String(n || '').trim().slice(0, 36); if (!nm) { toast('Type the name of your line first'); break; } const G = G0(app.job); G.custom = G.custom || [];
+      const id = 'cx_' + uid().slice(0, 8); G.custom.push({ id, name: nm, section: ($('#glSec') || {}).value || 'Amenities' }); G.lines = G.lines || {}; G.lines[id] = true; app.glOpen = true; save(); render(); toast('Line “' + nm + '” added – type each comp’s entry on it'); break; }
+    case 'glsave': { const G = G0(app.job); const on = {}; adjRows(app.job).forEach(r => { on[r[0]] = lineOn(r[0], app.job); }); GRID_DEFAULT = { on, custom: (G.custom || []).map(x => ({ ...x })) }; await DB.put('kv', { id: 'gridLines', v: GRID_DEFAULT }); toast('Saved as your default – new assignments start with these lines'); break; }
+    case 'glreset': { const G = G0(app.job); delete G.lines; if (GRID_DEFAULT && GRID_DEFAULT.custom) { G.custom = G.custom || []; GRID_DEFAULT.custom.forEach(x => { if (!G.custom.some(y => y.id === x.id)) G.custom.push({ ...x }); }); } save(); render(); toast('Back to your default lines'); break; }
     case 'gridall': { const J = app.job; const ord = !J.comps.some(c => c.use) || gridInDateOrder(J); let n = Math.max(0, ...J.comps.map(c => c.use || 0));
       const add = J.comps.filter(c => !c.use && !c.notUsed).sort(compOrder); add.forEach(c => { c.use = ++n; }); if (ord) gridDateOrder(J); save(); render();
       toast(`${add.length} comp${add.length === 1 ? '' : 's'} put on the grid` + (ord ? ' in closing-date order (comp 1 = the most recent)' : ' after the ones you numbered') + '. Remove takes one off and lists it under Analyzed – not used.', 7000); break; }
@@ -755,6 +762,7 @@ document.addEventListener('change', async e => {
   if (t.dataset.gvt) { const G = G0(app.job); G.viewT = G.viewT || {}; const w = t.dataset.gvt; if (t.value === '') { delete G.viewT[w]; } else { G.viewT[w] = +t.value; vtRemember(app.job, w, +t.value); } save(); renderKeepFocus(); return; }
   if (t.dataset.gfine) { const G = G0(app.job); G.fine = G.fine || {}; const [who, k] = t.dataset.gfine.split('|'); G.fine[who] = G.fine[who] || {}; G.fine[who][k] = t.value; save(); renderKeepFocus(); return; }
   if (t.dataset.gok !== undefined) { const G = G0(app.job); G.ok = G.ok || {}; const v = t.value.trim(); if (v) G.ok[t.dataset.gok] = v; else delete G.ok[t.dataset.gok]; save(); renderKeepFocus(); return; }
+  if (t.dataset.gline) { const G = G0(app.job); G.lines = G.lines || {}; G.lines[t.dataset.gline] = t.checked; save(); render(); return; }
   if (t.dataset.gfact) { const [cid, row] = t.dataset.gfact.split('|'); const c = app.job.comps.find(x => x.id === cid); if (!c) return;
     if (!wbEquals(app.job, cid, row, t.value, true)) wbFactSet(app.job, c, row, t.value); save(); renderKeepFocus(); return; }
   if (t.dataset.gadj && /^\s*=/.test(t.value)) { const [cid, row] = t.dataset.gadj.split('|'); if (wbEquals(app.job, cid, row, t.value, false)) { save(); renderKeepFocus(); return; } }

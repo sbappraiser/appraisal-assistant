@@ -16,7 +16,7 @@ const sup = v => v > 0 ? 'inferior' : 'superior';   // a plus adjustment means t
 function drTier(J, who, k, F) { const r = String(F[k] || '').toUpperCase().match(/[QC][1-6]/); if (!r) return ''; return fineOf(J, who, k) + ' ' + r[0]; }
 function drOverall(t) { const p = t.price || 1, n = t.net / p; return Math.abs(n) <= 0.03 ? 'similar to the subject overall' : Math.abs(n) <= 0.07 ? 'fairly similar to the subject overall' : n > 0 ? 'inferior to the subject overall' : 'superior to the subject overall'; }
 function drComp(J, c, t) {
-  const S = subjFacts(J), C = compFacts(c, J); const A = id => { const r = ADJ_ROWS.find(x => x[0] === id); return r ? (cellAmount(J, c, r).v || 0) : 0; };
+  const S = subjFacts(J), C = compFacts(c, J); const A = id => { const r = adjRows(J).find(x => x[0] === id); return r ? (cellAmount(J, c, r).v || 0) : 0; };
   const st = String(V(c, 'status') || 'Closed'); const listing = /active|pending|contingent|coming/i.test(st);
   const s = []; const addr = compTitle(c);
   s.push(`${addr} is ${listing ? `${/pending|contingent/i.test(st) ? 'a pending sale' : 'an active listing'}, and it is ` : ''}${drOverall(t)}.`);

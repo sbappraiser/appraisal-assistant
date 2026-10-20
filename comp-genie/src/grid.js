@@ -20,6 +20,10 @@ const ADJ_ROWS = [
   ['contract', 'Contract date', 'Sales and listing', 'ContractDate'],
   ['sale', 'Sale date (market conditions)', 'Sales and listing', 'SaleDate', 'timePct'],
   ['dom', 'Days on market', 'Sales and listing', null],
+  ['stl', 'Sale-to-list price ratio', 'Sales and listing', 'SaleToListPriceRatio'],
+  ['rights', 'Property rights appraised', 'Sales and listing', 'PropertyRightsAppraised'],
+  ['ownRights', 'Ownership rights conveyed', 'Sales and listing', 'OwnershipRightsConveyed'],
+  ['xferTerms', 'Ownership transfer terms', 'Sales and listing', 'PropertyOwnershipTransferTerms'],
   ['cdom', 'Cumulative days on market', 'Sales and listing', null],
   ['lastRed', 'Last price reduction', 'Sales and listing', null],
   ['project', 'Project name', 'Project (HOA)', null],
@@ -33,6 +37,17 @@ const ADJ_ROWS = [
   ['usable', 'Usable Lot Area/Utility', 'Site', 'OTHER', 'usableAc', 'Usable Lot Area/Utility'],
   ['land', 'Landscaping', 'Site', 'OTHER', ['landStep'], 'Landscaping'],   // her SFREP template needs an Add Other row named exactly "Landscaping"
   ['topo', 'Topography', 'Site', 'Topography'],
+  ['siteChar', 'Site characteristics', 'Site', 'SiteCharacteristic'],
+  ['drain', 'Site drainage', 'Site', 'SiteDrainage'],
+  ['waterFront', 'Water frontage', 'Site', 'WaterFrontage'],
+  ['streetAccess', 'Street access and surface', 'Site', 'PropertyStreetAccessAndSurface'],
+  ['primaryAccess', 'Primary access', 'Site', 'PropertyPrimaryAccess'],
+  ['easement', 'Easement', 'Site', 'Easement'],
+  ['hazard', 'Hazard zone', 'Site', 'HazardZone'],
+  ['zoning', 'Zoning compliance', 'Site', 'ZoningCompliance'],
+  ['envCond', 'Apparent environmental condition', 'Site', 'ApparentEnvironmentalCondition'],
+  ['restrict', 'Property restriction', 'Site', 'PropertyRestriction'],
+  ['native', 'Native American lands', 'Site', 'NativeAmericanLands'],
   ['year', 'Year built', 'Dwelling', 'YearBuilt'],
   ['style', 'Design (style)', 'Dwelling', 'DwellingStyle'],
   ['attach', 'Attached / detached', 'Dwelling', 'AttachedOrDetached', 'attach'],
@@ -41,18 +56,38 @@ const ADJ_ROWS = [
   ['unitPos', 'Unit location (interior / corner / end)', 'Dwelling', 'CornerUnit', 'unitPos'],
   ['floor', 'Floor (unit level)', 'Dwelling', 'LivingUnitFloorNumber'],
   ['energy', 'Energy efficient features', 'Dwelling', 'EnergyEfficientAndGreenFeatures'],
+  ['constr', 'Construction method', 'Dwelling', 'ConstructionMethod'],
+  ['disaster', 'Disaster mitigation features', 'Dwelling', 'DisasterMitigationFeatures'],
+  ['heat', 'Heating', 'Dwelling', 'HeatingSystem'],
+  ['cool', 'Cooling (air conditioning)', 'Dwelling', 'CoolingSystem', 'cool'],
   ['beds', 'Bedrooms', 'Dwelling', 'LivingUnitBedroomCount', 'bed'],
   ['baths', 'Baths (full / half)', 'Dwelling', 'LivingUnitBathroomCount', 'bath'],
   ['gla', 'Living area above grade (sq ft)', 'Dwelling', 'LivingUnitStandardFinishedAreaAboveGrade', 'gla'],
-  ['bsmt', 'Below grade finished (sq ft)', 'Dwelling', 'LivingUnitStandardFinishedAreaBelowGrade'],
+  ['bsmt', 'Below grade finished (sq ft)', 'Dwelling', 'LivingUnitStandardFinishedAreaBelowGrade', 'bsmtFin'],
+  ['bsmtUnf', 'Below grade unfinished (sq ft)', 'Dwelling', 'LivingUnitUnfinishedAreaBelowGrade', 'bsmtUnf'],
+  ['agUnf', 'Above grade unfinished (sq ft)', 'Dwelling', 'LivingUnitUnfinishedAreaAboveGrade'],
+  ['nsAbove', 'Non-standard finished above grade (sq ft)', 'Dwelling', 'LivingUnitNonStandardFinishedAreaAboveGrade'],
+  ['nsBelow', 'Non-standard finished below grade (sq ft)', 'Dwelling', 'LivingUnitNonStandardFinishedAreaBelowGrade'],
+  ['nonCont', 'Non-continuous finished area', 'Dwelling', 'NonContinuousFinishedArea'],
+  ['gba', 'Gross building finished area', 'Dwelling', 'GrossBuildingFinishedArea'],
+  ['disab', 'Features for individuals with disabilities', 'Dwelling', 'LivingUnitFeaturesForIndividualsWithDisabilities'],
+  ['window', 'Window surface area', 'Dwelling', 'WindowSurfaceArea'],
+  ['volume', 'Total dwelling volume', 'Dwelling', 'TotalDwellingVolume'],
+  ['mhWidth', 'Manufactured home width', 'Dwelling', 'ManufacturedHomeWidth'],
+  ['backToBack', 'Rowhouse / townhouse back-to-back', 'Dwelling', 'RowhouseTownhouseBackToBack'],
+  ['rowLoc', 'Rowhouse / townhouse location', 'Dwelling', 'RowhouseTownhouseLocation'],
   ['q', 'Overall quality', 'Dwelling', 'OverallQualityRating', ['qStep', 'qPct']],
   ['c', 'Overall condition', 'Dwelling', 'OverallConditionRating', ['cStep', 'cPct']],
+  ['func', 'Functional utility (functional issues)', 'Dwelling', 'FunctionalIssues'],
   ['porch', 'Porch / patio / deck', 'Amenities', 'OutdoorLivingAmenity'],
   ['pool', 'Water features (pool / spa / pond / lake)', 'Amenities', 'WaterFeaturesAmenity', ['pool', 'spa', 'pond', 'lake']],
   ['courts', 'Tennis / sport court', 'Amenities', 'OutdoorAccessoryAmenity', ['tennis', 'sport']],
   ['adu', 'ADU / guest house / outbuildings', 'Amenities', 'Outbuilding', ['aduSf', 'aduBath', 'aduHalf']],
+  ['aduLoc', 'ADU location', 'Amenities', 'AccessoryDwellingUnitLocation'],
+  ['wholeHome', 'Whole home amenities', 'Amenities', 'WholeHomeAmenity'],
   ['other', 'Other amenities', 'Amenities', 'MiscellaneousAmenity'],
-  ['garage', 'Vehicle storage', 'Amenities', 'VehicleStorage', 'space'],
+  ['garage', 'Vehicle storage – garage spaces', 'Amenities', 'VehicleStorage', 'space'],
+  ['carport', 'Vehicle storage – carport spaces', 'Amenities', 'VehicleStorage', 'cpSpace'],
 ];
 const LOT_UTILITY = 'Usable Lot Area/Utility';      // her exact SFREP template "Add Other" row name (must match letter for letter)
 const RATES = { gla: ['$ per sq ft', 'subject − comp sq ft × rate'], usableAc: ['$ per usable acre', 'subject − comp usable acres × rate'], bed: ['$ per bedroom', 'bedroom difference × rate'],
@@ -130,14 +165,20 @@ function startsUse(J) { const G = G0(J); const st = startsFor(J); G.rateFrom = G
   return n; }
 
 RATES.aduHalf = ['$ per ADU / guest half bath', 'half baths in the ADU / guest house (1.5 baths = 1 full + 1 half)']; RATES.attach = ['$ detached over attached', 'a detached unit is one step above an attached one'];
+RATES.cool = ['$ cooling over none', 'a comp with air conditioning when the subject has none (or the reverse) – one step'];
+RATES.bsmtUnf = ['$ per unfinished below-grade sq ft', 'subject − comp unfinished below-grade sq ft × rate'];
+RATES.bsmtFin = ['$ per finished below-grade sq ft', 'subject − comp finished below-grade sq ft × rate'];
+RATES.cpSpace = ['$ per carport space', 'carport space difference × rate'];
 RATES.unitPos = ['$ corner / end unit over interior', 'a corner or end unit is one step above an interior unit'];
 /* ---- property type of the grid (her request, Oct 19 2026): condo and PUD lines; info lines she checks before UAD 3.6 is filled ---- */
-const GRID_INFO = { status: 'UAD 3.6', listPrice: 'UAD 3.6', dom: 'UAD 3.6', origList: 'not in UAD 3.6 – for your check', listDate: 'not in UAD 3.6 – for your check', lastRed: 'not in UAD 3.6 – for your exposure time · from the MLS printout History · days to pending below the date', cdom: 'not in UAD 3.6 – for your check', project: 'UAD 3.6', hoa: 'UAD 3.6 (monthly fee)', nbhd: 'UAD 3.6 Neighborhood Name – the same field as the 2.6 neighborhood', loc: 'within the market area: busy street, flood zone, school, shared driveway, park, waterfront…' };
+const GRID_INFO = { status: 'UAD 3.6', listPrice: 'UAD 3.6', dom: 'UAD 3.6', origList: 'not in UAD 3.6 – for your check', listDate: 'not in UAD 3.6 – for your check', lastRed: 'not in UAD 3.6 – for your exposure time · from the MLS printout History · days to pending below the date', cdom: 'not in UAD 3.6 – for your check', project: 'UAD 3.6', hoa: 'UAD 3.6 (monthly fee)', nbhd: 'UAD 3.6 Neighborhood Name – the same field as the 2.6 neighborhood', loc: 'UAD SiteInfluence – ▾ pick: busy roadway, school, park, commercial, water … each with its impact (flood zone, easement, private road have their own lines)' };
 const STRUCTURES = ['Low-rise', 'Mid-rise', 'High-rise', 'Townhouse / rowhouse', 'Semi-detached'];
 function gridMode(J) { const G = G0(J); if (G.mode) return G.mode; const o = typeof orderOf === 'function' ? orderOf(J) : null; const pt = String((o && o.propType) || '');
   if (/condo/i.test(pt)) return 'condo'; if (/pud/i.test(pt)) return 'pud'; if (G.tier === 'condo' || (J.subject && J.subject.unit)) return 'condo'; return 'house'; }
 const landOwned = (J, F) => { const v = String(F.landCommon || '').trim(); if (v) return /^n/i.test(v); return gridMode(J) !== 'condo'; };   /* condo: site owned in common unless she says the unit owns land */
-function rowShown(row, J) { const id = row[0], m = gridMode(J);
+function rowShown(row, J) { return rowShownMode(row, J) && lineOn(row[0], J); }
+function rowShownMode(row, J) { const id = row[0], m = gridMode(J);
+  if (['backToBack', 'rowLoc'].includes(id)) return m !== 'house';
   if (['project', 'hoa', 'hoaAmen'].includes(id)) return m !== 'house';
   if (id === 'landCommon') return m !== 'house';
   if (['structure', 'unitPos', 'floor'].includes(id)) return m === 'condo';
@@ -152,7 +193,75 @@ const hasFeat = (F, k) => { const t = k === 'tennis' || k === 'sport' ? String(F
 
 /* days from the last price reduction to the contract (pending / contingent) date – her exposure-time measure */
 const redDaysOf = C => { const a = isoDate(C.lastRed), b = isoDate(C.contract); return a && b && b >= a ? Math.round((Date.parse(b) - Date.parse(a)) / 864e5) : null; };
-const G0 = J => { J.grid = J.grid || { rates: {}, cells: {}, weights: {}, subj: {}, value: null, note: '' }; return J.grid; };
+const G0 = J => { if (!J.grid) { J.grid = { rates: {}, cells: {}, weights: {}, subj: {}, value: null, note: '' }; if (typeof GRID_DEFAULT !== 'undefined' && GRID_DEFAULT && GRID_DEFAULT.custom) J.grid.custom = GRID_DEFAULT.custom.map(x => ({ ...x })); } return J.grid; };
+/* ---- Location (site influence) picker: UAD 3.6 SiteInfluenceType, each with its own impact and proximity (her request, Oct 20 2026) ----
+   Saved as text the grid already reads: "Neutral: Residential; Adverse: Busy roadway (Bordering)". Her 2.6 codes (BusyRd, AdjPrk, Schl …) are read too.
+   Flood zone, easements and private roads are not site influences in 3.6 – they have their own lines (Hazard zone, Easement, Street access). */
+const SI_TYPES = ['Residential', 'BusyRoadway', 'CommercialArea', 'IndustrialArea', 'HighDensityResidential', 'School', 'Park', 'GreenSpace', 'GolfCourse', 'BodyOfWater', 'Agricultural', 'Airport', 'RailLine', 'PublicTransportationHub',
+  'OverheadElectricPowerTransmissionLine', 'LocalDistributionLine', 'HighPressureGasLine', 'OilOrGasWell', 'StormwaterRetention', 'HistoricDistrict', 'Other'];
+const siLabel = t => t === 'OverheadElectricPowerTransmissionLine' ? 'Overhead power transmission line' : t.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/ (\w)/g, (m, a) => ' ' + a.toLowerCase()).replace('Or gas', 'or gas');
+const SI_OLD = { res: 'Residential', residential: 'Residential', busyrd: 'BusyRoadway', busyroad: 'BusyRoadway', busyroadway: 'BusyRoadway', fwynse: 'BusyRoadway', comm: 'CommercialArea', commercial: 'CommercialArea', schl: 'School', school: 'School', adjschl: 'School',
+  adjprk: 'Park', park: 'Park', nearpark: 'Park', golf: 'GolfCourse', wtrfr: 'BodyOfWater', nrwtr: 'BodyOfWater', train: 'RailLine', rail: 'RailLine', ind: 'IndustrialArea', industrial: 'IndustrialArea', powerline: 'OverheadElectricPowerTransmissionLine', pwrln: 'OverheadElectricPowerTransmissionLine' };
+function siParse(text) { const out = []; let imp = '';
+  String(text || '').split(/;|,(?![^(]*\))/).map(x => x.trim()).filter(Boolean).forEach(tok => { let m = tok.match(/^(Adverse|Beneficial|Neutral)\b\s*[:–-]?\s*(.*)$/i); let rest = tok; if (m) { imp = m[1][0].toUpperCase() + m[1].slice(1).toLowerCase(); rest = m[2]; }
+    const tail = rest.match(/\s*[–-]\s*(Adverse|Beneficial|Neutral)\s*$/i); if (tail) { imp = tail[1][0].toUpperCase() + tail[1].slice(1).toLowerCase(); rest = rest.slice(0, tail.index); }
+    if (!rest) return; const pm = rest.match(/\((Bordering|Offsite|Onsite)\)/i); const prox = pm ? pm[1][0].toUpperCase() + pm[1].slice(1).toLowerCase() : ''; rest = rest.replace(/\((Bordering|Offsite|Onsite)\)/i, '').trim();
+    const key = rest.toLowerCase().replace(/[^a-z]/g, ''); const ty = SI_TYPES.find(t => t.toLowerCase() === key || siLabel(t).toLowerCase().replace(/[^a-z]/g, '') === key) || SI_OLD[key] || 'Other';
+    out.push({ type: ty, impact: imp || 'Neutral', prox, other: ty === 'Other' ? rest : '' }); });
+  return out; }
+const siText = L => L.map(x => `${x.impact}: ${x.type === 'Other' ? (x.other || 'Other') : siLabel(x.type)}${x.prox ? ` (${x.prox})` : ''}`).join('; ');
+const locBtn = who => ` <button type="button" class="btn xs" data-locpick="${who}" title="Pick the site influences (UAD 3.6 list) with their impact">▾ pick</button>`;
+function locPick(who) {
+  const J = app.job; const G = G0(J); const c = who === 'subj' ? null : J.comps.find(x => x.id === who); const F = c ? compFacts(c, J) : subjFacts(J);
+  let L = siParse(F.loc); if (!L.length) L = [{ type: 'Residential', impact: 'Neutral', prox: '', other: '' }];
+  const bg = document.createElement('div'); bg.className = 'sheetbg';
+  const draw = () => { bg.innerHTML = `<div class="sheet"><h2>Location (site influence) – ${esc(c ? 'Comp ' + (c.use || '') + ' ' + compTitle(c) : 'Subject')}</h2>
+    <p class="help">UAD 3.6 site influences, each with its impact. Add as many as apply. Flood zone, easements and private roads have their own lines (Hazard zone, Easement, Street access) – tick them under ⚙ Grid lines.</p>
+    <table class="mini si">${L.map((x, i) => `<tr><td><select data-si="${i}|type">${SI_TYPES.map(t => `<option value="${t}" ${x.type === t ? 'selected' : ''}>${esc(siLabel(t))}</option>`).join('')}</select>${x.type === 'Other' ? `<input class="txt sm" data-si="${i}|other" maxlength="45" placeholder="Describe (45 characters)" value="${esc(x.other)}">` : ''}</td>
+      <td><select data-si="${i}|impact">${['Neutral', 'Beneficial', 'Adverse'].map(t => `<option ${x.impact === t ? 'selected' : ''}>${t}</option>`).join('')}</select></td>
+      <td><select data-si="${i}|prox"><option value="">proximity –</option>${['Onsite', 'Bordering', 'Offsite'].map(t => `<option ${x.prox === t ? 'selected' : ''}>${t}</option>`).join('')}</select></td><td><button class="btn xs" data-sidel="${i}">✕</button></td></tr>`).join('')}</table>
+    <div class="row"><button class="btn sm" data-siadd="1">+ Add an influence</button><span class="grow"></span><button class="btn primary" data-sisave="1">Use these</button><button class="btn" data-siclose="1">Cancel</button></div>
+    <p class="help">Shows on the grid as: <b>${esc(siText(L))}</b></p></div>`; };
+  draw(); document.body.appendChild(bg);
+  bg.addEventListener('change', e => { const d = e.target.dataset.si; if (!d) return; const [i, k] = d.split('|'); L[+i][k] = e.target.value; if (k === 'type') draw(); else bg.querySelector('.help b').textContent = siText(L); });
+  bg.addEventListener('click', e => { const t = e.target;
+    if (t.dataset.siadd) { L.push({ type: 'BusyRoadway', impact: 'Adverse', prox: '', other: '' }); draw(); }
+    else if (t.dataset.sidel) { L.splice(+t.dataset.sidel, 1); draw(); }
+    else if (t.dataset.siclose || t === bg) bg.remove();
+    else if (t.dataset.sisave) { const txt = siText(L); if (c) wbFactSet(J, c, 'loc', txt); else { if (txt) G.subj.loc = txt; else delete G.subj.loc; } bg.remove(); save(); render(); toast('Location (site influence) set: ' + (txt || 'none')); } });
+}
+/* ---- cooling from the MLS / archive heating-cooling text ---- */
+function coolText(t) { t = String(t || ''); if (!t.trim()) return ''; if (/no cooling|cooling: none|\/\s*none\b|\bno a\/?c\b/i.test(t)) return 'None';
+  const m = t.match(/central air|central|\bCAC\b|\bA\/?C\b|air condition\w*|heat pump|mini[- ]?split|ductless|evaporative|swamp|wall unit|window unit/i); return m ? m[0].replace(/^CAC$/i, 'Central air').replace(/^central$/i, 'Central air') : ''; }
+function coolHas(t) { t = String(t || '').trim(); if (!t) return null; if (/^(none|no)\b/i.test(t) || /none listed/i.test(t)) return 0; return 1; }
+/* ---- which lines this grid shows (her field picker, Oct 20 2026) ----
+   Every UAD 3.6 comparable adjustment line is in ADJ_ROWS; she ticks the ones this report needs. Her own "Add Other" lines
+   (Landscaping, Usable Lot Area/Utility, and any she adds) go to SFREP as Additional Comparison Line Items under her name for the line. */
+const GRID_BASE = new Set(['price', 'ppsf', 'src', 'prox', 'status', 'listPrice', 'origList', 'listDate', 'terms', 'conc', 'contract', 'sale', 'dom', 'cdom', 'lastRed', 'project', 'hoa', 'hoaAmen', 'landCommon',
+  'site', 'nbhd', 'loc', 'view', 'usable', 'land', 'topo', 'year', 'style', 'attach', 'levels', 'structure', 'unitPos', 'floor', 'energy', 'heat', 'cool', 'beds', 'baths', 'gla', 'bsmt', 'q', 'c', 'func', 'porch', 'pool', 'courts', 'adu', 'other', 'garage']);
+const GRID_KEEP = new Set(['price', 'sale', 'gla', 'q', 'c']);   // the grid needs these
+let GRID_DEFAULT = null;   // her saved default (kv 'gridLines'): { on: {id: true/false}, custom: [{id, name, section}] }
+function customRows(J) { const G = G0(J); return (G.custom || []).map(x => [x.id, x.name, x.section || 'Your own lines', 'OTHER', null, x.name]); }
+function adjRows(J) { return J ? ADJ_ROWS.concat(customRows(J)) : ADJ_ROWS; }
+function lineOn(id, J) { const G = G0(J); if (GRID_KEEP.has(id)) return true; if (G.lines && id in G.lines) return !!G.lines[id];
+  if (GRID_DEFAULT && GRID_DEFAULT.on && id in GRID_DEFAULT.on) return !!GRID_DEFAULT.on[id];
+  if (/^cx_/.test(id)) return true;
+  if (id === 'carport') return [subjFacts(J), ...usedComps(J).map(c => compFacts(c, J))].some(F => +F.carport > 0);
+  if (id === 'bsmtUnf') return [subjFacts(J), ...usedComps(J).map(c => compFacts(c, J))].some(F => +F.bsmtUnf > 0);
+  return GRID_BASE.has(id); }
+function gridLinesHTML(J) {
+  const G = G0(J); const rows = adjRows(J).filter(r => rowShownMode(r, J)); let sec = ''; const on = rows.filter(r => lineOn(r[0], J)).length;
+  const items = rows.map(r => { const head = r[2] !== sec ? `</div><div class="glsec"><b>${esc(r[2])}</b>` : ''; sec = r[2]; const lock = GRID_KEEP.has(r[0]);
+    const uad = r[3] === 'OTHER' ? `your own line – SFREP “Add Other” named “${esc(r[5])}”` : r[3] ? 'UAD ' + esc(r[3]) : 'information only (not a UAD adjustment line)';
+    return head + `<label class="check gl" title="${uad}"><input type="checkbox" data-gline="${r[0]}" ${lineOn(r[0], J) ? 'checked' : ''} ${lock ? 'disabled' : ''}> ${esc(r[1])}${/^cx_/.test(r[0]) ? ` <button type="button" class="lnk" data-glinedel="${r[0]}" title="Delete this line">✕</button>` : ''}<small>${r[3] === 'OTHER' ? 'your own line' : r[3] ? esc(r[3]) : 'info only'}</small></label>`; }).join('');
+  return `<details class="glines"${app.glOpen ? ' open' : ''}><summary data-act="glopen">⚙ Grid lines – pick the lines this report needs <small>(${on} of ${rows.length} shown)</small></summary>
+    <p class="help">Every UAD 3.6 adjustment line is here, under the UAD name it goes to in SFREP. Tick the ones this report needs; the rest stay hidden (and add nothing to the totals). Sale price, sale date, living area, quality and condition always show.</p>
+    <div class="glgrid"><div>${items}</div></div>
+    <div class="row"><input class="txt sm" id="glNew" maxlength="36" placeholder="Your own line, e.g. Workshop"><select id="glSec">${['Site', 'Dwelling', 'Amenities'].map(x => `<option>${x}</option>`).join('')}</select><button class="btn sm" data-act="gladd">+ Add your own line</button>
+      <span class="grow"></span><button class="btn sm" data-act="glsave" title="New assignments start with these lines ticked">Save as my default</button><button class="btn sm" data-act="glreset">Back to my default</button></div>
+    <p class="help">Your own lines go to SFREP as an “Add Other” line under the name you type (up to 36 characters); each comp's entry on it is up to 21 characters.</p></details>`;
+}
+
 const usedComps = J => J.comps.filter(c => c.use).sort((a, b) => a.use - b.use);
 const acOf = sf => sf ? Math.round(sf / 43560 * 100) / 100 : null;
 
@@ -162,7 +271,7 @@ function subjFacts(J) {
   const f = { price: '', ppsf: '', src: 'Inspection ' + (I.inspDate ? showDate(I.inspDate) : ''), prox: '', terms: '', conc: '', contract: '', sale: '', dom: '',
     site: I.siteSf || num(crs.lotSf) || null, usable: I.usableAc ?? null, loc: I.loc || '', view: I.view || '', topo: I.topo || '', nbhd: I.nbhd || '', land: I.land || '',
     style: I.style || '', attach: I.attach || '', levels: I.levels ?? null, status: '', listPrice: '', origList: '', listDate: '', lastRed: '', redDays: '', cdom: '', project: I.project || '', hoa: I.hoa ?? null, hoaAmen: I.hoaAmen || '', landCommon: '', structure: I.structure || '', unitPos: I.unitPos || '', floor: I.floor ?? null, year: I.year || num(crs.yearBuilt) || null, q: I.q || '', c: I.c || '', rooms: I.rooms ?? null, beds: I.beds ?? null, full: I.full ?? null, half: I.half ?? null,
-    gla: I.gla ?? null, bsmt: I.bsmt ?? null, garage: I.garage ?? null, energy: I.energy || '', pool: I.pool || '', courts: I.courts || '', porch: I.porch || '', adu: I.adu || '', other: I.other || '' };
+    gla: I.gla ?? null, bsmt: I.bsmt ?? null, bsmtUnf: I.bsmtUnf ?? null, garage: I.garage ?? null, carport: I.carport ?? null, heat: I.heat || '', cool: I.cool || '', func: I.func || '', constr: I.constr || '', energy: I.energy || '', pool: I.pool || '', courts: I.courts || '', porch: I.porch || '', adu: I.adu || '', other: I.other || '' };
   Object.entries(T).forEach(([k, v]) => { if (!blank(v)) f[k] = v; });
   f._fine = { q: fineOf(J, 'subj', 'q'), c: fineOf(J, 'subj', 'c') };
   f._own = landOwned(J, f); if (blank(f.landCommon)) f.landCommon = f._own ? 'No' : 'Yes';
@@ -176,7 +285,10 @@ function compFacts(c, J) {
     topo: g('topo') || '', nbhd: g('nbhd') || '', land: g('landscaping') || '', style: g('style') || '', attach: g('attach') || '', levels: num(g('stories')), status: g('status') || '', listPrice: num(g('listPrice')), origList: num(g('origList')), listDate: g('listDate') || '', lastRed: g('lastRed') || '', cdom: num(g('cdom')), project: g('project') || '', hoa: num(g('hoa')), hoaAmen: g('hoaAmen') || '', landCommon: g('landCommon') || '', structure: g('structure') || '', unitPos: g('unitPos') || '', floor: g('floor') ?? null, year: num(g('yearBuilt')), q: g('quality') || '', c: g('condition') || '',
     rooms: num(g('rooms')), beds: num(g('beds')), full: num(g('full')), half: num(g('half')), gla: num(g('gla')), bsmt: num(g('bsmtFin')), garage: num(g('garage')), energy: g('energy') || '',
     pool: [yes(g('pool')) ? 'Pool' : '', yes(g('spa')) ? 'Spa' : ''].filter(Boolean).join(', ') || (g('pool') && !yes(g('pool')) ? 'None' : ''), courts: [yes(g('tennis')) ? 'Tennis court' : '', yes(g('sport')) ? 'Sport court' : ''].filter(Boolean).join(', '), porch: g('porch') || '', adu: [g('adu'), g('guest'), g('accessory')].filter(Boolean).join('; '),
-    other: [g('horse') ? 'Horse facilities' : ''].filter(Boolean).join(', '), _id: c.id, aduSf: g('aduSf'), aduBaths: g('aduBaths') };
+    other: g('other') || [yes(g('horse')) ? 'Horse facilities' : ''].filter(Boolean).join(', '), _id: c.id, aduSf: g('aduSf'), aduBaths: g('aduBaths'),   // horse: the MLS says 'No' when the box is not ticked (it showed "Horse facilities" for every MLS comp)
+    carport: num(g('carport')), bsmtUnf: !blank(g('bsmtSf')) ? Math.max(0, (+g('bsmtSf')) - (+(g('bsmtFin') || 0))) : null,
+    heat: String(g('heating') || '').trim() || String(g('heatCool') || '').split(' / ')[0].trim(), cool: coolText(g('cooling') || g('heatCool')) || (/no cooling listed/i.test(g('heatCool') || '') ? 'None listed' : '') };
+  adjRows(J).forEach(r => { const e = (c.edit || {})['grid_' + r[0]]; if (!blank(e)) F0[r[0]] = e; });   // her entries on lines with no source
   F0._fine = { q: fineOf(J, c.id, 'q'), c: fineOf(J, c.id, 'c') };
   if (g('viewRange') && F0.view && !/limited|panoram/i.test(F0.view)) F0.view += ' – ' + g('viewRange');
   if (!blank(F0.aduSf) && F0.aduSf > 0) F0.adu = [F0.adu && F0.adu !== 'None' ? F0.adu : 'Living outbuilding', int(F0.aduSf) + ' sf', F0.aduBaths ? F0.aduBaths + ' bath' : ''].filter(Boolean).join(', ');
@@ -190,7 +302,7 @@ function showFact(k, v) {
   if (['contract', 'sale', 'listDate', 'lastRed'].includes(k)) return showDate(v);
   if (k === 'site') return fmt(FIELD.siteSf, v);
   if (k === 'usable') return (+v).toFixed(2) + ' ac';
-  if (['gla', 'bsmt'].includes(k)) return int(v);
+  if (['gla', 'bsmt', 'bsmtUnf', 'agUnf', 'nsAbove', 'nsBelow'].includes(k)) return int(v);
   return String(v);
 }
 /* the amount the rate gives, or null */
@@ -213,6 +325,10 @@ function rateAmount(row, S, C, J) {
   if (key === 'unitPos') { const a = goodness('unitPos', S), b = goodness('unitPos', C); x = a === null || b === null ? null : (a - b) * r; }
   if (key === 'attach') { const a = goodness('attach', S), b = goodness('attach', C); x = a === null || b === null ? null : (a - b) * r; }
   if (key === 'space') { const dd = d(S.garage, C.garage); x = dd === null ? null : dd * r; }
+  if (key === 'cpSpace') { const dd = d(S.carport || 0, C.carport); x = dd === null ? null : dd * r; }
+  if (key === 'bsmtFin') { const dd = d(S.bsmt || 0, C.bsmt); x = dd === null ? null : dd * r; }
+  if (key === 'bsmtUnf') { const dd = d(S.bsmtUnf || 0, C.bsmtUnf); x = dd === null ? null : dd * r; }
+  if (key === 'cool') { const a = coolHas(S.cool), b = coolHas(C.cool); x = a === null || b === null ? null : (a - b) * r; }
   if (key === 'timePct') { const eff = J.subject.eff; if (!C.sale || !eff || !C.price) return null; const m = monthsBetween(C.sale, eff); x = m === null ? null : C.price * r / 100 * m; }
   return x === null ? null : Math.round(x / 500) * 500;
 }
@@ -223,7 +339,7 @@ function cellAmount(J, c, row) {
 function compTotals(J, c) {
   const C = compFacts(c, J); let net = 0, gross = 0, lines = 0;
   // order as on the 3.6 grid (D-1 sample): Add Other rows first, then site, dwelling, units, quality/condition, amenities
-  ADJ_ROWS.filter(r => r[3] && rowShown(r, J)).sort((x, y) => (y[3] === 'OTHER') - (x[3] === 'OTHER')).forEach(r => { const a = cellAmount(J, c, r).v; if (a) { net += a; gross += Math.abs(a); lines++; } });
+  adjRows(J).filter(r => r[3] && rowShown(r, J)).sort((x, y) => (y[3] === 'OTHER') - (x[3] === 'OTHER')).forEach(r => { const a = cellAmount(J, c, r).v; if (a) { net += a; gross += Math.abs(a); lines++; } });
   const price = C.price || 0; return { price, net, gross, lines, adj: price + net, netPct: price ? net / price * 100 : 0, grossPct: price ? gross / price * 100 : 0, adjPsf: C.gla ? (price + net) / C.gla : null };
 }
 
@@ -234,25 +350,25 @@ function gridHTML(J) {
   const G = G0(J), S = subjFacts(J); const tot = used.map(c => compTotals(J, c)); const totAll = usedAll.map(c => compTotals(J, c));
   const inspNote = J.subject.insp ? `Subject from your inspection (${esc(J.subject.insp.file || 'workfile')}).` : 'Subject: drop your iPad <b>Workfile package</b> (.zip) on this page to fill the subject column from your inspection, or type the subject values in the grid.';
   let sec = '';
-  const rows = ADJ_ROWS.filter(WB_ROWS).filter(r => rowShown(r, J)).map(row => {
+  const rows = adjRows(J).filter(WB_ROWS).filter(r => rowShown(r, J)).map(row => {
     const [id, label, section, type] = row; const head = section !== sec ? `<tr class="grp"><th colspan="${2 + used.length}">${esc(section)}</th></tr>` : ''; sec = section;
     const sv = id === 'baths' ? [S.full, S.half].every(blank) ? '' : `${S.full ?? '–'} / ${S.half ?? 0}` : showFact(id, S[id]);
     const subjCell = ['price', 'ppsf', 'src', 'prox', 'dom', 'terms', 'conc', 'contract', 'sale', 'status', 'listPrice', 'origList', 'listDate', 'lastRed', 'redDays', 'cdom'].includes(id) ? `<td class="subj">${esc(sv)}</td>`
-      : `<td class="subj"><input class="txt sm" data-gsubj="${id}" value="${esc(blank(G.subj[id]) ? '' : G.subj[id])}" placeholder="${esc(sv || (id === 'usable' ? 'Measure it' : id === 'adu' ? 'e.g. Guest house 450 sf 1 bath' : ''))}">${id === 'q' || id === 'c' ? fineSel('subj', id, J) : id === 'view' ? vtSel('subj', J, S.view) : ''}</td>`;
+      : `<td class="subj"><input class="txt sm" data-gsubj="${id}" value="${esc(blank(G.subj[id]) ? '' : G.subj[id])}" placeholder="${esc(sv || (id === 'usable' ? 'Measure it' : id === 'adu' ? 'e.g. Guest house 450 sf 1 bath' : ''))}">${id === 'q' || id === 'c' ? fineSel('subj', id, J) : id === 'loc' ? locBtn('subj') : id === 'view' ? vtSel('subj', J, S.view) : ''}</td>`;
     const cells = used.map(c => { const C = compFacts(c, J);
       let shown = id === 'beds' && C.bedsBg ? `${C.beds} (${C.bedsBg} below grade)` : id === 'baths' ? ([C.full, C.half].every(blank) ? '' : `${C.full ?? '–'} / ${C.half ?? 0}`) : id === 'ppsf' ? (C.price && C.gla ? money(C.price / C.gla) : '') : showFact(id, C[id]);
       if (!WB_NOEDIT.includes(id)) { /* she can change any comp fact right on the grid (Oct 19 2026), not only in Workbook view */ const raw = id === 'usable' ? (blank(C.usable) ? '' : String(C.usable)) : wbFactText(id, C);
         shown = `<input class="txt sm fact" data-gfact="${c.id}|${id}" value="${esc(raw)}" placeholder="${id === 'usable' ? 'Measure it (ac)' : ''}" title="Type the comp's entry · = copies the subject · =2 copies comp 2">`; }
       else if (id === 'usable' && blank(C.usable)) shown = '<span class="measure">Measure it</span>'; else shown = esc(shown);
       if (id === 'lastRed') { const d = redDaysOf(C); shown += d !== null ? `<small class="muted rdays">${d} day${d === 1 ? '' : 's'} to pending</small>` : (C.lastRed ? '<small class="muted rdays">no contract date</small>' : ''); }
-      if (id === 'q' || id === 'c') shown += fineSel(c.id, id, J); if (id === 'view') shown += vtSel(c.id, J, C.view);
+      if (id === 'q' || id === 'c') shown += fineSel(c.id, id, J); if (id === 'view') shown += vtSel(c.id, J, C.view); if (id === 'loc') shown += locBtn(c.id);
       if (!type) return `<td>${shown}</td>`;
       const a = cellAmount(J, c, row);
       return `<td><div class="gval">${shown}</div><input class="txt sm adj ${a.own ? 'own' : a.v !== null ? 'auto' : ''}" data-gadj="${c.id}|${id}" value="${a.own ? a.v : ''}" placeholder="${a.v !== null && !a.own ? (a.v >= 0 ? '+' : '') + a.v.toLocaleString() : '$ adj'}" inputmode="decimal" title="${a.own ? 'Your amount – clear it to use the rate' : a.v !== null ? 'From your rate – type to override' : 'Type the adjustment'}"></td>`; }).join('');
     const bedAsk = id === 'beds' && blank(G.rates.bed) ? used.filter(c => { const C = compFacts(c, J); const a = capBeds(S.beds), b = capBeds(C.beds); return a !== null && b !== null && a !== b && blank((G.cells[c.id] || {}).beds); }) : [];
     const rk = row[4]; const rate = rk ? [].concat(rk === 'bath' ? ['bath', 'halfBath'] : rk).map(k => `<div class="grate"><label title="${esc(RATES[k][1])}">${esc(RATES[k][0])} <input class="txt xs" data-grate="${k}" value="${esc(blank(G.rates[k]) ? '' : G.rates[k])}" inputmode="decimal"></label>${G.rateFrom && G.rateFrom[k] && !blank(G.rates[k]) ? `<small class="from">${/ · /.test(G.rateFrom[k]) ? `from your starting points (${esc(G.rateFrom[k])})` : 'from ' + esc(G.rateFrom[k])}</small>` : ''}</div>`).join('') : '';
     const ask = bedAsk.length ? `<div class="bedask">${bedAsk.map(c => `Comp ${c.use} has ${compFacts(c, J).beds} bedroom${compFacts(c, J).beds === 1 ? '' : 's'}`).join(', ')} – what bedroom adjustment do you want? Type it per bedroom above, or in the comp's box.</div>` : '';
-    return head + `<tr${ask ? ' class="asking"' : ''}${GRID_INFO[id] ? ' class="info"' : ''}><th>${esc(label)}${GRID_INFO[id] ? `<br><small class="muted">${esc(GRID_INFO[id])}</small>` : ''}${id === 'structure' ? '<br><small class="muted">' + STRUCTURES.join(' · ') + '</small>' : id === 'unitPos' ? '<br><small class="muted">Interior · Corner · End</small>' : id === 'landCommon' ? '<br><small class="muted">Yes = no land owned · No = the unit owns land</small>' : ''}${rate}${ask}</th>${subjCell}${cells}</tr>`;
+    return head + `<tr${ask ? ' class="asking"' : ''}${GRID_INFO[id] ? ' class="info"' : ''}><th>${esc(label)}${type && type !== 'OTHER' && !GRID_INFO[id] ? `<br><small class="uadn" title="The UAD 3.6 line this goes to in SFREP">${esc(type)}</small>` : type === 'OTHER' ? `<br><small class="uadn">Add Other: “${esc(row[5])}”</small>` : ''}${GRID_INFO[id] ? `<br><small class="muted">${esc(GRID_INFO[id])}</small>` : ''}${id === 'structure' ? '<br><small class="muted">' + STRUCTURES.join(' · ') + '</small>' : id === 'unitPos' ? '<br><small class="muted">Interior · Corner · End</small>' : id === 'landCommon' ? '<br><small class="muted">Yes = no land owned · No = the unit owns land</small>' : ''}${rate}${ask}</th>${subjCell}${cells}</tr>`;
   }).join('');
   const sumRow = (label, fn, cls = '') => `<tr class="tot ${cls}"><th>${label}</th><td></td>${used.map((c, i) => `<td>${fn(tot[i], c)}</td>`).join('')}</tr>`;
   const adjs = totAll.map(t => t.adj).filter(Boolean); const lo = Math.min(...adjs), hi = Math.max(...adjs);
@@ -262,7 +378,7 @@ function gridHTML(J) {
     ${sumRow('Gross adjustment', t => `${money(t.gross)} <small class="${t.grossPct > GRID_LIMITS.gross ? 'over' : ''}">${t.grossPct.toFixed(1)}%</small>`)}
     ${sumRow('Adjusted sale price', t => `<b>${money(t.adj)}</b>${t.adjPsf ? `<br><small>${money(t.adjPsf)} / sq ft</small>` : ''}`, 'big')}</tbody></table></div>
     <div class="gsum"><div><span>Adjusted range (all comps)</span><b>${adjs.length ? money(lo) + ' – ' + money(hi) : '–'}</b></div><div><span>Median</span><b>${med ? money(med) : '–'}</b></div><div><span>Your value</span><b>${blank(G.value) ? '–' : money(G.value)}</b></div></div>`;
-  return `<h2>Adjustment grid <small>UAD 3.6 lines · your amounts</small></h2>${startsBar(J)}${wbBar(J, usedAll)}
+  return `<h2>Adjustment grid <small>UAD 3.6 lines · your amounts</small></h2>${startsBar(J)}${gridLinesHTML(J)}${wbBar(J, usedAll)}
     <p class="help">${inspNote} Type an amount in any cell (minus for a downward adjustment). Or type a rate once beside a line; cells without your own amount then use it (shown in grey). Clear a cell to go back to the rate. Usable Lot Area/Utility comes only from your archive or your measurement – blank comps say <span class="measure">Measure it</span>.</p>
     <div class="tablewrap"><table class="grid${lean ? ' wb' : ''}"><thead><tr><th></th><th>Subject<br><small>${esc(J.subject.addr || '')}</small></th>${used.map(c => `<th data-wbcol="${c.id}" class="${WB.cur === c.id ? 'cur' : ''}" title="Click to pick this comp for Ctrl+Shift+number or Ctrl+Z">Comp ${c.use}<br><small>${esc(compTitle(c))}</small>${gridMlsLink(c)}</th>`).join('')}</tr></thead>
     <tbody>${rows}
@@ -370,7 +486,7 @@ const sgn = a => (a < 0 ? '−' : '+') + money(Math.abs(a));
 const factText = (id, F) => id === 'baths' ? (blank(F.full) ? '?' : F.full + '/' + (F.half || 0)) : (showFact(id, F[id]) || '?');
 function gridReview(J) {
   const used = usedComps(J); const S = subjFacts(J); const G = G0(J); const out = []; const add = (key, sev, msg, extra) => out.push({ key, sev, msg, ok: G.ok && G.ok[key], ...(extra || {}) });
-  const rowOf = id => ADJ_ROWS.find(r => r[0] === id);
+  const rowOf = id => adjRows(J).find(r => r[0] === id);
   Object.keys(REVIEW_ROWS).forEach(id => { const row = rowOf(id); if (!row) return; const per = [];
     used.forEach(c => { const C = compFacts(c, J); const gs = goodness(id, S), gc = goodness(id, C); const a = cellAmount(J, c, row).v; const name = 'Comp ' + c.use;
       if (gs === null || gc === null) { if (a) per.push(null); return; }
@@ -403,7 +519,7 @@ function gridReview(J) {
   used.forEach(c => { const t = compTotals(J, c); const name = 'Comp ' + c.use; if (!t.price) return;
     if (t.grossPct > GRID_LIMITS.gross) add(`lim:g:${c.id}`, 'Limit', `${name}: gross adjustment ${t.grossPct.toFixed(1)}% is over ${GRID_LIMITS.gross}%.`, { limit: true });
     if (Math.abs(t.netPct) > GRID_LIMITS.net) add(`lim:n:${c.id}`, 'Limit', `${name}: net adjustment ${t.netPct.toFixed(1)}% is over ${GRID_LIMITS.net}%.`, { limit: true });
-    ADJ_ROWS.filter(r => r[3]).forEach(r => { const a = cellAmount(J, c, r).v; if (a && Math.abs(a) / t.price * 100 > GRID_LIMITS.line) add(`lim:l:${c.id}:${r[0]}`, 'Limit', `${name} – ${r[1]}: ${money(Math.abs(a))} is ${(Math.abs(a) / t.price * 100).toFixed(1)}% of the sale price (over ${GRID_LIMITS.line}%).`, { limit: true }); });
+    adjRows(J).filter(r => r[3] && rowShown(r, J)).forEach(r => { const a = cellAmount(J, c, r).v; if (a && Math.abs(a) / t.price * 100 > GRID_LIMITS.line) add(`lim:l:${c.id}:${r[0]}`, 'Limit', `${name} – ${r[1]}: ${money(Math.abs(a))} is ${(Math.abs(a) / t.price * 100).toFixed(1)}% of the sale price (over ${GRID_LIMITS.line}%).`, { limit: true }); });
   });
   return out;
 }
@@ -428,7 +544,9 @@ async function ingestInspection(files, name) {
     const C = D.condition || {}; if (C.oqTier && !g.fine.subj.q) g.fine.subj.q = TM[C.oqTier]; if (C.ocTier && !g.fine.subj.c) g.fine.subj.c = TM[C.ocTier]; }
   s.insp = { file: name, inspDate: D.property.inspDate, gla: T.agFin || null, bsmt: T.bgFin || 0, beds: (L.bedrooms || []).length, full: (L.baths || []).filter(x => x.kind === 'FullBathroom').length,
     half: (L.baths || []).filter(x => x.kind === 'HalfBathroom').length, year: num(D.front.yearBuilt), q: D.condition.oq || '', c: D.condition.oc || '', style: D.front.design || '', levels: (L.levels || []).filter(x => !x.grade || /Above/i.test(x.grade)).length || num(D.front.stories),
-    siteSf: site, usableAc: D.site.usable === 'All Usable' && site ? acOf(site) : null, garage: D.garage.garShared ? 0 : (D.garage.hasGarage ? num(D.garage.garSpaces) : 0),
+    siteSf: site, usableAc: D.site.usable === 'All Usable' && site ? acOf(site) : null, garage: D.garage.garShared ? 0 : (D.garage.hasGarage ? num(D.garage.garSpaces) : 0), carport: num(D.garage.carport) || 0, bsmtUnf: T.bgUnf || 0,
+    heat: (D.systems.heat || []).filter(x => x !== 'None').join(', ') || ((D.systems.heat || []).includes('None') ? 'None' : ''), cool: (D.systems.cool || []).filter(x => x !== 'None').join(', ') || ((D.systems.cool || []).includes('None') ? 'None' : ''),
+    func: ((D.condition || {}).func || []).filter(x => x !== 'None').join(', ') || (((D.condition || {}).func || []).includes('None') ? 'None observed' : ''), constr: D.front.constr || '',
     view: [(D.site.view || []).join(', '), D.site.viewImpact].filter(Boolean).join(' – '), loc: [(D.site.influences || []).join(', '), D.site.inflImpact].filter(Boolean).join(' – '),
     topo: (D.site.topo || []).join(', '), energy: (D.systems.renew || []).filter(x => x !== 'None').join(', '),
     pool: (L.waterFeatures || []).map(w => w.type).filter(Boolean).join(', ') || 'None', courts: (D.amenities.rec || []).filter(x => /court/i.test(x)).join(', '), porch: (L.outdoorLiving || []).map(o => o.type).filter(Boolean).join(', '),
@@ -446,9 +564,12 @@ async function ingestInspection(files, name) {
 function gridAdjustXML(CMP, c, job) {
   const G = job.grid; if (!G) return null; const box = X(CMP, 'COMPARABLE_ADJUSTMENTS'); const C = compFacts(c, job); let any = false;
   // order as on the 3.6 grid (D-1 sample): Add Other rows first, then site, dwelling, units, quality/condition, amenities
-  ADJ_ROWS.filter(r => r[3] && rowShown(r, job)).sort((x, y) => (y[3] === 'OTHER') - (x[3] === 'OTHER')).forEach(r => { const a = cellAmount(job, c, r).v;
+  adjRows(job).filter(r => r[3] && rowShown(r, job)).sort((x, y) => (y[3] === 'OTHER') - (x[3] === 'OTHER')).forEach(r => { const a = cellAmount(job, c, r).v;
     if (r[3] === 'OTHER') { const desc = otherDesc(r, C); if (!desc && !a) return; const e = X(box, 'COMPARABLE_ADJUSTMENT'); XV(e, 'AdditionalComparisonLineItemDescription', desc || null); XV(e, 'AdditionalComparisonLineItemIdentifier', r[5]); XV(e, 'ComparableAdjustmentAmount', a || 0); XV(e, 'ComparableAdjustmentType', 'SalesComparableAdditionalAdjustableComparisonItem'); any = true; return; }
-    if (a === null || a === undefined) return; const e = X(box, 'COMPARABLE_ADJUSTMENT'); XV(e, 'ComparableAdjustmentAmount', Math.round(a)); XV(e, 'ComparableAdjustmentType', r[0] === 'unitPos' && /town|row/i.test(String(C.structure || '') + String(subjFacts(job).structure || '')) ? 'RowhouseTownhouseEndUnit' : r[3]); any = true; });
+    if (a === null || a === undefined) return; const ty = r[0] === 'unitPos' && /town|row/i.test(String(C.structure || '') + String(subjFacts(job).structure || '')) ? 'RowhouseTownhouseEndUnit' : r[3];
+    const was = box.kids.find(k => k.tag === 'COMPARABLE_ADJUSTMENT' && k.kids.some(x => x.tag === 'ComparableAdjustmentType' && x.text === ty));   // one UAD line per type: garage + carport = Vehicle Storage
+    if (was) { const amt = was.kids.find(x => x.tag === 'ComparableAdjustmentAmount'); if (amt) amt.text = String(Math.round(num(amt.text) + a)); return; }
+    const e = X(box, 'COMPARABLE_ADJUSTMENT'); XV(e, 'ComparableAdjustmentAmount', Math.round(a)); XV(e, 'ComparableAdjustmentType', ty); any = true; });
   if (!any) CMP.kids = CMP.kids.filter(k => k !== box);
   return compTotals(job, c);
 }
@@ -484,7 +605,7 @@ async function buildFullReport(J) {
   if (!RL.children.length) RL.remove();
   // subject's Usable Lot Area/Utility row
   const S = subjFacts(J);
-  ADJ_ROWS.filter(r => r[3] === 'OTHER').forEach(r => { const desc = otherDesc(r, S); if (!desc) return; const CM = child(SUBJ, 'COMPARABLE'); const AS = child(CM, 'COMPARABLE_ADJUSTMENTS'); const a = sub.createElementNS(NS, 'COMPARABLE_ADJUSTMENT'); AS.appendChild(a);
+  adjRows(J).filter(r => r[3] === 'OTHER' && rowShown(r, J)).forEach(r => { const desc = otherDesc(r, S); if (!desc) return; const CM = child(SUBJ, 'COMPARABLE'); const AS = child(CM, 'COMPARABLE_ADJUSTMENTS'); const a = sub.createElementNS(NS, 'COMPARABLE_ADJUSTMENT'); AS.appendChild(a);
     leaf(a, 'AdditionalComparisonLineItemDescription', desc); leaf(a, 'AdditionalComparisonLineItemIdentifier', r[5]); leaf(a, 'ComparableAdjustmentType', 'SalesComparableAdditionalAdjustableComparisonItem'); });
   // value and comment
   const G = G0(J); const VR = child(VA, 'VALUATION_REPORT');
