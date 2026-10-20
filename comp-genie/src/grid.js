@@ -367,6 +367,7 @@ function compTotals(J, c) {
 }
 
 /* ---------------- the grid card ---------------- */
+const classicOn = () => { try { return localStorage.getItem('genie.classic') === '1'; } catch (e) { return false; } };
 function gridHTML(J) {
   const usedAll = usedComps(J); if (!usedAll.length) return '<h2>Adjustment grid</h2><p class="help">Pick comps with “Use as” in the list above; they line up here in grid order.</p>';
   const used = wbSlice(usedAll); const lean = wbLean();
@@ -377,14 +378,14 @@ function gridHTML(J) {
     const [id, label, section, type] = row; const head = section !== sec ? `<tr class="grp"><th colspan="${2 + used.length}">${esc(section)}</th></tr>` : ''; sec = section;
     const sv = id === 'baths' ? [S.full, S.half].every(blank) ? '' : `${S.full ?? '–'} / ${S.half ?? 0}` : showFact(id, S[id]);
     const subjCell = ['price', 'ppsf', 'src', 'prox', 'dom', 'terms', 'conc', 'contract', 'sale', 'status', 'listPrice', 'origList', 'listDate', 'lastRed', 'redDays', 'cdom'].includes(id) ? `<td class="subj">${esc(sv)}</td>`
-      : `<td class="subj"><input class="txt sm${(PICK[id] || id === 'view') && !blank(G.subj[id]) && !pkValid(id, G.subj[id], G.subj['pk_' + id]) ? ' bad' : ''}" data-gsubj="${id}" value="${esc(blank(G.subj[id]) ? '' : G.subj[id])}" placeholder="${esc(sv || (id === 'usable' ? 'Measure it' : id === 'adu' ? 'e.g. Guest house 450 sf 1 bath' : ''))}">${id === 'q' || id === 'c' ? fineSel('subj', id, J) + pkBtn('subj', id) : id === 'loc' ? locBtn('subj') : id === 'view' ? vtSel('subj', J, S.view) + pkBtn('subj', 'view') : PICK[id] ? pkBtn('subj', id) : ''}</td>`;
+      : `<td class="subj"><input class="txt sm${(PICK[id] || id === 'view') && !blank(G.subj[id]) && !pkValid(id, G.subj[id], G.subj['pk_' + id]) ? ' bad' : ''}" data-gsubj="${id}" value="${esc(blank(G.subj[id]) ? '' : G.subj[id])}" placeholder="${esc(sv || (id === 'usable' ? 'Measure it' : id === 'adu' ? 'e.g. Guest house 450 sf 1 bath' : ''))}">${id === 'garage' ? `${G.subj.vsText ? `<small class="vsx">${esc(G.subj.vsText)}</small>` : ''} <button type="button" class="btn xs" data-vspick="subj">▾ pick</button>` : id === 'q' || id === 'c' ? fineSel('subj', id, J) + pkBtn('subj', id) : id === 'loc' ? locBtn('subj') : id === 'view' ? vtSel('subj', J, S.view) + pkBtn('subj', 'view') : PICK[id] ? pkBtn('subj', id) : ''}</td>`;
     const cells = used.map(c => { const C = compFacts(c, J);
       let shown = id === 'beds' && C.bedsBg ? `${C.beds} (${C.bedsBg} below grade)` : id === 'baths' ? ([C.full, C.half].every(blank) ? '' : `${C.full ?? '–'} / ${C.half ?? 0}`) : id === 'ppsf' ? (C.price && C.gla ? money(C.price / C.gla) : '') : showFact(id, C[id]);
       if (!WB_NOEDIT.includes(id)) { /* she can change any comp fact right on the grid (Oct 19 2026), not only in Workbook view */ const raw = id === 'usable' ? (blank(C.usable) ? '' : String(C.usable)) : wbFactText(id, C);
         shown = `<input class="txt sm fact${(PICK[id] || id === 'view') && !pkValid(id, raw, (c.edit || {})['pk_' + id]) ? ' bad' : ''}" data-gfact="${c.id}|${id}" value="${esc(raw)}" placeholder="${id === 'usable' ? 'Measure it (ac)' : ''}" title="Type the comp's entry · = copies the subject · =2 copies comp 2">`; }
       else if (id === 'usable' && blank(C.usable)) shown = '<span class="measure">Measure it</span>'; else shown = esc(shown);
       if (id === 'lastRed') { const d = redDaysOf(C); shown += d !== null ? `<small class="muted rdays">${d} day${d === 1 ? '' : 's'} to pending</small>` : (C.lastRed ? '<small class="muted rdays">no contract date</small>' : ''); }
-      if (id === 'q' || id === 'c') shown += fineSel(c.id, id, J); if (id === 'view') shown += vtSel(c.id, J, C.view); if (id === 'loc') shown += locBtn(c.id); else shown += pkBtn(c.id, id);
+      if (id === 'q' || id === 'c') shown += fineSel(c.id, id, J); if (id === 'view') shown += vtSel(c.id, J, C.view); if (id === 'loc') shown += locBtn(c.id); else if (id === 'garage') shown += `${(c.edit || {}).grid_vsText ? `<small class="vsx">${esc(c.edit.grid_vsText)}</small>` : ''} <button type="button" class="btn xs" data-vspick="${c.id}" title="Type | spaces | attachment (UAD 3.6 vehicle storage)">▾ pick</button>`; else shown += pkBtn(c.id, id);
       if (!type) return `<td>${shown}</td>`;
       const a = cellAmount(J, c, row);
       return `<td><div class="gval">${shown}</div><input class="txt sm adj ${a.own ? 'own' : a.v !== null ? 'auto' : ''}" data-gadj="${c.id}|${id}" value="${a.own ? a.v : ''}" placeholder="${a.v !== null && !a.own ? (a.v >= 0 ? '+' : '') + a.v.toLocaleString() : '$ adj'}" inputmode="decimal" title="${a.own ? 'Your amount – clear it to use the rate' : a.v !== null ? 'From your rate – type to override' : 'Type the adjustment'}"></td>`; }).join('');
@@ -401,7 +402,7 @@ function gridHTML(J) {
     ${sumRow('Gross adjustment', t => `${money(t.gross)} <small class="${t.grossPct > GRID_LIMITS.gross ? 'over' : ''}">${t.grossPct.toFixed(1)}%</small>`)}
     ${sumRow('Adjusted sale price', t => `<b>${money(t.adj)}</b>${t.adjPsf ? `<br><small>${money(t.adjPsf)} / sq ft</small>` : ''}`, 'big')}</tbody></table></div>
     <div class="gsum"><div><span>Adjusted range (all comps)</span><b>${adjs.length ? money(lo) + ' – ' + money(hi) : '–'}</b></div><div><span>Median</span><b>${med ? money(med) : '–'}</b></div><div><span>Your value</span><b>${blank(G.value) ? '–' : money(G.value)}</b></div></div>`;
-  return `<h2>Adjustment grid <small>UAD 3.6 lines · your amounts</small></h2>${startsBar(J)}${gridLinesHTML(J)}${wbBar(J, usedAll)}
+  return `<div class="row"><h2 style="margin:0">Adjustment grid <small>UAD 3.6 lines · your amounts</small></h2><span class="grow"></span><label class="check" title="Grey boxes, thin black lines and compact rows, like your ACI forms"><input type="checkbox" data-classic="1" ${classicOn() ? 'checked' : ''}> Classic (ACI) look</label></div>${startsBar(J)}${gridLinesHTML(J)}${wbBar(J, usedAll)}
     <p class="help">${inspNote} Type an amount in any cell (minus for a downward adjustment). Or type a rate once beside a line; cells without your own amount then use it (shown in grey). Clear a cell to go back to the rate. Usable Lot Area/Utility comes only from your archive or your measurement – blank comps say <span class="measure">Measure it</span>.</p>
     <div class="tablewrap"><table class="grid${lean ? ' wb' : ''}"><thead><tr><th></th><th>Subject<br><small>${esc(J.subject.addr || '')}</small></th>${used.map(c => `<th data-wbcol="${c.id}" class="${WB.cur === c.id ? 'cur' : ''}" title="Click to pick this comp for Ctrl+Shift+number or Ctrl+Z">Comp ${c.use}<br><small>${esc(compTitle(c))}</small>${gridMlsLink(c)}</th>`).join('')}</tr></thead>
     <tbody>${rows}

@@ -48,9 +48,19 @@ function vwParse(text) { const out = []; let imp = '';
 const vwText = L => L.map(x => `${x.impact}: ${x.type === 'Other' ? (x.other || 'Other') : camelWords(x.type)}${x.range ? ` (${x.range})` : ''}`).join('; ');
 /* the answer as text, and back: official labels joined by "; " (Other: her words) */
 const pkText = (spec, vals, other) => vals.map(v => v === 'Other' && other ? other : (spec.opts.find(o => o[0] === v) || [v, v])[1].replace(/ \(.*\)$/, '')).join('; ');
+/* everyday words that mean an allowed answer (MLS, her archive) – they are read as that answer, not flagged */
+const PK_ALIAS = { status: { closed: 'SettledSale', sold: 'SettledSale', settled: 'SettledSale', expired: 'OffMarket', withdrawn: 'OffMarket', cancelled: 'OffMarket', canceled: 'OffMarket', undercontract: 'Pending', contingent: 'Pending', comingsoon: 'Active' },
+  cool: { centralair: 'Centralized', central: 'Centralized', ac: 'Centralized', heatpump: 'Centralized', nocoolinglisted: 'None', nocooling: 'None', none: 'None', ductless: 'Individual', minisplit: 'Individual', wallunit: 'Individual', windowunit: 'Individual' },
+  heat: { forcedair: 'ForcedWarmAir', fau: 'ForcedWarmAir', fwa: 'ForcedWarmAir', forcedairnaturalgas: 'ForcedWarmAir', wallfurnace: 'Other', floorfurnace: 'GravityAir', gravity: 'GravityAir', ductless: 'MiniSplit', heatpump: 'Other', radiantfloor: 'Radiant', naturalgas: '', gas: '', electric: '', propane: '', energystarqualifiedequipment: '', baseboard: 'Baseboard', hwbb: 'Baseboard', woodstove: 'Stove' },
+  topo: { level: 'Flat', flat: 'Flat', gentleslope: 'Sloping', slope: 'Sloping', sloped: 'Sloping', hillside: 'Sloping' },
+  attach: { det: 'Detached', att: 'Attached', semidetached: 'SemiDetached', sd: 'SemiDetached' },
+  terms: { conv: 'Conventional', conventional: 'Conventional', cash: 'Cash', usda: 'USDARuralDevelopment', seller: 'Private', sellerfinancing: 'Private' },
+  xferTerms: { armlth: 'TypicallyMotivated', armslength: 'TypicallyMotivated', reo: 'REOSale', short: 'ShortSale', estate: 'EstateSale', trust: 'EstateSale', relo: 'RelocationSale', crtord: 'CourtOrderedNonForeclosureSale', nonarm: 'SaleBetweenRelatedParties' },
+  zoning: { legal: 'Legal', legalnonconforming: 'LegalNonConforming', nonconforming: 'LegalNonConforming' } };
 function pkParse(spec, text) { const t = String(text || '').trim(); if (!t) return { vals: [], other: '', ok: true };
   const parts = spec.multi ? t.split(/;\s*|,\s*/) : [t]; const vals = []; let other = '', ok = true;
-  parts.forEach(p => { const k = p.toLowerCase().replace(/[^a-z0-9]/g, ''); const hit = spec.opts.find(([v, l]) => v.toLowerCase() === k || l.toLowerCase().replace(/ \(.*\)$/, '').replace(/[^a-z0-9]/g, '') === k || l.toLowerCase().replace(/[^a-z0-9]/g, '') === k);
+  const al = PK_ALIAS[Object.keys(PICK).find(k => PICK[k] === spec || PICK[k].title === spec.title)] || {};
+  parts.forEach(p => { const k = p.toLowerCase().replace(/[^a-z0-9]/g, ''); if (al[k] === '') return; const hit = (al[k] && spec.opts.find(o => o[0] === al[k])) || spec.opts.find(([v, l]) => v.toLowerCase() === k || l.toLowerCase().replace(/ \(.*\)$/, '').replace(/[^a-z0-9]/g, '') === k || l.toLowerCase().replace(/[^a-z0-9]/g, '') === k);
     if (hit) vals.push(hit[0]); else if (spec.other) { vals.push('Other'); other = (other ? other + ', ' : '') + p; } else ok = false; });
   return { vals, other, ok }; }
 /* valid = empty, or every part is an allowed answer; "Other" words count only when they came from ▾ pick (marker), so a 2.6 code like DT2;Ranch turns red */
@@ -85,3 +95,30 @@ function uadPick(who, id) {
     else if (t.dataset.pksave) { if (vals.includes('Other') && !other) { toast('Describe “Other” first'); return; } bg.remove(); pkSave(J, who, id, pkText(S, vals, other)); } });
 }
 document.addEventListener('click', e => { const b = e.target.closest('[data-uadpick]'); if (!b || !app.job) return; e.stopPropagation(); const [who, id] = b.dataset.uadpick.split('|'); uadPick(who, id); }, true);
+/* ---- vehicle storage (ACI's Garage/Carport box, in 3.6 terms): None, or up to 5 lines of spaces + type (+ attached / detached / built-in) ---- */
+const VS_TYPES = [['Garage', 'Garage'], ['Carport', 'Carport'], ['Driveway', 'Driveway'], ['SharedDriveway', 'Shared driveway'], ['ParkingGarage', 'Parking garage'], ['CommonCarport', 'Common carport'], ['OpenLot', 'Open lot'], ['Other', 'Other']];
+function vsPick(who) {
+  const J = app.job; const c = who === 'subj' ? null : J.comps.find(x => x.id === who); const F = c ? compFacts(c, J) : subjFacts(J); const name = c ? 'Comp ' + (c.use || '') + ' ' + compTitle(c) : 'Subject';
+  const g = k => c ? V(c, k) : null; let L = [];
+  if (c && c.edit && Array.isArray(c.edit.vs)) L = c.edit.vs.map(x => ({ ...x })); else if (!c && Array.isArray(G0(J).subj.vs)) L = G0(J).subj.vs.map(x => ({ ...x }));
+  else { const gt = String((c ? g('garageType') : '') || ''); if (+F.garage > 0) L.push({ n: +F.garage, t: 'Garage', a: /built/i.test(gt) ? 'BuiltIn' : /detach/i.test(gt) ? 'Detached' : /attach/i.test(gt) ? 'Attached' : '' }); if (+F.carport > 0) L.push({ n: +F.carport, t: 'Carport', a: '' }); const dw = c ? num(g('driveway')) : null; if (dw) L.push({ n: dw, t: 'Driveway', a: '' }); }
+  let none = !L.length && (c ? (c.edit || {}).vsNone : G0(J).subj.vsNone) === true;
+  while (L.length < 5) L.push({ n: '', t: '', a: '' });
+  const bg = document.createElement('div'); bg.className = 'sheetbg';
+  const draw = () => { bg.innerHTML = `<div class="sheet uadpick"><h2>Vehicle storage – ${esc(name)}</h2><div class="pkgrid"><div>
+    <label class="check"><input type="checkbox" data-vsnone="1" ${none ? 'checked' : ''}> None</label>
+    <table class="mini">${L.map((x, i) => `<tr><td># of spaces <input class="txt xs num" data-vs="${i}|n" value="${esc(x.n ?? '')}" style="width:4em" ${none ? 'disabled' : ''}></td><td>Type <select data-vs="${i}|t" ${none ? 'disabled' : ''}><option value="">–</option>${VS_TYPES.map(([v, l]) => `<option value="${v}" ${x.t === v ? 'selected' : ''}>${l}</option>`).join('')}</select></td>
+      <td>${['Garage', 'Carport'].includes(x.t) ? `<select data-vs="${i}|a"><option value="">attachment –</option>${[['Attached', 'Attached'], ['Detached', 'Detached'], ['BuiltIn', 'Built-in']].map(([v, l]) => `<option value="${v}" ${x.a === v ? 'selected' : ''}>${l}</option>`).join('')}</select>` : ''}</td></tr>`).join('')}</table></div>
+    <div class="pkguide"><b>UAD guidance</b><p>Give the type of parking and the number of spaces for each type (3.6 Vehicle Storage: Type | Spaces | Detail). A garage or carport also gets its attachment (attached, detached, built-in).</p></div></div>
+    <div class="row"><span class="grow"></span><button class="btn primary" data-vssave="1">OK</button><button class="btn" data-vsclose="1">Cancel</button></div></div>`; };
+  draw(); document.body.appendChild(bg);
+  bg.addEventListener('change', e => { const t = e.target; if (t.dataset.vsnone) { none = t.checked; draw(); return; } const d = t.dataset.vs; if (!d) return; const [i, k] = d.split('|'); L[+i][k] = k === 'n' ? (t.value.trim() === '' ? '' : Math.max(0, Math.round(+t.value) || 0)) : t.value; if (k === 't') draw(); });
+  bg.addEventListener('click', e => { const t = e.target; if (t.dataset.vsclose || t === bg) { bg.remove(); return; } if (!t.dataset.vssave) return;
+    const rows = none ? [] : L.filter(x => x.t && +x.n > 0); const sum = ty => rows.filter(x => x.t === ty).reduce((s, x) => s + +x.n, 0);
+    const gar = sum('Garage'), cpt = sum('Carport') + sum('CommonCarport'), dw = sum('Driveway') + sum('SharedDriveway'); const ga = (rows.find(x => x.t === 'Garage') || {}).a || '';
+    const txt = none ? 'None' : rows.map(x => `${x.n} ${(VS_TYPES.find(v => v[0] === x.t) || [, x.t])[1].toLowerCase()}${x.a ? ' (' + x.a.replace('BuiltIn', 'built-in').toLowerCase() + ')' : ''}`).join(', ');
+    if (c) { const E = c.edit = c.edit || {}; E.garage = none ? 0 : gar; E.carport = none ? 0 : cpt; E.driveway = none ? 0 : dw; E.garageType = ga === 'BuiltIn' ? 'Built-in' : ga; E.vs = rows; E.vsNone = none; E.grid_vsText = txt; }
+    else { const S = G0(J).subj; S.garage = none ? 0 : gar; S.carport = none ? 0 : cpt; S.vs = rows; S.vsNone = none; S.vsText = txt; }
+    bg.remove(); save(); render(); toast('Vehicle storage: ' + (txt || 'cleared')); });
+}
+document.addEventListener('click', e => { const b = e.target.closest('[data-vspick]'); if (!b || !app.job) return; e.stopPropagation(); vsPick(b.dataset.vspick); }, true);
