@@ -615,8 +615,7 @@ const SECTIONS = [
       { k: 'roofAge', l: 'Roof estimated age', t: 'one', req: (d, ins) => HO_EXT(ins), o: order(U('RoofEstimatedAgeRangeType'), ['LessThanOneYear','OneToTenYears','TenToTwentyYears','TwentyOrMoreYears']), uad: 'RoofEstimatedAgeRangeType' },
       { k: 'roofCond', l: 'Roof condition', t: 'one', show: d => d.roofObs !== false, req: (d, ins) => d.roofObs !== false && HO_EXT(ins), o: COMP_COND, uad: 'ImprovementComponentConditionStatusType' },
       { k: 'roofMoreInfo', t: 'info', l: 'Other roofs (garage, addition, ADU, patio cover…): add them below. They go into the exterior comment; the main roof stays in the UAD roof fields.' },
-      { k: 'gutterMat', l: 'Gutter material (your notes – not a UAD field)', t: 'multi', o: opts('None','Aluminum','Copper','Galvanized Steel','Zinc','Vinyl','Stainless Steel','Painted Steel','Wood') },
-      { k: 'gutters', l: 'Gutters & downspouts', t: 'multi', show: d => !(d.gutterMat || []).includes('None'), o: opts('Seamless','Half-round','K-style (ogee)','Box Gutters','Downspouts','Rain Chains','Gutter Guards','Underground Drains') },
+      { k: 'gutterMat', l: 'Gutters', help: 'Your notes – not a UAD field.', t: 'multi', o: opts('None','Aluminum','Copper','Galvanized Steel','Zinc','Vinyl','Stainless Steel','Painted Steel','Wood','Downspouts','Rain Chains','Underground Drains') },
     ], list: 'roofs2' },
     { id: 'walls', title: 'Exterior walls, windows & foundation', fields: [
       { k: 'hoaExt2', t: 'info', l: 'The HOA maintains the exterior, so UAD does not require exterior component conditions or exterior quality/condition ratings and they are not sent to SFREP. Fill in what you want for your comments and workfile.', show: (d, ins) => !HO_EXT(ins) },

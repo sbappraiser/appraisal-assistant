@@ -293,6 +293,7 @@ function dkLabelAnswers(text, put) {
     if (/ roof (?:is |was )?(?:observable|observed|visible|viewed) | roof observed /.test(sn) && !/ roof (?:is |was )?not /.test(sn)) put('front.roofObs', true);
     const ra = / roof (?:is |was )?(?:about |approximately |around |roughly )?(\d{1,2})(?: to (\d{1,2}))? years? old /.exec(dkNum(sn)); if (ra) { any = true; const y = +(ra[2] || ra[1]); put('front.roofAge', y < 1 ? 'LessThanOneYear' : y <= 10 ? 'OneToTenYears' : y <= 20 ? 'TenToTwentyYears' : 'TwentyOrMoreYears'); }
     if (/ roof (?:is |was )?(?:observable|observed|visible|viewed) | roof observed /.test(sn)) any = true;
+    if (/ downspouts? /.test(sn) && !/ no downspouts? /.test(sn)) put('front.gutterMat', 'Downspouts');
     // site influences ("site influence residential, neutral impact" – she may say site characteristic for it) and utilities
     { const sv = dkNum(sn); const mark = ws => ws.split(' ').forEach(w => vocab.add(w));
       if (/ site (?:characteristics?|influences?) | influences? /.test(sv)) { mark('site characteristic characteristics influence influences of with impact is are a an bordering borders onsite on offsite off typical');

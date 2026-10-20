@@ -141,7 +141,7 @@ function wkHear(t) {
 }
 
 /* ---------- moving between places ---------- */
-function wkGo(key, quiet) { const ins = app.ins, w = wkData(ins); if (w.place !== key) { WK.teachOpen = false; WK.teachSel = ''; } w.place = key; if (!quiet) { save(); wkRefresh(); window.scrollTo(0, 0); } if (wcamIsOpen()) wcamLabels(); }
+function wkGo(key, quiet) { const ins = app.ins, w = wkData(ins); if (w.place !== key) { WK.teachOpen = false; WK.teachSel = ''; const old = w.place; try { const ta = document.getElementById('wkNote'); if (ta && document.activeElement === ta) w.notes[old] = wkClean(ta.value); wkCommit(ins, [old], false); } catch (e) {} } w.place = key; if (!quiet) { save(); wkRefresh(); window.scrollTo(0, 0); } if (wcamIsOpen()) wcamLabels(); }
 function wkNext() { const ins = app.ins, w = wkData(ins); const P = wkPlace(ins, w.place); const k = P.parent || P.key; const i = WK_ORDER.indexOf(k); wkGo(WK_ORDER[Math.min(WK_ORDER.length - 1, i + 1)]); }
 function wkMode() { try { return localStorage.getItem('uad-wk-talk') || 'keyboard'; } catch (e) { return 'keyboard'; } }
 function wkSetMode(m) { try { localStorage.setItem('uad-wk-talk', m); } catch (e) {} if (m === 'keyboard' && WSR.on) wsrStop(); }
@@ -201,7 +201,8 @@ function renderWalk() {
       <li><b>Talk</b> listens until you tap it again. Pause as long as you like. “Scratch that” removes what you just said; “next place” moves on.</li>
       <li><b>Sketch</b>: photo and talk buttons stay on the sketch. Starting a new area for an ADU or outbuilding moves you to that building. Blocked by a gate? <b>⇄ Other end</b>. Couldn't measure the last walls? <b>⌐ Fill missing walls</b> (marked “calc”).</li>
       <li>Rooms: pick the <b>level</b>, then say “Bedroom 2 colon …”, “Kitchen colon …”. A new bedroom or bath is added for you.</li>
-      <li>When you are done (or any time): <b>Sort my notes</b> → 🎤 Dictate → “1. Sort my notes” → check → “2. Save to appraisal file”. Nothing is filled in until you save.</li></ol></details>
+      <li>Your notes are saved into the inspection by themselves when you go to the next place. At the end tap <b>✓ Save all my notes</b>: it also answers what you did not mention as No. Every answer can still be changed on its tab.</li></ol></details>
+    ${wkWaitingHtml(ins)}
     <div class="wk-route" id="wkRoute">${route}</div>
     <div class="wk-head"><div><small>${esc(P.g === 'item' ? (wkPlace(ins, P.parent).t) : P.g)}</small><h2 id="wkTitle">${esc(P.t)}</h2></div><button class="btn" id="wkNext">Next place ›</button></div>
     <div class="wk-big">
@@ -212,13 +213,13 @@ function renderWalk() {
     <div class="wk-mode"><span>Talk uses:</span><button class="wchip sm ${wkMode() === 'keyboard' ? 'on' : ''}" data-wkmode="keyboard">Keyboard microphone (more accurate)</button><button class="wchip sm ${wkMode() === 'listen' ? 'on' : ''}" data-wkmode="listen">Hands-free listening</button></div>
     <p class="wk-interim" id="wkInterim" hidden></p>
     <div id="wkBody">${wkBodyHtml(ins, P)}</div>
-    <div class="wk-foot"><button class="btn primary" id="wkSort">Sort my notes into the inspection ›</button><span class="help">Your notes go to the 🎤 Dictate tab with each place as a heading: tap “1. Sort my notes”, check the list, then “2. Save to appraisal file”.</span></div>
+    <div class="wk-foot"><button class="btn primary" id="wkSort">✓ Save all my notes into the inspection</button><span class="help">Each place is saved by itself when you go to the next place. This button saves anything left and answers what you did not mention as No (defects, age restriction…). Everything stays changeable on each tab.</span></div>
   </section>`;
 }
 function wkBodyHtml(ins, P) {
   const w = wkData(ins);
-  if (P.leave) { const un = Object.keys(w.notes).filter(k => (w.notes[k] || '').trim().length > (w.sentLen[k] || 0)).length;
-    return (un ? `<p class="warn-box">You have notes for ${un} place${un > 1 ? 's' : ''} that are not sorted yet, so this list still counts them as missing. Tap <b>Sort my notes</b> at the bottom, save them on the Dictate tab, then come back here.</p>` : '') + (typeof dkLeaveHtml === 'function' ? dkLeaveHtml(ins) : '') + wkNotesHtml(ins, P); }
+  if (P.leave) { try { if (wkCompose(ins, Object.keys(w.notes)).text) wkCommit(ins, null, false, true); } catch (e) {}
+    return '' + (typeof dkLeaveHtml === 'function' ? dkLeaveHtml(ins) : '') + wkNotesHtml(ins, P); }
   if (P.chooser) return wkChooserHtml(ins, P);
   const shot = wkShot(ins, P); const iss = wkIssues(ins, P); const heard = wkHeard(ins, P);
   const photos = ins.photos.filter(p => p.walk === P.key).sort((a, b) => b.ts - a.ts);
@@ -315,6 +316,7 @@ function bindWalk(root) {
       tb.hidden = !tb.hidden; WK.teachOpen = !tb.hidden; WK.teachSel = sel ? sel.replace(/[.,;:!?]+$/, '') : ''; if (!tb.hidden) { const h = tb.querySelector('#dkTh'); if (h && WK.teachSel) h.value = WK.teachSel; } }; bindT();
       if (WK.teachOpen) { tb.hidden = false; const h = tb.querySelector('#dkTh'); if (h && !h.value && WK.teachSel) h.value = WK.teachSel; } } }
   root.querySelectorAll('[data-wktake]').forEach(b => b.onclick = () => { w.shot[w.place] = b.dataset.wktake; save(); wkOpenCam(); });
+  { const sw = root.querySelector('#wkSaveWaiting'); if (sw) sw.onclick = () => { const n = wkApplyText(ins, ins.dictDraft, false); if (n >= 0) { ins.dictDraft = ''; if (app.dict) app.dict.text = ''; save(); toast(n + ' answers saved into the inspection from the waiting notes'); wkRefresh(); } }; }
   root.querySelectorAll('[data-wkdel]').forEach(b => b.onclick = () => wkRemove(ins, b.dataset.wkdel));
   root.querySelectorAll('button[data-wkans]').forEach(b => b.onclick = () => wkAnswer(ins, b.dataset.wkans, b.dataset.v));
   root.querySelectorAll('select[data-wkans]').forEach(b => b.onchange = () => { if (b.value) wkAnswer(ins, b.dataset.wkans, b.value); });
@@ -345,18 +347,43 @@ function wkRemove(ins, key) {
 }
 function it_fields_merge(a, b) { if (!a || !b) return false; Object.keys(a).forEach(k => { if (['id', 'label', 'dkPhoto', 'walkUsed', 'fromSketch'].includes(k)) return; const v = a[k], u = b[k]; if (u === undefined || u === '' || (Array.isArray(u) && !u.length)) b[k] = v; else if (Array.isArray(u) && Array.isArray(v)) b[k] = [...new Set([...u, ...v])]; else if (k === 'note' && v && !String(u).includes(v)) b[k] = u + '\n' + v; }); return true; }
 /* notes → the Dictate box, place by place, only what was not sent before */
-function wkSort() {
-  const ins = app.ins, w = wkData(ins); const keys = Object.keys(w.notes).filter(k => (w.notes[k] || '').trim().length > (w.sentLen[k] || 0));
-  if (!keys.length) { toast('No new notes to sort'); return; }
-  const rank = k => { const P = wkPlace(ins, k); const i = WK_ORDER.indexOf(P.parent || P.key); return i < 0 ? 99 : i; };
-  keys.sort((a, b) => rank(a) - rank(b));
-  const lines = []; let lv = null;
+/* her notes → the inspection fields, by themselves (Oct 20 2026: the two extra taps on the Dictate tab were missed and
+   nothing was saved). Each place is saved when she moves to another place or leaves the tab; "not mentioned = No"
+   answers (defects, age restriction …) are only filled at the end (Save all / Before you leave), never mid-walk. */
+function wkCompose(ins, keys) {
+  const w = wkData(ins); const rank = k => { const P = wkPlace(ins, k); const i = WK_ORDER.indexOf(P.parent || P.key); return i < 0 ? 99 : i; };
+  keys = keys.filter(k => (w.notes[k] || '').trim().length > (w.sentLen[k] || 0)).sort((a, b) => rank(a) - rank(b));
+  const lines = []; let lv = null; const done = [];
   keys.forEach(k => { const P = wkPlace(ins, k); const t = (w.notes[k] || '').slice(w.sentLen[k] || 0).replace(/^[\s.]+/, '').trim(); if (!t) return;
-    if (P.parent === 'rooms' && P.it.level && P.it.level !== lv) { lv = P.it.level; lines.push(wkLevelName(lv) + '.'); }
-    lines.push((P.head || P.t) + ': ' + t + (/[.!?]$/.test(t) ? '' : '.')); w.sentLen[k] = (w.notes[k] || '').length; });
-  ins.dictDraft = [ins.dictDraft, lines.join('\n')].filter(x => x && x.trim()).join('\n');
-  if (app.dict) app.dict.text = ins.dictDraft;
-  save(); goTab('dictate'); toast('Your notes are in the Dictate box – tap “1. Sort my notes”');
+    if (P.parent === 'rooms' && P.it && P.it.level && P.it.level !== lv) { lv = P.it.level; lines.push(wkLevelName(lv) + '.'); }
+    lines.push((P.head || P.t) + ': ' + t + (/[.!?]$/.test(t) ? '' : '.')); done.push(k); });
+  return { text: lines.join('\n'), keys: done };
+}
+function wkApplyText(ins, text, withAuto) {
+  if (!text || !text.trim()) return 0; let R; try { R = dictParse(text, ins); } catch (e) { toast('Could not read the notes: ' + (e.message || e)); return -1; }
+  const pick = { c: {}, i: {}, v: {}, r: {}, mx: {}, ma: {}, ap: {}, apAdd: {}, it: {} };
+  R.changes.forEach((c, i) => { pick.c[i] = withAuto || !c.auto; }); R.items.forEach((x, i) => { pick.i[i] = !x.off; }); R.rooms.forEach((x, i) => { pick.r[i] = true; });
+  dictApply(ins, R, pick); ins.dictLog = [...(ins.dictLog || []), { t: Date.now(), text, walk: true }];
+  return Object.values(pick.c).filter(Boolean).length + Object.values(pick.i).filter(Boolean).length;
+}
+function wkCommit(ins, keys, withAuto, quiet) {
+  const w = wkData(ins); const C = wkCompose(ins, keys || Object.keys(w.notes)); let n = 0;
+  if (C.text) { n = wkApplyText(ins, C.text, withAuto); if (n < 0) return 0; C.keys.forEach(k => { w.sentLen[k] = (w.notes[k] || '').length; }); }
+  if (withAuto) { const all = Object.keys(w.notes).map(k => { const P = wkPlace(ins, k); const t = (w.notes[k] || '').trim(); return t ? (P.head || P.t) + ': ' + t + (/[.!?]$/.test(t) ? '' : '.') : ''; }).filter(Boolean).join('\n');
+    // the whole walk, so a defect she mentioned anywhere keeps the defect questions open
+    const R2 = dictParse(all || '.', ins); const p2 = { c: {}, i: {}, v: {}, r: {}, mx: {}, ma: {}, ap: {}, apAdd: {}, it: {} }; R2.changes.forEach((c, i) => { p2.c[i] = !!c.auto; }); dictApply(ins, R2, p2); n += Object.values(p2.c).filter(Boolean).length; }
+  if (n) { ins.updated = Date.now(); save(); if (!quiet) toast(n + ' answer' + (n === 1 ? '' : 's') + ' saved into the inspection from your notes'); }
+  return n;
+}
+function wkSort() {   // the button at the bottom: save everything now, including "not mentioned = No"
+  const ins = app.ins; const waiting = (ins.dictDraft || '').trim(); let n = 0;
+  if (waiting && confirm('Notes from earlier are waiting on the Dictate tab and were never saved. Save them into the inspection now too?')) { n += Math.max(0, wkApplyText(ins, waiting, false)); ins.dictDraft = ''; if (app.dict) app.dict.text = ''; }
+  n += wkCommit(ins, null, true, true); save(); wkRefresh();
+  toast(n ? n + ' answer' + (n === 1 ? '' : 's') + ' saved into the inspection. What is still missing shows in red.' : 'Nothing new to save – everything you said is already in the inspection.');
+}
+function wkWaitingHtml(ins) {
+  const t = (ins.dictDraft || '').trim(); if (!t) return '';
+  return `<div class="warn-box"><b>Notes waiting on the Dictate tab were never saved into the inspection</b> (${t.split(/\n+/).length} line${t.split(/\n+/).length > 1 ? 's' : ''}). <button class="btn primary sm" id="wkSaveWaiting">Save them now</button> <button class="btn sm" data-wktab="dictate">Look at them first</button></div>`;
 }
 /* photos taken on the sketch page are filed here (the sketch page does not know the UAD photo slots) */
 function wkResolvePending(ins) {

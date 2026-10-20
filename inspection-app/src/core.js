@@ -164,6 +164,8 @@ function normalize(ins) {
     if (V.wellInfo) { V.utilNote = [V.utilNote, 'Well: ' + V.wellInfo].filter(Boolean).join('\n'); delete V.wellInfo; }
     [...(L.baths || []), ...(L.kitchens || []), ...(L.outbuildings || [])].forEach(it => { delete it.q; delete it.c; }); (L.kitchens || []).forEach(it => delete it.remodel);
     if (P && P.grExp && /^\d{1,2}\/\d{1,2}\/\d{4}$/.test(P.grExp)) { const [m, d, y] = P.grExp.split('/'); P.grExp = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`; } } }
+  // 6x (her ask, Oct 20 2026): one "Gutters" list; seamless / half-round / K-style / box / gutter guards dropped, downspouts, rain chains and underground drains kept
+  { const F = ins.data.front; if (F && Array.isArray(F.gutters)) { const keep = F.gutters.filter(x => ['Downspouts', 'Rain Chains', 'Underground Drains'].includes(x)); if (keep.length) F.gutterMat = [...new Set([...(F.gutterMat || []), ...keep])]; delete F.gutters; } }
   // field types changed between versions (e.g. single choice -> multiple): repair stored values to match
   const fix = (f, d) => {
     if (!d || !f || !f.k) return; const v = d[f.k]; if (v === undefined || v === null) return;

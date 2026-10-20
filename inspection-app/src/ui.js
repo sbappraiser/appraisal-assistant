@@ -200,6 +200,7 @@ function goTab(id, anchor, groupId) {
   if (id === 'alltabs') { dkSetWalk(false); refreshChrome(); toast('All tabs are back'); return; }
   if (app.tab !== id) saveNow();
   if (id !== 'walk' && typeof WSR !== 'undefined' && WSR.on) wsrStop();
+  if (app.tab === 'walk' && id !== 'walk' && typeof wkCommit === 'function') { try { const ta = document.getElementById('wkNote'); const w = wkData(app.ins); if (ta) w.notes[w.place] = wkClean(ta.value); wkCommit(app.ins, null, false, true); } catch (e) {} }
   app.tab = id; app.missIdx = 0;
   if (groupId) openGroup(id, groupId);
   renderTab();

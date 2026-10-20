@@ -117,8 +117,8 @@ const GEN = {
     const ef = lvl(ins, 'front', 'extFeat'); if (ef.length) out.push(S(`Exterior features include ${listJoin(ef)}`, 2));
     const fd = lvl(ins, 'front', 'frontDoor'); if (fd.length) out.push(S(`${cap(listJoin(fd))} front entry door`, 3));
     const xd = lvl(ins, 'interior', 'extDoors'); if (xd.length) out.push(S(`Exterior doors include ${listJoin(xd)}`, 2));
-    { const gm = lvl(ins, 'front', 'gutterMat').filter(x => !/^none$/i.test(x)), g = lvl(ins, 'front', 'gutters');
-      if (gm.length || g.length) out.push(S(`${gm.length ? cap(listJoin(gm)) + ' gutters' : 'Gutters'}${g.length ? ' (' + listJoin(g) + ')' : ''}`, 3)); }
+    { const all = lvl(ins, 'front', 'gutterMat').filter(x => !/^none$/i.test(x)); const ex = ['downspouts', 'rain chains', 'underground drains']; const gm = all.filter(x => !ex.includes(String(x).toLowerCase())), g = all.filter(x => ex.includes(String(x).toLowerCase())).map(x => String(x).toLowerCase());
+      if (gm.length || g.length) out.push(S(`${gm.length ? cap(listJoin(gm)) + ' gutters' : 'Gutters'}${g.length ? ' with ' + listJoin(g) : ''}`, 3)); }
     if (f.converted) out.push(S(`A converted ${lc(sv(ins, 'front', 'convFrom'))} area is ${lc(sv(ins, 'front', 'convSim'))} to the rest of the living area`, 1));
     if (iv.addDesc) out.push(S(`Reported additions / conversions: ${iv.addDesc}${iv.addPermit === 'Yes' ? ' (reported as permitted)' : iv.addPermit === 'No' ? ' (reported as not permitted)' : ''}`, 1));
     return out;
