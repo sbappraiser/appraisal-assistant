@@ -134,12 +134,17 @@ async function pullMicro(o, quiet) {
   return note;
 }
 window.addEventListener('focus', async () => { const o = await readOrders(); if (o.length !== (app.orders || []).length) { app.orders = o; render(); } else app.orders = o; });
+const jobLabel = j => { const same = app.jobs.filter(x => x.name === j.name).length > 1; return j.name + (same ? ` – started ${new Date(j.created || 0).toLocaleDateString()} ${new Date(j.created || 0).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}, ${(j.comps || []).filter(c => c.use).length} on the grid` : ''); };   // two assignments with one name: tell them apart
 const orderName = o => [o.fileNo, String(o.address || '').split(',')[0].trim()].filter(Boolean).join(' ') || 'Order';
 async function jobFromOrder(o) {
   const parts = String(o.address || '').split(',').map(x => x.trim());
   const sub = { addr: parts[0] || '', city: parts[1] || '', zip: ((parts[2] || '').match(/\d{5}/) || [''])[0], apn: o.apn || '', lat: o.lat || '', lon: o.lon || '', eff: o.effective || todayISO() };
   if (o.unit) sub.unit = o.unit;
   let j = app.jobs.find(x => x.orderId === o.id);
+  if (!j) {   // Oct 20 2026: never start a second assignment for a property she already has one for – an assignment with the same subject (address or APN) that is not tied to another order is this one
+    const ak = addrKey(parts[0] || ''), pk = apnKey(o.apn || ''); const ids = new Set((app.orders || []).map(x => x.id));
+    j = app.jobs.find(x => (!x.orderId || !ids.has(x.orderId)) && ((pk && apnKey(x.subject.apn) === pk) || (ak && addrKey(x.subject.addr || '') === ak)) && (x.comps || []).length) || null;
+    if (j) { j.orderId = o.id; toast('Linked your assignment “' + j.name + '” to this order', 6000); } }
   if (j) { Object.entries(sub).forEach(([k, v]) => { if (v && !j.subject[k]) j.subject[k] = v; }); if (o.effective) j.subject.eff = o.effective; app.job = j; }
   else { j = await newJob(orderName(o)); j.orderId = o.id; Object.assign(j.subject, sub); }
   if (o.crs && !j.subject.crs) j.subject.crs = crsCanon(o.crs);
@@ -357,7 +362,7 @@ function homeHTML() {
     ${app.jobs.length ? `<p class="muted">Click one to open it. To go back to this list later, choose <b>All assignments</b> in the Assignment box at the top.</p>
     <table class="tbl homelist"><thead><tr><th>Assignment</th><th>Subject</th><th>Effective date</th><th>Comps</th><th>Order</th><th>Last changed</th></tr></thead><tbody>
     ${app.jobs.map(j => { const o = orderOfJ(j), S = j.subject || {}; const used = (j.comps || []).filter(c => c.use).length;
-      return `<tr data-act="openjob" data-id="${j.id}" tabindex="0" style="cursor:pointer"><td><b>${esc(j.name)}</b></td><td>${esc([S.addr, S.city].filter(Boolean).join(', '))}</td><td>${esc(S.eff || '')}</td><td>${(j.comps || []).length}${used ? ` (${used} on the grid)` : ''}</td><td>${o ? esc(o.fileNo || '') + (o.stage ? ' · ' + esc(o.stage) : '') : `<button class="btn small" data-act="mkorder" data-id="${j.id}" title="Add this assignment to the Appraisal Assistant as an order">Make it an order</button>`}</td><td>${esc(d(j.updated))}</td></tr>`; }).join('')}
+      return `<tr data-act="openjob" data-id="${j.id}" tabindex="0" style="cursor:pointer"><td><b>${esc(jobLabel(j))}</b></td><td>${esc([S.addr, S.city].filter(Boolean).join(', '))}</td><td>${esc(S.eff || '')}</td><td>${(j.comps || []).length}${used ? ` (${used} on the grid)` : ''}</td><td>${o ? esc(o.fileNo || '') + (o.stage ? ' · ' + esc(o.stage) : '') : `<button class="btn small" data-act="mkorder" data-id="${j.id}" title="Add this assignment to the Appraisal Assistant as an order">Make it an order</button>`}</td><td>${esc(d(j.updated))}</td></tr>`; }).join('')}
     </tbody></table>` : '<p>No assignments yet. Click <b>New assignment</b>, or start one <b>From an order</b> in the Appraisal Assistant.</p>'}
   </section>
   <footer class="foot">Comp Genie · your data stays on this computer · build ${typeof BUILD !== 'undefined' ? BUILD : ''}</footer>`;
@@ -377,7 +382,7 @@ function renderPage() {
     <span class="pill ${ARCH.loaded ? 'ok' : 'warn'}">${ARCH.loaded ? `Archive: ${ARCH.rows.length.toLocaleString()} records` : 'Archive not loaded'}</span>${archPhotoPill()}
     <span class="pill">${app.cort.length ? `CORT: ${app.cort.length} sales` : 'No CORT table'}</span><span class="pill" title="Your land sale and construction cost databases (shared with the cost approach)">${(app.land || []).length ? `Land sales: ${app.land.length}` : 'No land sales'} · ${app.costDb ? `Costs: ${app.costDb.projects.length} projects` : 'No cost database'}</span>
     <span class="grow"></span>
-    <label class="jobsel">Assignment <select data-act="pickjob" id="jobpick"><option value="">All assignments (start page)</option>${app.jobs.map(j => `<option value="${j.id}" ${j.id === J.id ? 'selected' : ''}>${esc(j.name)}</option>`).join('')}</select></label>
+    <label class="jobsel">Assignment <select data-act="pickjob" id="jobpick"><option value="">All assignments (start page)</option>${app.jobs.map(j => `<option value="${j.id}" ${j.id === J.id ? 'selected' : ''}>${esc(jobLabel(j))}</option>`).join('')}</select></label>
     <button class="btn" data-act="newjob">New assignment</button>
     ${(app.orders || []).some(o => !ORDER_DONE.includes(o.stage || 'New')) ? `<select data-act="fromorder" aria-label="Start from an order"><option value="">From an order…</option>${app.orders.filter(o => !ORDER_DONE.includes(o.stage || 'New')).sort((a, b) => String(b.orderDate || '').localeCompare(String(a.orderDate || ''))).map(o => `<option value="${o.id}">${esc(orderName(o))}</option>`).join('')}</select>` : ''}
     <button class="btn" data-act="backup" title="Save this assignment to a file">Back up</button>
@@ -440,7 +445,7 @@ const compsCardHTML = J => J.ccDone ? `<div class="row"><h2 style="margin:0"><sp
 function renderParts(opts = {}) { return rcRun(() => renderParts0(opts)); }
 function renderParts0(opts = {}) {
   const J = app.job;
-  const jp = $('#jobpick'); if (jp) jp.innerHTML = app.jobs.map(j => `<option value="${j.id}" ${j.id === J.id ? 'selected' : ''}>${esc(j.name)}</option>`).join('');
+  const jp = $('#jobpick'); if (jp) jp.innerHTML = app.jobs.map(j => `<option value="${j.id}" ${j.id === J.id ? 'selected' : ''}>${esc(jobLabel(j))}</option>`).join('');
   const cc = $('#compsCard'); if (cc) { cc.innerHTML = compsCardHTML(J); fillImages(cc); }
   const ex = $('#exportCard'); if (ex) ex.innerHTML = '<h2>Export</h2>' + exportHTML(J);
   if (opts.grid !== false) { const gc = $('#gridCard'); if (gc) gc.innerHTML = gridHTML(J); }
