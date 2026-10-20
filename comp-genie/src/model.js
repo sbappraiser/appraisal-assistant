@@ -198,7 +198,7 @@ function defaultOrder(c, f) {
   const recent = a && (matched || (a.v.saleDate && sale && sale.date && Math.abs(monthsBetween(a.v.saleDate, sale.date)) <= 24) || (!a.v.saleDate && a.entered && monthsBetween(a.entered, todayISO()) <= 24));
   switch (f.kind) {
     case 'sale': if (f.k === 'financing') return matched ? ['arch', 'crs', 'cort', 'mls', 'pdf'] : ['crs', 'cort', 'mls', 'pdf'];   // her note: the recorded loan (CRS mortgage history, CORT lender) shows the financing
-      return matched ? ['arch', 'mls', 'pdf', 'cort', 'crs'] : ['mls', 'pdf', 'cort'];
+      return matched ? ['arch', 'mls', 'pdf', 'cort', 'crs'] : ['mls', 'pdf', 'cort', ...(sale && sale.from === 'crs' ? ['crs'] : [])];   // a sale only in CRS (not in the MLS): its recorded sale
     case 'listing': return ['pdf', 'mls', ...(matched ? ['arch'] : []), ...(sale && sale.from === 'arch' ? ['arch'] : [])];
     case 'phys': return recent ? ['arch', 'mls', 'pdf', 'crs', 'cort'] : ['mls', 'pdf', 'arch', 'crs', 'cort'];
     case 'geo': return ['mls', 'pdf', 'crs'];

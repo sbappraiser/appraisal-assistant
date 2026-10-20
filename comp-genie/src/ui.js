@@ -14,6 +14,7 @@ async function start() {
   const last = await DB.get('kv', 'lastJob');
   app.job = ((POP || CPOP) && app.jobs.find(j => j.id === (POP || CPOP).job)) || app.jobs.find(j => last && j.id === last.v) || app.jobs[0] || null;
   app.orders = await readOrders();
+  await archPhotoInit();
   const oq = new URLSearchParams(location.search).get('order');
   if (new URLSearchParams(location.search).get('embed')) document.body.classList.add('embed');   // inside the Appraisal Assistant's Comp genie tab
   if (CPOP) app.sel = CPOP.id;
@@ -76,9 +77,16 @@ function orderMicro(o) {   // one CSV, or several she added together on the Mark
   return { file, docs, docId: docs[0].id, exclude: mi.exclude || {}, n: (mi.rows || []).filter(r => !(mi.exclude || {})[r.mls]).length || (mi.rows || []).length };
 }
 const microIn = (J, M) => (J.files || []).some(f => f.kind === 'MLS export' && f.name === M.file);
-/* the micro search is her comps to start: when nothing is on the grid yet, its listings go on it –
-   closed sales newest first, then pendings, then actives. After that she adds and removes them herself. */
+/* the micro search is her comps to start: when nothing is on the grid yet, its listings go on it in the Comps considered order –
+   closed sales by closing date (most recent first), then pendings, then actives. After that she adds and removes them herself. */
+const gridInDateOrder = J => { const u = J.comps.filter(c => c.use).sort((a, b) => a.use - b.use); const d = u.slice().sort(compOrder); return u.every((c, i) => c === d[i]); };
+function gridDateOrder(J) { J.comps.filter(c => c.use).sort(compOrder).forEach((c, i) => { c.use = i + 1; }); }
 /* after the comps are on the grid: which still need their CRS report (one drop takes them all; each is matched by APN or address) */
+function photoNeedHTML(J) {   // the front photo in the square after the comp number comes from the MLS photos zip
+  const used = J.comps.filter(c => c.use && (V(c, 'mls') || c.mls)); const need = used.filter(c => !frontOf(c)); if (!need.length) return '';
+  const fromArch = need.filter(c => archPhotoNames(c).length).length; const archTip = fromArch && AP.state !== 'ok' ? ` <b>${fromArch}</b> of them have a front photo in your archive – <button class="lnk" data-act="archphotos">${AP.state === 'ask' ? 'reconnect' : 'connect'} your archive photos</button>.` : '';
+  return `<p class="help photoneed"><b>MLS photos:</b> ${need.length} of ${used.length} MLS comps on the grid have no photo yet (${need.map(c => esc(V(c, 'mls') || c.mls)).join(', ')}). In Flexmls tick those listings › <b>Download photos</b> (zip), then drop the zip in the box below – the first photo (the front) shows next to each comp number. ${archTip} <small>Click a comp to pick a different front photo.</small></p>`;
+}
 function crsNeedHTML(J) {
   const used = J.comps.filter(c => c.use).sort((a, b) => a.use - b.use); if (!used.length) return '';
   const need = used.filter(c => !c.src.crs || c.src.crs.fromList);
@@ -91,8 +99,9 @@ function microToGrid(rows) {
   const J = app.job; if (!J || J.comps.some(c => c.use)) return 0;
   const rank = r => /closed|sold/i.test(r.status || '') || r.saleDate ? 0 : /pend|contract|escrow/i.test(r.status || '') ? 1 : 2;
   const list = rows.slice().sort((a, b) => rank(a) - rank(b) || String(b.saleDate || b.contractDate || b.listDate || '').localeCompare(String(a.saleDate || a.contractDate || a.listDate || '')));
-  let n = 0; list.forEach(r => { const c = findComp({ mls: r.mls, apn: r.apn, key: r.addr ? addrKey(r.addr) : '', label: r.addr }); if (c && !c.use && !c.notUsed) { c.use = ++n; } });
-  return n;
+  const cs = []; list.forEach(r => { const c = findComp({ mls: r.mls, apn: r.apn, key: r.addr ? addrKey(r.addr) : '', label: r.addr }); if (c && !c.notUsed && !cs.includes(c)) cs.push(c); });
+  cs.sort(compOrder).forEach((c, i) => { c.use = i + 1; });   // same order as Comps considered: closed sales by closing date, most recent first (her rule, Oct 20 2026)
+  return cs.length;
 }
 async function pullMicro(o, quiet) {
   const M = orderMicro(o); if (!M || !app.job) return ''; const by = new Map(); const crsRows = []; let missing = 0;
@@ -112,7 +121,7 @@ async function pullMicro(o, quiet) {
       if (was && was.src.crs && !was.src.crs.fromList) { crsIn.push({ ...r, mls: seed.mls }); return; }   // her CRS report is already on it
       const { isNew } = upsertComp(seed, 'crs', crsFromList(r), fid); if (isNew) crsNew++; crsIn.push({ ...r, mls: seed.mls, status: 'Closed' }); });
     logFile(M.file.split(' + ').filter(n => /crs|prospect/i.test(n)).join(' + ') || 'CRS list', 'CRS report', crsIn.length, fid); }
-  const left = Object.keys(M.exclude).length; const onGrid = microToGrid([...rows, ...crsIn.map(r => ({ ...r, status: 'Closed' }))]); save(); render();
+  await archPhotoFill(false); const left = Object.keys(M.exclude).length; const onGrid = microToGrid([...rows, ...crsIn.map(r => ({ ...r, status: 'Closed' }))]); save(); render();
   if (!quiet) toast(`Added your Search Criteria search: ${rows.length} listings` + (crsRows.length ? ` and ${crsIn.length} CRS sales (${crsNew} not in the MLS search)` : '') + (onGrid ? `, ${onGrid} put on the grid` : '') + (left ? ` (${left} you unticked on the Market tab left out)` : '') + (missing ? ` – ${missing} file${missing > 1 ? 's were' : ' was'} not found` : ''), 7000);
   return note;
 }
@@ -147,8 +156,35 @@ async function saveNow() { if (!app.job) return; app.job.updated = Date.now(); a
 
 /* ---------------- photos ---------------- */
 app.photos = []; // [{id, mls, n, name}] for this job (blobs stay in storage)
-async function loadPhotos() { app.photos = app.job ? (await DB.byJob(app.job.id)).map(p => ({ id: p.id, mls: p.mls, n: p.n, name: p.name, file: p.file })) : []; }
-const photosOf = c => { const m = V(c, 'mls'); return m ? app.photos.filter(p => p.mls === m).sort((a, b) => a.n - b.n) : []; };
+async function loadPhotos() { app.photos = app.job ? (await DB.byJob(app.job.id)).map(p => ({ id: p.id, mls: p.mls, arch: p.arch, n: p.n, name: p.name, file: p.file })) : []; }
+const archPhotoNames = c => [...new Set((c.src.arch || []).map(a => String(a.photo || '').trim()).filter(Boolean))];
+const photosOf = c => { const m = V(c, 'mls'); const mlsPs = m ? app.photos.filter(p => p.mls === m).sort((a, b) => a.n - b.n) : [];
+  const an = archPhotoNames(c); const archPs = an.length ? app.photos.filter(p => p.arch && an.includes(p.arch)).sort((a, b) => an.indexOf(a.arch) - an.indexOf(b.arch)) : [];
+  return [...mlsPs, ...archPs]; };   // MLS photos first; your archive's front photo when the MLS has none (her note, Oct 20 2026)
+/* ---- your archive's front photos: ACI keeps them in "ACI Research\Research Photos" as R…F.IMG (JPEG). She connects a copy of that folder once;
+   Chrome remembers it (asks again with one click after a restart). Only the photos of this assignment's comps are copied in. ---- */
+const AP = { dir: null, state: '' };   // state: '' not connected · 'ask' connected before, needs a click · 'ok'
+async function archPhotoInit() { try { const r = await DB.get('kv', 'archPhotoDir'); if (!r || !r.h) return; AP.dir = r.h; AP.name = r.name || r.h.name;
+  AP.state = (await AP.dir.queryPermission({ mode: 'read' })) === 'granted' ? 'ok' : 'ask'; } catch (e) { AP.state = ''; } }
+async function archPhotoConnect() {
+  if (AP.dir && AP.state === 'ask') { try { if ((await AP.dir.requestPermission({ mode: 'read' })) === 'granted') { AP.state = 'ok'; await archPhotoFill(true); render(); return; } } catch (e) {} }
+  if (!window.showDirectoryPicker) { toast('This browser cannot open a folder – use Chrome on your computer'); return; }
+  let h; try { h = await window.showDirectoryPicker({ id: 'aciphotos', mode: 'read' }); } catch (e) { if (e && e.name !== 'AbortError') toast('Chrome would not open that folder (' + (e.message || e.name) + '). Copy the Research Photos folder to Documents and pick the copy.', 9000); return; }
+  let n = 0; for await (const [nm] of h.entries()) { if (/^R[0-9A-Z]+F\.IMG$/i.test(nm)) { n++; if (n > 3) break; } }
+  if (!n) { toast('No ACI photos (R…F.IMG) in “' + h.name + '”. Pick the “Research Photos” folder.', 8000); return; }
+  AP.dir = h; AP.name = h.name; AP.state = 'ok'; await DB.put('kv', { id: 'archPhotoDir', h, name: h.name }); await archPhotoFill(true); render();
+}
+async function archPhotoFill(loud) {
+  if (AP.state !== 'ok' || !app.job) return 0; const have = new Set(app.photos.filter(p => p.arch).map(p => p.arch)); let n = 0, miss = 0;
+  for (const c of app.job.comps) { if (photosOf(c).length) continue;   // MLS photos (or an archive photo) already there
+    for (const nm of archPhotoNames(c)) { if (have.has(nm)) continue; let f = null;
+      for (const ext of ['.IMG', '.img', '.jpg', '.JPG']) { try { f = await (await AP.dir.getFileHandle(nm + ext)).getFile(); break; } catch (e) {} }
+      if (!f) { miss++; continue; } have.add(nm);
+      await DB.put('photos', { id: app.job.id + ':arch:' + nm, jobId: app.job.id, mls: '', arch: nm, n: 0, name: nm + '.jpg', file: 'arch', blob: new Blob([await f.arrayBuffer()], { type: 'image/jpeg' }) }); n++; break; } }
+  if (n) await loadPhotos(); if (loud || n) toast(n ? `${n} front photo${n > 1 ? 's' : ''} from your archive added` + (miss ? ` (${miss} named in the archive but not in the folder)` : '') : 'No archive photos needed – every comp with an archive photo already has a photo', 6000);
+  return n;
+}
+const archPhotoPill = () => !ARCH.loaded ? '' : AP.state === 'ok' ? `<span class="pill ok" title="Front photos from your ACI archive fill in when a comp has no MLS photo">Archive photos ✓</span>` : `<button class="pill warn" data-act="archphotos" title="Connect your ACI Research Photos folder so a comp's front photo comes from your archive when the MLS has none">${AP.state === 'ask' ? 'Archive photos – click to reconnect' : 'Connect archive photos'}</button>`;
 const frontOf = c => { const ps = photosOf(c); return ps.find(p => p.id === c.front) || ps[0] || null; };
 async function photoURL(id) {
   if (app.photoCache.has(id)) return app.photoCache.get(id);
@@ -298,7 +334,7 @@ function homeHTML() {
   const d = t => t ? new Date(t).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '';
   const open = (app.orders || []).filter(o => !ORDER_DONE.includes(o.stage || 'New')).sort((a, b) => String(b.orderDate || '').localeCompare(String(a.orderDate || '')));
   return `<header class="top"><h1>Comp Genie</h1>
-    <span class="pill ${ARCH.loaded ? 'ok' : 'warn'}">${ARCH.loaded ? `Archive: ${ARCH.rows.length.toLocaleString()} records` : 'Archive not loaded'}</span>
+    <span class="pill ${ARCH.loaded ? 'ok' : 'warn'}">${ARCH.loaded ? `Archive: ${ARCH.rows.length.toLocaleString()} records` : 'Archive not loaded'}</span>${archPhotoPill()}
     <span class="pill">${app.cort.length ? `CORT: ${app.cort.length} sales` : 'No CORT table'}</span><span class="pill" title="Your land sale and construction cost databases (shared with the cost approach)">${(app.land || []).length ? `Land sales: ${app.land.length}` : 'No land sales'} · ${app.costDb ? `Costs: ${app.costDb.projects.length} projects` : 'No cost database'}</span><span class="grow"></span>
     <button class="btn" data-act="newjob">New assignment</button>
     ${open.length ? `<select data-act="fromorder" aria-label="Start from an order"><option value="">From an order…</option>${open.map(o => `<option value="${o.id}">${esc(orderName(o))}</option>`).join('')}</select>` : ''}</header>
@@ -313,7 +349,10 @@ function homeHTML() {
   </section>
   <footer class="foot">Comp Genie · your data stays on this computer · build ${typeof BUILD !== 'undefined' ? BUILD : ''}</footer>`;
 }
-function render() {
+/* every redraw keeps her place on the page (her note, Oct 20 2026: saving a comp to her database jumped to the top);
+   the few actions that should go to the top (open an assignment, the start page) scroll there themselves after render */
+function render() { const y = window.scrollY; renderPage(); if (Math.abs(window.scrollY - y) > 2) window.scrollTo(0, y); requestAnimationFrame(() => { if (Math.abs(window.scrollY - y) > 2 && !render.top) window.scrollTo(0, y); render.top = false; }); }
+function renderPage() {
   const J = app.job; const root = $('#app');
   if (CPOP) { const c = J && J.comps.find(x => x.id === CPOP.id); root.innerHTML = c ? `<header class="top pop"><h1>Comp Genie</h1><span class="pill">${esc(J.name)}</span><span class="grow"></span><small>stays in step with your other windows</small></header>` + detailHTML(c) : '<p class="help">That comp is no longer in this assignment.</p>'; document.title = (c ? compTitle(c) : 'Comp') + ' · ' + (J ? J.name : ''); fillImages(); return; }
   if (POP) { root.innerHTML = popHTML(J); document.title = `Comps ${POP.from}–${POP.to} · ${J.name}`; wbUndoBar(); return; }
@@ -321,7 +360,7 @@ function render() {
   document.title = 'Comp Genie · ' + J.name;
   root.innerHTML = `
   <header class="top"><h1>Comp Genie</h1>
-    <span class="pill ${ARCH.loaded ? 'ok' : 'warn'}">${ARCH.loaded ? `Archive: ${ARCH.rows.length.toLocaleString()} records` : 'Archive not loaded'}</span>
+    <span class="pill ${ARCH.loaded ? 'ok' : 'warn'}">${ARCH.loaded ? `Archive: ${ARCH.rows.length.toLocaleString()} records` : 'Archive not loaded'}</span>${archPhotoPill()}
     <span class="pill">${app.cort.length ? `CORT: ${app.cort.length} sales` : 'No CORT table'}</span><span class="pill" title="Your land sale and construction cost databases (shared with the cost approach)">${(app.land || []).length ? `Land sales: ${app.land.length}` : 'No land sales'} · ${app.costDb ? `Costs: ${app.costDb.projects.length} projects` : 'No cost database'}</span>
     <span class="grow"></span>
     <label class="jobsel">Assignment <select data-act="pickjob" id="jobpick"><option value="">All assignments (start page)</option>${app.jobs.map(j => `<option value="${j.id}" ${j.id === J.id ? 'selected' : ''}>${esc(j.name)}</option>`).join('')}</select></label>
@@ -340,7 +379,7 @@ function render() {
     ${(() => { const o = (app.orders || []).find(x => x.id === J.orderId); const M = orderMicro(o); if (!o) return `<p class="help">This assignment is not an order in the Appraisal Assistant yet. <button class="btn small" data-act="mkorder" data-id="${J.id}">Make it an order</button></p>`; if (!M) return `<p class="help">No Search Criteria search on this order yet. In the Appraisal Assistant, open the order's <b>Market</b> tab and drop it in box 2; it comes in here.</p>`;
       return microIn(J, M) ? `<p class="help"><b class="ok">✓</b> Your Search Criteria search from the order's Market tab is in: <b>${esc(M.file)}</b>${Object.keys(M.exclude).length ? ` (${Object.keys(M.exclude).length} listing${Object.keys(M.exclude).length > 1 ? 's' : ''} you unticked there left out)` : ''}. <button class="lnk" data-act="pullmicro">Bring it in again</button></p>`
         : `<div class="row"><button class="btn primary" data-act="pullmicro">Add your Search Criteria search (${M.n} listings)</button><span class="help">from the order's Market tab: ${esc(M.file)}</span></div>`; })()}
-    ${crsNeedHTML(J)}
+    ${crsNeedHTML(J)}${photoNeedHTML(J)}
     <label class="drop" id="drop"><input type="file" multiple data-act="files" hidden>
       <b>Drop files here</b> or click to choose: MLS export (.csv) · MLS photos (.zip) · MLS printout (.pdf) · CRS reports (.pdf) · CORT table (.csv) · comp archive (.gz) · your land sales or cost database (.xlsx)</label>
     ${(J.files || []).length ? `<div class="files"><b>Files in this assignment</b> <small>(✕ takes a file back out)</small><ul>${J.files.map(f => `<li>${esc(f.name)} <small>${esc(f.kind)}${f.n ? ', ' + f.n : ''}</small> ${app.confirm === 'rf:' + f.id ? `<span class="confirm">Take it out? <button class="btn danger solid sm" data-rfyes="${esc(f.id)}">Remove file</button><button class="btn sm" data-act="cancel">Keep</button></span>` : `<button class="btn sm" data-rf="${esc(f.id)}" title="Remove this file and what it added">✕</button>`}</li>`).join('')}</ul></div>` : ''}
@@ -366,11 +405,11 @@ function renderKeepFocus() {
     const a = document.activeElement; let key = null;
     if (a && a !== document.body) for (const k of FOCUS_KEYS) { const v = a.getAttribute(k); if (v) { key = [k, v]; break; } }
     const pos = a && typeof a.selectionStart === 'number' ? [a.selectionStart, a.selectionEnd] : null;
-    const y = window.scrollY; render(); window.scrollTo(0, y);
+    render();
     if (key) { const el = document.querySelector(`[${key[0]}="${CSS.escape(key[1])}"]`); if (el) { el.focus({ preventScroll: true }); try { if (pos) el.setSelectionRange(pos[0], pos[1]); } catch (e) {} } }
   }, 0);
 }
-const compsCardHTML = J => `<div class="row"><h2 style="margin:0">Comps considered <small>${J.comps.length}</small></h2><span class="grow"></span>${J.comps.length ? (app.confirm === 'rmall' ? `<span class="confirm">Remove all ${J.comps.length} comps from this assignment? <button class="btn danger solid sm" data-act="rmall-yes">Remove all</button><button class="btn sm" data-act="cancel">Keep</button></span>` : `<button class="btn sm danger" data-act="rmall">Remove all comps</button>`) : ''}</div>${compsTable(J)}`;
+const compsCardHTML = J => `<div class="row"><h2 style="margin:0">Comps considered <small>${J.comps.length}</small></h2><span class="grow"></span>${(() => { const n = J.comps.filter(c => !c.use && !c.notUsed).length; return n ? `<button class="btn sm primary" data-act="gridall" title="Put every comp that is not on the grid (and not one you took off) on it, in closing-date order">Grid all (${n})</button>` : ''; })()}${J.comps.filter(c => c.use).length > 1 && !gridInDateOrder(J) ? `<button class="btn sm" data-act="gridorder" title="Comp 1 = the most recent closing, as in this list">Number the grid in closing-date order</button>` : ''}${J.comps.length ? (app.confirm === 'rmall' ? `<span class="confirm">Remove all ${J.comps.length} comps from this assignment? <button class="btn danger solid sm" data-act="rmall-yes">Remove all</button><button class="btn sm" data-act="cancel">Keep</button></span>` : `<button class="btn sm danger" data-act="rmall">Remove all comps</button>`) : ''}</div>${compsTable(J)}`;
 /* Redraw only what depends on a typed value, so the field you are in (and the next one you Tab to) is never replaced. */
 function renderParts(opts = {}) {
   const J = app.job;
@@ -405,20 +444,20 @@ function compsTable(J) {
   if (!J.comps.length) return '<p class="help">No comps yet. Type an address above, or drop your MLS export.</p>';
   const rows = [...J.comps].sort(compOrder);
   const maxUse = Math.max(9, J.comps.length);
-  return `<div class="tablewrap"><table class="comps"><thead><tr><th>Use as</th><th></th><th>Address</th><th>Status</th><th class="r">Price</th><th>Date</th><th class="r">GLA</th><th class="r">Site</th><th>Q / C</th><th>View</th><th class="r">Miles</th><th>Sources</th><th>Flags</th><th></th></tr></thead><tbody>
+  return `<div class="tablewrap"><table class="comps"><thead><tr><th>Use as</th><th></th><th>Address</th><th>Status</th><th class="r">Price</th><th>Date</th><th class="r">GLA</th><th title="From the MLS listing (Construction: Single Story / Two Story); blank when the listing does not say">Stories</th><th class="r">Site</th><th>Q / C</th><th>View</th><th class="r">Miles</th><th>Sources</th><th>Flags</th><th></th></tr></thead><tbody>
   ${rows.map(c => { const fr = frontOf(c); const px = proximity(c, J); const fl = compFlags(c, J); const warn = fl.filter(x => x.sev === 'warn').length;
     const st = V(c, 'status') || ((currentSale(c) || {}).status || '');
     return `<tr class="${c.id === app.sel ? 'sel' : ''} ${c.use ? 'used' : ''}" data-open="${c.id}">
       <td class="usecell"><button class="btn small${c.use ? '' : ' primary'}" data-quse="${c.id}" title="${c.use ? 'Take it off the grid' : 'Put it on the grid as the next comp'}">${c.use ? 'Remove' : '+ Grid'}</button><select data-use="${c.id}" aria-label="Use as comp number" title="Or pick its comp number">${'<option value="">–</option>'}${Array.from({ length: maxUse }, (_, i) => `<option ${c.use === i + 1 ? 'selected' : ''}>${i + 1}</option>`).join('')}</select></td>
-      <td>${fr ? `<img class="thumb" data-photo="${fr.id}" alt="">` : '<span class="nothumb"></span>'}</td>
+      <td>${fr ? `<img class="thumb" data-photo="${fr.id}" alt="">` : `<span class="nothumb" title="${c.mls || V(c, 'mls') ? 'Drop the MLS photos zip in Add comps – the first photo (the front) shows here' : 'Not in the MLS – no MLS photo'}">${c.mls || V(c, 'mls') ? '📷' : ''}</span>`}</td>
       <td><b>${esc(compTitle(c))}</b><br><small>${esc(V(c, 'mls') ? 'MLS ' + V(c, 'mls') : '')}</small></td>
       <td>${esc(st)}</td><td class="r">${money(V(c, 'salePrice') || V(c, 'listPrice'))}${!V(c, 'salePrice') && V(c, 'listPrice') ? '<br><small>list</small>' : ''}</td>
-      <td>${esc(showDate(V(c, 'saleDate') || V(c, 'contractDate')))}</td><td class="r">${int(V(c, 'gla'))}</td><td class="r">${esc(fmt(FIELD.siteSf, V(c, 'siteSf')))}</td>
+      <td>${esc(showDate(V(c, 'saleDate') || V(c, 'contractDate')))}</td><td class="r">${int(V(c, 'gla'))}</td><td>${(() => { const n = (c.src.mls && c.src.mls.stories) || (c.src.pdf && c.src.pdf.stories) || null; return n ? (n === 1 ? 'Single' : n === 2 ? 'Two' : n === 3 ? 'Three' : esc(n)) : ''; })()}</td><td class="r">${esc(fmt(FIELD.siteSf, V(c, 'siteSf')))}</td>
       <td>${esc([V(c, 'quality'), V(c, 'condition')].filter(Boolean).join(' / '))}</td><td><small>${esc([V(c, 'viewRating'), V(c, 'viewTypes')].filter(Boolean).join(': ')).slice(0, 40)}</small></td>
       <td class="r">${px ? px.mi.toFixed(2) + '<br><small>' + px.dir.replace(/([a-z])([A-Z])/, '$1 $2') + '</small>' : ''}</td>
       <td>${sourcesOf(c).map(s => `<span class="src">${esc(s)}</span>`).join(' ')}</td>
       <td>${fl.length ? `<span class="badge ${warn ? 'warn' : ''}">${fl.length}</span>` : ''}</td>
-      <td>${app.confirm === 'rm:' + c.id ? `<span class="rmask">Keep it as analyzed – not used? <button class="btn sm primary" data-rmnu="${c.id}">Keep as not used</button><button class="btn sm" data-rmdb="${c.id}">Save to my comp database, then remove</button><button class="btn danger solid sm" data-rmyes="${c.id}">Remove</button><button class="btn sm" data-act="cancel">Cancel</button></span>` : `<button class="btn sm" data-rm="${c.id}" title="Remove from this list">✕</button>`}</td></tr>`; }).join('')}
+      <td>${app.confirm === 'rm:' + c.id ? `<span class="rmask">Keep it as analyzed – not used? <button class="btn sm primary" data-rmnu="${c.id}">Keep as not used</button><button class="btn sm primary" data-rmnu="${c.id}" data-nudb="1" title="Listed under Analyzed – not used, and saved to your comp database">Keep as not used + save to my comp database</button><button class="btn sm" data-rmdb="${c.id}">Save to my comp database, then remove</button><button class="btn danger solid sm" data-rmyes="${c.id}">Remove</button><button class="btn sm" data-act="cancel">Cancel</button></span>` : `<button class="btn sm" data-rm="${c.id}" title="Remove from this list">✕</button>`}</td></tr>`; }).join('')}
   </tbody></table></div>`;
 }
 const DETAIL_ALWAYS = ['quality', 'condition', 'beds', 'full', 'half', 'garage', 'carport'];   // her lines, always there to fill in
@@ -572,14 +611,14 @@ document.addEventListener('click', async e => {
   if (tu) { const G = G0(app.job); G.rates.timePct = +tu.dataset.tsuse; G.rateFrom = G.rateFrom || {}; G.rateFrom.timePct = 'market conditions support: ' + tu.dataset.tslabel; save(); renderKeepFocus(); toast('Sale date line: ' + tu.dataset.tsuse + '% per month – every comp is recalculated'); return; }
   const nb = e.target.closest('[data-rmnu],[data-rmdb],[data-savedb],[data-nuback]');
   if (nb) { const id = nb.dataset.rmnu || nb.dataset.rmdb || nb.dataset.savedb || nb.dataset.nuback; const c = app.job.comps.find(x => x.id === id); if (!c) return;
-    if (nb.dataset.rmnu) { markNotUsed(c); app.nuAsk = c.id; app.confirm = null; save(); render(); toast('Kept as analyzed – not used. Pick the reason below the grid.'); return; }
+    if (nb.dataset.rmnu) { const ord = c.use && gridInDateOrder(app.job); markNotUsed(c); if (ord) gridDateOrder(app.job); app.nuAsk = c.id; app.confirm = null; let n = 0; if (nb.dataset.nudb) n = await saveToMyDb(c); save(); render(); toast('Kept as analyzed – not used' + (nb.dataset.nudb ? ` and saved to your comp database (${n} saved)` : '') + '. Pick the reason below the grid.', 6000); return; }
     if (nb.dataset.savedb || nb.dataset.rmdb) { const n = await saveToMyDb(c); toast(`Saved to your comp database (${n} saved) – it goes into your archive the next time it is rebuilt`); }
     if (nb.dataset.rmdb) { app.job.comps = app.job.comps.filter(x => x.id !== id); if (app.sel === id) app.sel = null; app.confirm = null; save(); render(); return; }
     if (nb.dataset.nuback) { delete c.notUsed; if (app.nuAsk === id) app.nuAsk = null; save(); render(); return; }
     return; }
   { const q = e.target.closest('[data-quse]'); if (q && app.job) { e.stopPropagation(); const c = app.job.comps.find(x => x.id === q.dataset.quse); if (!c) return;
-      if (c.use) { markNotUsed(c); app.nuAsk = c.id; c.use = null; toast('Taken off the grid – kept as analyzed, not used. Pick the reason below the grid.'); }
-      else { const taken = new Set(app.job.comps.map(x => x.use).filter(Boolean)); let n = 1; while (taken.has(n)) n++; c.use = n; delete c.notUsed; toast(`On the grid as comp ${n}`); }
+      if (c.use) { const ord = gridInDateOrder(app.job); markNotUsed(c); app.nuAsk = c.id; c.use = null; if (ord) gridDateOrder(app.job); toast('Taken off the grid – listed under Analyzed – not used (below the grid). Pick the reason there.' + (ord ? ' The others moved up.' : '')); }
+      else { const ord = gridInDateOrder(app.job); const taken = new Set(app.job.comps.map(x => x.use).filter(Boolean)); let n = 1; while (taken.has(n)) n++; c.use = n; delete c.notUsed; if (ord) gridDateOrder(app.job); toast(`On the grid as comp ${c.use}` + (ord && c.use !== n ? ' (in closing-date order)' : '')); }
       save(); render(); return; } }
   { const ro = e.target.closest('[data-refopen],[data-refclose]'); if (ro && app.job) { app.ref = app.ref || { tab: 'land', area: null, q: '', newOnly: true }; if (ro.dataset.refopen) { app.ref.openFor = app.job.id; app.ref.closedFor = null; } else { app.ref.closedFor = app.job.id; app.ref.openFor = null; } const c = $('#refCard'); if (c) c.innerHTML = refHTML(app.job); return; } }
   { const rt = e.target.closest('[data-reftab]'); if (rt && app.job) { app.ref = app.ref || {}; app.ref.tab = rt.dataset.reftab; const c = $('#refCard'); if (c) c.innerHTML = refHTML(app.job); return; } }
@@ -600,7 +639,7 @@ document.addEventListener('click', async e => {
   switch (t.dataset.act) {
     case 'add': addByAddress($('#addr').value); break;
     case 'newjob': app.home = false; await newJob(); await loadPhotos(); render(); break;
-    case 'startorder': { const o = (app.orders || []).find(x => x.id === t.dataset.id); if (!o) break; app.home = false; await jobFromOrder(o); await loadPhotos(); render(); window.scrollTo(0, 0); break; }
+    case 'startorder': { const o = (app.orders || []).find(x => x.id === t.dataset.id); if (!o) break; app.home = false; await jobFromOrder(o); await loadPhotos(); render.top = true; render(); window.scrollTo(0, 0); break; }
     case 'mkorder': { const j = app.jobs.find(x => x.id === t.dataset.id); if (!j) break; if (j.orderId && (app.orders || []).some(o => o.id === j.orderId)) { toast('Already an order'); break; }
       if (window.parent === window) { toast('Open the Appraisal Assistant, click its Comp genie tab, and click Make it an order there – the order is made by the Appraisal Assistant.', 7000); break; }
       const S = j.subject || {}; t.disabled = true; t.textContent = 'Making the order…';
@@ -616,9 +655,9 @@ document.addEventListener('click', async e => {
       if (!hit) { MLSSTART = u; await DB.put('kv', { id: 'mlsStart', v: u }); app.mlsSet = false; render(); toast('Saved as your MLS start page – MLS buttons open it, and the number is copied for you to paste', 7000); break; }
       MLSLINK = u.replace(hit, '{mls}'); if (hit === n.replace(/-/g, '') && hit !== n) MLSLINK = MLSLINK.replace('{mls}', '{mlsnodash}');
       await DB.put('kv', { id: 'mlsLink', v: MLSLINK }); app.mlsSet = false; render(); toast('Saved – every comp now has Open in MLS'); break; }
-    case 'openjob': { const j = app.jobs.find(x => x.id === t.dataset.id); if (!j) break; app.home = false; app.job = j; app.sel = null; await DB.put('kv', { id: 'lastJob', v: j.id }); await loadPhotos(); render(); window.scrollTo(0, 0); break; }
+    case 'openjob': { const j = app.jobs.find(x => x.id === t.dataset.id); if (!j) break; app.home = false; app.job = j; app.sel = null; await DB.put('kv', { id: 'lastJob', v: j.id }); await loadPhotos(); render.top = true; render(); window.scrollTo(0, 0); break; }
     case 'deljob': app.confirm = 'deljob'; render(); break;
-    case 'deljob-yes': { const id = app.job.id; await DB.del('jobs', id); for (const p of await DB.byJob(id)) await DB.del('photos', p.id); app.jobs = app.jobs.filter(j => j.id !== id); app.job = app.jobs[0] || null; app.confirm = null; app.home = true; await loadPhotos(); render(); window.scrollTo(0, 0); toast('Assignment deleted'); break; }
+    case 'deljob-yes': { const id = app.job.id; await DB.del('jobs', id); for (const p of await DB.byJob(id)) await DB.del('photos', p.id); app.jobs = app.jobs.filter(j => j.id !== id); app.job = app.jobs[0] || null; app.confirm = null; app.home = true; await loadPhotos(); render.top = true; render(); window.scrollTo(0, 0); toast('Assignment deleted'); break; }
     case 'cancel': app.confirm = null; render(); break;
     case 'rmall': app.confirm = 'rmall'; render(); break;
     case 'rmall-yes': app.job.comps = []; app.sel = null; app.confirm = null; await saveNow(); render(); toast('All comps removed – your files list is unchanged'); break;
@@ -649,6 +688,11 @@ document.addEventListener('click', async e => {
     case 'rev-add': { await revLoad(); const t = ($('#revText') || {}).value || ''; if (!t.trim()) { toast('Type what they asked first'); break; }
       app.revOpen = true; REVLOG.push({ id: 'r' + Date.now().toString(36), text: t.trim(), word: (($('#revWord') || {}).value || '').trim(), client: (($('#revClient') || {}).value || '').trim(), added: todayISO(), on: true }); await revSave();
       if (app.pre && app.pre.job === app.job.id) await precheckRun(app.job, app.pre.wantExport); renderKeepFocus(); toast('Added – every pre-check will remind you'); break; }
+    case 'archphotos': await archPhotoConnect(); break;
+    case 'gridall': { const J = app.job; const ord = !J.comps.some(c => c.use) || gridInDateOrder(J); let n = Math.max(0, ...J.comps.map(c => c.use || 0));
+      const add = J.comps.filter(c => !c.use && !c.notUsed).sort(compOrder); add.forEach(c => { c.use = ++n; }); if (ord) gridDateOrder(J); save(); render();
+      toast(`${add.length} comp${add.length === 1 ? '' : 's'} put on the grid` + (ord ? ' in closing-date order (comp 1 = the most recent)' : ' after the ones you numbered') + '. Remove takes one off and lists it under Analyzed – not used.', 7000); break; }
+    case 'gridorder': gridDateOrder(app.job); save(); render(); toast('Grid numbered in closing-date order – comp 1 is the most recent'); break;
     case 'pullmicro': { const o = (app.orders || []).find(x => x.id === app.job.orderId); if (o) await pullMicro(o); break; }
     case 'x-csv': exportCsv(); break;
     case 'x-photos': exportPhotos(); break;
@@ -664,7 +708,7 @@ document.addEventListener('change', async e => {
   if (t.dataset.act === 'files' && t.files.length) { await ingest([...t.files]); t.value = ''; return; }
   if (t.dataset.act === 'subjcrs' && t.files.length) { try { const r = crsCanon(parseCRS(await pdfLines(t.files[0]))); app.job.subject.crs = r; ['addr', 'city', 'zip', 'apn'].forEach(k => { if (r[k]) app.job.subject[k] = r[k]; }); if (r.lat) { app.job.subject.lat = r.lat; app.job.subject.lon = r.lon; } if (app.job.name === 'New assignment' && r.addr) app.job.name = r.addr; logFile(t.files[0].name, 'CRS (subject)', 1); save(); render(); toast('Subject filled from the CRS report'); } catch (err) { toast('Could not read that CRS report'); } return; }
   if (t.dataset.act === 'fromorder' && t.value) { const o = app.orders.find(x => x.id === t.value); if (o) { app.home = false; await jobFromOrder(o); await loadPhotos(); render(); } return; }
-  if (t.dataset.act === 'pickjob' && !t.value) { app.home = true; render(); window.scrollTo(0, 0); return; }
+  if (t.dataset.act === 'pickjob' && !t.value) { app.home = true; render.top = true; render(); window.scrollTo(0, 0); return; }
   if (t.dataset.act === 'pickjob') { app.home = false; app.job = app.jobs.find(j => j.id === t.value); app.sel = null; await DB.put('kv', { id: 'lastJob', v: app.job.id }); await loadPhotos(); render(); return; }
   if (t.dataset.act === 'showall') { app.showAll = t.checked; render(); return; }
   if (t.dataset.use) { const c = app.job.comps.find(x => x.id === t.dataset.use); const n = t.value ? +t.value : null; if (!n && c.use) { markNotUsed(c); app.nuAsk = c.id; } if (n) app.job.comps.forEach(x => { if (x !== c && x.use === n) x.use = null; }); c.use = n; save(); render(); return; }

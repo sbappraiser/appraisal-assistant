@@ -140,7 +140,7 @@ function mlsCanon(raw, G, g) {
     topo: list('Location/Topo'), viewTypes: views.filter(v => !/^Setting$/.test(v)).join('; ') || (views.includes('Setting') ? 'Setting' : ''),
     viewRange: views.includes('Panoramic') ? 'Panoramic' : views.includes('Partial/Filtered') ? 'Partial' : '',
     attach: condoAtt ? 'Attached' : condoDet ? 'Detached' : (/^HE$/i.test(typ) ? 'Detached' : ''), propType: typ,
-    style: list('Style'), stories: has('Construction', /Single Story/) ? 1 : has('Construction', /Two Story/) ? 2 : has('Construction', /Tri/) ? 3 : null,
+    style: list('Style'), stories: has('Construction', /Single Story/) ? 1 : has('Construction', /Two Story/) ? 2 : has('Construction', /Tri/) ? 3 : (num(g('Stories', '# Stories', 'Number of Stories', 'Levels')) || null),
     mlsCondition: list('Condition'), yearBuilt: num(g('Year Built')), assessorYB: num(g('Assessor Year Built')),
     beds: num(g('Total Bedrooms')), full: num(g('Total Full Baths')), half: num(g('Total Half Baths')), bathsTotal: num(g('Total Bathrooms')),
     gla: num(g('Total SqFt.', 'Total SqFt')), mainSf: num(g('Main House SqFt')), otherSf: num(g('Other Structures SqFt')), assessorSf: num(g('Assessor SqFt')),
