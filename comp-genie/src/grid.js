@@ -230,6 +230,27 @@ function locPick(who) {
     else if (t.dataset.siclose || t === bg) bg.remove();
     else if (t.dataset.sisave) { const txt = siText(L); if (c) wbFactSet(J, c, 'loc', txt); else { if (txt) G.subj.loc = txt; else delete G.subj.loc; } bg.remove(); save(); render(); toast('Location (site influence) set: ' + (txt || 'none')); } });
 }
+/* ---- her 2.6 archive location (N/B/A + factors: Res, BsyRd, ShrDrv, PrvtLn, InterLot, FldZne …) → UAD 3.6 (Oct 20 2026) ----
+   Site influences get their own impact (the 2.6 rating goes to the first factor; traffic/noise/power lines are adverse, water / gated beneficial,
+   Residential neutral when it is not first). Shared drive, private road, easement, flood zone and lot shape are not site influences in 3.6 –
+   they go to their own lines (Primary access, Street access, Easement, Hazard zone, Site characteristics). Her own entries always win. */
+const ARCH_SI = [[/^res(idential)?$/, 'Residential'], [/^(bsyrd|busy ?road|some ?tr(a|f)+ic|sometrfc|sometrffc|bckstrfc|trfcnse|traffic|fwynse|freeway)/, 'BusyRoadway'], [/^comm/, 'CommercialArea'], [/^ind/, 'IndustrialArea'],
+  [/^(wtrfr|waterfront|nrwtr|near water|ocean|lake|creek)/, 'BodyOfWater'], [/^(adjprk|prklnd|park|adjacent park|nearpark)/, 'Park'], [/^(glfcse|golf)/, 'GolfCourse'], [/^(adjpwr|pwrln|power)/, 'OverheadElectricPowerTransmissionLine'],
+  [/^(pubtrn|transit)/, 'PublicTransportationHub'], [/^(train|rail)/, 'RailLine'], [/^(schl|school|adjschl)/, 'School'], [/^(agri|farm)/, 'Agricultural'], [/^airport/, 'Airport'], [/^(hidens|high density|apts|apartments)/, 'HighDensityResidential']];
+const ARCH_LINE = [[/^(shrdrv|shared ?dr)/, 'primaryAccess', 'Shared driveway'], [/^(prvtln|private ?lane|pvtln)/, 'streetAccess', 'Private lane'], [/^(prvtrd|private ?road|pvtrd)/, 'streetAccess', 'Private road'],
+  [/^(drvesmn?t|driveway easement)/, 'easement', 'Driveway easement'], [/^(esmt|easement)/, 'easement', 'Easement'], [/^(fldzne?|flood ?zone|fldwy|floodway)/, 'hazard', 'Flood zone'],
+  [/^(interlot|interior lot)/, 'siteChar', 'Interior lot'], [/^(flaglot|flag lot)/, 'siteChar', 'Flag lot'], [/^(secondrow|second row)/, 'siteChar', 'Second row'], [/^(lotstoamenity)/, 'siteChar', 'Lots to amenity']];
+const SI_BAD = new Set(['BusyRoadway', 'IndustrialArea', 'OverheadElectricPowerTransmissionLine', 'RailLine', 'Airport', 'HighPressureGasLine', 'OilOrGasWell']), SI_GOOD = new Set(['BodyOfWater', 'GolfCourse', 'Park', 'GreenSpace']);
+function archLoc36(rating, factors) {
+  const imp0 = /^b/i.test(rating) ? 'Beneficial' : /^a/i.test(rating) ? 'Adverse' : 'Neutral'; const L = [], lines = {};
+  String(factors || '').split(/;\s*/).map(x => x.trim()).filter(Boolean).forEach((f, i) => { const k = f.toLowerCase().replace(/[^a-z ]/g, '').trim();
+    const ln = ARCH_LINE.find(([re]) => re.test(k)); if (ln) { lines[ln[1]] = lines[ln[1]] ? lines[ln[1]] + '; ' + ln[2] : ln[2]; return; }
+    const si = ARCH_SI.find(([re]) => re.test(k)); const type = si ? si[1] : 'Other';
+    const impact = i === 0 ? imp0 : type === 'Residential' ? 'Neutral' : SI_BAD.has(type) ? 'Adverse' : SI_GOOD.has(type) || /gated/i.test(k) ? 'Beneficial' : imp0;
+    L.push({ type, impact, prox: '', other: type === 'Other' ? (/gated/i.test(k) ? 'Gated community' : /noise/i.test(k) ? 'Noise exposure' : /rural/i.test(k) ? 'Rural' : f).slice(0, 45) : '' }); });
+  if (!L.length && Object.keys(lines).length) L.push({ type: 'Residential', impact: 'Neutral', prox: '', other: '' });
+  return { loc: siText(L), lines };
+}
 /* ---- cooling from the MLS / archive heating-cooling text ---- */
 function coolText(t) { t = String(t || ''); if (!t.trim()) return ''; if (/no cooling|cooling: none|\/\s*none\b|\bno a\/?c\b/i.test(t)) return 'None';
   const m = t.match(/central air|central|\bCAC\b|\bA\/?C\b|air condition\w*|heat pump|mini[- ]?split|ductless|evaporative|swamp|wall unit|window unit/i); return m ? m[0].replace(/^CAC$/i, 'Central air').replace(/^central$/i, 'Central air') : ''; }
@@ -289,6 +310,7 @@ function compFacts(c, J) {
     other: g('other') || [yes(g('horse')) ? 'Horse facilities' : ''].filter(Boolean).join(', '), _id: c.id, aduSf: g('aduSf'), aduBaths: g('aduBaths'),   // horse: the MLS says 'No' when the box is not ticked (it showed "Horse facilities" for every MLS comp)
     carport: num(g('carport')), bsmtUnf: !blank(g('bsmtSf')) ? Math.max(0, (+g('bsmtSf')) - (+(g('bsmtFin') || 0))) : null,
     heat: String(g('heating') || '').trim() || String(g('heatCool') || '').split(' / ')[0].trim(), cool: coolText(g('cooling') || g('heatCool')) || (/no cooling listed/i.test(g('heatCool') || '') ? 'None listed' : '') };
+  { const lr = val(c, 'locRating'); const E = c.edit || {}; if (lr.src === 'arch' && blank(E.locRating) && blank(E.locFactors)) { const A = archLoc36(g('locRating'), g('locFactors')); if (A.loc) F0.loc = A.loc; Object.entries(A.lines).forEach(([k, v]) => { if (blank(F0[k])) F0[k] = v; }); } }   // her 2.6 archive location in 3.6 terms
   adjRows(J).forEach(r => { const e = (c.edit || {})['grid_' + r[0]]; if (!blank(e)) F0[r[0]] = e; });   // her entries on lines with no source
   F0._fine = { q: fineOf(J, c.id, 'q'), c: fineOf(J, c.id, 'c') };
   if (g('viewRange') && F0.view && !/limited|panoram/i.test(F0.view)) F0.view += ' – ' + g('viewRange');
