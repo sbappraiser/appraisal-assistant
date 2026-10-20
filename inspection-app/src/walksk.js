@@ -45,7 +45,8 @@ async function wskShot(file) {
   await wskUpdate(ins => { ins.photos = ins.photos || []; if (!ins.photos.some(x => x.id === id)) ins.photos.push(meta); return { check: c => c && (c.photos || []).some(x => x.id === id) }; });
   toast('Photo saved – ' + p.t);
 }
-function wskCam() {
+function wskCam() { if (wkCamMode() !== 'app') return wkNativeShot(wskShot); return wskCamApp(); }
+function wskCamApp() {
   wcamOpen({ to: () => wskTitle(), chips: () => wskPlaces().slice(0, 4).map(p => ({ k: p.k, t: p.t.replace(' of dwelling', ''), on: p.k === WSK.place })),
     onChip: k => { WSK.place = k; wskState(); }, onShot: wskShot, onClose: () => wskState() });
 }

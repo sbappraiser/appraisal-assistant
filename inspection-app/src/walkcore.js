@@ -16,7 +16,16 @@ function wkClean(t) {
   return s.replace(WK_COLON, ': ').replace(/\s+:/g, ':').replace(/:\s*/g, ': ').replace(/\s{2,}/g, ' ').trim();
 }
 
-/* ---------------- camera ---------------- */
+/* ---------------- camera ----------------
+   Oct 20 2026: photos from the in-app camera are a frame of the live video (no tap-to-focus, no HDR) and looked fuzzy,
+   so the iPad's own camera is the default; the in-app camera (stays open, many shots) is a choice. */
+function wkCamMode() { try { return localStorage.getItem('uad-wk-cam') || 'ipad'; } catch (e) { return 'ipad'; } }
+function wkSetCamMode(m) { try { localStorage.setItem('uad-wk-cam', m); } catch (e) {} }
+function wkNativeShot(onFile) {   // must run inside the tap
+  const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/*'; inp.setAttribute('capture', 'environment'); inp.style.display = 'none';
+  inp.onchange = async () => { const f = inp.files && inp.files[0]; inp.remove(); if (f) { try { await onFile(f); } catch (e) { toast('Photo not saved: ' + (e.message || e)); } } };
+  document.body.appendChild(inp); inp.click();
+}
 const WCAM = { stream: null, el: null, o: null, n: 0, busy: false };
 const wcamIsOpen = () => !!WCAM.el;
 async function wcamOpen(o) {   // o: { to(): label, chips(): [{k, t, on}], onChip(k), onShot(file) -> Promise, onClose() }

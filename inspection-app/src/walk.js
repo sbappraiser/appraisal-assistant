@@ -156,6 +156,8 @@ function wkMicState() {
   const b = document.getElementById('wkMic'), it = document.getElementById('wkInterim'); if (b) { b.classList.toggle('on', !!WSR.on); b.querySelector('b').textContent = WSR.on ? 'Listening… tap to stop' : wkMode() === 'keyboard' ? 'Talk (keyboard 🎤)' : 'Talk'; }
   if (it) { it.textContent = WSR.on ? (WSR.interim || 'Say a place and "colon" to move: "Driveway colon concrete, 2 cars"…') : WSR.err === 'not allowed' ? 'Listening is not allowed – iPad Settings › Safari › Microphone › Allow (and Siri & Dictation on). Or use the keyboard microphone in the box below.' : ''; it.hidden = !it.textContent; }
 }
+function wkPhoto() { if (wkCamMode() === 'app') return wkOpenCam(); const ins = app.ins, P = wkPlace(ins, wkData(ins).place); if (!wkShot(ins, P)) { toast('Tap the room or item first, then Photo'); return; }
+  wkNativeShot(async f => { await wkSavePhoto(f); toast('Photo saved – ' + (wkShot(ins, P) || {}).t + '. Tap Photo again for another.'); }); }
 function wkOpenCam() {
   const ins = app.ins;
   wcamOpen({ to: () => { const P = wkPlace(ins, wkData(ins).place), s = wkShot(ins, P); return s ? (P.g === 'item' ? '' : P.t + ' › ') + s.t : P.t + ' (pick what the photo is)'; },
@@ -210,6 +212,7 @@ function renderWalk() {
       <button class="wk-b mic ${WSR.on ? 'on' : ''}" id="wkMic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg><b>${WSR.on ? 'Listening… tap to stop' : wkMode() === 'keyboard' ? 'Talk (keyboard 🎤)' : 'Talk'}</b></button>
       <button class="wk-b sk" id="wkSketch"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><path d="M4 20V8l8-4 8 4v12z"/><path d="M4 20h16"/></svg><b>Sketch</b></button>
     </div>
+    <div class="wk-mode"><span>Photo uses:</span><button class="wchip sm ${wkCamMode() === 'ipad' ? 'on' : ''}" data-wkcam="ipad">iPad camera (sharpest)</button><button class="wchip sm ${wkCamMode() === 'app' ? 'on' : ''}" data-wkcam="app">Camera in the app (stays open)</button></div>
     <div class="wk-mode"><span>Talk uses:</span><button class="wchip sm ${wkMode() === 'keyboard' ? 'on' : ''}" data-wkmode="keyboard">Keyboard microphone (more accurate)</button><button class="wchip sm ${wkMode() === 'listen' ? 'on' : ''}" data-wkmode="listen">Hands-free listening</button></div>
     <p class="wk-interim" id="wkInterim" hidden></p>
     <div id="wkBody">${wkBodyHtml(ins, P)}</div>
@@ -301,7 +304,7 @@ function bindWalk(root) {
   const ins = app.ins, w = wkData(ins);
   { const rt = root.querySelector('#wkRoute'), on = rt && rt.querySelector('.wk-stop.on'); if (on) { const c = () => { rt.scrollLeft = on.offsetLeft - rt.clientWidth / 2 + on.offsetWidth / 2; }; c(); requestAnimationFrame(c); } }   // the place she is in stays highlighted in the middle
   const on = (id, fn) => { const b = root.querySelector('#' + id); if (b) b.onclick = fn; };
-  on('wkCam', wkOpenCam); on('wkMic', wkTalk); on('wkSketch', wkOpenSketch); on('wkNext', wkNext); on('wkSort', wkSort);
+  on('wkCam', wkPhoto); on('wkMic', wkTalk); on('wkSketch', wkOpenSketch); on('wkNext', wkNext); on('wkSort', wkSort);
   root.querySelectorAll('[data-wkgo]').forEach(b => b.onclick = () => wkGo(b.dataset.wkgo));
   root.querySelectorAll('[data-wkshot]').forEach(b => b.onclick = () => { w.shot[w.place] = b.dataset.wkshot; save(); wkRefresh(); });
   root.querySelectorAll('[data-wklv]').forEach(b => b.onclick = () => { w.level = b.dataset.wklv; save(); wkRefresh(); });
@@ -315,11 +318,12 @@ function bindWalk(root) {
     if (tbtn && tb && box) { tbtn.onclick = () => { const st = box.selectionStart, en = box.selectionEnd; const sel = st != null && en > st ? box.value.slice(st, en).trim() : (box.value.replace(/[.,;:!?\s]+$/, '').match(/(\S+)$/) || [, ''])[1];
       tb.hidden = !tb.hidden; WK.teachOpen = !tb.hidden; WK.teachSel = sel ? sel.replace(/[.,;:!?]+$/, '') : ''; if (!tb.hidden) { const h = tb.querySelector('#dkTh'); if (h && WK.teachSel) h.value = WK.teachSel; } }; bindT();
       if (WK.teachOpen) { tb.hidden = false; const h = tb.querySelector('#dkTh'); if (h && !h.value && WK.teachSel) h.value = WK.teachSel; } } }
-  root.querySelectorAll('[data-wktake]').forEach(b => b.onclick = () => { w.shot[w.place] = b.dataset.wktake; save(); wkOpenCam(); });
+  root.querySelectorAll('[data-wktake]').forEach(b => b.onclick = () => { w.shot[w.place] = b.dataset.wktake; wkPhoto(); });
   { const sw = root.querySelector('#wkSaveWaiting'); if (sw) sw.onclick = () => { const n = wkApplyText(ins, ins.dictDraft, false); if (n >= 0) { ins.dictDraft = ''; if (app.dict) app.dict.text = ''; save(); toast(n + ' answers saved into the inspection from the waiting notes'); wkRefresh(); } }; }
   root.querySelectorAll('[data-wkdel]').forEach(b => b.onclick = () => wkRemove(ins, b.dataset.wkdel));
   root.querySelectorAll('button[data-wkans]').forEach(b => b.onclick = () => wkAnswer(ins, b.dataset.wkans, b.dataset.v));
   root.querySelectorAll('select[data-wkans]').forEach(b => b.onchange = () => { if (b.value) wkAnswer(ins, b.dataset.wkans, b.value); });
+  root.querySelectorAll('[data-wkcam]').forEach(b => b.onclick = () => { wkSetCamMode(b.dataset.wkcam); wkRefresh(); });
   root.querySelectorAll('[data-wkmode]').forEach(b => b.onclick = () => { wkSetMode(b.dataset.wkmode); wkRefresh(); });
   root.querySelectorAll('[data-lvtab]').forEach(b => b.onclick = () => { if (b.dataset.lvtab === 'attention') return goTab('attention'); goTab(b.dataset.lvtab, b.dataset.lvanchor || null, b.dataset.lvgroup || null); });
   const rf = root.querySelector('#dkLvRefresh'); if (rf) rf.onclick = () => wkRefresh();
