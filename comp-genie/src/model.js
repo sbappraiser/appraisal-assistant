@@ -39,6 +39,7 @@ const FIELDS = [
   { k: 'unit', l: 'Unit', g: 'Location and site', kind: 'id', t: 'text' },
   { k: 'city', l: 'City', g: 'Location and site', kind: 'id', t: 'text' },
   { k: 'zip', l: 'ZIP', g: 'Location and site', kind: 'id', t: 'text' },
+  { k: 'zip4', l: 'ZIP+4 (last 4 digits)', g: 'Location and site', kind: 'id', t: 'text' },
   { k: 'apn', l: 'APN', g: 'Location and site', kind: 'id', t: 'text' },
   { k: 'lat', l: 'Latitude', g: 'Location and site', kind: 'geo', t: 'num6' },
   { k: 'lon', l: 'Longitude', g: 'Location and site', kind: 'geo', t: 'num6' },

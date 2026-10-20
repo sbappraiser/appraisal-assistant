@@ -70,7 +70,7 @@ function buildCompXML(PROPS, RELS, DSS, c, n, job) {
   const g = k => V(c, k);
   // ADDRESS
   const ad = X(P, 'ADDRESS'); XV(ad, 'AddressLineText', g('addr')); if (g('unit')) { XV(ad, 'AddressUnitDesignatorType', 'Unit'); XV(ad, 'AddressUnitIdentifier', g('unit')); }
-  XV(ad, 'CityName', g('city') || ARCH.zipCity[g('zip')] || ''); XV(ad, 'PostalCode', g('zip')); XV(ad, 'StateCode', 'CA');
+  XV(ad, 'CityName', g('city') || ARCH.zipCity[g('zip')] || ''); XV(ad, 'PostalCode', zip9(c)); XV(ad, 'StateCode', 'CA');
   // CAR_STORAGES
   const cs = X(P, 'CAR_STORAGES'); let any = false;
   const gar = num(g('garage')); if (gar) { any = true; const d = X(X(cs, 'CAR_STORAGE'), 'CAR_STORAGE_DETAIL'); const gt = String(g('garageType') || ''); XV(d, 'CarStorageAttachmentType', /built/i.test(gt) ? 'BuiltIn' : /detach/i.test(gt) ? 'Detached' : /attach/i.test(gt) ? 'Attached' : null); XV(d, 'CarStorageType', 'Garage'); XV(d, 'ParkingSpacesCount', gar); }

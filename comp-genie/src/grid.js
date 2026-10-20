@@ -452,7 +452,7 @@ function notUsedXML(PROPS, job) { let k = 0;
   job.comps.filter(c => c.notUsed && c.notUsed.report && !c.use).forEach(c => { const N = c.notUsed; const g = x => V(c, x); k++;
     const P = X(PROPS, 'PROPERTY', { ValuationUseType: 'PropertyAnalyzedNotUsed' });
     const ad = X(P, 'ADDRESS'); XV(ad, 'AddressLineText', g('addr')); if (g('unit')) { XV(ad, 'AddressUnitDesignatorType', 'Unit'); XV(ad, 'AddressUnitIdentifier', g('unit')); }
-    XV(ad, 'CityName', g('city') || ARCH.zipCity[g('zip')] || ''); XV(ad, 'PostalCode', g('zip')); XV(ad, 'StateCode', 'CA');
+    XV(ad, 'CityName', g('city') || ARCH.zipCity[g('zip')] || ''); XV(ad, 'PostalCode', zip9(c)); XV(ad, 'StateCode', 'CA');
     XV(X(X(P, 'COMPARABLE'), 'COMPARABLE_DETAIL'), 'PropertyOrdinalNumber', k);
     const s = String(g('status') || (g('salePrice') ? 'Closed' : '')); const lst = /closed|sold|settled/i.test(s) ? 'SettledSale' : /pending|escrow|contingent/i.test(s) ? 'Pending' : /active|coming/i.test(s) ? 'Active' : s ? 'OffMarket' : null;
     if (lst) XV(X(X(X(P, 'LISTING_INFORMATIONS'), 'LISTING_INFORMATION'), 'LISTING_INFORMATION_DETAIL'), 'ListingStatusType', lst);
@@ -642,6 +642,8 @@ async function buildFullReport(J) {
     const after = [...parent.children].find(k => seq.indexOf(k.localName) > r && r >= 0); parent.insertBefore(e, after || null); return e; };
   const leaf = (parent, tag, text, attrs) => { const e = sub.createElementNS(NS, tag); e.textContent = String(text); Object.entries(attrs || {}).forEach(([k, v]) => e.setAttribute(k, v)); parent.appendChild(e); return e; };
   const VA = q1(sub, 'VALUATION_ANALYSIS'), PROPS = q1(sub, 'PROPERTIES'), SUBJ = [...PROPS.children].find(p => p.getAttribute('ValuationUseType') === 'SubjectProperty'), SVC = q1(sub, 'SERVICE');
+  { const crs = J.subject.crs || {}; const pc = SUBJ && [...SUBJ.children].find(e => e.localName === 'ADDRESS'); const pe = pc && [...pc.children].find(e => e.localName === 'PostalCode');   // subject ZIP+4 from the subject's CRS report
+    if (pe && /^\d{4}$/.test(crs.zip4 || '') && pe.textContent.trim() === String(crs.zip || '').slice(0, 5)) pe.textContent = pe.textContent.trim() + '-' + crs.zip4; }
   // comps after the subject; their data sources and relationships
   [...q1(cmp, 'PROPERTIES').children].forEach(p => PROPS.appendChild(sub.importNode(p, true)));
   const DS = child(VA, 'DATA_SOURCES'); [...(q1(cmp, 'DATA_SOURCES') || { children: [] }).children].forEach(d => DS.appendChild(sub.importNode(d, true)));

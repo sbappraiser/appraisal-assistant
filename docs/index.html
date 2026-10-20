@@ -594,6 +594,7 @@ mark.blank{background:#fff3a8;padding:0 2px;border-radius:3px}.cmt textarea{widt
       <li>The <b>Stories</b> column comes from the MLS listing (Single Story / Two Story); when the listing does not say, it comes from your archive's 2.6 Design line (DT1;Ranch = detached 1 story, DT2, AT2, SD2 …, marked “archive”). The same number is the <b>Levels (stories)</b> line on the grid (UAD 3.6 Levels).</li>
       <li>Click the 📷 square of a comp with no photo: if your archive has its front photo, it connects your archive photos; otherwise choose the MLS photos zip or a picture of the front.</li>
       <li><b>⚙ Grid lines</b> (top of the adjustment grid): every UAD 3.6 adjustment line, with the UAD name it goes to in SFREP. Tick the lines this report needs (Cooling, Heating, Functional utility, Below grade unfinished, Carport spaces, Hazard zone, Easement …); unticked lines are hidden and add nothing. <b>+ Add your own line</b> makes an SFREP “Add Other” line under your name (each comp's entry up to 21 characters). <b>Save as my default</b> keeps the ticks and your own lines for new assignments. Garage and carport amounts go to SFREP together as the one Vehicle Storage line.</li>
+      <li><b>ZIP+4</b>: the UAD file carries the 9-digit ZIP (93117-2136) when the CRS report, CRS list, your database or MLS has the last 4 digits for the same ZIP (3.6 takes 5 or 9 digits; +4 is not required). The comp’s page has a <b>ZIP+4 (last 4 digits)</b> line you can type in. The subject gets its +4 from the subject’s CRS report. CRS reports dropped before Oct 20 2026 need dropping again to pick up the +4.</li>
       <li><b>A comp’s Field by field table</b> (click a comp’s row in Comps considered): the <b>green</b> cell is the source in use for that line, and the grid uses it. To use another source, click its cell – the green moves there. <b>Your value</b> shows the value in use; type over it to use your own (it shows “You”), and ↺ goes back to the sources. Lines between the columns separate Using, Your value and each source.</li>
       <li><b>Comps considered – ✓ Done – collapse</b>: when you have finished the list, click <b>✓ Done – collapse</b> (top right of Comps considered). It folds away and shows a green ✓; click <b>Show ▾</b> to open it again. The field you are typing in turns <b>orange</b>. <b>Files in this assignment</b> (Add comps) stays folded with a green ✓ when nothing else is needed; it opens by itself when comps still need a CRS report (missing MLS photos alone keep it folded). Click its title to see the files.</li>
       <li><b>▾ pick (UAD 3.6 answers)</b>: on the grid, lines whose 3.6 field is a fixed list have <b>▾ pick</b> under the subject and each comp – attached / detached, design (style), levels, quality, condition, listing status, transfer terms (financing), sale type, heating, cooling, topography, construction method, functional utility, hazard zone, zoning, street access, easement, restriction, view and location. Only the allowed answers are offered, with UAD guidance; “Other – describe” where 3.6 allows it. A typed entry that is not an allowed answer turns <b>red</b> (for example a 2.6 code like DT2;Ranch – in 3.6 that is Attached/detached = Detached, Levels = 2, Design = Ranch). The lines the 3.6 grid always shows (Appendix F-1) are always ticked under ⚙ Grid lines and have a <b style="color:#1f5fd6">blue *</b> to the left of the line name (on the grid and in ⚙ Grid lines).</li>
@@ -756,7 +757,7 @@ mark.blank{background:#fff3a8;padding:0 2px;border-radius:3px}.cmt textarea{widt
 </div>
 <div id="toast" role="status" hidden></div>
 <script>
-const BUILD='o1-1020-2020';
+const BUILD='o1-1020-2025';
 const G = (() => {
 /* ---------------- small helpers ---------------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -1128,7 +1129,7 @@ function parseCrsExport(text) {
   const H = rows[0].map(x => String(x).trim().toLowerCase()); const ix = n => H.indexOf(n.toLowerCase());
   return rows.slice(1).map(r => { const g = (...ns) => { for (const n of ns) { const i = ix(n); if (i >= 0 && String(r[i] || '').trim() !== '') return String(r[i]).trim(); } return ''; };
     const addr = titleCase(g('Property Address')); const lotSf = num(String(g('Lot Sq. Feet')).replace(/,/g, '')); const acres = num(g('Acreage'));
-    return { _src: 'crslist', apn: g('APN'), addr, city: titleCase(g('Property City')), zip: (g('Property Zip').match(/\d{5}/) || [''])[0],
+    return { _src: 'crslist', apn: g('APN'), addr, city: titleCase(g('Property City')), zip: (g('Property Zip').match(/\d{5}/) || [''])[0], zip4: (g('Property Zip').match(/\d{5}-?(\d{4})/) || ['', ''])[1],
       gla: num(g('Total Square Footage')), yearBuilt: num(g('Year Built')), lotSf: lotSf || (acres ? Math.round(acres * 43560) : null), acres,
       saleDate: isoDate(g('Last Sale Date')), salePrice: num(String(g('Last Sale Amount')).replace(/[$,]/g, '')), doc: g('Warranty Deed Document Number'),
       landUse: g('Land Use', 'Improvement Type'), subdivision: g('Subdivision') };
@@ -1166,7 +1167,7 @@ function mlsCanon(raw, G, g) {
   const aduN = ['ADU #1: Type', 'ADU #2: Attached'].filter(k => raw[k]).length;
   const views = G['View'] || [];
   return {
-    _src: 'mls', mls: g('Listing Number'), addr: [g('Street #'), titleCase(g('Street Name'))].filter(Boolean).join(' '), unit: g('Unit/Space #'), zip: g('Postal Code'), apn: g('Parcel Number'),
+    _src: 'mls', mls: g('Listing Number'), addr: [g('Street #'), titleCase(g('Street Name'))].filter(Boolean).join(' '), unit: g('Unit/Space #'), zip: (String(g('Postal Code')).match(/\d{5}/) || [''])[0], zip4: (String(g('Postal Code') + ' ' + g('Zip Plus 4', 'Postal Code Plus 4', 'ZIP+4')).match(/\d{5}-?(\d{4})|\b(\d{4})\b/) || [])[1] || (String(g('Zip Plus 4', 'Postal Code Plus 4', 'ZIP+4')).match(/\d{4}/) || [''])[0], apn: g('Parcel Number'),
     city: g('City') ? titleCase(g('City')) : '',
     status, listPrice: num(g('Price')), origList: num(g('Original List Price')), listDate: isoDate(g('Begin Date')), lastRed: isoDate(g('Price Change Date', 'Last Price Change Date', 'Price Change Timestamp')) || '',
     contractDate: isoDate(g('Under Contract Date')), saleDate: isoDate(g('Sold Date', 'COE')), salePrice: num(g('Sold Price')),
@@ -1279,7 +1280,7 @@ function pdfCanon(p) {
 function crsCanon(c) {
   const sales = (c.sales || []).map(s => ({ date: isoDate(s.recorded) || isoDate(s.date), docDate: isoDate(s.docDate || s.date), recorded: isoDate(s.recorded),   /* closing = Date Recorded (her rule) */ price: num(s.amount), src: 'CRS ' + (s.instrument || 'deed'), type: num(s.amount) ? 'Sale' : 'Transfer', inst: s.instrument || '', buyer: s.buyer || '', seller: s.seller || '', doc: s.doc || '' }));
   return {
-    _src: 'crs', addr: titleCase(c.addr || ''), city: titleCase(c.city || ''), zip: c.zip || '', apn: c.apn || '',
+    _src: 'crs', addr: titleCase(c.addr || ''), city: titleCase(c.city || ''), zip: c.zip || '', zip4: c.zip4 || '', apn: c.apn || '',
     beds: num(c.beds), bathsTotal: num(c.baths), gla: num(c.sqftAssessor), yearBuilt: num(c.yearBuilt), rooms: num(c.rooms),
     siteSf: num(c.lotSf) || (num(c.acres) ? Math.round(num(c.acres) * 43560) : null), acres: num(c.acres),
     lat: num(c.lat), lon: num(c.lng), zoning: c.zoning || '', landUse: c.landUse || '', fema: [c.fema, c.femaPanel, c.femaDate].filter(Boolean).join(' · '), owner: c.owner || '',
@@ -1325,6 +1326,13 @@ function remarkFinancing(code, rem) {
   const w = m[0].toLowerCase(); const kind = /cash/.test(w) ? 'Cash' : /fha/.test(w) ? 'FHA' : /\bva\b/.test(w) ? 'VA' : /usda/.test(w) ? 'USDA' : /seller|owner/.test(w) ? 'Seller financing' : 'Conventional';
   return kind + ' (agent remarks: \u201c' + t.slice(Math.max(0, m.index - 25), m.index + m[0].length + 25).replace(/\s+/g, ' ').trim() + '\u201d)';
 }
+
+/* ZIP+4 (her ask Oct 20 2026): 3.6 PostalCode takes 5 or 9 digits (12345 or 12345-6789; Appendix F-1 examples show 5, so +4 is not required).
+   The comp's 5-digit ZIP decides; the +4 comes from any source with the same 5 digits (CRS report, CRS list, your database, MLS). */
+function zip9(c) { const z = String(V(c, 'zip') || '').match(/\d{5}/); if (!z) return V(c, 'zip') || ''; const S = srcVals(c); const e = String((c.edit || {}).zip4 || '').match(/\d{4}/); if (e) return z[0] + '-' + e[0];
+  for (const s of ['crs', 'arch', 'mls', 'pdf', 'cort']) { const o = S[s]; if (!o) continue; const m = String(o.zip || '').match(/^(\d{5})-?(\d{4})$/); if (m && m[1] === z[0]) return z[0] + '-' + m[2];
+    if (o.zip4 && /^\d{4}$/.test(o.zip4) && String(o.zip || '').slice(0, 5) === z[0]) return z[0] + '-' + o.zip4; }
+  return z[0]; }
 
 /* ---------------- County "Permit History by Parcel" PDF parser ----------------
    Uses the positioned text rows from pdfLines (lines.rows = [[{x,s}]]). */

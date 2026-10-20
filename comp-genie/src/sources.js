@@ -97,7 +97,7 @@ function parseCrsExport(text) {
   const H = rows[0].map(x => String(x).trim().toLowerCase()); const ix = n => H.indexOf(n.toLowerCase());
   return rows.slice(1).map(r => { const g = (...ns) => { for (const n of ns) { const i = ix(n); if (i >= 0 && String(r[i] || '').trim() !== '') return String(r[i]).trim(); } return ''; };
     const addr = titleCase(g('Property Address')); const lotSf = num(String(g('Lot Sq. Feet')).replace(/,/g, '')); const acres = num(g('Acreage'));
-    return { _src: 'crslist', apn: g('APN'), addr, city: titleCase(g('Property City')), zip: (g('Property Zip').match(/\d{5}/) || [''])[0],
+    return { _src: 'crslist', apn: g('APN'), addr, city: titleCase(g('Property City')), zip: (g('Property Zip').match(/\d{5}/) || [''])[0], zip4: (g('Property Zip').match(/\d{5}-?(\d{4})/) || ['', ''])[1],
       gla: num(g('Total Square Footage')), yearBuilt: num(g('Year Built')), lotSf: lotSf || (acres ? Math.round(acres * 43560) : null), acres,
       saleDate: isoDate(g('Last Sale Date')), salePrice: num(String(g('Last Sale Amount')).replace(/[$,]/g, '')), doc: g('Warranty Deed Document Number'),
       landUse: g('Land Use', 'Improvement Type'), subdivision: g('Subdivision') };
@@ -135,7 +135,7 @@ function mlsCanon(raw, G, g) {
   const aduN = ['ADU #1: Type', 'ADU #2: Attached'].filter(k => raw[k]).length;
   const views = G['View'] || [];
   return {
-    _src: 'mls', mls: g('Listing Number'), addr: [g('Street #'), titleCase(g('Street Name'))].filter(Boolean).join(' '), unit: g('Unit/Space #'), zip: g('Postal Code'), apn: g('Parcel Number'),
+    _src: 'mls', mls: g('Listing Number'), addr: [g('Street #'), titleCase(g('Street Name'))].filter(Boolean).join(' '), unit: g('Unit/Space #'), zip: (String(g('Postal Code')).match(/\d{5}/) || [''])[0], zip4: (String(g('Postal Code') + ' ' + g('Zip Plus 4', 'Postal Code Plus 4', 'ZIP+4')).match(/\d{5}-?(\d{4})|\b(\d{4})\b/) || [])[1] || (String(g('Zip Plus 4', 'Postal Code Plus 4', 'ZIP+4')).match(/\d{4}/) || [''])[0], apn: g('Parcel Number'),
     city: g('City') ? titleCase(g('City')) : '',
     status, listPrice: num(g('Price')), origList: num(g('Original List Price')), listDate: isoDate(g('Begin Date')), lastRed: isoDate(g('Price Change Date', 'Last Price Change Date', 'Price Change Timestamp')) || '',
     contractDate: isoDate(g('Under Contract Date')), saleDate: isoDate(g('Sold Date', 'COE')), salePrice: num(g('Sold Price')),
@@ -248,7 +248,7 @@ function pdfCanon(p) {
 function crsCanon(c) {
   const sales = (c.sales || []).map(s => ({ date: isoDate(s.recorded) || isoDate(s.date), docDate: isoDate(s.docDate || s.date), recorded: isoDate(s.recorded),   /* closing = Date Recorded (her rule) */ price: num(s.amount), src: 'CRS ' + (s.instrument || 'deed'), type: num(s.amount) ? 'Sale' : 'Transfer', inst: s.instrument || '', buyer: s.buyer || '', seller: s.seller || '', doc: s.doc || '' }));
   return {
-    _src: 'crs', addr: titleCase(c.addr || ''), city: titleCase(c.city || ''), zip: c.zip || '', apn: c.apn || '',
+    _src: 'crs', addr: titleCase(c.addr || ''), city: titleCase(c.city || ''), zip: c.zip || '', zip4: c.zip4 || '', apn: c.apn || '',
     beds: num(c.beds), bathsTotal: num(c.baths), gla: num(c.sqftAssessor), yearBuilt: num(c.yearBuilt), rooms: num(c.rooms),
     siteSf: num(c.lotSf) || (num(c.acres) ? Math.round(num(c.acres) * 43560) : null), acres: num(c.acres),
     lat: num(c.lat), lon: num(c.lng), zoning: c.zoning || '', landUse: c.landUse || '', fema: [c.fema, c.femaPanel, c.femaDate].filter(Boolean).join(' · '), owner: c.owner || '',
@@ -294,3 +294,10 @@ function remarkFinancing(code, rem) {
   const w = m[0].toLowerCase(); const kind = /cash/.test(w) ? 'Cash' : /fha/.test(w) ? 'FHA' : /\bva\b/.test(w) ? 'VA' : /usda/.test(w) ? 'USDA' : /seller|owner/.test(w) ? 'Seller financing' : 'Conventional';
   return kind + ' (agent remarks: \u201c' + t.slice(Math.max(0, m.index - 25), m.index + m[0].length + 25).replace(/\s+/g, ' ').trim() + '\u201d)';
 }
+
+/* ZIP+4 (her ask Oct 20 2026): 3.6 PostalCode takes 5 or 9 digits (12345 or 12345-6789; Appendix F-1 examples show 5, so +4 is not required).
+   The comp's 5-digit ZIP decides; the +4 comes from any source with the same 5 digits (CRS report, CRS list, your database, MLS). */
+function zip9(c) { const z = String(V(c, 'zip') || '').match(/\d{5}/); if (!z) return V(c, 'zip') || ''; const S = srcVals(c); const e = String((c.edit || {}).zip4 || '').match(/\d{4}/); if (e) return z[0] + '-' + e[0];
+  for (const s of ['crs', 'arch', 'mls', 'pdf', 'cort']) { const o = S[s]; if (!o) continue; const m = String(o.zip || '').match(/^(\d{5})-?(\d{4})$/); if (m && m[1] === z[0]) return z[0] + '-' + m[2];
+    if (o.zip4 && /^\d{4}$/.test(o.zip4) && String(o.zip || '').slice(0, 5) === z[0]) return z[0] + '-' + o.zip4; }
+  return z[0]; }
