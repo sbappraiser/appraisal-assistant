@@ -58,3 +58,4 @@
 /* shutter at the lower right, above Done – reachable with the right thumb */
 .wcam-bot { flex-direction: row; align-items: flex-end; }
 .wcam-right { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.wk-sent { margin-top: 6px; font-size: 15px; color: #0a4d27; background: #eefbf3; border: 1px solid #0fa84a; border-radius: 8px; padding: 6px 10px; }

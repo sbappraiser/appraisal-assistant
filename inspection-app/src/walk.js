@@ -127,8 +127,9 @@ function wkFile(ins, text) {
       const k = wkResolveHead(ins, hd.h, hd.num); if (k) cur = k; continue; }
     buf += (buf ? ' ' : '') + words[j]; }
   if (buf.trim()) parts.push([cur, buf.trim()]);
-  parts.forEach(([k, t]) => { const old = w.notes[k] || ''; w.notes[k] = old ? old.replace(/\s*$/, '') + (/[.!?]$/.test(old.trim()) ? ' ' : '. ') + t : t; w.lastAdd = { key: k, len: old.length }; });
+  const dup = []; parts.forEach(([k, t]) => { const old = w.notes[k] || ''; if (old && dkNorm(t).trim().length > 8 && dkNorm(old).includes(dkNorm(t).trim())) { dup.push(k); return; } w.notes[k] = old ? old.replace(/\s*$/, '') + (/[.!?]$/.test(old.trim()) ? ' ' : '. ') + t : t; w.lastAdd = { key: k, len: old.length }; });
   if (cur !== w.place) wkGo(cur, true);
+  if (dup.length) toast('You already said that for ' + dup.map(k => wkPlace(ins, k).t).join(', ') + ' – it is kept once');
   return parts.length;
 }
 function wkHear(t) {
@@ -230,13 +231,15 @@ function wkBodyHtml(ins, P) {
     <div class="wk-check">${need.length || got.length ? `<b>Needed here</b>${need.map(x => wkNeedHtml(ins, x)).join('')}${got.map(x => `<div class="wk-need ok">✓ ${esc(x.label)} <small>heard</small></div>`).join('')}${auto.map(x => wkNeedHtml(ins, x).replace('</div><div class="wk-ans">', ` <small class="wk-auto">– you did not mention it, so it will be saved as <b>No</b>. Tap Yes if it applies.</small></div><div class="wk-ans">`)).join('')}` : `<div class="wk-need ok">✓ Nothing required is missing here${P.key === 'access' || P.key === 'front' || P.key === 'rear' ? '' : ''}</div>`}</div>
     ${wkNotesHtml(ins, P, heard)}
     ${P.interview ? `<div class="row"><button class="btn" data-wktab="interview">Open the Interview tab</button></div>` : ''}
+    ${P.g === 'item' && !(P.list === 'kitchens' && P.i === 0) ? `<div class="row"><button class="btn sm danger" data-wkdel="${esc(P.key)}">Remove this ${esc(P.t.replace(/ · .*$/, ''))}</button></div>` : ''}
     ${P.sketch ? `<p class="help">Sketching around the house? Tap <b>Sketch</b>: the photo and talk buttons stay on the sketch, and the photos are labeled “Exterior of dwelling” (or Front / Rear – tap the label on the camera).</p>` : ''}`;
 }
 function wkNotesHtml(ins, P, heard) {
   const w = wkData(ins); const t = w.notes[P.key] || '';
   return `<div class="wk-notes"><label><b>Notes for ${esc(P.t)}</b>${P.hint ? `<span class="help">${esc(P.hint)}</span>` : ''}
     <textarea class="txt" id="wkNote" rows="4" placeholder="Talk, or tap here and use the keyboard microphone">${esc(t)}</textarea></label>
-    ${heard && heard.short.length ? `<div class="wk-heard"><b>I heard:</b> ${heard.short.map(esc).join(' · ')}</div>` : ''}</div>`;
+    ${heard && heard.short.length ? `<div class="wk-heard"><b>I heard:</b> ${heard.short.map(esc).join(' · ')}</div>` : ''}
+    ${(() => { const sl = w.sentLen[P.key] || 0; if (!sl || !t.trim()) return ''; const rest = t.slice(sl).trim(); return `<div class="wk-sent">${rest ? `✓ Sorted into the inspection, except the newest part: “${esc(rest.slice(0, 120))}${rest.length > 120 ? '…' : ''}”` : '✓ All of this has been sorted into the inspection – no need to say it again.'}</div>`; })()}</div>`;
 }
 /* a checklist line; a question can be answered right here with one tap (no dictation needed) */
 function wkFieldOf(ins, x) { const m = /^([a-z]+):([A-Za-z0-9]+)$/.exec(x.key || ''); if (m) { const sec = SECTIONS.find(s => s.id === m[1]); if (!sec) return null; for (const g of sec.groups) for (const f of g.fields) if (f.k === m[2]) return { f, d: ins.data[m[1]], sec: m[1] }; return null; }
@@ -265,7 +268,9 @@ function wkChooserHtml(ins, P) {
   else if (P.chooser === 'outdoorLiving') add = `<div class="wk-add">${WK_OUTLIV.map((t, i) => `<button class="btn" data-wkadd="o${i}">+ ${esc(t)}</button>`).join('')}</div>`;
   else if (P.chooser === 'waterFeatures') { const O = LISTS.waterFeatures.fields[0].o; add = `<div class="wk-add">${O.slice(0, 14).map(([v, l], i) => `<button class="btn" data-wkadd="w${i}">+ ${esc(l)}</button>`).join('')}</div>`; }
   const iss = wkIssues(ins, P);
-  return `${kids.length ? `<div class="wk-kids">${kids.map(k => { const st = wkStatus(ins, k); return `<button class="wk-stop ${st}" data-wkgo="${esc(k.key)}">${st === 'done' ? '✓ ' : ''}${esc(k.t)}</button>`; }).join('')}</div>` : ''}
+  const twins = []; { const seen = {}; kids.forEach(k => { const id = k.list + '|' + (k.it.type || k.it.kind || '') + '|' + (k.it.label || '') + '|' + (k.it.level || ''); if (k.list === 'bedrooms' || k.list === 'baths') return; (seen[id] = seen[id] || []).push(k); }); Object.values(seen).forEach(a => { if (a.length > 1) twins.push(a); }); }
+  return `${twins.map(a => `<p class="warn-box">You have ${a.length} × <b>${esc(a[0].t)}</b>. If that is one room, tap the extra one and <b>Remove</b> it (its notes and photos move to the one you keep).</p>`).join('')}
+    ${kids.length ? `<div class="wk-kids">${kids.map(k => { const st = wkStatus(ins, k); return `<button class="wk-stop ${st}" data-wkgo="${esc(k.key)}">${st === 'done' ? '✓ ' : ''}${esc(k.t)}</button>`; }).join('')}</div>` : ''}
     <p class="help">${kids.length ? 'Tap one to go back to it, or add another:' : 'Tap what you are looking at (or say it with a colon: “Patio colon…”):'}</p>${add}
     ${iss.length ? `<div class="wk-check"><b>Still needed</b>${iss.slice(0, 10).map(x => wkNeedHtml(ins, x)).join('')}${iss.length > 10 ? `<div class="wk-need">+ ${iss.length - 10} more</div>` : ''}</div>` : ''}
     ${wkNotesHtml(ins, P)}`;
@@ -290,6 +295,7 @@ function bindWalk(root) {
   root.querySelectorAll('[data-wkshot]').forEach(b => b.onclick = () => { w.shot[w.place] = b.dataset.wkshot; save(); wkRefresh(); });
   root.querySelectorAll('[data-wklv]').forEach(b => b.onclick = () => { w.level = b.dataset.wklv; save(); wkRefresh(); });
   root.querySelectorAll('[data-wktab]').forEach(b => b.onclick = () => goTab(b.dataset.wktab));
+  root.querySelectorAll('[data-wkdel]').forEach(b => b.onclick = () => wkRemove(ins, b.dataset.wkdel));
   root.querySelectorAll('button[data-wkans]').forEach(b => b.onclick = () => wkAnswer(ins, b.dataset.wkans, b.dataset.v));
   root.querySelectorAll('select[data-wkans]').forEach(b => b.onchange = () => { if (b.value) wkAnswer(ins, b.dataset.wkans, b.value); });
   root.querySelectorAll('[data-wkmode]').forEach(b => b.onclick = () => { wkSetMode(b.dataset.wkmode); wkRefresh(); });
@@ -305,6 +311,19 @@ function bindWalk(root) {
   const ta = root.querySelector('#wkNote'); if (ta) { ta.oninput = () => { w.notes[w.place] = ta.value; save(); }; ta.onblur = () => { const v = wkClean(ta.value); w.notes[w.place] = v; const P = wkPlace(ins, w.place);
     if (/:/.test(v) && !(P.head && new RegExp('^\\s*' + P.head + ':', 'i').test(v))) { w.notes[w.place] = ''; wkFile(ins, v); } save(); setTimeout(() => wkRefresh(), 400); }; }
 }
+/* remove a room / patio / pool … she added twice: its notes and photos go to the twin she keeps (or stay as extra photos) */
+function wkRemove(ins, key) {
+  const P = wkItemPlace(ins, key); if (!P) return; const w = wkData(ins); const L = ins.lists[P.list];
+  const twin = L.find(x => x !== P.it && (x.type || '') === (P.it.type || '') && (x.kind || '') === (P.it.kind || '') && (P.list !== 'rooms' || x.level === P.it.level) && !['bedrooms', 'baths'].includes(P.list));
+  if (!confirm(`Remove ${P.t}?` + (twin ? ` Its notes and photos move to the other ${LISTS[P.list].name(twin, L.indexOf(twin), L)}.` : ' Its photos stay in the inspection as extra photos.'))) return;
+  const tk = twin ? 'L:' + P.list + ':' + twin.id : null; const T = twin ? wkItemPlace(ins, tk) : null;
+  (ins.photos || []).filter(p => p.item === P.it.id).forEach(p => { if (T && T.shots[0]) { const sl = T.shots.find(x => x.k === p.slot) || T.shots[0]; Object.assign(p, { list: sl.slot.list, item: sl.slot.item, slot: sl.slot.slot, label: sl.slot.label }); p.walk = tk; } else Object.assign(p, { list: null, item: null, slot: null, sec: 'interior', extra: true }); });
+  if (tk && (w.notes[key] || '').trim()) { const a = w.notes[tk] || '', b = w.notes[key]; if (!dkNorm(a).includes(dkNorm(b).trim())) { w.notes[tk] = a ? a.replace(/\s*$/, '') + ' ' + b : b; } }
+  if (it_fields_merge(P.it, twin)) {}
+  delete w.notes[key]; delete w.sentLen[key]; ins.lists[P.list] = L.filter(x => x !== P.it);
+  save(); toast(P.t + ' removed'); wkGo(tk || P.parent);
+}
+function it_fields_merge(a, b) { if (!a || !b) return false; Object.keys(a).forEach(k => { if (['id', 'label', 'dkPhoto', 'walkUsed', 'fromSketch'].includes(k)) return; const v = a[k], u = b[k]; if (u === undefined || u === '' || (Array.isArray(u) && !u.length)) b[k] = v; else if (Array.isArray(u) && Array.isArray(v)) b[k] = [...new Set([...u, ...v])]; else if (k === 'note' && v && !String(u).includes(v)) b[k] = u + '\n' + v; }); return true; }
 /* notes → the Dictate box, place by place, only what was not sent before */
 function wkSort() {
   const ins = app.ins, w = wkData(ins); const keys = Object.keys(w.notes).filter(k => (w.notes[k] || '').trim().length > (w.sentLen[k] || 0));
