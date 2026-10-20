@@ -645,7 +645,7 @@ mark.blank{background:#fff3a8;padding:0 2px;border-radius:3px}.cmt textarea{widt
       <li><b>Talk</b> uses the keyboard microphone (more accurate): tap Talk, then the 🎤 on the keyboard. Switch to <b>Hands-free listening</b> under the buttons if you want to talk without touching the screen.</li>
       <li>A word keeps coming out wrong ("Mila" for Miele)? Select it in the note box, tap <b>🎓 Teach a word</b> under the box, type what you meant, <b>Save</b>. It is used on every inspection on that iPad.</li>
       <li>Going down the list: say the item and the answer – "Roof estimated age 10 to 20 years. Roof condition typical wear and tear. Converted area no." Or tap the answer under the item in <b>Needed here</b>.</li>
-      <li>At the end tap <b>Sort my notes</b>, then on 🎤 Dictate "1. Sort my notes" and "2. Save to appraisal file".</li></ol></details>
+      <li>Your notes are saved into the inspection by themselves each time you go to the next place. At the end tap <b>✓ Save all my notes into the inspection</b> – it also answers what you did not mention as No (defects, age restriction). Notes left waiting on the Dictate tab from before show a <b>Save them now</b> button.</li></ol></details>
     <details><summary>Dictate your notes (iPad)</summary><ol>
       <li>In an inspection, tap the first tab, <b>🎤 Dictate</b>. Tap in the box, then the microphone on the iPad keyboard, and talk.</li>
       <li>Say the area or room first, then what you see: exterior, garage, view, topography, site, landscaping, interior, heating / cooling / water heater, then each room – entry, living room, kitchen, family room, powder room, primary bedroom, primary bath, bedroom 2, hall bath, laundry room.</li>
@@ -714,7 +714,7 @@ mark.blank{background:#fff3a8;padding:0 2px;border-radius:3px}.cmt textarea{widt
 </div>
 <div id="toast" role="status" hidden></div>
 <script>
-const BUILD='o1-1020-0502';
+const BUILD='o1-1020-0537';
 const G = (() => {
 /* ---------------- small helpers ---------------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -1293,7 +1293,8 @@ function permitItems(P) {
   const out = [];
   (P.accela || []).forEach(a => { const tags = PERMIT_TAGS.filter(([re]) => re.test(a.project || '')).map(t => t[1]); out.push({ year: yr(a.filed), date: a.filed, what: a.project || '(no project name)', dept: { B: 'Building', P: 'Planning', E: 'Enforcement', F: 'Fire', PW: 'Public Works', C: 'Cannabis' }[a.dept] || a.dept, status: a.status, tags, num: a.num }); });
   (P.lix || []).forEach(l => { const tags = PERMIT_TAGS.filter(([re]) => re.test(l.desc || '')).map(t => t[1]); out.push({ year: yr(l.issued), date: l.issued, what: l.desc, dept: 'Building (LIX)', status: l.status, tags, num: l.app }); });
-  return out.sort((a, b) => (+a.year || 0) - (+b.year || 0));
+  const key = d => { const m = String(d || '').match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/); if (!m) return 0; let y = +m[3]; if (y < 100) y += y > 40 ? 1900 : 2000; return y * 10000 + +m[1] * 100 + +m[2]; };
+  return out.sort((a, b) => key(b.date) - key(a.date) || (+b.year || 0) - (+a.year || 0));   // newest first (her ask, Oct 20 2026)
 }
 
 return { parseCRS, crsCanon, parseMlsCsv, parseMlsPdf, parsePermits, permitItems: typeof permitItems === "function" ? permitItems : null, pdfLines, pdfFirstText, readText, parseCSV, isoDate, showDate, num, money, titleCase, addrKey, splitAddr, apnKey, fmtApn, makeZip, readZip, safeName };
