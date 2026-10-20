@@ -103,7 +103,7 @@ const FIELD = Object.fromEntries(FIELDS.map(f => [f.k, f]));
 const SALE_TYPE_TEXT = { ArmLth: 'Typically motivated', Listing: 'Typically motivated (listing)', REO: 'REO sale', Short: 'Short sale', Estate: 'Estate sale', CrtOrd: 'Court ordered non-foreclosure sale', NonArm: 'Sale between related parties', Relo: 'Relocation sale', Trust: 'Estate sale' };   // her note Oct 20 2026: shown in the 3.6 words (ArmLth = Typically motivated)
 function fmt(f, v) {
   if (blank(v)) return '';
-  if (f.k === 'saleType') return SALE_TYPE_TEXT[v] || String(v);
+  if (f.k === 'saleType') return SALE_TYPE_TEXT[v] || (typeof PICK !== 'undefined' && (PICK.xferTerms.opts.find(o => o[0] === v) || [])[1]) || String(v);
   if (f.k === 'status' && typeof statusText === 'function') return statusText(v);   // 3.6 words: Closed → Settled sale
   switch (f.t) {
     case 'money': return money(v);
