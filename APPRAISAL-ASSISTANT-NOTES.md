@@ -537,3 +537,7 @@ Decisions (her, Oct 19–20): "Exterior of dwelling" instead of left/right/side 
 ## Hub – Zillow removed (Oct 20 2026, o1-1020-0743)
 - Jennifer: Zillow ZIP pages lack sales metrics and the city page misses Goleta/Montecito/Summerland; the SBMLS monthly stats sheet already covers the South Coast. Zillow box, ZIP/city choice, figures and the Zillow sentence in the price trend draft removed; "Zillow" filtered out of 17.018 Price Trend Source.
 - An order that already has a Zillow page shows one line in box 5 with "✕ Remove this file". Old kv 'mk:zillow' left in place (harmless, still in backups).
+
+## Comp genie – micro comps onto the grid, CRS ask (Oct 20 2026, g2-1020-0752, hub o1-1020-0752)
+- Jennifer: the micro (box 2 Search Criteria) search is her grid comps to start. orderMicro now reads every CSV in box 2 (r.src names / "a + b" file), deduped by MLS #, minus unticked. pullMicro → microToGrid: only when nothing is on the grid yet, puts them on it (closed newest first, then pending, then active).
+- Add comps shows a red "Upload the CRS report for each comp on the grid" box (crsNeedHTML) listing grid comps with no CRS; one multi-file picker, matched by APN/address; turns into a green ✓ line when all are in.

@@ -586,6 +586,7 @@ mark.blank{background:#fff3a8;padding:0 2px;border-radius:3px}.cmt textarea{widt
       <li>Once a month, drop the SBMLS Monthly MLS Statistics PDF in box 5 (South Coast trends).</li></ol></details>
     <details><summary>1004MC market conditions (UAD 2.6)</summary><ol>
       <li>Load the <b>Search Criteria</b> search in box 2 of the Market tab (box 1 is used until you do). Untick the listings that do not compete.</li>
+      <li>Those box 2 listings (every CSV you added there, minus the ones you unticked) come into the <b>Comp genie</b> by themselves when you open the order there, and go on the grid to start – closed sales newest first, then pendings, then actives. Nothing is put on the grid if you already have comps on it. Then the red box in <b>Add comps</b> lists each grid comp that still needs its CRS report: click <b>Choose CRS PDFs</b> and pick them all at once – each one finds its comp by APN or address.</li>
       <li>Open <b>1004MC – Market Conditions Addendum</b> under box 3 (it opens by itself when the order's report form is UAD 2.6).</li>
       <li>The grid has the three periods ending on the effective date: prior 7–12 months, prior 4–6 months and the current 3 months – sales, absorption rate, active listings, months of supply, median sale price, sales DOM, median list price, listings DOM and sale price as % of list price. Active listings are counted as of the end of each period.</li>
       <li>Each line has an Overall trend suggestion. The rule: the current 3 months compared with the prior 7–12 months – more than 5% higher is Increasing, more than 5% lower is Declining, otherwise Stable. “few – your call” means a period has fewer than 3 sales or listings. Pick the answer you will report; your choice is kept.</li>
@@ -735,7 +736,7 @@ mark.blank{background:#fff3a8;padding:0 2px;border-radius:3px}.cmt textarea{widt
 </div>
 <div id="toast" role="status" hidden></div>
 <script>
-const BUILD='o1-1020-0749';
+const BUILD='o1-1020-0753';
 const G = (() => {
 /* ---------------- small helpers ---------------- */
 const $ = (s, r = document) => r.querySelector(s);
