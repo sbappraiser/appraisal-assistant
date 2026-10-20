@@ -1,0 +1,52 @@
+/* ---- 🚶 Walk-through (6w) ---- */
+.wk { display: flex; flex-direction: column; gap: 14px; }
+.wk-route { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 6px; -webkit-overflow-scrolling: touch; }
+.wk-stop { flex: 0 0 auto; border: 2px solid #000; background: #fff; border-radius: 999px; padding: 8px 14px; font: 700 15px var(--font); color: #000; }
+.wk-stop.on { background: #000; color: #fff; }
+.wk-stop.part { border-color: var(--tangerine); }
+.wk-stop.done { background: var(--req); border-color: var(--go); }
+.wk-stop.on.done { background: #0a4d27; color: #fff; }
+.wk-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
+.wk-head small { font: 700 13px var(--font); text-transform: uppercase; letter-spacing: .05em; color: #555; }
+.wk-head h2 { margin: 2px 0 0; font-size: 30px; line-height: 1.1; }
+.wk-big { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.wk-b { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; min-height: 120px; border: 3px solid #000; border-radius: 16px; background: #fff; font: 700 20px var(--font); color: #000; }
+.wk-b svg { width: 46px; height: 46px; }
+.wk-b.cam { background: #fff3e0; } .wk-b.sk { background: #eef4ff; }
+.wk-b.mic.on { background: #e00000; color: #fff; border-color: #900; animation: wkpulse 1.4s infinite; }
+@keyframes wkpulse { 50% { box-shadow: 0 0 0 10px rgba(224,0,0,.18); } }
+.wk-interim { margin: -4px 0 0; padding: 10px 12px; border-radius: 10px; background: #fff7d6; border: 2px dashed #b38600; font-size: 17px; }
+.wk-shots, .wk-lv { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; } .wk-shots span, .wk-lv span { font-weight: 700; }
+.wchip { border: 2px solid #000; border-radius: 999px; background: #fff; padding: 7px 14px; font: 700 15px var(--font); color: #000; }
+.wchip.on { background: var(--tangerine); }
+.wk-check { border: 2px solid #000; border-radius: 12px; padding: 10px 14px; background: #fafafa; display: flex; flex-direction: column; gap: 4px; }
+.wk-need { font-size: 16px; } .wk-need.ph { font-weight: 700; } .wk-need.ok { color: #0a4d27; font-weight: 700; } .wk-need small { font-weight: 400; color: #555; }
+.wk-notes label { display: flex; flex-direction: column; gap: 4px; } .wk-notes textarea { width: 100%; font-size: 18px; min-height: 110px; }
+.wk-heard { margin-top: 6px; font-size: 15px; color: #0a4d27; }
+.wk-strip { margin-top: 0; }
+.wk-add { display: flex; flex-wrap: wrap; gap: 8px; } .wk-add .btn { font-size: 16px; } .wk-add select { max-width: 260px; }
+.wk-kids { display: flex; flex-wrap: wrap; gap: 8px; }
+.wk-back { align-self: flex-start; }
+.wk-foot { border-top: 2px solid #000; padding-top: 12px; display: flex; flex-direction: column; gap: 6px; }
+/* camera inside the app */
+.wcam { position: fixed; inset: 0; z-index: 9000; background: #000; color: #fff; }
+.wcam video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #000; }
+.wcam-top { position: absolute; left: 0; right: 0; top: 0; padding: calc(10px + env(safe-area-inset-top)) 14px 10px; background: linear-gradient(rgba(0,0,0,.75), rgba(0,0,0,0)); }
+.wcam-to { font-size: 19px; } .wcam-to b { color: #ffb25c; }
+.wcam-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.wcam-msg { position: absolute; left: 20px; right: 20px; top: 35%; background: #222; border: 2px solid #ffb25c; border-radius: 12px; padding: 16px; font-size: 17px; line-height: 1.4; }
+.wcam-bot { position: absolute; left: 0; right: 0; bottom: 0; padding: 14px 18px calc(18px + env(safe-area-inset-bottom)); display: flex; align-items: center; justify-content: space-between; background: linear-gradient(rgba(0,0,0,0), rgba(0,0,0,.75)); }
+.wcam-shut { width: 88px; height: 88px; border-radius: 50%; border: 5px solid #fff; background: transparent; padding: 6px; }
+.wcam-shut span { display: block; width: 100%; height: 100%; border-radius: 50%; background: #fff; }
+.wcam-shut:active span { background: #ffb25c; }
+.wcam.nocam .wcam-shut { opacity: .25; }
+.wcam-ipad, .wcam-done { min-width: 130px; font-size: 18px; }
+.wcam-flash { position: absolute; inset: 0; background: #fff; opacity: 0; pointer-events: none; }
+.wcam-flash.go { animation: wcflash .35s; } @keyframes wcflash { 0% { opacity: .8; } 100% { opacity: 0; } }
+/* on the sketch */
+.wsk-bar { position: absolute; right: 10px; top: 10px; display: flex; flex-direction: row-reverse; justify-content: flex-start; gap: 8px; align-items: center; z-index: 30; flex-wrap: wrap; max-width: calc(100% - 20px); }
+.wsk-b { display: flex; flex-direction: column; align-items: center; width: 74px; height: 66px; border: 3px solid #000; border-radius: 14px; background: #fff; font: 700 13px var(--font); color: #000; justify-content: center; gap: 2px; box-shadow: 0 2px 8px rgba(0,0,0,.2); }
+.wsk-b svg { width: 30px; height: 30px; } .wsk-b.on { background: #e00000; color: #fff; }
+.wsk-place { border: 3px solid #000; border-radius: 999px; background: #fff3e0; padding: 10px 16px; font: 600 16px var(--font); color: #000; box-shadow: 0 2px 8px rgba(0,0,0,.2); }
+.wsk-interim { flex-basis: 100%; background: #fff7d6; border: 2px dashed #b38600; border-radius: 10px; padding: 6px 10px; font-size: 15px; max-width: 520px; }
+.wk-how { border: 2px solid #000; border-radius: 12px; padding: 8px 14px; background: #fffbe6; } .wk-how summary { font-weight: 700; cursor: pointer; } .wk-how ol { margin: 8px 0 4px; padding-left: 22px; display: flex; flex-direction: column; gap: 6px; }

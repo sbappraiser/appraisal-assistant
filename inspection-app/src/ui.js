@@ -2,9 +2,9 @@
 const app = { ins: null, tab: 'property', open: new Set(), groups: {}, cur: null, confirm: null, saving: null, ovrOpen: null, appl: null, missIdx: 0, undo: null };
 const EXTRA_TABS = [{ id: 'photos', title: 'Photos' }, { id: 'summaries', title: 'Summaries' }, { id: 'attention', title: 'Needs Attention' }, { id: 'export', title: 'Save & Export' }];
 const tabShown = (sec, ins) => !sec.showTab || !!sec.showTab(ins || app.ins);
-const ALL_TABS_FULL = () => [{ id: 'dictate', title: '🎤 Dictate' }, ...SECTIONS.filter(s => tabShown(s)).map(s => ({ id: s.id, title: s.title })), ...EXTRA_TABS];
+const ALL_TABS_FULL = () => [{ id: 'walk', title: '🚶 Walk-through' }, { id: 'dictate', title: '🎤 Dictate' }, ...SECTIONS.filter(s => tabShown(s)).map(s => ({ id: s.id, title: s.title })), ...EXTRA_TABS];
 const ALL_TABS = () => { const T = ALL_TABS_FULL(); if (typeof dkWalk !== 'function' || !dkWalk()) return T;   // walk-through mode (6r)
-  const keep = new Set(['dictate', 'photos', 'attention', app.tab]); return [...T.filter(t => keep.has(t.id)), { id: 'alltabs', title: '☰ All tabs' }]; };
+  const keep = new Set(['walk', 'dictate', 'photos', 'attention', app.tab]); return [...T.filter(t => keep.has(t.id)), { id: 'alltabs', title: '☰ All tabs' }]; };
 const CAM_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>';
 const LIB_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-8 8"/></svg>';
 
@@ -163,7 +163,8 @@ async function openInspection(id, tab) {
 }
 async function openInspection2(id, tab) {
   const ins = normalize(await DB.get('inspections', id)); app.ins = ins;
-  app.tab = (tab && (SECTIONS.some(x => x.id === tab) || EXTRA_TABS.some(x => x.id === tab))) ? tab : 'property'; app.open = new Set(); app.groups = {}; app.cur = null; app.confirm = null; app.appl = null;
+  app.tab = (tab && (SECTIONS.some(x => x.id === tab) || EXTRA_TABS.some(x => x.id === tab) || tab === 'walk' || tab === 'dictate')) ? tab : 'property';
+  if (typeof wkResolvePending === 'function' && wkResolvePending(ins)) { ins.updated = Date.now(); try { await DB.put('inspections', JSON.parse(JSON.stringify(ins))); } catch (e) {} } app.open = new Set(); app.groups = {}; app.cur = null; app.confirm = null; app.appl = null;
   const root = $('#app');
   root.innerHTML = `<header class="bar"><div class="bar-row">
       <button class="icon-btn" id="homeBtn" aria-label="All inspections">‹ All</button>
@@ -198,6 +199,7 @@ function refreshChrome() {
 function goTab(id, anchor, groupId) {
   if (id === 'alltabs') { dkSetWalk(false); refreshChrome(); toast('All tabs are back'); return; }
   if (app.tab !== id) saveNow();
+  if (id !== 'walk' && typeof WSR !== 'undefined' && WSR.on) wsrStop();
   app.tab = id; app.missIdx = 0;
   if (groupId) openGroup(id, groupId);
   renderTab();
@@ -230,11 +232,12 @@ function renderTab2() {
   const sec = SECTIONS.find(s => s.id === app.tab);
   if (sec) main.innerHTML = legend() + renderSection(sec) + extraPhotos(sec);
   else if (app.tab === 'dictate') main.innerHTML = renderDictate();
+  else if (app.tab === 'walk') main.innerHTML = renderWalk();
   else if (app.tab === 'photos') main.innerHTML = renderGallery();
   else if (app.tab === 'summaries') main.innerHTML = renderSummaries();
   else if (app.tab === 'attention') main.innerHTML = renderAttention();
   else if (app.tab === 'export') main.innerHTML = renderExport();
-  bind(main); if (app.tab === 'dictate') bindDictate(main); fillThumbs(main); window.scrollTo(0, y);
+  bind(main); if (app.tab === 'dictate') bindDictate(main); if (app.tab === 'walk') { bindWalk(main); setTimeout(wkMicState, 0); } fillThumbs(main); window.scrollTo(0, y);
   returnBar();
   syncBar();
 }

@@ -437,7 +437,10 @@ function dictParse(text, ins) {
       if (/\bdeeded\b/.test(fw)) put('site.waterRights', 'Deeded'); } }
   { const fw = T.filter(t => !t.rep && !t.br).map(t => t.w).join(' ');
     if (/\broof (?:can ?not|could ?not|cannot|is not|isnt|not) (?:be )?(?:seen|visible|observed)|roof (?:was )?not (?:visible|observable)/.test(fw)) put('front.roofObs', false);
-    else if (/\broof (?:can|could|is|was)? ?(?:only )?(?:partially |partly |mostly |fully )?(?:be )?(?:seen|visible|observed|observable)/.test(fw)) put('front.roofObs', true); }
+    else if (/\broof (?:can|could|is|was)? ?(?:only )?(?:partially |partly |mostly |fully )?(?:be )?(?:seen|visible|observed|observable)/.test(fw)) put('front.roofObs', true);
+    // 6w: property access – "public street / private road", "access is typical / not typical"
+    if (/\bprivate (?:street|road|lane|drive)\b/.test(fw)) put('street.primaryAccess', 'PrivateStreet'); else if (/\bpublic (?:street|road)\b/.test(fw)) put('street.primaryAccess', 'PublicStreet');
+    if (/\baccess (?:is )?(?:not|isnt|is not) typical|\batypical access|\baccess (?:is )?atypical/.test(fw)) put('street.accessTypical', false); else if (/\baccess (?:is )?typical|\btypical access\b/.test(fw)) put('street.accessTypical', true); }
   // her rule (Oct 2026): if she does not say a defect there is no defect → the defect questions are answered No (she can change them in the list)
   const DEFECT_RX = /\b(?:defects?|damaged?|cracks?|cracked|cracking|leaks?|leaking|rot|rotted|rotting|termites?|broken|peeling|deferred maintenance|needs? (?:repair|replacing|replacement)|water stains?|mold|mildew|missing|inoperable|not working)\b/;
   const defectSaid = sentW.some((ws, k) => { if (report.has(k)) return false; const w = ws.map(t => t.w).join(' ').replace(/\bno (?:visible |apparent |observed |known )?(?:defects?|damage|deferred maintenance|deficienc(?:y|ies))(?:[\s,]+(?:or |and )?(?:defects?|damage|deficienc(?:y|ies)|deferred maintenance))*\b/g, '').replace(/\b(?:deferred maintenance|defects?|damage|functional obsolescence)(?:[\s,:]+(?:and\s+)?(?:deferred maintenance|defects?|damage))*[\s,:]*(?:none|no|not observed|none observed|n\/?a)\b/g, ''); return DEFECT_RX.test(w); });

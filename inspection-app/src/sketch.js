@@ -451,7 +451,9 @@ function dimText(a, p, q, hi, i) {
   if (a.closed && a.pts.length > 2) { const tp = toFt(mx + nx * 6, my + ny * 6); if (inPoly(tp, shape(a))) { nx = -nx; ny = -ny; } if ([10, 18, 26].some(k => inNeighbour(a, toFt(mx + nx * k, my + ny * k)))) { nx = -nx; ny = -ny; } }
   let ang = Math.atan2(Y2 - Y1, X2 - X1); if (ang > Math.PI / 2 || ang < -Math.PI / 2) ang += Math.PI;
   ctx.save(); ctx.translate(mx + nx * 12, my + ny * 12); ctx.rotate(ang); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.font = `${hi ? 700 : 500} ${(hi ? 15 : 12) * DS()}px system-ui,sans-serif`; ctx.fillStyle = hi ? '#c75b00' : '#333'; ctx.fillText(r1(L).toFixed(1) + "'", 0, 0); ctx.restore();
+  const calc = a.calc && a.calc[i], ins = a.inside && a.inside[i];
+  ctx.font = `${hi ? 700 : 500} ${(hi ? 15 : 12) * DS()}px system-ui,sans-serif`; ctx.fillStyle = hi ? '#c75b00' : calc ? '#1e5bd8' : '#333'; ctx.fillText((calc ? '≈ ' : '') + r1(L).toFixed(1) + "'" + (calc ? ' calc' : '') + (ins ? ' (in)' : ''), 0, 0); ctx.restore();
+  if (calc) { ctx.save(); ctx.setLineDash([8, 6]); ctx.strokeStyle = '#1e5bd8'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(X1, Y1); ctx.lineTo(X2, Y2); ctx.stroke(); ctx.restore(); }
 }
 
 /* ---------- hit testing ---------- */
@@ -528,12 +530,37 @@ function addWall(dx, dy) {
   const a = curArea(); if (!a) return toast('Tap “New area” first');
   const L = parseFloat(SK.entry); if (!(L > 0)) return toast('Type the wall length first');
   const len = Math.hypot(dx, dy); const last = a.pts[a.pts.length - 1];
-  pushUndo(); a.pts.push([r3(last[0] + dx / len * L), r3(last[1] + dy / len * L)]); SK.entry = ''; SK.angle = null;
+  pushUndo(); const add = SK.insideOn ? 2 * wallT() : 0; if (add) { a.inside = a.inside || {}; a.inside[a.pts.length - 1] = true; }
+  a.pts.push([r3(last[0] + dx / len * (L + add)), r3(last[1] + dy / len * (L + add))]); SK.entry = ''; SK.angle = null;
+  if (add) toast(`Measured inside ${L.toFixed(1)}' + 2 walls of ${Math.round(wallT() * 12)} in = ${(L + add).toFixed(1)}'`);
   if (a.pts.length >= 4 && Math.hypot(a.pts[a.pts.length - 1][0] - a.pts[0][0], a.pts[a.pts.length - 1][1] - a.pts[0][1]) < 0.06) { a.pts.pop(); finishArea(true); return; }
   markDirty(); draw(); renderPanel();
 }
 function angleWall() { const deg = SK.angle; if (deg === null || isNaN(deg)) return; const t = deg * Math.PI / 180; addWall(Math.cos(t), -Math.sin(t)); }
-function closeArea() { const a = curArea(); if (!a) return; if (a.pts.length < 3) return toast('Draw at least two walls first'); pushUndo(); finishArea(true); }
+function closeArea() { const a = curArea(); if (!a) return; if (a.pts.length < 3) return toast('Draw at least two walls first'); pushUndo();
+  const f = a.pts[0], l = a.pts[a.pts.length - 1]; if (Math.hypot(f[0] - l[0], f[1] - l[1]) > 0.05) { a.calc = a.calc || {}; a.calc[a.pts.length - 1] = true; }
+  finishArea(true); }
+const wallT = () => (SK.lib && SK.lib.wallT) || 0.5;   // her exterior wall thickness in feet (6 in. unless she changes it)
+/* the last one or two walls she could not measure (gate, wall, hedge): square corner + closing wall, both marked "calculated" */
+function closeSquare() { const a = curArea(); if (!a) return; if (a.pts.length < 3) return toast('Draw at least two walls first');
+  const n = a.pts.length, f = a.pts[0], l = a.pts[n - 1], p = a.pts[n - 2]; const dx = f[0] - l[0], dy = f[1] - l[1];
+  if (Math.hypot(dx, dy) < 0.05) return closeArea();
+  pushUndo(); a.calc = a.calc || {};
+  if (Math.abs(dx) < 0.05 || Math.abs(dy) < 0.05) { a.calc[n - 1] = true; setTimeout(() => toast('One wall filled in – marked “calc”. Check it with your tape.'), 2700); return finishArea(true); }
+  const lastHoriz = Math.abs(l[0] - p[0]) >= Math.abs(l[1] - p[1]);   // turn 90° from the last wall …
+  const back = (u, v) => { const cr = u[0] * v[1] - u[1] * v[0], dt = u[0] * v[0] + u[1] * v[1]; return Math.abs(cr) < 1e-6 * (Math.hypot(...u) * Math.hypot(...v) + 1) && dt < 0; };
+  const sub = (x, y) => [x[0] - y[0], x[1] - y[1]], f1 = a.pts[1];
+  const ok = c => !back(sub(c, l), sub(l, p)) && !back(sub(f, c), sub(f1, f));   // … unless that doubles back along a wall already drawn
+  const cA = lastHoriz ? [l[0], f[1]] : [f[0], l[1]], cB = lastHoriz ? [f[0], l[1]] : [l[0], f[1]];
+  const c = ok(cA) || !ok(cB) ? cA : cB;
+  const k = a.pts.length; a.pts.push([r3(c[0]), r3(c[1])]); a.calc[k - 1] = true; a.calc[k] = true;
+  setTimeout(() => toast('Two walls filled in at a square corner – marked “calc”. Check them with your tape.'), 2700); finishArea(true); }
+/* she hit a gate: keep drawing from the corner where she started */
+function flipEnds() { const a = curArea(); if (!a || a.pts.length < 2) return toast('Draw a wall first'); pushUndo(); const n = a.pts.length; a.pts.reverse();
+  const remap = o => { if (!o) return o; const r = {}; Object.keys(o).forEach(i => { const j = n - 2 - +i; if (j >= 0) r[j] = o[i]; }); return r; };
+  if (a.arcs) { const r = remap(a.arcs); Object.values(r).forEach(v => { if (v && v.side) v.side = v.side === 'L' ? 'R' : 'L'; }); a.arcs = r; }
+  a.calc = remap(a.calc); a.inside = remap(a.inside); SK.entry = ''; SK.dial = null;
+  toast('Now drawing from your starting corner – go the other way'); markDirty(); draw(); renderPanel(); }
 function finishArea(closed) {
   const a = curArea(); if (!a) return; a.closed = closed && a.pts.length >= 3;
   if (a.pts.length < 2) SK.sk.areas = SK.sk.areas.filter(x => x !== a);
@@ -548,13 +575,13 @@ function backspace() {
   if (!a && SK.sel && SK.sel.type === 'area') { a = SK.sk.areas.find(x => x.id === SK.sel.id); if (a) { pushUndo(); a.closed = false; SK.drawId = a.id; SK.mode = 'draw'; SK.sel = null; toast('Area reopened – keep pressing ⌫ to remove walls'); markDirty(); draw(); renderPanel(); return; } }
   if (!a) return toast('Nothing to remove');
   pushUndo();
-  if (a.closed) a.closed = false; else if (a.pts.length > 1) { a.pts.pop(); if (a.arcs) { delete a.arcs[a.pts.length - 1]; delete a.arcs[a.pts.length]; } } else { SK.sk.areas = SK.sk.areas.filter(x => x !== a); SK.drawId = null; SK.mode = 'select'; toast('Area removed'); }
+  if (a.closed) a.closed = false; else if (a.pts.length > 1) { a.pts.pop(); ['arcs', 'calc', 'inside'].forEach(k => { if (a[k]) { delete a[k][a.pts.length - 1]; delete a[k][a.pts.length]; } }); } else { SK.sk.areas = SK.sk.areas.filter(x => x !== a); SK.drawId = null; SK.mode = 'select'; toast('Area removed'); }
   markDirty(); draw(); renderPanel();
 }
 function setWallLength(a, i, L) {
   const n = a.pts.length; if (a.closed && i === n - 1) return toast('The closing wall adjusts by itself – change the other walls');
   const p = a.pts[i], q = a.pts[i + 1]; const cur = wallLen(p, q); if (!(L > 0) || cur < 1e-6) return;
-  pushUndo(); const dx = (q[0] - p[0]) * (L / cur - 1), dy = (q[1] - p[1]) * (L / cur - 1);
+  pushUndo(); if (a.calc) delete a.calc[i]; const dx = (q[0] - p[0]) * (L / cur - 1), dy = (q[1] - p[1]) * (L / cur - 1);
   for (let j = i + 1; j < n; j++) a.pts[j] = [r3(a.pts[j][0] + dx), r3(a.pts[j][1] + dy)];
   markDirty(); draw(); renderPanel();
 }
@@ -821,11 +848,13 @@ function renderPanel() {
   else if (SK.mode === 'uscale') ctxHtml = `<div class="ctx"><b>Set the scale:</b> ${SK.us && SK.us.a ? 'now tap the other end.' : 'tap one end of the scale bar, or of a wall whose length is printed on the plan.'} <button class="btn sm" id="skCancelLabel">Cancel</button></div>`;
   else if (SK.mode === 'umove') ctxHtml = `<div class="ctx"><b>Move the floor plan:</b> drag it until it lines up with your walls. <button class="btn primary sm" id="skCancelLabel">Done</button></div>`;
   else if (SK.mode === 'label') ctxHtml = `<div class="ctx"><b>Tap where “${esc(SK.pendingLabel.text)}” goes.</b> <button class="btn sm" id="skCancelLabel">Cancel</button></div>`;
-  else if (a) ctxHtml = `<div class="ctx"><b>Drawing: ${esc(a.name || defOf(a.def).name)}</b> · ${a.pts.length - 1} wall${a.pts.length === 2 ? '' : 's'} · type a length + arrow, drag from the orange point, or tap a blue dot to line up with another corner. Tap the green start to close.${a.pts.length >= 2 ? ' <button class="btn sm" id="skCurveLast">⌒ Curve last wall</button>' : ''}</div>`;
+  else if (a) ctxHtml = `<div class="ctx"><b>Drawing: ${esc(a.name || defOf(a.def).name)}</b> · ${a.pts.length - 1} wall${a.pts.length === 2 ? '' : 's'} · type a length + arrow, drag from the orange point, or tap a blue dot to line up with another corner. Tap the green start to close.${a.pts.length >= 2 ? ' <button class="btn sm" id="skCurveLast">⌒ Curve last wall</button> <button class="btn sm" id="skFlip" title="Blocked by a gate or wall? Keep going from your starting corner">⇄ Other end</button>' : ''}${a.pts.length >= 3 ? ' <button class="btn sm" id="skSquare" title="Fill the last one or two walls you could not measure (square corner)">⌐ Fill missing walls</button>' : ''}
+      <button class="btn sm ${SK.insideOn ? 'primary' : ''}" id="skInside" title="The next walls were measured inside: two wall thicknesses are added">${SK.insideOn ? `✓ Measured inside (+${Math.round(wallT() * 12)} in × 2)` : 'Measured inside?'}</button>${SK.insideOn ? '<button class="btn sm" id="skWallT">wall thickness</button>' : ''}</div>`;
   else if (sel && sel.type === 'wall') { const ar = SK.sk.areas.find(x => x.id === sel.id); const ws = walls(ar).find(w => w[0] === sel.i); const L = ws ? r1(wallLen(ws[1], ws[2])) : 0; const closing = ar.closed && sel.i === ar.pts.length - 1;
     ctxHtml = `<div class="ctx"><b>Wall: ${L.toFixed(1)} ft</b>${closing ? ' · closing wall (adjusts by itself)' : ''} of ${esc(ar.name || defOf(ar.def).name)}
       ${closing ? '' : `<label class="inl">New length <input id="skWallLen" class="txt num" inputmode="decimal" value="${L.toFixed(1)}"></label><button class="btn primary sm" id="skWallSet">Apply</button>`}
-      <button class="btn sm" id="skCurve">⌒ ${ar.arcs && ar.arcs[sel.i] ? 'Edit curve' : 'Curve this wall'}</button><button class="btn sm" id="skWallArea">Select the area</button></div>`; }
+      <button class="btn sm" id="skCurve">⌒ ${ar.arcs && ar.arcs[sel.i] ? 'Edit curve' : 'Curve this wall'}</button><button class="btn sm" id="skWallArea">Select the area</button>${ar.closed ? '' : '<button class="btn primary sm" id="skContinue">✎ Continue drawing this area</button>'}
+      ${ar.calc && ar.calc[sel.i] ? '<span class="help">≈ calculated, not measured. <button class="btn sm" id="skCalcOk">I measured it</button></span>' : ''}</div>`; }
   else if (sel && sel.type === 'all') ctxHtml = `<div class="ctx"><b>Turn the whole sketch</b> (all levels, labels and symbols) <div class="nmpos">${rotBar('all')}<button class="btn primary sm" id="rotDone">Done</button></div></div>`;
   else if (sel && sel.type === 'area') { const ar = SK.sk.areas.find(x => x.id === sel.id); const C = computeAreas(); const d = defOf(ar.def);
     ctxHtml = `<div class="ctx"><b>${esc(ar.name || d.name)}</b> · ${Math.round(C.net.get(ar.id) || 0).toLocaleString()} sf${C.net.get(ar.id) !== C.gross.get(ar.id) ? ` net (${Math.round(C.gross.get(ar.id)).toLocaleString()} gross)` : ''} · ${esc(BUCKETS[d.bucket].l)}
@@ -912,6 +941,11 @@ function renderPanel() {
     }
   on('skCurve', () => startCurve(SK.sk.areas.find(x => x.id === sel.id), sel.i));
   on('skCurveLast', () => { const ca = curArea(); startCurve(ca, ca.pts.length - 2); });
+  on('skFlip', flipEnds); on('skSquare', closeSquare);
+  on('skInside', () => { SK.insideOn = !SK.insideOn; renderPanel(); toast(SK.insideOn ? `Inside measurements: ${Math.round(wallT() * 24)} in added to each wall until you turn it off` : 'Back to outside measurements'); });
+  on('skWallT', () => askNumber('Wall thickness (inches)', 'Added at each end of a wall you measured inside. Stucco on wood frame is about 6 in.', String(Math.round(wallT() * 12)), v => { if (v > 0 && v < 30) { SK.lib.wallT = v / 12; saveLib(); renderPanel(); } }));
+  on('skContinue', () => { const ar = SK.sk.areas.find(x => x.id === sel.id); SK.drawId = ar.id; SK.mode = 'draw'; SK.sel = null; toast('Keep drawing from the orange end – ⇄ Other end switches ends'); draw(); renderPanel(); });
+  on('skCalcOk', () => { const ar = SK.sk.areas.find(x => x.id === sel.id); pushUndo(); delete ar.calc[sel.i]; markDirty(); draw(); renderPanel(); });
   if (SK.dial) wireDial(el); if (SK.curve) wireCurve(el);
   renderLevels();
 }
