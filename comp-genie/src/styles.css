@@ -208,3 +208,4 @@ small.vsx{display:block;color:#1f2a35;font-size:11px}
 input.txt:focus,input:not([type=checkbox]):not([type=radio]):not([type=file]):focus,select:focus,textarea:focus{background:#ffd29a!important;border-color:#ff8a00!important;outline:2px solid #ff8a00!important;outline-offset:0;color:#000!important}
 input::placeholder,textarea::placeholder{color:#5a6672}
 .ccdone{color:var(--ok);font-weight:800}
+.files summary{cursor:pointer}

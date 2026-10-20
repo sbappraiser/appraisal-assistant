@@ -617,3 +617,4 @@ Decisions (her, Oct 19–20): "Exterior of dwelling" instead of left/right/side 
 - g2-1020-2002: picking Listing status = Settled sale (▾ pick saves SettledSale) dropped 604 Dara from comp 3 to 10 – compGroup only knew Closed/Sold, so it sorted as "other". compGroup and the market-time check (time.js) now read Settled as closed.
 - g2-1020-2003: blue * (REQ_STAR, .req) left of required lines (GRID_KEEP = F-1 always-displayed) on the grid and in ⚙ Grid lines – her ask.
 - g2-1020-2008: darker text (--ink #05090d, --muted #2b3642, grays darkened); focused field orange (#ffd29a, orange outline, also in Classic look); Comps considered ✓ Done – collapse / Show ▾ (J.ccDone).
+- Files in this assignment is a <details>: folded (✓ nothing else needed) unless crsNeedHTML/photoNeedHTML has something or a remove-file confirm is open.
