@@ -183,3 +183,8 @@ td.subj input::placeholder{color:#2f3f4d;opacity:1}td.subj input:placeholder-sho
 
 .maps{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;margin:10px 0}.mapbox{border:1px solid var(--line);border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:6px;background:#fff}
 .mapbox img{width:100%;height:auto;border:1px solid #ccd;border-radius:6px}.mapempty{height:160px;display:flex;align-items:center;justify-content:center;background:#f3f5f7;border-radius:6px;color:#889}
+
+input.bad{border-color:#d00000!important;background:#fff0f0!important}
+.uadpick .pkgrid{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:16px}.uadpick .pkopts{max-height:55vh;overflow:auto;display:flex;flex-direction:column;gap:4px}
+.uadpick label.pk{display:block;padding:4px 6px;border-radius:6px}.uadpick label.pk:hover{background:#f3f7fb}.uadpick label.pk small{display:block;color:#5d6b78;margin-left:22px}
+.uadpick .pkguide{background:#fbf6ee;border:1px solid #ecd9b8;border-radius:10px;padding:10px 12px;font-size:13px;max-height:55vh;overflow:auto}

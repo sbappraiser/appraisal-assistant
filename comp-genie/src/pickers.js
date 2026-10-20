@@ -1,0 +1,87 @@
+/* =====================================================================
+   UAD 3.6 compliance pickers on the grid (her request, Oct 20 2026 – like ACI's "UAD Compliance" boxes).
+   Every grid line whose 3.6 field is a fixed list gets ▾ pick: only the allowed answers (A-1 / GSE UAD 3.6 schema),
+   "Other – describe" where 3.6 allows it, and short UAD guidance. A typed entry that is not an allowed answer turns red.
+   Answers are written in the official words, so the SFREP file always gets a valid value.
+   ===================================================================== */
+const camelWords = t => t === 'OffMarket' ? 'Off market' : t === 'SettledSale' ? 'Settled sale' : t.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/ (\w)/g, (m, a) => ' ' + a.toLowerCase());
+const Q_HELP = { Q1: 'Unique, architect-designed for a specific user; exceptionally high-grade workmanship and materials throughout.', Q2: 'Often custom designed; or high-quality tract homes from individual / highly modified plans; high or very high quality finishes.',
+  Q3: 'Higher quality from individual or readily available designer plans; above-standard; many materials and finishes upgraded from stock.', Q4: 'Meets or exceeds code; standard or modified standard plans; stock or builder grade with some upgrades.',
+  Q5: 'Economy of construction and basic functionality; plain design; inexpensive stock materials with limited refinements.', Q6: 'Basic quality and lower cost; may not be suitable for year-round occupancy; lowest quality materials.' };
+const C_HELP = { C1: 'Very recently built, not previously occupied; no physical depreciation.', C2: 'No deferred maintenance, little or no depreciation, no repairs needed; virtually all components new or recently rehabilitated.',
+  C3: 'Well maintained; limited depreciation from normal wear and tear; some components updated or recently rehabilitated.', C4: 'Some minor deferred maintenance and physical deterioration; adequately maintained; only minimal repairs needed.',
+  C5: 'Obvious deferred maintenance; needs some significant repairs; functional utility and livability somewhat diminished.', C6: 'Substantial damage or deferred maintenance; deficiencies affect safety, soundness or structural integrity.' };
+const enumOpts = list => list.map(v => [v, camelWords(v)]);
+const PICK = {
+  attach: { title: 'Attached / detached', one: true, opts: [['Detached', 'Detached'], ['Attached', 'Attached'], ['SemiDetached', 'Semi-detached (end unit, one shared wall)']],
+    help: 'Detached: shares no walls, floor or ceiling with another property. Attached: shares walls (row and townhouses, condominiums). For an attached unit, tick the structure design line under ⚙ Grid lines.' },
+  style: { title: 'Design (style)', one: true, other: 33, opts: enumOpts(['AFrame', 'Barn', 'BiLevel', 'Bungalow', 'CapeCod', 'Chalet', 'Colonial', 'Contemporary', 'Cottage', 'Craftsman', 'EarthBerm', 'Farmhouse', 'GeodesicDome', 'Georgian', 'Log', 'Mediterranean', 'Modern', 'NeoEclectic', 'RaisedRanch', 'Rambler', 'Ranch', 'Southwest', 'Spanish', 'SplitFoyerOrEntry', 'SplitLevel', 'Stilt', 'Traditional', 'Tudor', 'Victorian', 'Other']).map(([v, l]) => [v, v === 'AFrame' ? 'A-frame' : l]),
+    help: 'UAD 3.6 architectural design (style) list. In 3.6 the attachment and the number of stories are their own lines (Attached / detached, Levels) – not "DT2;Ranch".' },
+  levels: { title: 'Levels (stories)', one: true, opts: [['1', '1'], ['2', '2'], ['3', '3'], ['4', '4']], help: 'Number of above-grade levels in the unit (whole numbers in 3.6).' },
+  q: { title: 'Overall quality', one: true, opts: ['Q1', 'Q2', 'Q3', 'Q4', 'Q5', 'Q6'].map(v => [v, v, Q_HELP[v]]), help: 'One rating – the one that best describes the whole dwelling. Your low / mid / high tier stays in your notes and comments (the drop-down beside it), never in the UAD field.' },
+  c: { title: 'Overall condition', one: true, opts: ['C1', 'C2', 'C3', 'C4', 'C5', 'C6'].map(v => [v, v, C_HELP[v]]), help: 'One rating for the overall condition. Your low / mid / high tier stays in your notes and comments only.' },
+  status: { title: 'Listing status', one: true, opts: [['SettledSale', 'Settled sale'], ['Pending', 'Pending'], ['Active', 'Active'], ['OffMarket', 'Off market (expired, withdrawn, cancelled)']], help: 'UAD 3.6 listing status of the comparable.' },
+  terms: { title: 'Transfer terms (financing)', one: true, other: 33, opts: [['Cash', 'Cash (no financing)'], ['Conventional', 'Conventional'], ['FHA', 'FHA'], ['VA', 'VA'], ['USDARuralDevelopment', 'USDA Rural Development'], ['Private', 'Private / seller financing'], ['Other', 'Other']], help: 'How the sale was financed (UAD MortgageType; cash = no financing).' },
+  xferTerms: { title: 'Ownership transfer terms (sale type)', one: true, other: 33, opts: enumOpts(['TypicallyMotivated', 'EstateSale', 'SaleBetweenRelatedParties', 'ShortSale', 'REOSale', 'ForeclosureSale', 'CourtOrderedNonForeclosureSale', 'RelocationSale', 'PreSubdivisionSale', 'LandSale', 'Other']).map(([v, l]) => [v, v === 'REOSale' ? 'REO sale' : l]), help: 'UAD 3.6 sale type.' },
+  heat: { title: 'Heating', multi: true, other: 33, opts: enumOpts(['ForcedWarmAir', 'Radiant', 'Baseboard', 'Radiators', 'GravityAir', 'MiniSplit', 'Fireplace', 'Stove', 'PassiveSolar', 'None', 'Other']), help: 'One or more heating system types (fuel is part of the subject’s inspection).' },
+  cool: { title: 'Cooling (air conditioning)', one: true, other: 33, opts: [['Centralized', 'Centralized (central air)'], ['Individual', 'Individual (wall / window / mini-split units)'], ['None', 'None'], ['Other', 'Other']], help: 'UAD 3.6 cooling system type, or None.' },
+  topo: { title: 'Topography', multi: true, other: 33, opts: enumOpts(['Flat', 'Sloping', 'Rolling', 'Rocky', 'Other']), help: 'UAD 3.6 topography (Flat replaces "Level").' },
+  constr: { title: 'Construction method', one: true, other: 33, opts: enumOpts(['SiteBuilt', 'Modular', 'Manufactured', 'OnFrameModular', 'Container', 'ThreeDimensionalPrintingTechnology', 'Other']).map(([v, l]) => [v, v === 'ThreeDimensionalPrintingTechnology' ? '3-D printed' : l]), help: 'How the dwelling was built.' },
+  func: { title: 'Functional utility (functional issues)', multi: true, other: 33, opts: [['None', 'None'], ['FloorPlan', 'Floor plan'], ['CeilingHeight', 'Ceiling height'], ['NonConformity', 'Non-conformity'], ['Overimprovement', 'Overimprovement'], ['Underimprovement', 'Underimprovement'], ['Other', 'Other']], help: 'UAD 3.6 functional issue types.' },
+  hazard: { title: 'Hazard zone', multi: true, other: 33, opts: [['None', 'None'], ['FEMASpecialFloodHazardArea', 'FEMA special flood hazard area'], ['USGSLavaFlowZone', 'USGS lava flow zone'], ['Other', 'Other (e.g. very high fire hazard severity zone)']], help: 'The flood zone and panel come from the flood map (Maps card) or CRS.' },
+  zoning: { title: 'Zoning compliance', one: true, opts: enumOpts(['Legal', 'LegalNonConforming', 'Illegal', 'NoZoning']), help: 'UAD 3.6 zoning compliance.' },
+  streetAccess: { title: 'Street access', one: true, other: 33, opts: enumOpts(['Local', 'Collector', 'Arterial', 'CulDeSac', 'DeadEnd', 'Alley', 'Rural', 'Other']).map(([v, l]) => [v, v === 'CulDeSac' ? 'Cul-de-sac' : l]), help: 'UAD 3.6 street type. A private road: Other – “Private road”.' },
+  easement: { title: 'Easement', multi: true, other: 33, opts: enumOpts(['IngressOrEgress', 'Utility', 'Drainage', 'Conservation', 'Other']).map(([v, l]) => [v, v === 'IngressOrEgress' ? 'Ingress / egress (driveway, access)' : l]), help: 'UAD 3.6 easement types.' },
+  restrict: { title: 'Property restriction', multi: true, other: 33, opts: enumOpts(['Age', 'HistoricPreservation', 'Income', 'LandUse', 'Rental', 'SalePrice', 'Other']), help: 'UAD 3.6 restriction types (deed or covenant).' },
+};
+/* view: like the site influence picker – each view with its impact and range */
+const VIEW_TYPES = ['Residential', 'Mountain', 'Ocean', 'Bay', 'Valley', 'Woods', 'Park', 'Pastoral', 'GolfCourse', 'Skyline', 'CityStreet', 'Lake', 'River', 'Creek', 'Pond', 'Reservoir', 'Canal', 'Cove', 'Gulf', 'Sound', 'Marsh', 'Commercial', 'Industrial', 'HighDensityResidential', 'Highway', 'ParkingLot', 'School', 'TrafficWallBarriers', 'Other'];
+function vwParse(text) { const out = []; let imp = '';
+  String(text || '').split(/;|,(?![^(]*\))/).map(x => x.trim()).filter(Boolean).forEach(tok => { let rest = tok; const m = tok.match(/^(Adverse|Beneficial|Neutral)\b\s*[:–-]?\s*(.*)$/i); if (m) { imp = m[1][0].toUpperCase() + m[1].slice(1).toLowerCase(); rest = m[2]; }
+    const tail = rest.match(/\s*[–-]\s*(Adverse|Beneficial|Neutral)\s*$/i); if (tail) { imp = tail[1][0].toUpperCase() + tail[1].slice(1).toLowerCase(); rest = rest.slice(0, tail.index); }
+    const rm = rest.match(/\((Full|Partial|Seasonal|Panoramic|Limited|Filtered)\)/i) || rest.match(/\b(panoramic|partial|limited|filtered|seasonal)\b/i); const range = rm ? ({ panoramic: 'Full', limited: 'Partial', filtered: 'Partial' }[rm[1].toLowerCase()] || rm[1][0].toUpperCase() + rm[1].slice(1).toLowerCase()) : '';
+    rest = rest.replace(/\((Full|Partial|Seasonal|Panoramic|Limited|Filtered)\)/i, '').replace(/\b(panoramic|partial|limited|filtered|seasonal)\b/ig, '').replace(/\s+/g, ' ').trim(); if (!rest) return;
+    const key = rest.toLowerCase().replace(/[^a-z]/g, ''); let ty = VIEW_TYPES.find(t => t.toLowerCase() === key || camelWords(t).toLowerCase().replace(/[^a-z]/g, '') === key);
+    if (!ty) { const m2 = VIEW_MAP.find(([re]) => re.test(rest)); ty = m2 ? m2[1] : 'Other'; }
+    out.push({ type: ty, impact: imp || 'Neutral', range, other: ty === 'Other' ? rest.slice(0, 33) : '' }); });
+  return out; }
+const vwText = L => L.map(x => `${x.impact}: ${x.type === 'Other' ? (x.other || 'Other') : camelWords(x.type)}${x.range ? ` (${x.range})` : ''}`).join('; ');
+/* the answer as text, and back: official labels joined by "; " (Other: her words) */
+const pkText = (spec, vals, other) => vals.map(v => v === 'Other' && other ? other : (spec.opts.find(o => o[0] === v) || [v, v])[1].replace(/ \(.*\)$/, '')).join('; ');
+function pkParse(spec, text) { const t = String(text || '').trim(); if (!t) return { vals: [], other: '', ok: true };
+  const parts = spec.multi ? t.split(/;\s*|,\s*/) : [t]; const vals = []; let other = '', ok = true;
+  parts.forEach(p => { const k = p.toLowerCase().replace(/[^a-z0-9]/g, ''); const hit = spec.opts.find(([v, l]) => v.toLowerCase() === k || l.toLowerCase().replace(/ \(.*\)$/, '').replace(/[^a-z0-9]/g, '') === k || l.toLowerCase().replace(/[^a-z0-9]/g, '') === k);
+    if (hit) vals.push(hit[0]); else if (spec.other) { vals.push('Other'); other = (other ? other + ', ' : '') + p; } else ok = false; });
+  return { vals, other, ok }; }
+/* valid = empty, or every part is an allowed answer; "Other" words count only when they came from ▾ pick (marker), so a 2.6 code like DT2;Ranch turns red */
+function pkValid(id, text, marker) { const t = String(text || '').trim(); if (!t || (marker && marker === t)) return true;
+  if (id === 'view') return vwParse(t).every(x => x.type !== 'Other'); const S = PICK[id]; if (!S) return true; const P = pkParse({ ...S, other: 0 }, t); return P.ok; }
+const pkBtn = (who, id) => (PICK[id] || id === 'view') ? ` <button type="button" class="btn xs" data-uadpick="${who}|${id}" title="Pick from the UAD 3.6 list">▾ pick</button>` : '';
+function pkSave(J, who, id, txt) { const c = who === 'subj' ? null : J.comps.find(x => x.id === who); const G = G0(J);
+  if (c) { wbFactSet(J, c, id, txt); c.edit = c.edit || {}; if (txt) c.edit['pk_' + id] = txt; else delete c.edit['pk_' + id]; } else { if (txt) { G.subj[id] = txt; G.subj['pk_' + id] = txt; } else { delete G.subj[id]; delete G.subj['pk_' + id]; } } save(); render(); toast((PICK[id] ? PICK[id].title : 'View') + ': ' + (txt || 'cleared')); }
+function uadPick(who, id) {
+  const J = app.job; const c = who === 'subj' ? null : J.comps.find(x => x.id === who); const F = c ? compFacts(c, J) : subjFacts(J); const name = c ? 'Comp ' + (c.use || '') + ' ' + compTitle(c) : 'Subject';
+  const bg = document.createElement('div'); bg.className = 'sheetbg';
+  if (id === 'view') { let L = vwParse(F.view); if (!L.length) L = [{ type: 'Residential', impact: 'Neutral', range: '', other: '' }];
+    const draw = () => { bg.innerHTML = `<div class="sheet"><h2>View – ${esc(name)}</h2><p class="help">UAD 3.6 view types, each with its impact and range (Full, Partial, Seasonal). Add as many as apply; the first is the primary view.</p>
+      <table class="mini si">${L.map((x, i) => `<tr><td><select data-vw="${i}|type">${VIEW_TYPES.map(t => `<option value="${t}" ${x.type === t ? 'selected' : ''}>${esc(camelWords(t))}</option>`).join('')}</select>${x.type === 'Other' ? `<input class="txt sm" data-vw="${i}|other" maxlength="33" placeholder="Describe (33)" value="${esc(x.other)}">` : ''}</td>
+        <td><select data-vw="${i}|impact">${['Neutral', 'Beneficial', 'Adverse'].map(t => `<option ${x.impact === t ? 'selected' : ''}>${t}</option>`).join('')}</select></td><td><select data-vw="${i}|range"><option value="">range –</option>${['Full', 'Partial', 'Seasonal'].map(t => `<option ${x.range === t ? 'selected' : ''}>${t}</option>`).join('')}</select></td><td><button class="btn xs" data-vwdel="${i}">✕</button></td></tr>`).join('')}</table>
+      <div class="row"><button class="btn sm" data-vwadd="1">+ Add a view</button><span class="grow"></span><button class="btn primary" data-pksave="1">Use these</button><button class="btn" data-pkclose="1">Cancel</button></div><p class="help">Shows as: <b>${esc(vwText(L))}</b></p></div>`; };
+    draw(); document.body.appendChild(bg);
+    bg.addEventListener('change', e => { const d = e.target.dataset.vw; if (!d) return; const [i, k] = d.split('|'); L[+i][k] = e.target.value; draw(); });
+    bg.addEventListener('click', e => { const t = e.target; if (t.dataset.vwadd) { L.push({ type: 'Mountain', impact: 'Beneficial', range: 'Partial', other: '' }); draw(); } else if (t.dataset.vwdel) { L.splice(+t.dataset.vwdel, 1); draw(); }
+      else if (t.dataset.pkclose || t === bg) bg.remove(); else if (t.dataset.pksave) { bg.remove(); pkSave(J, who, 'view', vwText(L)); } });
+    return; }
+  const S = PICK[id]; const now = F[id] != null ? String(F[id]) : ''; const mk = c ? (c.edit || {})['pk_' + id] : (G0(J).subj || {})['pk_' + id]; const strict = pkParse({ ...S, other: 0 }, now); const cur = mk === now ? pkParse(S, now) : { ...strict, vals: strict.ok ? strict.vals : [], other: '' }; let vals = cur.vals.slice(), other = cur.other;
+  const draw = () => { bg.innerHTML = `<div class="sheet uadpick"><h2>${esc(S.title)} – ${esc(name)}</h2>${!cur.ok ? `<p class="help warnTxt">Now: “${esc(F[id])}” – not a UAD 3.6 answer. Pick one.</p>` : ''}
+    <div class="pkgrid"><div class="pkopts">${S.opts.map(([v, l, hlp]) => `<label class="check pk"><input type="${S.multi ? 'checkbox' : 'radio'}" name="pk" value="${esc(v)}" ${vals.includes(v) ? 'checked' : ''}> <b>${esc(l)}</b>${hlp ? `<small>${esc(hlp)}</small>` : ''}</label>`).join('')}
+      ${S.other ? `<label class="fld" ${vals.includes('Other') ? '' : 'hidden'} id="pkOther"><span>Other – describe (up to ${S.other} characters)</span><input class="txt" maxlength="${S.other}" value="${esc(other)}" data-pkother="1"></label>` : ''}</div>
+      <div class="pkguide"><b>UAD guidance</b><p>${esc(S.help || '')}</p></div></div>
+    <div class="row"><button class="btn ghost" data-pkclear="1">Clear</button><span class="grow"></span><button class="btn primary" data-pksave="1">OK</button><button class="btn" data-pkclose="1">Cancel</button></div></div>`; };
+  draw(); document.body.appendChild(bg);
+  bg.addEventListener('change', e => { const t = e.target; if (t.name === 'pk') { vals = S.multi ? [...bg.querySelectorAll('input[name=pk]:checked')].map(x => x.value) : [t.value]; if (S.multi && vals.includes('None') && vals.length > 1) vals = t.value === 'None' ? ['None'] : vals.filter(v => v !== 'None');
+      bg.querySelectorAll('input[name=pk]').forEach(x => { x.checked = vals.includes(x.value); }); const o = bg.querySelector('#pkOther'); if (o) o.hidden = !vals.includes('Other'); } if (t.dataset.pkother) other = t.value.trim(); });
+  bg.addEventListener('click', e => { const t = e.target; if (t.dataset.pkclose || t === bg) bg.remove(); else if (t.dataset.pkclear) { bg.remove(); pkSave(J, who, id, ''); }
+    else if (t.dataset.pksave) { if (vals.includes('Other') && !other) { toast('Describe “Other” first'); return; } bg.remove(); pkSave(J, who, id, pkText(S, vals, other)); } });
+}
+document.addEventListener('click', e => { const b = e.target.closest('[data-uadpick]'); if (!b || !app.job) return; e.stopPropagation(); const [who, id] = b.dataset.uadpick.split('|'); uadPick(who, id); }, true);
