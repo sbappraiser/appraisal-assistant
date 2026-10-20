@@ -62,6 +62,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-
 .client-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; }
 .client-actions { display: flex; gap: 6px; flex-wrap: wrap; } .client-actions select { width: auto; max-width: 220px; padding: 6px 8px; font-size: 13px; }
 .eyebrow { font: 600 12px var(--ui); text-transform: uppercase; letter-spacing: .07em; color: var(--muted); }
+.eyebrow.mkhd { font: 700 15px var(--ui); color: #c00000; letter-spacing: .05em; } .eyebrow.mkhd b { font-weight: 800; }
 .btn { font: 600 14px var(--ui); border: 1px solid var(--line); background: var(--panel); color: var(--ink); border-radius: 8px; padding: 9px 14px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
 .btn:hover { border-color: var(--accent); }
 .btn.primary { background: var(--accent-fill); color: var(--accent-ink); border-color: #000; }
@@ -719,7 +720,7 @@ mark.blank{background:#fff3a8;padding:0 2px;border-radius:3px}.cmt textarea{widt
 </div>
 <div id="toast" role="status" hidden></div>
 <script>
-const BUILD='o1-1020-0641';
+const BUILD='o1-1020-0648';
 const G = (() => {
 /* ---------------- small helpers ---------------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -2716,13 +2717,13 @@ function mkRender(redraft) {
       <label>Look back<select data-mk="lookback">${[3, 6, 12, 18, 24, 36].map(n => `<option value="${n}"${+m.lookback === n ? ' selected' : ''}>${n} months</option>`).join('')}</select></label>
       <label>Property types${typesAll.length ? `<span class="types">${typesAll.map(t => `<label class="check"><input type="checkbox" data-mktype="${h(t)}" ${!m.types || m.types.includes(t) ? 'checked' : ''}>${h(t)}</label>`).join('')}</span>` : '<input disabled value="from the search">'}</label></div>
     <p class="help">The effective date comes from the order (inspection date, or the date of death for retrospective work). Change it on the Order &amp; letter tab.</p>
-    <div class="drop" id="mkDrop"><div><span class="eyebrow">Market Area Boundary search (macro market area)</span><p class="help">In Flexmls, search all residential listings inside your market area boundaries (actives, pendings and sales for the look-back period), export the CSV and drop it here.${m.file ? ' Loaded: <b>' + h(m.file) + '</b>' : ''}</p></div>
+    <div class="drop" id="mkDrop"><div><span class="eyebrow mkhd">Market Area Boundary search <b>(MACRO market area)</b></span><p class="help">In Flexmls, search all residential listings inside your market area boundaries (actives, pendings and sales for the look-back period), export the CSV and drop it here.${m.file ? ' Loaded: <b>' + h(m.file) + '</b>' : ''}</p></div>
       <label class="btn" for="mkFile">Choose CSV<input type="file" id="mkFile" accept=".csv,text/csv"></label></div>
     ${(cur.docs || []).some(d => d.type === 'marketSearch' && /\.csv$/i.test(d.name)) && !m.rows.length ? '<p><button type="button" class="btn small" id="mkFromDocs">Use the market search in this order’s documents</button></p>' : ''}
     ${m.rows.length ? mkTable(RA, m, 'macro') + '<p class="help">Untick a listing that is not competitive with the subject (wrong property type, two units on one lot, a different market). It is left out of every number below. Click a column heading to sort.</p>' : ''}
   </section>
   <section class="mkcard"><h3>2 · Search Criteria (17.004) – the comparable properties within the boundaries <small>fills the UAD 3.6 Search Result Metrics (17.005–17.016)</small></h3>
-    <div class="drop" id="mkDrop2"><div><span class="eyebrow">Search Criteria search (micro – competitive market area)</span><p class="help">Your Flexmls search of the similar properties within the macro market area that compete with the subject (the same one you use for the 1004MC and, in a 2.6 report, the comparable listings and sales line at the top of the Sales Comparison Approach). Export the CSV and drop it here. Its results are the 3.6 Search Result Metrics, Demand/Supply and Marketing Time. Until it is loaded, the boundary search above is used.${MI().file ? ' Loaded: <b>' + h(MI().file) + '</b>' : ''}</p></div>
+    <div class="drop" id="mkDrop2"><div><span class="eyebrow mkhd">Search Criteria search <b>(MICRO – competitive market area)</b></span><p class="help">Your Flexmls search of the similar properties within the macro market area that compete with the subject (the same one you use for the 1004MC and, in a 2.6 report, the comparable listings and sales line at the top of the Sales Comparison Approach). Export the CSV and drop it here. Its results are the 3.6 Search Result Metrics, Demand/Supply and Marketing Time. Until it is loaded, the boundary search above is used.${MI().file ? ' Loaded: <b>' + h(MI().file) + '</b>' : ''}</p></div>
       <label class="btn" for="mkFile2">Choose CSV<input type="file" id="mkFile2" accept=".csv,text/csv"></label></div>
     ${MI().rows.length ? (() => { const Q = R; const ppsf = Q.S.filter(r => r.salePrice && r.gla).map(r => r.salePrice / r.gla), stl = Q.S.filter(r => r.salePrice && r.listPrice).map(r => r.salePrice / r.listPrice);
       return `<table class="facts uad mkmini"><tr><th>Sales in the look-back</th><td>${Q.salesN}${Q.salesN ? ` · ${$m(Q.saleLow)} / ${$m(Q.saleMed)} / ${$m(Q.saleHigh)} (low / median / high)` : ''}</td></tr>
