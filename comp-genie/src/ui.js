@@ -107,7 +107,7 @@ async function pullMicro(o, quiet) {
   const same = (a, b) => (apnKey(a.apn) && apnKey(a.apn) === apnKey(b.apn)) || (a.addr && b.addr && addrKey(a.addr) === addrKey(b.addr));
   const crsIn = []; let crsNew = 0;
   if (crsRows.length) { const fid = uid();
-    crsRows.forEach(r => { const id = 'CRS:' + (apnKey(r.apn) || addrKey(r.addr)); if (M.exclude[id]) return; const twin = all.find(x => same(x, r)); if (twin && M.exclude[twin.mls]) return;
+    crsRows.forEach(r => { const id = 'CRS:' + (apnKey(r.apn) || addrKey(r.addr)); if (M.exclude[id]) return; const twin = all.filter(x => same(x, r)).sort((x, y) => { const sc = z => z.saleDate ? (r.saleDate ? Math.abs(new Date(z.saleDate) - new Date(r.saleDate)) / 864e5 : 500) : /Pend|Contract/i.test(z.status || '') ? 2e5 : 3e5; return sc(x) - sc(y); })[0];   // a house with several listings: the closed one nearest the recorded sale if (twin && M.exclude[twin.mls]) return;
       const seed = { mls: twin ? twin.mls : '', apn: r.apn, key: r.addr ? addrKey(r.addr) : '', label: r.addr }; const was = findComp(seed);
       if (was && was.src.crs && !was.src.crs.fromList) { crsIn.push({ ...r, mls: seed.mls }); return; }   // her CRS report is already on it
       const { isNew } = upsertComp(seed, 'crs', crsFromList(r), fid); if (isNew) crsNew++; crsIn.push({ ...r, mls: seed.mls, status: 'Closed' }); });

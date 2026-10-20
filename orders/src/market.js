@@ -63,7 +63,7 @@ function mkCompute(src) {   // src: the market-area search (default) or the comp
   (src.rows || []).forEach(r0 => {
     const fx = (src.fix || {})[r0.mls]; const r = fx ? { ...r0, ...(r0.crsFill || {}), ...fx, typed: true } : r0.crsFill ? { ...r0, ...r0.crsFill, crsFilled: true } : r0;   // sale date / price she typed for a closed row the CSV left blank
     const s = statusAt(r, eff); let use = s && !(src.exclude || {})[r.mls] && (r.crsOnly || !types || types.includes(r.typ));
-    if (r.crsOnly && !m.countCrs) use = false;   // CRS-only sales: not in the SBMLS numbers unless she counts them
+    if (r.crsOnly && m.countCrs === false) use = false;   // CRS-only sales: not in the SBMLS numbers unless she counts them
     if (s === 'sold' && r.saleDate <= start) use = false;
     if (s === 'closed – no sale date') use = false;   // shown, but it cannot be counted without a sale date
     const dom = s === 'active' ? (nearToday && r.dom != null ? r.dom : (r.listDate ? daysBetween(r.listDate, eff) : null)) : r.cdom ?? r.dom;
@@ -302,8 +302,8 @@ function mkTable(R, src, which) {
   const inc = which === 'micro' ? 'data-mkinc2' : 'data-mkinc';
   return `<div class="tableWrap"><table class="facts mkrows"><tr><th></th>${th('addr', 'Address')}${th('at', 'On ' + h(shortDate(R.eff)))}${th('listDate', 'Listed')}${th('listPrice', 'List price')}${th('contractDate', 'Contract')}${th('saleDate', 'Sold')}${th('salePrice', 'Sale price')}${th('ppsf', '$ / sq ft')}${th('domAt', 'DOM')}${th('gla', 'Sq ft')}<th>Notes</th></tr>
     ${rows.map(r => `<tr class="${r.use ? '' : 'off'}">
-      <td><input type="checkbox" ${inc}="${h(r.mls)}" ${(src.exclude || {})[r.mls] ? '' : 'checked'} title="Use this listing" aria-label="Use ${h(r.addr)}"></td><td>${h(r.addr)}${r.unit ? ' #' + h(r.unit) : ''}${r.crsOnly ? `<small class="mkcrs">CRS only – check Flexmls${r.apn ? ' · APN ' + h(r.apn) : ''}</small>` : `<small>MLS ${h(r.mls)} · ${h(r.typ)}${r.crs ? ' · <span class="mkcrsok">+ CRS</span>' : ''}</small>`}</td>
-      <td>${r.at === 'closed – no sale date' ? `<b class="warnTxt">closed – no sale date or price in the CSV</b><span class="mkfix">Sold <input type="date" data-mkfix="${which}|${h(r.mls)}|saleDate" aria-label="Sold date"> for $<input class="num" inputmode="numeric" data-mkfix="${which}|${h(r.mls)}|salePrice" placeholder="sold price" aria-label="Sold price"></span>` : h(r.at || 'not on the market') + (r.crsOnly ? '<small>recorded sale (CRS)' + (r.use ? '' : (src.exclude || {})[r.mls] ? '' : ' · not counted') + '</small>' : '') + (r.crsFilled ? '<small>sale date from CRS (recorded)</small>' : '') + (r.typed ? `<small>sale typed by you · <a href="#" data-mkunfix="${which}|${h(r.mls)}">undo</a></small>` : '')}</td><td>${h(shortDate(r.listDate))}</td><td>${h($m(r.listPrice))}</td><td>${h(shortDate(r.contractDate))}</td><td>${h(shortDate(r.saleDate))}</td><td>${h($m(r.salePrice))}</td><td>${r.salePrice && r.gla ? h($m(r.salePrice / r.gla)) : ''}</td><td>${h(r.domAt ?? '')}</td><td>${r.gla ? Math.round(r.gla).toLocaleString() : ''}</td>
+      <td><input type="checkbox" ${inc}="${h(r.mls)}" ${(src.exclude || {})[r.mls] ? '' : 'checked'} title="Use this listing" aria-label="Use ${h(r.addr)}"></td><td>${h(r.addr)}${r.unit ? ' #' + h(r.unit) : ''}${r.crsOnly ? (r.macroMls ? `<small class="mkcrs">CRS sale · in your macro MLS search (MLS ${h(r.macroMls)}) but outside your micro criteria</small>` : `<small class="mkcrs">CRS only – not in SBMLS? check Flexmls${r.apn ? ' · APN ' + h(r.apn) : ''}</small>`) : `<small>MLS ${h(r.mls)} · ${h(r.typ)}${r.crs ? ' · <span class="mkcrsok">+ CRS</span>' : ''}</small>`}</td>
+      <td>${r.at === 'closed – no sale date' ? `<b class="warnTxt">closed – no sale date or price in the CSV</b><span class="mkfix">Sold <input type="date" data-mkfix="${which}|${h(r.mls)}|saleDate" aria-label="Sold date"> for $<input class="num" inputmode="numeric" data-mkfix="${which}|${h(r.mls)}|salePrice" placeholder="sold price" aria-label="Sold price"></span>` : h(r.at || 'not on the market') + (r.crsOnly ? '<small>recorded sale (CRS)' + (r.use || (src.exclude || {})[r.mls] ? '' : ' · not counted') + '</small>' : '') + mkCrsDiff(r) + (r.crsFilled ? '<small>sale date from CRS (recorded)</small>' : '') + (r.typed ? `<small>sale typed by you · <a href="#" data-mkunfix="${which}|${h(r.mls)}">undo</a></small>` : '')}</td><td>${h(shortDate(r.listDate))}</td><td>${h($m(r.listPrice))}</td><td>${h(shortDate(r.contractDate))}</td><td>${h(shortDate(r.saleDate))}</td><td>${h($m(r.salePrice))}</td><td>${r.salePrice && r.gla ? h($m(r.salePrice / r.gla)) : ''}</td><td>${h(r.domAt ?? '')}</td><td>${r.gla ? Math.round(r.gla).toLocaleString() : ''}</td>
       <td>${[r.twoUnits ? 'two units? (left out)' : '', r.distressed ? '<b>distressed: ' + h(r.details.join(', ')) + '</b>' : r.details.length ? h(r.details.join(', ')) : ''].filter(Boolean).join(' · ')}</td></tr>`).join('')}</table></div>`;
 }
 /* a CSV for a search box. A small file next to a loaded search is ADDED to it (her Oct 20 2026 loss: a one-sale CSV
@@ -317,6 +317,7 @@ async function mkAddSearch(file, which, how) {
     if (mode === 'add') { const ids = new Set(rows.map(r => r.mls)); m.rows = [...old.filter(r => !ids.has(r.mls)), ...rows]; m.rows = mkJoinCrs(m.rows); m.file = (m.file || '') + ' + ' + file.name; rows.forEach(r => { if (m.exclude) delete m.exclude[r.mls]; }); }
     else { m.rows = rows; m.file = file.name; m.exclude = {}; m.types = null; }
     rows.filter(r => r.twoUnits).forEach(r => { m.exclude = m.exclude || {}; m.exclude[r.mls] = true; });
+    { const inf = mkCrsInfos({ rows: m.prev.rows }); if (inf.length && mode === 'add') mkCrsApply(m, which, inf); }
     mkChanged(); mkRender(true); toast(mode === 'add' ? `${rows.length} listing${rows.length === 1 ? '' : 's'} added – the search now has ${m.rows.length}` : `${rows.length} listings read from ${file.name}` + (which === 'micro' ? ' (comparable-sales search)' : ' (market area)'));
     if (!(cur.docs || []).some(d => d.name === file.name)) addDocs([file]); // keep the search with the order's documents
   } catch (e) { toast(e.message || 'Could not read that file'); }
@@ -325,34 +326,58 @@ async function mkAddSearch(file, which, how) {
    added; a closed MLS row with no sale date gets the recorded sale); the others come in as "CRS only" sales for her to
    check in Flexmls (agent entry errors can keep a listing out of a boundary search). CRS-only sales are not counted in the
    SBMLS market numbers unless she ticks "Count them"; they all go to the Comp genie. Owner names are never kept. */
-const mkSame = (a, b) => (G.apnKey(a.apn) && G.apnKey(a.apn) === G.apnKey(b.apn)) || (a.addr && b.addr && G.addrKey(a.addr) === G.addrKey(b.addr) && (a.unit || '') === (b.unit || ''));
-const mkCrsInfo = (c, file) => ({ file, saleDate: c.saleDate, salePrice: c.salePrice, gla: c.gla, yearBuilt: c.yearBuilt, lotSf: c.lotSf, apn: c.apn, doc: c.doc });
-function mkJoinCrs(rows) {   // a CRS-only sale that an MLS listing now covers becomes part of that listing
-  const mls = rows.filter(r => !r.crsOnly); const out = [];
-  rows.forEach(r => { if (!r.crsOnly) return; const t = mls.find(x => mkSame(x, r)); if (!t) { out.push(r); return; } t.crs = r.crs; if ((t.status === 'C' || t.status === 'S') && !t.saleDate && r.saleDate) t.crsFill = { saleDate: r.saleDate, salePrice: r.salePrice }; });
-  return [...mls, ...out];
-}
 function mkCrsBoxHTML() {
   const rows = MI().rows || []; const only = rows.filter(r => r.crsOnly), joined = rows.filter(r => !r.crsOnly && r.crs); if (!only.length && !joined.length) return '';
-  const ex = MI().exclude || {}; const live = only.filter(r => !ex[r.mls]);
-  return `<div class="mkcrsbox"><b>CRS Data list:</b> ${joined.length} sale${joined.length === 1 ? '' : 's'} also in your MLS search${only.length ? `, <b>${only.length} CRS only</b>` : ''}.
-    ${only.length ? `<p class="help">Check each CRS-only sale in Flexmls by address or APN – an agent's entry error can keep a listing out of a boundary search. If you find it, export that listing's CSV and drop it here: it joins the CRS sale. Untick any you do not want; the rest go to the Comp genie with your MLS listings.</p>
-    <label class="check"><input type="checkbox" data-mkcountcrs ${M().countCrs ? 'checked' : ''}> Count the ${live.length} CRS-only sale${live.length === 1 ? '' : 's'} in the market numbers above and the 1004MC (adds “CRS Data” as a Price Trend Source)</label>` : ''}</div>`;
+  const inMac = only.filter(r => r.macroMls), notMls = only.filter(r => !r.macroMls), diff = joined.filter(r => mkCrsDiff(r));
+  return `<div class="mkcrsbox"><b>CRS Data list:</b> ${joined.length} sale${joined.length === 1 ? '' : 's'} joined to their MLS listing (“+ CRS”)${diff.length ? `, <b>${diff.length}</b> where CRS and the MLS differ (shown in blue on the row – you decide which is right)` : ''}.
+    ${notMls.length ? `<br><b>${notMls.length} not in SBMLS?</b> – recorded sales with no MLS listing in your searches. They are counted. Check each in Flexmls by address or APN (an agent's entry error can keep a listing out of a boundary search); if you find it, export that listing's CSV and drop it here – it joins the sale.` : ''}
+    ${inMac.length ? `<br><b>${inMac.length} in your macro MLS search but outside your micro criteria</b> (for example two-story or a different size) – left unticked. Tick any that do compete.` : ''}
+    ${only.length ? `<label class="check"><input type="checkbox" data-mkcountcrs ${M().countCrs !== false ? 'checked' : ''}> Count the ticked CRS sales in the market numbers and the 1004MC (adds “CRS Data” as a Price Trend Source)</label>` : ''}</div>`;
 }
+const mkSame = (a, b) => (G.apnKey(a.apn) && G.apnKey(a.apn) === G.apnKey(b.apn)) || (a.addr && b.addr && G.addrKey(a.addr) === G.addrKey(b.addr) && (a.unit || '') === (b.unit || ''));
+const mkCrsInfo = (c, file) => ({ file, addr: c.addr, saleDate: c.saleDate, salePrice: c.salePrice, gla: c.gla, yearBuilt: c.yearBuilt, lotSf: c.lotSf, apn: c.apn, doc: c.doc });
+const mkCrsId = c => 'CRS:' + (G.apnKey(c.apn) || G.addrKey(c.addr));
+/* the MLS listing a recorded sale belongs to: a house can have several listings (an earlier one that expired) –
+   the closed one whose sale date is nearest the recorded date wins (5375 Parejo, Oct 20 2026) */
+function mkBestTwin(list, c) {
+  const days = (x, y) => Math.abs((new Date(x) - new Date(y)) / 864e5);
+  const score = x => (x.status === 'C' || x.status === 'S') && x.saleDate ? (c.saleDate ? days(x.saleDate, c.saleDate) : 500) : (x.status === 'C' || x.status === 'S') ? 1e5 : /^(P|U)/.test(x.status) ? 2e5 : 3e5 + (c.saleDate && (x.listDate || x.offDate) ? days(x.listDate || x.offDate, c.saleDate) : 0);
+  const cand = list.filter(x => !x.crsOnly && mkSame(x, c)); return cand.sort((x, y) => score(x) - score(y))[0] || null;
+}
+/* lay every CRS sale of this search onto its rows again: joined to the right MLS listing, or a CRS-only row.
+   Micro only: a CRS-only sale that IS in the macro MLS search did not meet her micro criteria (stories, size …), so it is left unticked
+   until she ticks it (m.crsKeep). CRS-only sales are actual sales and are counted (her rule, Oct 20 2026) unless she unticks "Count". */
+function mkCrsApply(m, which, infos) {
+  const base = (m.rows || []).filter(r => !r.crsOnly).map(r => { const o = { ...r }; delete o.crs; delete o.crsFill; return o; });
+  const macro = which === 'micro' ? (M().rows || []).filter(r => !r.crsOnly) : []; const fresh = []; let matched = 0, filled = 0, inMacro = 0;
+  m.exclude = m.exclude || {}; m.crsKeep = m.crsKeep || {};
+  infos.forEach(c => { const t = mkBestTwin(base, c);
+    if (t) { if (t.crs) return; matched++; t.crs = c; if ((t.status === 'C' || t.status === 'S') && !t.saleDate && c.saleDate) { t.crsFill = { saleDate: c.saleDate, salePrice: c.salePrice }; filled++; } return; }
+    const id = mkCrsId(c); if (fresh.some(x => x.mls === id)) return; const mt = macro.length ? mkBestTwin(macro, c) : null;
+    if (mt) { inMacro++; if (!m.crsKeep[id]) m.exclude[id] = true; }
+    fresh.push({ mls: id, crsOnly: true, src: c.file, status: 'S', typ: '', addr: c.addr, unit: '', apn: c.apn, saleDate: c.saleDate, salePrice: c.salePrice, gla: c.gla,
+      listDate: '', contractDate: '', offDate: '', listPrice: null, dom: null, cdom: null, details: [], distressed: false, conc: '', twoUnits: false, crs: c, macroMls: mt ? mt.mls : '' }); });
+  m.rows = [...base, ...fresh]; m.crsV = 2; return { matched, filled, fresh: fresh.length, inMacro };
+}
+const mkCrsInfos = (m, skipFile) => (m.rows || []).filter(r => r.crs && r.crs.file !== skipFile).map(r => ({ ...r.crs, addr: r.crs.addr || r.addr, apn: r.crs.apn || r.apn }));
+function mkJoinCrs(rows) { return rows; }   // joining is done by mkCrsApply after every MLS file (see mkAddSearch)
 async function mkAddCrs(file, text, which) {
   const list = G.parseCrsExport(text); if (!list.length) { toast('No sales found in that CRS file'); return; }
-  const m = which === 'micro' ? MI() : M(); const old = (m.rows || []).filter(r => !(r.crsOnly && r.src === file.name) && !(r.crs && r.crs.file === file.name && r.crsOnly)).map(r => ({ ...r }));
-  old.forEach(r => { if (r.crs && r.crs.file === file.name) { delete r.crs; delete r.crsFill; } });   // loading the same CRS file again
+  const m = which === 'micro' ? MI() : M();
   m.prev = { rows: (m.rows || []).slice(), file: m.file, exclude: { ...(m.exclude || {}) }, types: m.types, at: new Date().toISOString() };
-  let matched = 0, filled = 0; const fresh = [];
-  list.forEach(c => { const t = old.find(x => !x.crsOnly && mkSame(x, c));
-    if (t) { matched++; t.crs = mkCrsInfo(c, file.name); if ((t.status === 'C' || t.status === 'S') && !t.saleDate && c.saleDate) { t.crsFill = { saleDate: c.saleDate, salePrice: c.salePrice }; filled++; } return; }
-    fresh.push({ mls: 'CRS:' + (G.apnKey(c.apn) || G.addrKey(c.addr)), crsOnly: true, src: file.name, status: 'S', typ: '', addr: c.addr, unit: '', apn: c.apn, saleDate: c.saleDate, salePrice: c.salePrice, gla: c.gla,
-      listDate: '', contractDate: '', offDate: '', listPrice: null, dom: null, cdom: null, details: [], distressed: false, conc: '', twoUnits: false, crs: mkCrsInfo(c, file.name) }); });
-  m.rows = [...old, ...fresh]; if (!String(m.file || '').split(' + ').includes(file.name)) m.file = m.file ? m.file + ' + ' + file.name : file.name;
+  const k = mkCrsApply(m, which, [...mkCrsInfos(m, file.name), ...list.map(c => mkCrsInfo(c, file.name))]);
+  if (!String(m.file || '').split(' + ').includes(file.name)) m.file = m.file ? m.file + ' + ' + file.name : file.name;
   mkChanged(); mkRender(true);
-  toast(`CRS list: ${list.length} sales – ${matched} also in your MLS search (CRS details added${filled ? `; ${filled} missing sale date${filled > 1 ? 's' : ''} filled from the recorded sale` : ''}), ${fresh.length} CRS only. Check the CRS-only ones in Flexmls.`, 10000);
+  toast(`CRS list: ${list.length} sales – ${k.matched} joined to their MLS listing${k.filled ? ` (${k.filled} missing sale date${k.filled > 1 ? 's' : ''} filled from the recorded sale)` : ''}, ${k.fresh} not in this MLS search` + (k.inMacro ? ` (${k.inMacro} of them are in your macro MLS search, so outside your micro criteria – left unticked)` : '') + '.', 12000);
   if (!(cur.docs || []).some(d => d.name === file.name)) addDocs([file]);
+}
+/* where the two sources disagree – she decides which is right */
+function mkCrsDiff(r) {
+  const c = r.crs; if (!c || r.crsOnly) return ''; const d = [];
+  if (c.salePrice && r.salePrice && Math.abs(c.salePrice - r.salePrice) >= 1000 && !r.crsFilled) d.push(`price ${$m(c.salePrice)}`);
+  if (c.saleDate && r.saleDate && !r.crsFilled && Math.abs((new Date(c.saleDate) - new Date(r.saleDate)) / 864e5) > 10) d.push(`recorded ${shortDate(c.saleDate)}`);
+  if (c.gla && r.gla && Math.abs(c.gla - r.gla) >= 25) d.push(`${Number(c.gla).toLocaleString()} sq ft`);
+  return d.length ? `<span class="mkdiff">CRS differs: ${d.join(' · ')}</span>` : '';
 }
 /* the CSV files already in this order's documents, to load one again with one click */
 function mkCsvDocsHTML(which) {
@@ -390,7 +415,9 @@ function parseZillowText(t) {   // Zillow "Housing Market Overview" wording
   return out;
 }
 function mkRender(redraft) {
-  const box = $('#mkBody'); if (!box || !cur) return; const m = M(); const RA = mkCompute(); const R = MI().rows.length ? mkCompute(MI()) : RA; mkLast = R;
+  const box = $('#mkBody'); if (!box || !cur) return; const m = M();
+  [[M(), 'macro'], [MI(), 'micro']].forEach(([q, w]) => { if (q.crsV !== 2 && (q.rows || []).some(r => r.crs)) { mkCrsApply(q, w, mkCrsInfos(q)); mkChanged(); } });   // CRS lists loaded before Oct 20 2026 evening: joined again the right way
+  const RA = mkCompute(); const R = MI().rows.length ? mkCompute(MI()) : RA; mkLast = R;
   if (redraft || m.comment == null) { if (R.rows.length || Object.keys(MK.stats).length) { if (!m.commentEdited) m.comment = mkCommentDraft(R); if (!m.criteriaEdited) m.criteria = mkCriteriaDraft(R); } }
   const pick = (k, list) => m[k] || R.suggest[{ supply: 'supply', mktime: 'mktime', distress: 'distress' }[k]] || '';
   const sel = (k, list, sug) => `<select data-mk="${k}">${['', ...list.map(x => x[0])].map(v => `<option value="${v}"${pick(k) === v ? ' selected' : ''}>${v ? list.find(x => x[0] === v)[1] : '—'}</option>`).join('')}</select>${sug ? ` <small class="${m[k] && m[k] !== sug ? 'warnTxt' : 'muted'}">suggested: ${h((list.find(x => x[0] === sug) || [, ''])[1])}</small>` : ''}`;
@@ -400,7 +427,7 @@ function mkRender(redraft) {
     if (R.rows.length && JSON.stringify(U) !== JSON.stringify(m.uad)) { m.uad = U; mkChanged(); } }
   const typesAll = [...new Set((m.rows || []).map(r => r.typ).filter(Boolean))];
   const st = mkStatsFor(R.eff); const city = mkCity(); 
-  const sources = (m.sources || ['SBMLS'].concat(m.countCrs && (MI().rows || []).some(r => r.crsOnly) ? ['CRS Data'] : [])).filter(x => x !== 'Zillow');
+  const sources = (m.sources || ['SBMLS'].concat(m.countCrs !== false && (MI().rows || []).some(r => r.crsOnly) ? ['CRS Data'] : [])).filter(x => x !== 'Zillow');
   const cnt = (id, max) => `<span class="cnt" data-cnt="${id}" data-max="${max}"></span>`;
   box.innerHTML = `
   <div class="mkgrid">
@@ -469,7 +496,7 @@ function mkRender(redraft) {
   $('#mkFile2').onchange = e => { const f = e.target.files[0]; e.target.value = ''; if (f) mkAddSearch(f, 'micro'); };
   { const z2 = $('#mkDrop2'); ['dragover', 'dragleave', 'drop'].forEach(ev => z2.addEventListener(ev, e => { e.preventDefault(); z2.classList.toggle('over', ev === 'dragover'); if (ev === 'drop' && e.dataTransfer.files[0]) mkAddSearch(e.dataTransfer.files[0], 'micro'); })); }
   box.querySelectorAll('[data-mksort]').forEach(th => th.onclick = () => { const [w, k] = th.dataset.mksort.split('|'); const S = MKSORT[w]; MKSORT[w] = { k, dir: S.k === k ? -S.dir : (['listPrice', 'salePrice', 'domAt', 'gla', 'ppsf'].includes(k) ? -1 : 1) }; mkRender(); });
-  box.querySelectorAll('[data-mkinc2]').forEach(cb => cb.onchange = () => { const q = MI(); q.exclude = q.exclude || {}; if (cb.checked) delete q.exclude[cb.dataset.mkinc2]; else q.exclude[cb.dataset.mkinc2] = true; mkChanged(); mkRender(true); });
+  box.querySelectorAll('[data-mkinc2]').forEach(cb => cb.onchange = () => { const q = MI(); q.exclude = q.exclude || {}; q.crsKeep = q.crsKeep || {}; if (cb.checked) { delete q.exclude[cb.dataset.mkinc2]; q.crsKeep[cb.dataset.mkinc2] = true; } else { q.exclude[cb.dataset.mkinc2] = true; delete q.crsKeep[cb.dataset.mkinc2]; } mkChanged(); mkRender(true); });
   $('#mkStatsFile').onchange = e => { const f = e.target.files[0]; e.target.value = ''; if (f) mkAddStats(f); };
   const fd = $('#mkFromDocs'); if (fd) fd.onclick = async () => { const d = cur.docs.find(d => d.type === 'marketSearch' && /\.csv$/i.test(d.name)); const f = await docFile(d.id); if (f) mkAddSearch(f); };
   box.querySelectorAll('[data-mktrend]').forEach(bt => bt.onclick = () => { m.trendConcl = bt.dataset.mktrend; mkChanged(); mkRender(!m.commentEdited); });
