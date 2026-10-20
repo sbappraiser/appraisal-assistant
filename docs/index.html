@@ -63,6 +63,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-
 .client-actions { display: flex; gap: 6px; flex-wrap: wrap; } .client-actions select { width: auto; max-width: 220px; padding: 6px 8px; font-size: 13px; }
 .eyebrow { font: 600 12px var(--ui); text-transform: uppercase; letter-spacing: .07em; color: var(--muted); }
 .eyebrow.mkhd { font: 700 15px var(--ui); color: #c00000; letter-spacing: .05em; } .eyebrow.mkhd b { font-weight: 800; }
+table.mcq th { color: #c00000 !important; font-size: 14px !important; font-weight: 800 !important; letter-spacing: .03em; background: #fff1f1; border-left: 4px solid #c00000; padding-left: 10px !important; }
 .btn { font: 600 14px var(--ui); border: 1px solid var(--line); background: var(--panel); color: var(--ink); border-radius: 8px; padding: 9px 14px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
 .btn:hover { border-color: var(--accent); }
 .btn.primary { background: var(--accent-fill); color: var(--accent-ink); border-color: #000; }
@@ -725,7 +726,7 @@ mark.blank{background:#fff3a8;padding:0 2px;border-radius:3px}.cmt textarea{widt
 </div>
 <div id="toast" role="status" hidden></div>
 <script>
-const BUILD='o1-1020-0725';
+const BUILD='o1-1020-0726';
 const G = (() => {
 /* ---------------- small helpers ---------------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -3902,7 +3903,7 @@ function mcLines(C) {
    3 closed sales, 1 pending sale and 1 active listing." One sale a period is too few to show a trend. */
 function mcSummaryDraft(C) {
   const m = M(), [a, b, c] = C.per, pick = k => (m.mc && m.mc.trend && m.mc.trend[k]) || C.trend[k].t; const out = []; const pl = (n, w) => n + ' ' + w + (n === 1 ? '' : 's');
-  const R = MI().rows.length ? mkCompute(MI()) : mkCompute(); const crit = String(m.criteria || '').trim().replace(/\s+/g, ' ');
+  const R = MI().rows.length ? mkCompute(MI()) : mkCompute(); const crit = String(m.criteria || '').trim().replace(/\s+/g, ' ').replace(/^(?:an?\s+)?SBMLS search (?:of|for)\s+/i, '');
   out.push('SBMLS was used for the 1004MC.');
   if (crit) { const w1 = crit.split(/\s/)[0]; out.push(/^(search|the search|the appraiser)/i.test(crit) ? crit.replace(/([^.])$/, '$1.') : 'Search parameters include ' + (/^[A-Z0-9]{2,}$/.test(w1.replace(/[^A-Za-z0-9]/g, '')) ? crit : crit.charAt(0).toLowerCase() + crit.slice(1)).replace(/([^.])$/, '$1.')); }
   out.push(`The search resulted in ${pl(C.allS, 'closed sale')} in the past 12 months, ${pl(R.pendingN, 'pending sale')} and ${pl(R.activeN, 'active listing')} as of the effective date of ${shortDate(C.eff)}.`);
@@ -3925,7 +3926,7 @@ function mcHTML(C) {
       ${MC_ROWS.map(([k, label, t], i) => `${i === 4 ? `<tr><th colspan="5">Median sale &amp; list price, DOM, sale/list %</th></tr>` : ''}<tr><td>${h(label)}</td>${C.per.map(p => `<td class="t">${mcFmt(p.v[k], t)}</td>`).join('')}<td>${sel(k, MC_TREND, C.trend[k].t)}<small class="sug${T[k] && T[k] !== C.trend[k].t ? ' warnTxt' : ''}">suggested ${C.trend[k].t}${C.trend[k].why ? ' (' + h(C.trend[k].why) + ')' : ''}</small></td></tr>`).join('')}
       <tr><td>Seller concessions reported in MLS (sales)</td>${C.per.map(p => `<td class="t">${p.concKnown ? p.conc + ' of ' + p.concKnown : '—'}</td>`).join('')}<td>${sel('conc', MC_TREND, 'Stable')}</td></tr>
       <tr><td>REO / short sales (sales)</td>${C.per.map(p => `<td class="t">${p.reo}${p.reoA ? ' · ' + p.reoA + ' listed' : ''}</td>`).join('')}<td></td></tr></table></div>
-    <table class="facts"><tr><th>Seller-(developer, builder, etc.) paid financial assistance prevalent?</th><td>${sel('concYN', ['', 'Yes', 'No'], '')} <small class="muted">${concPct == null ? 'concessions not in this export' : concPct + '% of the sales with an answer reported concessions'}</small></td></tr>
+    <table class="facts mcq"><tr><th>Seller-(developer, builder, etc.) paid financial assistance prevalent?</th><td>${sel('concYN', ['', 'Yes', 'No'], '')} <small class="muted">${concPct == null ? 'concessions not in this export' : concPct + '% of the sales with an answer reported concessions'}</small></td></tr>
       <tr><th>Are foreclosure sales (REO sales) a factor in the market?</th><td>${sel('reoYN', ['', 'Yes', 'No'], C.reo ? '' : 'No')} <small class="muted">${C.reo} REO / short sale${C.reo === 1 ? '' : 's'} in the past 12 months</small></td></tr>
       <tr><th>Cite data sources for the above information</th><td><input data-mcx="sources" value="${h(m.mc.sources ?? 'SBMLS')}"></td></tr>
       <tr><th>Summarize the above as support for your conclusions</th><td><textarea data-mcx="summary" rows="6">${h(m.mc.summary ?? mcSummaryDraft(C))}</textarea><div class="row"><button type="button" class="btn ghost small" id="mcRedo">Draft again</button></div></td></tr></table>
