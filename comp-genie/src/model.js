@@ -214,7 +214,7 @@ function defaultOrder(c, f) {
       if (f.k === 'sfSource') return ['pdf', 'mls'];
       return ['pdf', 'mls', ...(matched ? ['arch'] : []), ...(sale && sale.from === 'arch' ? ['arch'] : [])];
     case 'phys': return recent ? ['arch', 'mls', 'pdf', 'crs', 'cort'] : ['mls', 'pdf', 'arch', 'crs', 'cort'];
-    case 'geo': return ['mls', 'pdf', 'crs'];
+    case 'geo': return ['crs', 'mls', 'pdf'];   // Oct 20 2026: the public-record (parcel) location first, like the address
     default: return ['arch', 'mls', 'pdf', 'crs', 'cort'];
   }
 }
