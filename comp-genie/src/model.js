@@ -166,7 +166,8 @@ function archChosen(c) {
   const sale = currentSale(c);
   return c.src.arch.find(a => archMatches(a, sale)) || c.src.arch[0];
 }
-function srcVals(c) { // canonical values per source for this comp
+function srcVals(c) { return rcMemo('srcVals', c.id, () => srcVals0(c)); }
+function srcVals0(c) { // canonical values per source for this comp
   const a = archChosen(c);
   // show the CRS recorded price beside the others when its last sale is this sale
   let crs = c.src.crs; const sale = currentSale(c);
@@ -216,7 +217,8 @@ function defaultOrder(c, f) {
     default: return ['arch', 'mls', 'pdf', 'crs', 'cort'];
   }
 }
-function val(c, k) { // → { v, src, auto }
+function val(c, k) { return rcMemo('val', c.id + '|' + k, () => val0(c, k)); }
+function val0(c, k) { // → { v, src, auto }
   const f = FIELD[k] || { k, t: 'text', kind: 'id' };
   if (c.edit && k in c.edit && !blank(c.edit[k])) return { v: c.edit[k], src: 'edit' };
   const S = srcVals(c);
@@ -261,7 +263,8 @@ function priorSales(c) {
   if (sale && sale.date) kept.forEach(s => { s.monthsBefore = monthsBetween(s.date, sale.date); });
   return kept.filter(s => !sale || !sale.date || s.monthsBefore > 0 || s.date <= sale.date);
 }
-function compFlags(c, job) {
+function compFlags(c, job) { return rcMemo('compFlags', c.id, () => compFlags0(c, job)); }
+function compFlags0(c, job) {
   const F = []; const sale = currentSale(c); const yb = V(c, 'yearBuilt'); const price = V(c, 'salePrice');
   const st = V(c, 'status') || (sale && sale.status) || '';
   if (/Active/i.test(st)) F.push({ sev: 'info', t: 'Active listing (not a sale)' });

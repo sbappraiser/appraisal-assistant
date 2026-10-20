@@ -364,7 +364,7 @@ function homeHTML() {
 }
 /* every redraw keeps her place on the page (her note, Oct 20 2026: saving a comp to her database jumped to the top);
    the few actions that should go to the top (open an assignment, the start page) scroll there themselves after render */
-function render() { const y = window.scrollY; renderPage(); if (Math.abs(window.scrollY - y) > 2) window.scrollTo(0, y); requestAnimationFrame(() => { if (Math.abs(window.scrollY - y) > 2 && !render.top) window.scrollTo(0, y); render.top = false; }); }
+function render() { const y = window.scrollY; rcRun(renderPage); if (Math.abs(window.scrollY - y) > 2) window.scrollTo(0, y); requestAnimationFrame(() => { if (Math.abs(window.scrollY - y) > 2 && !render.top) window.scrollTo(0, y); render.top = false; }); }
 function renderPage() {
   const J = app.job; const root = $('#app');
   if (J && !J.gridManual && J.comps.some(c => c.use) && !gridInDateOrder(J)) { gridDateOrder(J); save(); }   // her rule: the grid is in closing-date order unless she numbered it herself
@@ -437,7 +437,8 @@ function bulkBarHTML(J) { if (!J.comps.length) return '';
 const compsCardHTML = J => J.ccDone ? `<div class="row"><h2 style="margin:0"><span class="ccdone">✓</span> Comps considered <small>${J.comps.length} · done</small></h2><span class="grow"></span><button class="btn sm" data-act="ccopen" title="Show the list again">Show ▾</button></div>`
   : `<div class="row"><h2 style="margin:0">Comps considered <small>${J.comps.length}</small></h2><span class="grow"></span>${J.comps.length ? `<button class="btn sm" data-act="ccdone" title="Mark the list finished and fold it away (Show ▾ brings it back)" style="color:var(--ok);border-color:#8fcca0">✓ Done – collapse</button>` : ''}${(() => { const n = J.comps.filter(c => !c.use && !c.notUsed).length; return n ? `<button class="btn sm primary" data-act="gridall" title="Puts on the grid every comp that is not on the grid yet and not already listed under Analyzed – not used, in closing-date order">Grid the undecided (${n})</button>` : ''; })()}${J.comps.filter(c => c.use).length > 1 && !gridInDateOrder(J) ? `<button class="btn sm" data-act="gridorder" title="Comp 1 = the most recent closing, as in this list">Number the grid in closing-date order</button>` : ''}${J.comps.length ? (app.confirm === 'rmall' ? `<span class="confirm">Remove all ${J.comps.length} comps from this assignment? <button class="btn danger solid sm" data-act="rmall-yes">Remove all</button><button class="btn sm" data-act="cancel">Keep</button></span>` : `<button class="btn sm danger" data-act="rmall">Remove all comps</button>`) : ''}</div>${bulkBarHTML(J)}${compsTable(J)}`;
 /* Redraw only what depends on a typed value, so the field you are in (and the next one you Tab to) is never replaced. */
-function renderParts(opts = {}) {
+function renderParts(opts = {}) { return rcRun(() => renderParts0(opts)); }
+function renderParts0(opts = {}) {
   const J = app.job;
   const jp = $('#jobpick'); if (jp) jp.innerHTML = app.jobs.map(j => `<option value="${j.id}" ${j.id === J.id ? 'selected' : ''}>${esc(j.name)}</option>`).join('');
   const cc = $('#compsCard'); if (cc) { cc.innerHTML = compsCardHTML(J); fillImages(cc); }

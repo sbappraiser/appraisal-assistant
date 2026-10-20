@@ -292,7 +292,8 @@ const usedComps = J => J.comps.filter(c => c.use).sort((a, b) => a.use - b.use);
 const acOf = sf => sf ? Math.round(sf / 43560 * 100) / 100 : null;
 
 /* subject facts: what she typed in the grid, else her inspection (workfile), else the order / CRS */
-function subjFacts(J) {
+function subjFacts(J) { return rcMemo('subjFacts', 's', () => subjFacts0(J)); }
+function subjFacts0(J) {
   const I = J.subject.insp || {}, T = G0(J).subj, crs = J.subject.crs || {};
   const f = { price: '', ppsf: '', src: 'Inspection ' + (I.inspDate ? showDate(I.inspDate) : ''), prox: '', terms: '', conc: '', contract: '', sale: '', dom: '',
     site: I.siteSf || num(crs.lotSf) || null, usable: I.usableAc ?? null, loc: I.loc || '', view: I.view || '', topo: I.topo || '', nbhd: I.nbhd || '', land: I.land || '',
@@ -303,7 +304,8 @@ function subjFacts(J) {
   f._own = landOwned(J, f); if (blank(f.landCommon)) f.landCommon = f._own ? 'No' : 'Yes';
   return f;
 }
-function compFacts(c, J) {
+function compFacts(c, J) { return rcMemo('compFacts', c.id, () => compFacts0(c, J)); }
+function compFacts0(c, J) {
   const g = k => V(c, k); const px = proximity(c, J);
   const F0 = { price: num(g('salePrice')), src: g('mls') ? 'MLS ' + g('mls') : (c.src.cort.length ? 'CORT' : c.src.arch.length ? 'Your archive' : ''), prox: px ? px.mi.toFixed(2) + ' mi ' + px.dir.replace(/([a-z])([A-Z])/, '$1 $2') : '',
     terms: termsText(g('financing')), xferTerms: g('saleType') && typeof PICK !== 'undefined' ? ((PICK.xferTerms.opts.find(o => o[0] === uadSaleType(g('saleType'))) || [])[1] || '') : '', conc: num(g('concessions')), contract: g('contractDate') || '', sale: g('saleDate') || '', dom: g('dom'),

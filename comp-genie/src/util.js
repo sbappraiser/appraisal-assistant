@@ -193,3 +193,8 @@ async function pdfFirstText(file) { // quick look at page 1 to tell what kind of
   const doc = await pdfjsLib.getDocument({ data: new Uint8Array(await file.arrayBuffer()), isEvalSupported: false, wasmUrl: './wasm/', standardFontDataUrl: './standard_fonts/' }).promise;
   const tc = await (await doc.getPage(1)).getTextContent(); return { text: tc.items.map(i => i.str).join(' '), pages: doc.numPages };
 }
+
+/* speed (Oct 20 2026): one redraw asks for the same comp facts thousands of times – remember them for that one redraw only */
+let RC = null;
+function rcRun(fn) { if (RC) return fn(); RC = new Map(); try { return fn(); } finally { RC = null; } }
+function rcMemo(name, key, fn) { if (!RC) return fn(); const k = name + '|' + key; if (RC.has(k)) return RC.get(k); const v = fn(); RC.set(k, v); return v; }
