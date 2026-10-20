@@ -68,13 +68,40 @@ async function pullWorkfile(o, quiet) {
   catch (e) { console.warn('workfile', e); toast('Could not read the iPad workfile ' + d.name + ': ' + (e.message || e), 6000); return false; }
 }
 /* the order's Search Criteria search (the micro market on the Market tab) – its listings become the comps considered, minus the ones she unticked there */
-function orderMicro(o) { const mi = o && o.market && o.market.micro; if (!mi || !mi.file) return null; const doc = (o.docs || []).find(d => d.name === mi.file); return doc ? { file: mi.file, docId: doc.id, exclude: mi.exclude || {}, n: (mi.rows || []).length } : null; }
+function orderMicro(o) {   // one CSV, or several she added together on the Market tab ("a.csv + b.csv")
+  const mi = o && o.market && o.market.micro; if (!mi || !mi.file) return null;
+  const names = [...new Set([...(mi.rows || []).map(r => r.src).filter(Boolean), ...String(mi.file).split(' + ').map(x => x.trim()).filter(Boolean)])];
+  const docs = names.map(n => (o.docs || []).find(d => d.name === n)).filter(Boolean); if (!docs.length) return null;
+  const file = docs.map(d => d.name).join(' + ');
+  return { file, docs, docId: docs[0].id, exclude: mi.exclude || {}, n: (mi.rows || []).filter(r => !(mi.exclude || {})[r.mls]).length || (mi.rows || []).length };
+}
 const microIn = (J, M) => (J.files || []).some(f => f.kind === 'MLS export' && f.name === M.file);
+/* the micro search is her comps to start: when nothing is on the grid yet, its listings go on it –
+   closed sales newest first, then pendings, then actives. After that she adds and removes them herself. */
+/* after the comps are on the grid: which still need their CRS report (one drop takes them all; each is matched by APN or address) */
+function crsNeedHTML(J) {
+  const used = J.comps.filter(c => c.use).sort((a, b) => a.use - b.use); if (!used.length) return '';
+  const need = used.filter(c => !c.src.crs);
+  if (!need.length) return `<p class="help crsok"><b class="ok">✓</b> CRS reports are in for all ${used.length} comps on the grid.</p>`;
+  return `<div class="crsneed"><b>Upload the CRS report for each comp on the grid</b> <small>(${need.length} of ${used.length} still needed)</small>
+    <ul>${need.map(c => `<li>Comp ${c.use} – ${esc(c.label || c.mls || '')}${c.apn ? ` <small>APN ${esc(c.apn)}</small>` : ''}${c.mls ? ` <small>MLS ${esc(c.mls)}</small>` : ''}</li>`).join('')}</ul>
+    <label class="btn primary">Choose CRS PDFs<input type="file" multiple accept=".pdf,application/pdf" data-act="files" hidden></label> <span class="help">Pick them all at once (or drop them in the box below) – each one finds its comp by APN or address and leaves this list.</span></div>`;
+}
+function microToGrid(rows) {
+  const J = app.job; if (!J || J.comps.some(c => c.use)) return 0;
+  const rank = r => /closed|sold/i.test(r.status || '') || r.saleDate ? 0 : /pend|contract|escrow/i.test(r.status || '') ? 1 : 2;
+  const list = rows.slice().sort((a, b) => rank(a) - rank(b) || String(b.saleDate || b.contractDate || b.listDate || '').localeCompare(String(a.saleDate || a.contractDate || a.listDate || '')));
+  let n = 0; list.forEach(r => { const c = findComp({ mls: r.mls, apn: r.apn, key: r.addr ? addrKey(r.addr) : '', label: r.addr }); if (c && !c.use && !c.notUsed) { c.use = ++n; } });
+  return n;
+}
 async function pullMicro(o, quiet) {
-  const M = orderMicro(o); if (!M || !app.job) return ''; const rec = await readOrderDoc(M.docId); if (!rec || !rec.blob) { if (!quiet) toast('The search file was not found in the Appraisal Assistant'); return ''; }
-  const rows = parseMlsCsv(await readText(new File([rec.blob], M.file))).filter(r => !M.exclude[r.mls]);
-  const note = ingestMls(rows, M.file); const left = Object.keys(M.exclude).length; save(); render();
-  if (!quiet) toast(`Added your Search Criteria search: ${rows.length} listings` + (left ? ` (${left} you unticked on the Market tab left out)` : ''), 6000);
+  const M = orderMicro(o); if (!M || !app.job) return ''; const by = new Map(); let missing = 0;
+  for (const d of M.docs) { const rec = await readOrderDoc(d.id); if (!rec || !rec.blob) { missing++; continue; }
+    parseMlsCsv(await readText(new File([rec.blob], d.name))).forEach(r => by.set(r.mls || (r.addr + '|' + by.size), r)); }
+  if (!by.size) { if (!quiet) toast('The search file was not found in the Appraisal Assistant'); return ''; }
+  const rows = [...by.values()].filter(r => !M.exclude[r.mls]);
+  const note = ingestMls(rows, M.file); const left = Object.keys(M.exclude).length; const onGrid = microToGrid(rows); save(); render();
+  if (!quiet) toast(`Added your Search Criteria search: ${rows.length} listings` + (onGrid ? `, ${onGrid} put on the grid` : '') + (left ? ` (${left} you unticked on the Market tab left out)` : '') + (missing ? ` – ${missing} file${missing > 1 ? 's were' : ' was'} not found` : ''), 6000);
   return note;
 }
 window.addEventListener('focus', async () => { const o = await readOrders(); if (o.length !== (app.orders || []).length) { app.orders = o; render(); } else app.orders = o; });
@@ -90,7 +117,7 @@ async function jobFromOrder(o) {
   j.subject.listings = o.listings || []; j.fileNo = o.fileNo || '';
   app.sel = null; await saveNow(); await loadPhotos(); toast('Opened the assignment for order ' + orderName(o));
   await pullWorkfile(o);
-  { const M = orderMicro(o); if (M && !microIn(j, M)) { await pullMicro(o, true); toast('Opened the assignment for order ' + orderName(o) + ' and added your Search Criteria search (' + M.file + ')', 6000); } }
+  { const M = orderMicro(o); if (M && !microIn(j, M)) { const had = j.comps.some(c => c.use); await pullMicro(o, true); const g = had ? 0 : j.comps.filter(c => c.use).length; toast('Opened the assignment for order ' + orderName(o) + ' and added your Search Criteria search (' + M.file + ')' + (g ? ` – its ${g} listing${g > 1 ? 's are' : ' is'} on the grid to start. Next: upload a CRS report for each (Add comps).` : ''), 9000); } }
 }
 async function newJob(name) {
   const j = { id: uid(), name: name || 'New assignment', created: Date.now(), updated: Date.now(), subject: { addr: '', city: '', zip: '', apn: '', lat: '', lon: '', eff: todayISO() }, comps: [], files: [] };
@@ -301,6 +328,7 @@ function render() {
     ${(() => { const o = (app.orders || []).find(x => x.id === J.orderId); const M = orderMicro(o); if (!o) return `<p class="help">This assignment is not an order in the Appraisal Assistant yet. <button class="btn small" data-act="mkorder" data-id="${J.id}">Make it an order</button></p>`; if (!M) return `<p class="help">No Search Criteria search on this order yet. In the Appraisal Assistant, open the order's <b>Market</b> tab and drop it in box 2; it comes in here.</p>`;
       return microIn(J, M) ? `<p class="help"><b class="ok">✓</b> Your Search Criteria search from the order's Market tab is in: <b>${esc(M.file)}</b>${Object.keys(M.exclude).length ? ` (${Object.keys(M.exclude).length} listing${Object.keys(M.exclude).length > 1 ? 's' : ''} you unticked there left out)` : ''}. <button class="lnk" data-act="pullmicro">Bring it in again</button></p>`
         : `<div class="row"><button class="btn primary" data-act="pullmicro">Add your Search Criteria search (${M.n} listings)</button><span class="help">from the order's Market tab: ${esc(M.file)}</span></div>`; })()}
+    ${crsNeedHTML(J)}
     <label class="drop" id="drop"><input type="file" multiple data-act="files" hidden>
       <b>Drop files here</b> or click to choose: MLS export (.csv) · MLS photos (.zip) · MLS printout (.pdf) · CRS reports (.pdf) · CORT table (.csv) · comp archive (.gz) · your land sales or cost database (.xlsx)</label>
     ${(J.files || []).length ? `<div class="files"><b>Files in this assignment</b> <small>(✕ takes a file back out)</small><ul>${J.files.map(f => `<li>${esc(f.name)} <small>${esc(f.kind)}${f.n ? ', ' + f.n : ''}</small> ${app.confirm === 'rf:' + f.id ? `<span class="confirm">Take it out? <button class="btn danger solid sm" data-rfyes="${esc(f.id)}">Remove file</button><button class="btn sm" data-act="cancel">Keep</button></span>` : `<button class="btn sm" data-rf="${esc(f.id)}" title="Remove this file and what it added">✕</button>`}</li>`).join('')}</ul></div>` : ''}
