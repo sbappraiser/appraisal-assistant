@@ -127,6 +127,7 @@ async function pullMicro(o, quiet) {
       if (was && was.src.crs && !was.src.crs.fromList) { crsIn.push({ ...r, mls: seed.mls }); return; }   // her CRS report is already on it
       const { isNew } = upsertComp(seed, 'crs', crsFromList(r), fid); if (isNew) crsNew++; crsIn.push({ ...r, mls: seed.mls, status: 'Closed' }); });
     logFile(M.file.split(' + ').filter(n => /crs|prospect/i.test(n)).join(' + ') || 'CRS list', 'CRS report', crsIn.length, fid); }
+  { let hist = 0; app.job.comps.forEach(c => { const cur = c.src.mls; macroRows.filter(x => x.saleDate && (!cur || x.mls !== cur.mls) && !macroUsed.has(x.mls) && same(x, { apn: c.apn || V(c, 'apn'), addr: V(c, 'addr') || c.label })).forEach(x => { c.mlsOther = c.mlsOther || []; if (!c.mlsOther.some(o => o.mls === x.mls)) { c.mlsOther.push(x); hist++; } }); }); }   // earlier MLS sales of the same houses, from the macro search
   if (macroUsed.size) ingestMls([...macroUsed.values()], 'Macro search: ' + String(o.market.file || 'MLS export'));   // the MLS data for CRS sales that were only in the macro search
   await archPhotoFill(false); const left = Object.keys(M.exclude).length; const onGrid = microToGrid([...rows, ...crsIn.map(r => ({ ...r, status: 'Closed' }))]); save(); render();
   if (!quiet) toast(`Added your Search Criteria search: ${rows.length} listings` + (crsRows.length ? ` and ${crsIn.length} CRS sales (${crsNew} not in the MLS search)` : '') + (macroUsed.size ? `; MLS data for ${macroUsed.size} of them from your macro search` : '') + (onGrid ? `, ${onGrid} put on the grid` : '') + (left ? ` (${left} you unticked on the Market tab left out)` : '') + (missing ? ` – ${missing} file${missing > 1 ? 's were' : ' was'} not found` : ''), 7000);
@@ -220,6 +221,9 @@ function upsertComp(seed, srcName, rec, fid) {
   if (!c) { c = newComp(seed); c.madeBy = fid || 'typed'; app.job.comps.push(c); }
   if (rec && fid) rec._file = fid;
   if (seed.apn && !c.apn) c.apn = seed.apn; if (seed.mls && !c.mls) c.mls = seed.mls; if (seed.key && !c.key) c.key = seed.key; if (seed.label && !c.label) c.label = seed.label;
+  if (srcName === 'mls' && rec && c.src.mls && c.src.mls.mls && rec.mls && c.src.mls.mls !== rec.mls) {   // another listing of the same house: keep the newer one, the other is its listing history
+    const when = x => String(x.saleDate || x.contractDate || x.listDate || ''); const [newer, older] = when(rec) >= when(c.src.mls) ? [rec, c.src.mls] : [c.src.mls, rec];
+    c.mlsOther = (c.mlsOther || []).filter(o => o.mls !== older.mls && o.mls !== newer.mls); c.mlsOther.push(older); rec = newer; }
   if (srcName) c.src[srcName] = rec;
   attachArchive(c); attachCort(c);
   return { c, isNew };

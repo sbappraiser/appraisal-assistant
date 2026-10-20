@@ -236,6 +236,7 @@ function compTitle(c) { const a = V(c, 'addr') || c.label || '(no address)'; con
 function priorSales(c) {
   const out = []; const sale = currentSale(c);
   const add = s => { if (!s || !s.date) return; out.push(s); };
+  (c.mlsOther || []).filter(o => o.saleDate && o.salePrice).forEach(o => add({ date: o.saleDate, price: o.salePrice, src: 'MLS ' + o.mls, type: 'Sale' }));   // an earlier MLS sale of the same house (micro or macro search)
   (c.src.pdf ? c.src.pdf.priorSales : []).forEach(add);
   (c.src.crs ? c.src.crs.priorSales : []).forEach(s => add(s && s.recorded ? { ...s, date: s.recorded } : s));   // CRS: the recording date is the closing date
   c.src.cort.forEach(t => add({ date: t.saleDate, price: t.salePrice, src: 'CORT ' + (t.period || ''), type: t.salePrice ? 'Sale' : 'Transfer' }));
@@ -266,7 +267,9 @@ function compFlags(c, job) {
   PS.forEach(s => {
     if (before.includes(s) || (yb && s.date && +s.date.slice(0, 4) < +yb)) return;
     if (!s.price) { if (s.monthsBefore > 0 && s.monthsBefore <= 12) F.push({ sev: 'info', t: `Transfer within 12 months: ${showDate(s.date)} ${s.inst || 'deed'} (no price)` }); return; }
-    if (price && s.price && s.monthsBefore > 0 && s.monthsBefore <= 24 && price >= s.price * 1.25) F.push({ sev: 'warn', t: `Quick resale: sold ${showDate(s.date)} for ${money(s.price)}, ${Math.round(s.monthsBefore)} months earlier (+${Math.round((price / s.price - 1) * 100)}%) – check for a flip or remodel` });
+    if (price && s.price && s.monthsBefore > 0 && s.monthsBefore <= 24 && price >= s.price * 1.25) { const rm = remodelAfter(c, s.date);   // her note Oct 20 2026: a remodel after the prior sale explains it ('26 Rmdl C2+)
+      F.push(rm ? { sev: 'info', t: `Resold after a remodel: bought ${showDate(s.date)} for ${money(s.price)}, remodeled (${rm}), sold again ${Math.round(s.monthsBefore)} months later (+${Math.round((price / s.price - 1) * 100)}%) – report the prior sale and the remodel` }
+        : { sev: 'warn', t: `Quick resale: sold ${showDate(s.date)} for ${money(s.price)}, ${Math.round(s.monthsBefore)} months earlier (+${Math.round((price / s.price - 1) * 100)}%) – check for a flip or remodel` }); }
     else if (s.monthsBefore > 0 && s.monthsBefore <= 12) F.push({ sev: 'info', t: `Prior sale within 12 months: ${showDate(s.date)} ${money(s.price)} – report it in the prior sale history` });
   });
   const p = c.src.pdf;
@@ -284,7 +287,9 @@ function compFlags(c, job) {
     if (dm !== null && dm >= 30) F.push({ sev: 'warn', t: t + ` after ${dm} days on market – call the agent to find out why` }); else F.push({ sev: 'info', t: t + (dm !== null ? ` in ${dm} days on market` : '') + (dm !== null && dm <= 14 ? ' – likely multiple offers' : '') }); } }
   const dom = V(c, 'dom'), cdom = V(c, 'cdom'); if (dom && cdom && cdom > dom + 30) F.push({ sev: 'info', t: `Relisted: ${dom} days on this listing, ${cdom} cumulative` });
   const op = V(c, 'origList'); if (op && price && price < op * 0.85) F.push({ sev: 'info', t: `Sold ${Math.round((1 - price / op) * 100)}% under the original list price` });
-  c.src.cort.forEach(t => { if (t.conf !== null && t.conf < 60) F.push({ sev: 'warn', t: `CORT line read with low confidence (${t.conf}) – check it against the scan ${t.file || ''}` }); });
+  { const ps = priorSales(c), cs = currentSale(c); const other = [...ps, ...(cs ? [{ date: cs.date, price: cs.price, src: cs.from }] : [])];   // a CORT line that another source agrees with (same date and price) is confirmed (Oct 20 2026)
+    c.src.cort.forEach(t => { if (t.conf === null || t.conf >= 60) return; const ok = other.some(s => String(s.src || '').split('; ').some(x => !/^CORT/.test(x) && x !== 'cort') && s.date && t.saleDate && Math.abs(monthsBetween(s.date, t.saleDate)) <= 1 && (!t.salePrice || !s.price || Math.abs(s.price - t.salePrice) <= Math.max(1000, s.price * 0.01)));
+      if (!ok) F.push({ sev: 'warn', t: `CORT line read with low confidence (${t.conf}) – check it against the scan ${t.file || ''}` }); }); }
   if (disagree(c, 'gla')) F.push({ sev: 'info', t: 'Square footage differs between sources' });
   const a = archChosen(c); if (a && sale && !archMatches(a, sale) && a.v.saleDate) F.push({ sev: 'info', t: `Your archive has this property from an earlier sale (${showDate(a.v.saleDate)}); its sale facts are not used. House facts from your record ${monthsBetween(a.v.saleDate, sale.date) <= 24 ? 'are used' : 'are older than 2 years, so MLS is used first'}` });
   if (job && job.subject && job.subject.eff && sale && sale.date && monthsBetween(sale.date, job.subject.eff) > 12) F.push({ sev: 'warn', t: 'Sale is more than 12 months before the effective date' });
@@ -295,4 +300,13 @@ function proximity(c, job) {
   const a = { lat: num(s.lat), lon: num(s.lon) }, b = num(V(c, 'lat')) ? { lat: num(V(c, 'lat')), lon: num(V(c, 'lon')) } : (c.geo ? { lat: c.geo.lat, lon: c.geo.lon } : { lat: null, lon: null });   // c.geo: found by address for the map
   const mi = milesBetween(a, b); if (mi === null) return null;
   return { mi, dir: directionOf(a, b) };
+}
+
+/* a remodel after the prior sale: her archive note ('26 Rmdl, 2026 Remodel, Rebuild …) dated after it, or the MLS listing says remodeled / renovated */
+function remodelAfter(c, priorDate) {
+  const py = +String(priorDate || '').slice(0, 4); const a = archChosen(c) || (c.src.arch || [])[0]; const t = String(a && a.v ? a.v.remodel || '' : '');
+  const m = t.match(/(?:'(\d{2})|\b((?:19|20)\d{2}))\s*-?\s*(?:'?\d{2,4})?\s*(rmdl|remodel|rmd|reno|renovat|rebuild|rbld|update|updt)/i);
+  if (m) { const y = m[2] ? +m[2] : 2000 + +m[1]; if (!py || y >= py) return t.trim(); }
+  const S = c.src.mls || c.src.pdf; const w = S ? [S.mlsCondition, S.remodel, S.remarks].filter(Boolean).join(' ') : '';
+  const mm = w.match(/remodel\w*|renovat\w*|rebuilt|completely updated|fully updated/i); return mm ? 'MLS: ' + mm[0].toLowerCase() : '';
 }
