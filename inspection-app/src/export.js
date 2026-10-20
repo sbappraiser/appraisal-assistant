@@ -319,7 +319,7 @@ function buildMISMO(ins, imgName) {
   if (eff.includes('EV Charging') || (d.garage.garFeat || []).includes('EV Charger')) amen.push({ type: 'ElectricVehicleChargingStation' });
   if (sm.length) amen.push({ type: 'SmartHomeSystem' });
   if ((d.interior.fireplaces || 0) > 0) amen.push({ type: 'IndoorFireplace', count: d.interior.fireplaces });
-  if ((d.systems.heatZones || 0) >= 2) amen.push({ type: 'MultipleZoneHeatingVentilationAndAirConditioning' });
+  // Heating / cooling zones removed at her request (Oct 20 2026) – Multi-Zone HVAC is no longer sent
   if ((d.systems.mech || []).includes('Whole House Ventilation')) amen.push({ type: 'WholeHouseVentilation' });
   if (a.equestrian) amen.push({ type: 'Other', other: 'Equestrian', photos: take(p => p.sec === 'amenities' && p.field === 'photoEquine') });
   // anything not placed above (amenity / site / parking photos, and extra photos she ticked "Send to SFREP") goes in as an exhibit of its section

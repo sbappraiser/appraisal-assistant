@@ -25,6 +25,7 @@ const CEIL_S = opts(['Flat','Flat'],['Vaulted','Vaulted'],['Cathedral','Cathedra
   'Groin Vaulted','Coved','Paneled','Copper','Decorative','Mural','Tongue & Groove Flat','Tongue & Groove Wood Beam','Tongue & Groove Vaulted','Tower',['Other','Other']);
 const FLOORING = opts('Tile','Stone Tile','Stone Slab',['Hardwood','Hardwood'],['EngineeredWood','Engineered Wood'],'Bamboo',['Laminate','Laminate'],'LVP','Vinyl Tile','Vinyl Sheet',['Carpet','Carpet'],['FinishedConcrete','Finished Concrete'],'Plywood','None',['Microcement / Plaster','Other','Other']);
 const COUNTERS = opts('Stone Slab','Tile','Corian / Solid Surface','Butcher Block','Concrete','Stainless Steel','Porcelain Slab','Laminate','Microcement / Plaster','Other');
+const VANITY_MAT_X = ['White Oak', 'Rift-sawn Oak', 'Walnut', 'Panel-ready Appliance Fronts'];   // kitchen only (her list, Oct 20 2026)
 const CABINETS = opts('Custom Built','Semi-Custom','Stock','Solid Wood','Painted Wood','Stained Wood','Matched Grain Laminate','Lacquer / High Gloss','Thermofoil','Laminate','MDF','Metal','Glass Front','Inset','Frameless (Full Overlay)','Slab / Flat Panel','Shaker','Raised Panel','White Oak','Rift-sawn Oak','Walnut','Panel-ready Appliance Fronts','Other');
 const FIXTURE_FIN = opts('Polished Chrome','Brushed Nickel','Polished Nickel','Stainless','Unlacquered Brass',['Polished Gold Tone','Gold tone – polished'],['Brushed Brass / Gold','Gold tone – brushed / satin'],'Matte Black','Oil-rubbed Bronze','Mixed Metals');
 const BATH_MAT = opts('Stone Tile','Stone Slab','Tile','Corian','Glass Tile','Acrylic / Fiberglass','Cast Iron','Enameled Steel','Copper','Concrete','Waterproof Plaster (Tadelakt / Microcement)','Other');
@@ -287,7 +288,7 @@ const LISTS = {
       { k: 'flooring', l: 'Flooring', t: 'multi', o: FLOORING },
       { k: 'vanity', l: 'Vanity', t: 'multi', o: opts('Built-in','Pedestal','Floating','Furniture Style','Console','Dual Sinks','Makeup Vanity','Wall-hung','Built-in Plaster / Concrete','Live Edge / Natural Wood','Trough Sink','Integrated Sink','Vessel Sinks') },
       { k: 'vanQty', l: 'Vanity quantity', t: 'count' },
-      { k: 'vanMat', l: 'Vanity material', t: 'multi', o: CABINETS },
+      { k: 'vanMat', l: 'Vanity material', t: 'multi', o: [...CABINETS.filter(x => !VANITY_MAT_X.includes(x[0])).slice(0, -1), ['Matched Grain Wood', 'Matched Grain Wood'], ...CABINETS.slice(-1)] },
       { k: 'counter', l: 'Counter material', t: 'multi', o: COUNTERS },
       { k: 'tubFree', l: 'Freestanding tub', t: 'yn', show: it => it.kind === 'FullBathroom' },
       { k: 'tubFreeMat', l: 'Freestanding tub material', t: 'multi', o: BATH_MAT, show: it => it.tubFree === true },
@@ -295,7 +296,6 @@ const LISTS = {
       { k: 'tubShowerMat', l: 'Tub / shower surround material', t: 'multi', o: BATH_MAT, show: it => it.tubShower === true },
       { k: 'shower', l: 'Separate shower', t: 'yn', show: it => it.kind === 'FullBathroom' },
       { k: 'showerMat', l: 'Shower material', t: 'multi', o: BATH_MAT, show: it => it.shower === true },
-      { k: 'finish', l: 'Fixture finish', t: 'multi', o: FIXTURE_FIN },
       { k: 'feat', l: 'Features', t: 'multi', o: opts('Frameless Glass','Steam Shower','Rain Shower Head','Multiple Shower Heads','Body Sprays','Jetted Tub','Heated Floors','Towel Warmer','Bidet','Smart Toilet','Water Closet','Wainscoting','Window','Walk-in Closet Access','Curbless / Walk-in Shower','Wet Room (open shower and tub)','Built-in Shower Bench','Shower Niche','Handheld Shower','Thermostatic Valve','Freestanding Soaking Tub','Floor-mounted Tub Filler','Wall-mount Faucets','Bidet Seat','Waterproof Plaster Walls','Wheelchair Accessible','Grab Bars','Linen Closet','Exhaust Fan') },
       { k: 'upd', l: 'Update status', t: 'one', req: true, o: UPDATE, uad: 'RoomUpdateStatusType' },
       { k: 'time', l: 'Update time frame', t: 'one', o: TIMEFRAME, show: it => it.upd && it.upd !== 'NotUpdated', req: it => it.upd && it.upd !== 'NotUpdated', uad: 'RoomUpdatedTimeframeType' },
@@ -870,7 +870,6 @@ const SECTIONS = [
     { id: 'hvac', title: 'Heating & cooling', fields: [
       { k: 'heat', l: 'Heating system', t: 'multi', req: true, o: [['None','None'], ...U('HeatingSystemType').filter(x => x[0] !== 'Other'), ['Heat Pump','Heat Pump'], ['Other','Other']], uad: 'HeatingSystemType' },
       { k: 'heatFuel', l: 'Heating fuel', t: 'multi', req: d => (d.heat || []).some(x => x !== 'None'), o: U('HeatingFuelType').filter(x => !['Coal','Oil'].includes(x[0])), uad: 'HeatingFuelType' },
-      { k: 'heatZones', l: 'Heating / cooling zones', t: 'count', help: '2 or more = multi-zone HVAC' },
       { k: 'heatBelow', l: 'Core heating system below grade', t: 'yn', req: true, uad: 'CoreHeatingSystemBelowGradeIndicator' },
       { k: 'cool', l: 'Cooling', t: 'multi', req: true, o: opts('None',['Centralized','Central Air'],['Individual','Individual Units'],'Heat Pump','Mini Split','Evaporative','Whole House Fan',['Other','Other']), uad: 'CoolingSystemType' },
     ]},
@@ -940,8 +939,7 @@ const SECTIONS = [
     ]},
     { id: 'sysConf', title: 'Systems confirmed', fields: [
       { k: 'sysRev', l: 'What you entered on the Systems tab', t: 'review', items: ins => reviewItems(ins, [
-        ['Heating', 'systems', 'heat'], ['Heating fuel', 'systems', 'heatFuel'], ['Cooling', 'systems', 'cool'], ['HVAC zones', 'systems', 'heatZones'],
-        ['Water heater', 'systems', 'wh'], ['Number of water heaters', 'systems', 'whCount'], ['Recirculating pump', 'systems', 'whRecirc'],
+        ['Heating', 'systems', 'heat'], ['Heating fuel', 'systems', 'heatFuel'], ['Cooling', 'systems', 'cool'], ['Water heater', 'systems', 'wh'], ['Number of water heaters', 'systems', 'whCount'], ['Recirculating pump', 'systems', 'whRecirc'],
         ['Mechanical / water systems', 'systems', 'mech'], ['Renewable energy', 'systems', 'renew'], ['Solar ownership', 'systems', 'solarOwn'],
         ['Efficiency items', 'systems', 'eff'], ['Smart home', 'systems', 'smart'], ['Security', 'systems', 'security'], ['Technology', 'systems', 'tech']]) },
       { k: 'sysOk', l: 'Systems confirmed with interviewee', t: 'yn' },

@@ -47,7 +47,7 @@ function bathText(b, name) {
   if (b.tubShower) p.push(`tub/shower with ${listJoin(mats(b.tubShowerMat)) || 'tile'} surround`);
   if (b.shower) p.push(`${mats(b.showerMat).length ? listJoin(mats(b.showerMat)) + ' ' : ''}shower${(b.feat || []).includes('Frameless Glass') ? ' with frameless glass' : ''}`);
   const f = mats(b.feat).filter(x => x !== 'frameless glass' || !b.shower); if (f.length) p.push(listJoin(f));
-  const fn = mats(b.finish); if (fn.length) p.push(`${listJoin(fn)} fixtures`);
+  
   const fl = mats(b.flooring, FLOORING); if (fl.length) p.push(`${listJoin(fl)} flooring`);
   return p.length ? `${cap(name)}: ${p.join('; ')}` : '';
 }
@@ -148,7 +148,6 @@ const GEN = {
     // systems & components
     const sys = [];
     const heat = lvl(ins, 'systems', 'heat'), cool = lvl(ins, 'systems', 'cool');
-    if (sy.heatZones > 1) sys.push(`${sy.heatZones}-zone HVAC`);
     const mech = lvl(ins, 'systems', 'mech'); if (mech.length) sys.push(listJoin(mech));
     const wh = lvl(ins, 'systems', 'wh').map(x => x.replace(' – ', ' ')); if (wh.length) sys.push(`${listJoin(wh)} water heating${sy.whRecirc ? ' with recirculation' : ''}`);
     const sm = lvl(ins, 'systems', 'smart'); if (sm.length) sys.push(listJoin(sm));

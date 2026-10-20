@@ -602,6 +602,7 @@ async function pdfLines(file) {
 }
 
 /* ---------------- Lists ---------------- */
+const ROOM_LISTS_TOP = new Set(['rooms', 'bedrooms', 'baths', 'kitchens', 'wetbars']);   // rooms: the photo first (her ask, Oct 20 2026)
 function renderList(key) {
   const def = LISTS[key], ins = app.ins, list = ins.lists[key];
   const items = list.map((it, i) => {
@@ -618,8 +619,8 @@ function renderList(key) {
         ${canRename ? `<button class="btn sm" data-rename="${it.id}">Rename</button>` : ''}
         ${fixed ? '' : `<button class="btn sm danger" data-rm="${it.id}" data-rmlist="${key}">Remove</button>`}`}</div>
       ${conf ? `<div class="confirm">Remove ${esc(name)}${nph ? ' and its ' + nph + ' photo' + (nph > 1 ? 's' : '') : ''}? <button class="btn danger solid sm" data-rmyes="${it.id}" data-rmlist="${key}">Remove</button><button class="btn sm" data-rmno="1">Cancel</button></div>` : ''}
-      ${open ? `<div class="item-body"><div class="fields two">${def.fields.map(f => renderField(f, it, { list: key, item: it.id })).join('')}
-        ${itemPhotos(key, it, i)}${qualityPreview(key, it)}</div>
+      ${open ? `<div class="item-body"><div class="fields two">${ROOM_LISTS_TOP.has(key) ? itemPhotos(key, it, i) : ''}${def.fields.map(f => renderField(f, it, { list: key, item: it.id })).join('')}
+        ${ROOM_LISTS_TOP.has(key) ? '' : itemPhotos(key, it, i)}${qualityPreview(key, it)}</div>
         <div class="gfoot"><button class="btn sm done" data-toggle="${it.id}">Done with ${esc(name)} ▴</button></div></div>` : ''}
     </div>`;
   }).join('');
