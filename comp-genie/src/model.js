@@ -104,6 +104,7 @@ const SALE_TYPE_TEXT = { ArmLth: "Arm's length", Listing: 'Listing', REO: 'REO (
 function fmt(f, v) {
   if (blank(v)) return '';
   if (f.k === 'saleType') return SALE_TYPE_TEXT[v] || String(v);
+  if (f.k === 'status' && typeof statusText === 'function') return statusText(v);   // 3.6 words: Closed → Settled sale
   switch (f.t) {
     case 'money': return money(v);
     case 'int': return int(v);

@@ -230,3 +230,9 @@ body:not(.classic) table.grid input.adj.own{background:#fff;font-weight:700}
 .gaddr{display:block;color:#0b4fc4;font-size:14.5px;font-weight:700;line-height:1.25;margin-top:2px}
 body:not(.classic) table.grid thead th{font-size:15px;color:#000}
 .req{color:#d40000}
+/* flags in red (her ask Oct 20 2026) */
+.badge.flagred{background:#d40000;color:#fff;cursor:help}
+.flagbox{border:2px solid #d40000;background:#fff0f0;border-radius:8px;padding:8px 12px;margin:6px 0;color:#000}.flagbox>b{color:#b00000}
+.flagbox .flags li,.flagbox .flags li.warn{color:#b00000;font-weight:700}.flagbox .flags li.info{color:#b00000;font-weight:600}
+table.cmp tr.flagrow th,table.cmp tr.flagrow td.using{background:#ffd6d6}.flagmk{color:#d40000;font-weight:800}
+#detail,.detail{scroll-margin-top:var(--toph,120px)}
