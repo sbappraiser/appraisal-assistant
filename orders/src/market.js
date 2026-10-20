@@ -39,9 +39,9 @@ function parseMarketCsv(text) {
     const offs = ['Withdrawal Date', 'Cancel Date', 'End Date'].map(n => G.isoDate(g(n))).filter(Boolean).sort();
     const addr = [g('Street #'), G.titleCase(g('Street Name'))].filter(Boolean).join(' ');
     return { mls: g('Listing Number'), status: st, typ: g('TYP') || g('Property Type') || '', district: g('District'), addr, unit: g('Unit/Space #'),
-      listDate: G.isoDate(g('Begin Date', 'Start Active Date')), contractDate: G.isoDate(g('Under Contract Date')), saleDate: G.isoDate(g('Sold Date', 'COE')),
+      listDate: G.isoDate(g('Begin Date', 'Start Active Date')), contractDate: G.isoDate(g('Under Contract Date')), saleDate: G.isoDate(g('Sold Date', 'COE', 'Close Date', 'Closing Date', 'Closed Date', 'Selling Date', 'Sale Date', 'Settled Date', 'Contract Closing Date')),
       offDate: ['A', 'P', 'C', 'U', 'S'].includes(st) ? '' : (offs[0] || G.isoDate(g('Status Change Date'))), fallDate: G.isoDate(g('Fallthrough Date')),
-      listPrice: G.num(g('Price')), origList: G.num(g('Original List Price')), salePrice: G.num(g('Sold Price')), dom: G.num(g('Days On Market')), cdom: G.num(g('Cumulative DOM')),
+      listPrice: G.num(g('Price')), origList: G.num(g('Original List Price')), salePrice: G.num(g('Sold Price', 'Close Price', 'Closed Price', 'Closing Price', 'Selling Price', 'Sale Price', 'Sales Price')), dom: G.num(g('Days On Market')), cdom: G.num(g('Cumulative DOM')),
       gla: G.num(g('Total SqFt.', 'Total SqFt')), details, distressed: details.some(d => DISTRESS_RE.test(d)), conc: g('Seller Concessions').toUpperCase().slice(0, 1), twoUnits: /^\d+[A-Za-z]?\s*[\/&-]\s*\d+/.test(addr) };
   }).filter(r => r.mls);
 }
@@ -51,7 +51,7 @@ function statusAt(r, eff) { // what the listing was on the effective date
   if (r.offDate && r.offDate <= eff) return '';
   const fell = r.fallDate && r.contractDate && r.fallDate >= r.contractDate && r.fallDate <= eff;
   if (r.contractDate && r.contractDate <= eff && !fell) return 'pending';
-  if (r.status === 'C' && !r.saleDate) return '';
+  if ((r.status === 'C' || r.status === 'S') && !r.saleDate) return 'closed – no sale date';   // closed in the MLS, but the CSV row has no sale date / price (her question, Oct 20 2026)
   return r.listDate ? 'active' : '';
 }
 function mkEff() { return (cur && effectiveDate(readForm())) || todayISO(); }
@@ -63,6 +63,7 @@ function mkCompute(src) {   // src: the market-area search (default) or the comp
   (src.rows || []).forEach(r => {
     const s = statusAt(r, eff); let use = s && !(src.exclude || {})[r.mls] && (!types || types.includes(r.typ));
     if (s === 'sold' && r.saleDate <= start) use = false;
+    if (s === 'closed – no sale date') use = false;   // shown, but it cannot be counted without a sale date
     const dom = s === 'active' ? (nearToday && r.dom != null ? r.dom : (r.listDate ? daysBetween(r.listDate, eff) : null)) : r.cdom ?? r.dom;
     out.rows.push({ ...r, at: s === 'sold' && r.saleDate <= start ? 'older sale' : s, use, domAt: dom });
   });
@@ -269,7 +270,7 @@ function savePng(cv, name) { cv.toBlob(b => { const u = URL.createObjectURL(b); 
 /* ---------- 5. the Market tab ---------- */
 let mkLast = null;
 const MKSORT = { macro: { k: 'at', dir: 1 }, micro: { k: 'at', dir: 1 } };
-const AT_ORDER = ['active', 'pending', 'sold', 'older sale', ''];
+const AT_ORDER = ['active', 'pending', 'sold', 'older sale', 'closed – no sale date', ''];
 function mkTable(R, src, which) {
   const S = MKSORT[which]; const val = (r, k) => k === 'at' ? AT_ORDER.indexOf(r.at || '') : k === 'ppsf' ? (r.salePrice && r.gla ? r.salePrice / r.gla : null) : k === 'addr' ? String(r.addr || '').toLowerCase() : r[k];
   const rows = R.rows.slice().sort((a, b) => { const x = val(a, S.k), y = val(b, S.k); if (x == null && y == null) return 0; if (x == null) return 1; if (y == null) return -1; return (x < y ? -1 : x > y ? 1 : 0) * S.dir || String(b.saleDate || b.listDate).localeCompare(String(a.saleDate || a.listDate)); });
@@ -278,7 +279,7 @@ function mkTable(R, src, which) {
   return `<div class="tableWrap"><table class="facts mkrows"><tr><th></th>${th('addr', 'Address')}${th('at', 'On ' + h(shortDate(R.eff)))}${th('listDate', 'Listed')}${th('listPrice', 'List price')}${th('contractDate', 'Contract')}${th('saleDate', 'Sold')}${th('salePrice', 'Sale price')}${th('ppsf', '$ / sq ft')}${th('domAt', 'DOM')}${th('gla', 'Sq ft')}<th>Notes</th></tr>
     ${rows.map(r => `<tr class="${r.use ? '' : 'off'}">
       <td><input type="checkbox" ${inc}="${h(r.mls)}" ${(src.exclude || {})[r.mls] ? '' : 'checked'} title="Use this listing" aria-label="Use ${h(r.addr)}"></td><td>${h(r.addr)}${r.unit ? ' #' + h(r.unit) : ''}<small>MLS ${h(r.mls)} · ${h(r.typ)}</small></td>
-      <td>${h(r.at || 'not on the market')}</td><td>${h(shortDate(r.listDate))}</td><td>${h($m(r.listPrice))}</td><td>${h(shortDate(r.contractDate))}</td><td>${h(shortDate(r.saleDate))}</td><td>${h($m(r.salePrice))}</td><td>${r.salePrice && r.gla ? h($m(r.salePrice / r.gla)) : ''}</td><td>${h(r.domAt ?? '')}</td><td>${r.gla ? Math.round(r.gla).toLocaleString() : ''}</td>
+      <td>${r.at === 'closed – no sale date' ? '<b class="warnTxt" title="The MLS shows it closed, but this CSV row has no sold date or sold price, so it cannot be counted. Check the export columns (Sold Date, Sold Price) or that listing in Flexmls.">closed – no sale date or price in the CSV</b>' : h(r.at || 'not on the market')}</td><td>${h(shortDate(r.listDate))}</td><td>${h($m(r.listPrice))}</td><td>${h(shortDate(r.contractDate))}</td><td>${h(shortDate(r.saleDate))}</td><td>${h($m(r.salePrice))}</td><td>${r.salePrice && r.gla ? h($m(r.salePrice / r.gla)) : ''}</td><td>${h(r.domAt ?? '')}</td><td>${r.gla ? Math.round(r.gla).toLocaleString() : ''}</td>
       <td>${[r.twoUnits ? 'two units? (left out)' : '', r.distressed ? '<b>distressed: ' + h(r.details.join(', ')) + '</b>' : r.details.length ? h(r.details.join(', ')) : ''].filter(Boolean).join(' · ')}</td></tr>`).join('')}</table></div>`;
 }
 async function mkAddSearch(file, which) {
