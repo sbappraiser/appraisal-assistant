@@ -659,3 +659,4 @@ Decisions (her, Oct 19–20): "Exterior of dwelling" instead of left/right/side 
 - g2-1020-2331: latitude / longitude default CRS (parcel) first, then MLS.
 - g2-1020-2335: PICK.energy (multi: None, Solar owned/leased/PPA/unknown, Geothermal, Wind turbine, Other 60) + aliases; export writes RENEWABLE_ENERGY_COMPONENT per pick with RenewableEnergyComponentOwnershipType, Other → EnergyEfficientAndGreenDescription, plus required Efficiency rating / Green certification indicators; subject energy from iPad renew + solarOwn.
 - g2-1020-2338: amenity lines on the comp page show 'None' for the MLS 'No' (display only; yes() unchanged).
+- g2-1020-2338: a ▾ pick on a comp-page line counts as her value – yellow clears (heatCool ← grid_heat/grid_cool, saleType ← grid_xferTerms, financing ← terms, garage/carport ← vs, quality/condition ← pk); Heating / cooling's Your value shows the picked 3.6 'heating / cooling'.
