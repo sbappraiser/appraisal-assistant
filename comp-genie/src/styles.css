@@ -202,7 +202,7 @@ body.classic table.grid input.bad{background:#ffc9c9!important}
 body.classic table.grid .btn.xs{padding:0 4px;font-size:10.5px;border-radius:2px}
 body.classic table.grid td.subj{background:#f4f4f4}body.classic table.grid tr.tot td,body.classic table.grid tr.tot th{background:#fff;font-weight:700}
 small.vsx{display:block;color:#000;font-size:11px}
-.req{color:#1f5fd6;font-weight:800;font-size:1.2em;margin-right:3px;cursor:help}
+.req{color:#d40000;font-weight:800;font-size:1.2em;margin-right:3px;cursor:help}
 
 /* her ask Oct 20 2026: the field you are in turns orange */
 input.txt:focus,input:not([type=checkbox]):not([type=radio]):not([type=file]):focus,select:focus,textarea:focus{background:#ffd29a!important;border-color:#ff8a00!important;outline:2px solid #ff8a00!important;outline-offset:0;color:#000!important}
@@ -216,3 +216,17 @@ table.comps th.ck,table.comps td.ck{width:26px;text-align:center;padding-left:4p
 table.cmp td,table.cmp thead th{border-left:1px solid #b9c3cd}table.cmp tr>th:first-child{border-left:0}table.cmp td.mine{border-left:2px solid #6f7d8a;border-right:2px solid #6f7d8a}
 table.cmp td.mine input.txt.echo{color:#000;background:#fbfcfd}table.cmp td.mine input.txt.own{background:#fff4c2;font-weight:700}
 table.cmp td.srccell[data-pick]{cursor:pointer}table.cmp td.srccell[data-pick]:hover{outline:2px solid #ff8a00;outline-offset:-2px}
+/* her ask Oct 20 2026 – SFREP-style field colors on the grid (default look; Classic keeps the ACI look):
+   required / formatted = mint green, optional = baby blue, photo = lavender, warned = red, the field you are in = orange */
+body:not(.classic) table.grid tbody th:first-child{background:#e9edf2;font-size:15px;font-weight:700;color:#000}
+body:not(.classic) table.grid tbody th:first-child small{font-size:12px;font-weight:600;color:#1a1a1a}
+body:not(.classic) table.grid tr.grp th,body:not(.classic) table.grid tr.grp th:first-child{background:var(--teal-l);color:#000;font-size:14px}
+table.grid tr.grp th{color:#000}
+body:not(.classic) table.grid tr.reqrow td input.txt:not(.adj){background:#d4fcd4;border-color:#9fd89f}
+body:not(.classic) table.grid tr.optrow td input.txt:not(.adj){background:#dcefff;border-color:#a9cdee}
+body:not(.classic) table.grid td input.txt.bad,table.cmp input.bad{background:#ff8f8f!important;border-color:#d40000!important;color:#000}
+body:not(.classic) table.grid input.adj.own{background:#fff;font-weight:700}
+.nothumb,button.nothumb{background:#e6dcff!important;border-color:#b9a5ef!important}
+.gaddr{display:block;color:#0b4fc4;font-size:14.5px;font-weight:700;line-height:1.25;margin-top:2px}
+body:not(.classic) table.grid thead th{font-size:15px;color:#000}
+.req{color:#d40000}
