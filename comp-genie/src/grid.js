@@ -65,10 +65,10 @@ const ADJ_ROWS = [
   ['gla', 'Living area above grade (sq ft)', 'Dwelling', 'LivingUnitStandardFinishedAreaAboveGrade', 'gla'],
   ['bsmt', 'Below grade finished (sq ft)', 'Dwelling', 'LivingUnitStandardFinishedAreaBelowGrade', 'bsmtFin'],
   ['bsmtUnf', 'Below grade unfinished (sq ft)', 'Dwelling', 'LivingUnitUnfinishedAreaBelowGrade', 'bsmtUnf'],
-  ['agUnf', 'Above grade unfinished (sq ft)', 'Dwelling', 'LivingUnitUnfinishedAreaAboveGrade'],
-  ['nsAbove', 'Non-standard finished above grade (sq ft)', 'Dwelling', 'LivingUnitNonStandardFinishedAreaAboveGrade'],
-  ['nsBelow', 'Non-standard finished below grade (sq ft)', 'Dwelling', 'LivingUnitNonStandardFinishedAreaBelowGrade'],
-  ['nonCont', 'Non-continuous finished area', 'Dwelling', 'NonContinuousFinishedArea'],
+  ['agUnf', 'Above grade unfinished (sq ft)', 'Dwelling', 'LivingUnitUnfinishedAreaAboveGrade', 'agUnf'],
+  ['nsAbove', 'Non-standard finished above grade (sq ft)', 'Dwelling', 'LivingUnitNonStandardFinishedAreaAboveGrade', 'nsAbove'],
+  ['nsBelow', 'Non-standard finished below grade (sq ft)', 'Dwelling', 'LivingUnitNonStandardFinishedAreaBelowGrade', 'nsBelow'],
+  ['nonCont', 'Non-continuous finished area', 'Dwelling', 'NonContinuousFinishedArea', 'nonCont'],
   ['gba', 'Gross building finished area', 'Dwelling', 'GrossBuildingFinishedArea'],
   ['disab', 'Features for individuals with disabilities', 'Dwelling', 'LivingUnitFeaturesForIndividualsWithDisabilities'],
   ['window', 'Window surface area', 'Dwelling', 'WindowSurfaceArea'],
@@ -90,7 +90,7 @@ const ADJ_ROWS = [
   ['carport', 'Vehicle storage – carport spaces', 'Amenities', 'VehicleStorage', 'cpSpace'],
 ];
 const LOT_UTILITY = 'Usable Lot Area/Utility';      // her exact SFREP template "Add Other" row name (must match letter for letter)
-const RATES = { gla: ['$ per sq ft', 'subject − comp sq ft × rate'], usableAc: ['$ per usable acre', 'subject − comp usable acres × rate'], bed: ['$ per bedroom', 'bedroom difference × rate'],
+const RATES = { gla: ['$ per sq ft', 'subject − comp sq ft × rate'], agUnf: ['$ per sq ft', 'subject − comp unfinished above-grade sq ft × rate'], nsAbove: ['$ per sq ft', 'subject − comp non-standard above-grade sq ft × rate'], nsBelow: ['$ per sq ft', 'subject − comp non-standard below-grade sq ft × rate'], nonCont: ['$ per sq ft', 'subject − comp non-continuous sq ft × rate'], usableAc: ['$ per usable acre', 'subject − comp usable acres × rate'], bed: ['$ per bedroom', 'bedroom difference × rate'],
   bath: ['$ per full bath', 'full-bath difference × rate (half baths at half the rate)'], space: ['$ per garage space', 'space difference × rate'], timePct: ['% per month', 'months from sale to effective date × % × price'],
   pool: ['$ pool', 'has / has not'], spa: ['$ spa', 'has / has not'], pond: ['$ pond', 'has / has not'], lake: ['$ lake', 'has / has not'], tennis: ['$ tennis court', 'has / has not'], sport: ['$ sport court', 'has / has not'] };
 Object.assign(RATES, { qStep: ['$ per quality step', 'whole steps, thirds for low / mid / high'], qPct: ['% of price per quality step', 'whole steps, thirds for low / mid / high'],
@@ -296,7 +296,7 @@ function subjFacts(J) {
   const f = { price: '', ppsf: '', src: 'Inspection ' + (I.inspDate ? showDate(I.inspDate) : ''), prox: '', terms: '', conc: '', contract: '', sale: '', dom: '',
     site: I.siteSf || num(crs.lotSf) || null, usable: I.usableAc ?? null, loc: I.loc || '', view: I.view || '', topo: I.topo || '', nbhd: I.nbhd || '', land: I.land || '',
     style: I.style || '', attach: I.attach || '', levels: I.levels ?? null, status: '', listPrice: '', origList: '', listDate: '', lastRed: '', redDays: '', cdom: '', project: I.project || '', hoa: I.hoa ?? null, hoaAmen: I.hoaAmen || '', landCommon: '', structure: I.structure || '', unitPos: I.unitPos || '', floor: I.floor ?? null, year: I.year || num(crs.yearBuilt) || null, q: I.q || '', c: I.c || '', rooms: I.rooms ?? null, beds: I.beds ?? null, full: I.full ?? null, half: I.half ?? null,
-    gla: I.gla ?? null, bsmt: I.bsmt ?? null, bsmtUnf: I.bsmtUnf ?? null, garage: I.garage ?? null, carport: I.carport ?? null, heat: I.heat || '', cool: I.cool || '', func: I.func || '', constr: I.constr || '', energy: I.energy || '', pool: I.pool || '', courts: I.courts || '', porch: I.porch || '', adu: I.adu || '', other: I.other || '', primaryAccess: I.primaryAccess || '', siteChar: I.siteChar || '', hazard: I.hazard || (J.subject.femaZone ? (/^(A|V)/i.test(J.subject.femaZone) ? 'FEMA special flood hazard area' : 'None') : (crs.fema ? (/^(A|V)/i.test(crs.fema) ? 'FEMA special flood hazard area' : 'None') : '')) };
+    gla: I.gla ?? null, bsmt: I.bsmt ?? null, bsmtUnf: I.bsmtUnf ?? null, garage: I.garage ?? null, carport: I.carport ?? null, heat: I.heat || '', cool: I.cool || '', func: I.func || '', constr: I.constr || '', energy: I.energy || '', pool: I.pool || '', courts: I.courts || '', porch: I.porch || '', adu: I.adu || '', other: I.other || '', agUnf: I.agUnf || null, nsAbove: (I.sk && I.sk.agNon) || null, nsBelow: (I.sk && I.sk.bgNon) || null, primaryAccess: I.primaryAccess || '', siteChar: I.siteChar || '', hazard: I.hazard || (J.subject.femaZone ? (/^(A|V)/i.test(J.subject.femaZone) ? 'FEMA special flood hazard area' : 'None') : (crs.fema ? (/^(A|V)/i.test(crs.fema) ? 'FEMA special flood hazard area' : 'None') : '')) };
   Object.entries(T).forEach(([k, v]) => { if (!blank(v)) f[k] = v; });
   f._fine = { q: fineOf(J, 'subj', 'q'), c: fineOf(J, 'subj', 'c') };
   f._own = landOwned(J, f); if (blank(f.landCommon)) f.landCommon = f._own ? 'No' : 'Yes';
@@ -315,7 +315,8 @@ function compFacts(c, J) {
     heat: String(g('heating') || '').trim() || (String(g('heatCool') || '').includes(' / ') ? String(g('heatCool')).split(' / ')[0].trim() : (/cool/i.test(g('heatCool') || '') ? '' : String(g('heatCool') || '').trim())), cool: coolText(g('cooling') || g('heatCool')) || (/no cooling listed/i.test(g('heatCool') || '') ? 'None listed' : '') };
   { const hc = val(c, 'heatCool'); if (hc.v && (hc.src === 'arch' || hc.src === 'edit') && !/ \/ /.test(String(hc.v))) { const A = archHC(hc.v); if (A.heat) F0.heat = A.heat; else if (!F0.heat) F0.heat = String(hc.v); if (A.cool) F0.cool = A.cool; } }   // her 2.6 Heating/Cooling line (FWA C/Air …) split into the 3.6 heating and cooling fields
   { const lr = val(c, 'locRating'); const E = c.edit || {}; if (lr.src === 'arch' && blank(E.locRating) && blank(E.locFactors)) { const A = archLoc36(g('locRating'), g('locFactors')); if (A.loc) F0.loc = A.loc; Object.entries(A.lines).forEach(([k, v]) => { if (blank(F0[k])) F0[k] = v; }); } }   // her 2.6 archive location in 3.6 terms
-  { if (blank(F0.hazard)) F0.hazard = hazardOf(c); }   // her note Oct 20 2026: FldZne / FldZn / FldWy / Fldway in her archive, or the CRS FEMA zone (X = none)
+  { if (blank(F0.hazard)) F0.hazard = hazardOf(c); }
+  { const fu = archFU(c); if (fu.func && blank(F0.func)) F0.func = fu.func; if (fu.tandem) F0.tandem = fu.tandem; }   // her 2.6 Functional utility line: floor plan / tandem bedrooms → Functional utility, tandem garage → vehicle storage   // her note Oct 20 2026: FldZne / FldZn / FldWy / Fldway in her archive, or the CRS FEMA zone (X = none)
   adjRows(J).forEach(r => { const e = (c.edit || {})['grid_' + r[0]]; if (!blank(e)) F0[r[0]] = e; });   // her entries on lines with no source
   F0._fine = { q: fineOf(J, c.id, 'q'), c: fineOf(J, c.id, 'c') };
   if (g('viewRange') && F0.view && !/limited|panoram/i.test(F0.view)) F0.view += ' – ' + g('viewRange');
@@ -356,6 +357,7 @@ function rateAmount(row, S, C, J) {
   if (key === 'cpSpace') { const dd = d(S.carport || 0, C.carport); x = dd === null ? null : dd * r; }
   if (key === 'bsmtFin') { const dd = d(S.bsmt || 0, C.bsmt); x = dd === null ? null : dd * r; }
   if (key === 'bsmtUnf') { const dd = d(S.bsmtUnf || 0, C.bsmtUnf); x = dd === null ? null : dd * r; }
+  if (['agUnf', 'nsAbove', 'nsBelow', 'nonCont'].includes(key)) { const n = v => blank(v) ? null : num(String(v).replace(/[^0-9.]/g, '')); const dd = d(n(S[key]) || 0, n(C[key])); x = dd === null ? null : dd * r; }   // her ask Oct 20 2026: a $ per sq ft rate on these lines too
   if (key === 'cool') { const a = coolHas(S.cool), b = coolHas(C.cool); x = a === null || b === null ? null : (a - b) * r; }
   if (key === 'timePct') { const eff = J.subject.eff; if (!C.sale || !eff || !C.price) return null; const m = monthsBetween(C.sale, eff); x = m === null ? null : C.price * r / 100 * m; }
   return x === null ? null : Math.round(x / 500) * 500;
@@ -390,7 +392,7 @@ function gridHTML(J) {
         shown = `<input class="txt sm fact${(PICK[id] || id === 'view') && !pkValid(id, raw, (c.edit || {})['pk_' + id]) ? ' bad' : ''}" data-gfact="${c.id}|${id}" value="${esc(raw)}" placeholder="${id === 'usable' ? 'Measure it (ac)' : ''}" title="Type the comp's entry · = copies the subject · =2 copies comp 2">`; }
       else if (id === 'usable' && blank(C.usable)) shown = '<span class="measure">Measure it</span>'; else shown = esc(shown);
       if (id === 'lastRed') { const d = redDaysOf(C); shown += d !== null ? `<small class="muted rdays">${d} day${d === 1 ? '' : 's'} to pending</small>` : (C.lastRed ? '<small class="muted rdays">no contract date</small>' : ''); }
-      if (id === 'q' || id === 'c') shown += fineSel(c.id, id, J); if (id === 'view') shown += vtSel(c.id, J, C.view); if (id === 'loc') shown += locBtn(c.id); else if (id === 'garage') shown += `${(c.edit || {}).grid_vsText ? `<small class="vsx">${esc(c.edit.grid_vsText)}</small>` : ''} <button type="button" class="btn xs" data-vspick="${c.id}" title="Type | spaces | attachment (UAD 3.6 vehicle storage)">▾ pick</button>`; else shown += pkBtn(c.id, id);
+      if (id === 'q' || id === 'c') shown += fineSel(c.id, id, J); if (id === 'view') shown += vtSel(c.id, J, C.view); if (id === 'loc') shown += locBtn(c.id); else if (id === 'garage') shown += `${C.tandem ? `<small class="vsx" title="From your 2.6 Functional utility line – 3.6 has no tandem field; mention it in your comment">${esc(C.tandem)}</small>` : ''}${(c.edit || {}).grid_vsText ? `<small class="vsx">${esc(c.edit.grid_vsText)}</small>` : ''} <button type="button" class="btn xs" data-vspick="${c.id}" title="Type | spaces | attachment (UAD 3.6 vehicle storage)">▾ pick</button>`; else shown += pkBtn(c.id, id);
       if (!type) return `<td>${shown}</td>`;
       const a = cellAmount(J, c, row);
       return `<td><div class="gval">${shown}</div><input class="txt sm adj ${a.own ? 'own' : a.v !== null ? 'auto' : ''}" data-gadj="${c.id}|${id}" value="${a.own ? a.v : ''}" placeholder="${a.v !== null && !a.own ? (a.v >= 0 ? '+' : '') + a.v.toLocaleString() : '$ adj'}" inputmode="decimal" title="${a.own ? 'Your amount – clear it to use the rate' : a.v !== null ? 'From your rate – type to override' : 'Type the adjustment'}"></td>`; }).join('');
@@ -573,7 +575,7 @@ async function ingestInspection(files, name) {
     const C = D.condition || {}; if (C.oqTier && !g.fine.subj.q) g.fine.subj.q = TM[C.oqTier]; if (C.ocTier && !g.fine.subj.c) g.fine.subj.c = TM[C.ocTier]; }
   s.insp = { file: name, inspDate: D.property.inspDate, gla: T.agFin || null, bsmt: T.bgFin || 0, beds: (L.bedrooms || []).length, full: (L.baths || []).filter(x => x.kind === 'FullBathroom').length,
     half: (L.baths || []).filter(x => x.kind === 'HalfBathroom').length, year: num(D.front.yearBuilt), q: D.condition.oq || '', c: D.condition.oc || '', style: D.front.design || '', levels: (L.levels || []).filter(x => !x.grade || /Above/i.test(x.grade)).length || num(D.front.stories),
-    siteSf: site, usableAc: D.site.usable === 'All Usable' && site ? acOf(site) : null, garage: D.garage.garShared ? 0 : (D.garage.hasGarage ? num(D.garage.garSpaces) : 0), carport: num(D.garage.carport) || 0, bsmtUnf: T.bgUnf || 0,
+    siteSf: site, usableAc: D.site.usable === 'All Usable' && site ? acOf(site) : null, garage: D.garage.garShared ? 0 : (D.garage.hasGarage ? num(D.garage.garSpaces) : 0), carport: num(D.garage.carport) || 0, bsmtUnf: T.bgUnf || 0, agUnf: T.agUnf || 0,
     heat: (D.systems.heat || []).filter(x => x !== 'None').join(', ') || ((D.systems.heat || []).includes('None') ? 'None' : ''), cool: (D.systems.cool || []).filter(x => x !== 'None').join(', ') || ((D.systems.cool || []).includes('None') ? 'None' : ''),
     func: ((D.condition || {}).func || []).filter(x => x !== 'None').join(', ') || (((D.condition || {}).func || []).includes('None') ? 'None observed' : ''), constr: D.front.constr || '',
     view: [(D.site.view || []).join(', '), D.site.viewImpact].filter(Boolean).join(' – '), loc: [(D.site.influences || []).join(', '), D.site.inflImpact].filter(Boolean).join(' – '),
@@ -739,4 +741,20 @@ function hazardOf(c) {
   const fz = String(V(c, 'fema') || '').trim().toUpperCase();
   if (!out.length && fz) out.push(/^(A|V)/.test(fz) ? 'FEMA special flood hazard area' : 'None');
   return out.join('; ');
+}
+
+/* her 2.6 "Functional utility" line (aci FunctionalUtility, kept as the archive's remodel text) – her rules (Oct 20 2026):
+   Floorplan / Flrpln / Flr pln → Functional utility: Floor plan · TndmBr / tandem bedroom → Functional utility: Other: Tandem bedrooms
+   Tandem / TndmGar / tandem bay / tandem parking → the vehicle storage line (3.6 has no tandem field – it shows with the garage and in her notes)
+   Low ceilings → Ceiling height · Over improvement → Overimprovement · everything else (remodel years, dated, C3+, 2 lots …) goes to the comp's notes */
+function archFU(c) {
+  const a = archChosen(c) || (c.src.arch || [])[0]; const t = String(a && a.v ? a.v.remodel || '' : '').trim(); if (!t) return { func: '', tandem: '', raw: '' };
+  const L = t.toLowerCase(); const F = [];
+  if (/fl\w{0,3}r\s*\.?\s*pl|flrpl|floorpl|flr\s*pln|dysfnctnl|funct\w*\.?\s*obsol|layout(?!\/terr)/.test(L)) F.push('Floor plan');
+  if (/low\s*ceil|ceiling height|slpd\s*ceil/.test(L)) F.push('Ceiling height');
+  if (/over\s*-?\s*improv/.test(L)) F.push('Overimprovement');
+  const bed = /tndm\s*b(d|r|ed)|tandem\s*b(d|r|ed)/.test(L); if (bed) F.push('Other: Tandem bedrooms');
+  const gar = !bed && /tndm|tandem/.test(L) || /tndm\s*ga|tandem\s*ga|tndmgar|tndmgrg|tandem\s*(bay|park)/.test(L);
+  const m = t.match(/(\d+)\s*[- ]?\s*(tndm|tandem)/i);
+  return { func: F.join('; '), tandem: gar ? (m ? m[1] + ' tandem space' + (+m[1] === 1 ? '' : 's') : 'Tandem') : '', raw: t };
 }
