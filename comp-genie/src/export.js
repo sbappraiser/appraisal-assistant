@@ -101,7 +101,7 @@ function buildCompXML(PROPS, RELS, DSS, c, n, job) {
   if (mode !== 'house' && num(CF.hoa)) { const d = X(X(X(X(P, 'HOMEOWNERS_ASSOCIATIONS'), 'HOMEOWNERS_ASSOCIATION'), 'ASSOCIATION_CHARGES'), 'ASSOCIATION_CHARGE'); const dd = X(d, 'ASSOCIATION_CHARGE_DETAIL'); XV(dd, 'AssociationChargeAmount', Math.round(num(CF.hoa))); XV(dd, 'AssociationChargeType', 'AssociationDues'); }
   const imp = X(X(P, 'IMPROVEMENTS'), 'IMPROVEMENT'); const idt = X(imp, 'IMPROVEMENT_DETAIL'); const cool = uadCool(g('heatCool'));
   if (cool) XV(idt, 'CoolingSystemExistsIndicator', cool.exists ? 'true' : 'false');
-  XV(idt, 'ImprovementType', 'Dwelling'); XV(idt, 'PropertyStructureBuiltYear', g('yearBuilt')); if (g('yearBuilt')) XV(idt, 'PropertyStructureBuiltYearEstimatedIndicator', 'false');
+  XV(idt, 'ImprovementType', 'Dwelling'); if (num(g('yearBuilt')) >= 1700) { XV(idt, 'PropertyStructureBuiltYear', g('yearBuilt')); XV(idt, 'PropertyStructureBuiltYearEstimatedIndicator', 'false'); }   // a 0 from the MLS is no year (schema minimum 0001)
   const pu = X(X(imp, 'PROPERTY_UNITS'), 'PROPERTY_UNIT');
   const ar = X(pu, 'PROPERTY_UNIT_AREA'); const bs = num(g('bsmtSf')), bf = num(g('bsmtFin'));
   if (bs && bs > (bf || 0)) XV(ar, 'UnitBelowGradeUnfinishedAreaMeasure', bs - (bf || 0), SQFT);
@@ -177,10 +177,10 @@ function buildCompsMISMO(job, comps) {
   comps.forEach((c, i) => buildCompXML(PROPS, RELS, DSS, c, i + 1, job));
   notUsedXML(PROPS, job);   // analyzed – not used (UAD 22.17)
   svc.kids = [...svc.kids.filter(k => k !== RELS), RELS]; // UAD order: VALUATION, then RELATIONSHIPS
-  XV(X(X(X(va, 'VALUATION_REPORT'), 'VALUATION_SOFTWARE_SYSTEMS'), 'VALUATION_SOFTWARE_SYSTEM'), 'ValuationSoftwareProductName', 'Appraisal Assistant – Comp Genie');
+  { const vs = X(X(X(va, 'VALUATION_REPORT'), 'VALUATION_SOFTWARE_SYSTEMS'), 'VALUATION_SOFTWARE_SYSTEM'); XV(vs, 'ValuationSoftwareProductName', 'Appraisal Assistant – Comp Genie'); XV(vs, 'ValuationSoftwareProductVersionIdentifier', typeof BUILD !== 'undefined' ? BUILD : '1'); XV(vs, 'ValuationSoftwareVendorName', 'Jennifer Heath, LLC (in-house)'); }   // schema: name + version (or vendor)
   const dc = X(doc, 'DOCUMENT_CLASSIFICATION'); XV(X(X(dc, 'DOCUMENT_CLASSES'), 'DOCUMENT_CLASS'), 'DocumentType', 'AppraisalReport');
   const dcd = X(dc, 'DOCUMENT_CLASSIFICATION_DETAIL'); XV(dcd, 'DocumentFormIssuingEntityNameType', 'FNM_FRE'); XV(dcd, 'DocumentFormIssuingEntityVersionIdentifier', 'September 2024');
-  return '<?xml version="1.0" encoding="UTF-8"?>\n<!--Sales comparables exported by Comp Genie for import into Appraise-It Pro (Home > Import Forms). Adjustments are yours, from the Comp Genie grid.-->\n' + xmlOut(root);
+  return xsdSortXML('<?xml version="1.0" encoding="UTF-8"?>\n<!--Sales comparables exported by Comp Genie for import into Appraise-It Pro (Home > Import Forms). Adjustments are yours, from the Comp Genie grid.-->\n' + xmlOut(root));   // schema (XSD) element order
 }
 
 /* ---- comps table ---- */

@@ -439,7 +439,7 @@ function buildMISMO(ins, imgName) {
     const gp = getC('project'); if (gp) { const c = X(VC, 'VALUATION_COMMENTARY'); V(c, 'ValuationAnalysisCategoryType', 'Project'); V(c, 'ValuationCommentText', gp); }
   }
   if ((d.condition.valCond || []).length) { const vcs = X(X(X(VR, 'VALUATION_RECONCILIATION'), 'VALUATION_RECONCILIATION_SUMMARY'), 'VALUATION_CONDITIONS'); (d.condition.valCond.includes('AsIs') ? ['AsIs'] : d.condition.valCond).forEach(v => V(X(vcs, 'VALUATION_CONDITION'), 'PropertyValuationConditionalConclusionType', v)); }
-  V(X(X(VR, 'VALUATION_SOFTWARE_SYSTEMS'), 'VALUATION_SOFTWARE_SYSTEM'), 'ValuationSoftwareProductName', 'UAD Field Inspection (iPad)');
+  { const vs = X(X(VR, 'VALUATION_SOFTWARE_SYSTEMS'), 'VALUATION_SOFTWARE_SYSTEM'); V(vs, 'ValuationSoftwareProductName', 'UAD Field Inspection (iPad)'); V(vs, 'ValuationSoftwareProductVersionIdentifier', typeof BUILD !== 'undefined' ? BUILD : '1'); V(vs, 'ValuationSoftwareVendorName', 'Jennifer Heath, LLC (in-house)'); }
 
   take(() => true).forEach(p => push(p, 'SupplementalExhibit'));   // last: anything still not placed
 
@@ -447,7 +447,7 @@ function buildMISMO(ins, imgName) {
   const dc = X(doc, 'DOCUMENT_CLASSIFICATION'); V(X(X(dc, 'DOCUMENT_CLASSES'), 'DOCUMENT_CLASS'), 'DocumentType', 'AppraisalReport');
   const dcd = X(dc, 'DOCUMENT_CLASSIFICATION_DETAIL'); V(dcd, 'DocumentFormIssuingEntityNameType', 'FNM_FRE'); V(dcd, 'DocumentFormIssuingEntityVersionIdentifier', 'September 2024');
 
-  return '<?xml version="1.0" encoding="UTF-8"?>\n<!--Subject inspection data exported by UAD Field Inspection for import into Appraise-It Pro (Home > Import Forms).-->\n' + xmlOut(root);
+  return xsdSortXML('<?xml version="1.0" encoding="UTF-8"?>\n<!--Subject inspection data exported by UAD Field Inspection for import into Appraise-It Pro (Home > Import Forms).-->\n' + xmlOut(root));   // schema (XSD) element order, Oct 20 2026
 }
 function aduComment(ins, a, i) {
   const t = COMMENT_TARGETS.find(x => x.id === 'adu');

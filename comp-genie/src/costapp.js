@@ -85,7 +85,7 @@ document.addEventListener('change', e => { const t = e.target; if (!app.job || !
   if (t.dataset.cs) { const [id, k] = t.dataset.cs.split('|'); const s = K.site.find(x => x.id === id); if (s) s[k] = k === 'desc' ? t.value : (t.value.trim() === '' ? null : n(t.value)); }
   save(); if (t.dataset.ck !== 'comment') costRedraw(); });
 /* into the SFREP file (writeReportXML helpers) */
-function costXML(J, VR, child, set) {
+function costXML(J, VR, child, set, doc, NS, SVC) {
   if (!(J.costOn ?? false) && !J.cost) return; if (J.costOn === false) return; const K = costJob(J), X = costCalc(J); const LD = landJob(J);
   const CA = child(child(VR, 'APPROACH_TO_VALUE'), 'COST_APPROACH'); [...CA.children].filter(k => k.localName === 'VALUATION_APPROACH_EXCLUSION_REASONS').forEach(k => k.remove());
   const d = child(CA, 'COST_APPROACH_DETAIL'); const cm = K.comment != null ? K.comment : costDraft(J); const site = LD.comment != null ? LD.comment : (LD.lastDraft || '');
@@ -95,6 +95,35 @@ function costXML(J, VR, child, set) {
   set(d, 'DepreciationMethodType', 'EconomicAgeLife'); if (X.land) set(d, 'SiteEstimatedValueAmount', Math.round(X.land)); if (site) set(d, 'SiteEstimatedValueCommentDescription', site.slice(0, 2500));
   if (X.siteImp) set(d, 'SiteOtherImprovementsAsIsAmount', Math.round(X.siteImp)); set(d, 'SiteValuationMethodType', K.siteMethod || 'SalesComparison');
   const v = num(K.value) || X.rounded; if (v) set(d, 'ValueIndicatedByCostApproachAmount', Math.round(v));
+  if (doc) costDetailXML(J, K, X, CA, doc, NS, SVC);
+}
+/* line by line (UAD 3.6 schema, D-1 MH1 sample): COST_APPROACH / IMPROVEMENT_COST_AND_DEPRECIATED_VALUES – one per building (dwelling, each ADU / outbuilding),
+   its REPLACEMENT_REPRODUCTION_COSTS, depreciation and depreciated value, linked to the iPad's IMPROVEMENT; then SITE_IMPROVEMENTS_AS_IS_COSTS. */
+function costDetailXML(J, K, X, CA, doc, NS, SVC) {
+  const XL = 'http://www.w3.org/1999/xlink'; const el = (p, tag, attrs) => { const e = doc.createElementNS(NS, tag); Object.entries(attrs || {}).forEach(([k, v]) => e.setAttributeNS(XL, k, v)); p.appendChild(e); return e; };
+  const leaf = (p, tag, v, attrs) => { if (v === null || v === undefined || v === '' || (typeof v === 'number' && !isFinite(v))) return; const e = doc.createElementNS(NS, tag); e.textContent = String(v); Object.entries(attrs || {}).forEach(([k, a]) => e.setAttribute(k, a)); p.appendChild(e); };
+  [...CA.children].filter(k => ['IMPROVEMENT_COST_AND_DEPRECIATED_VALUES', 'SITE_IMPROVEMENTS_AS_IS_COSTS'].includes(k.localName)).forEach(k => k.remove());
+  const groups = [{ key: 'DWELLING', to: 'IMPROVEMENT_SubjectDwelling', lines: K.lines.filter(l => l.dw), pct: X.phys, func: num(K.funcAmt) || 0, ext: num(K.extAmt) || 0, soft: num(K.soft) || 0 }];
+  let na = 0, no = 0; K.lines.filter(l => !l.dw).forEach((l, i) => { const adu = /adu|guest|accessory|casita/i.test(l.label || ''); const to = adu ? 'IMPROVEMENT_ADU' + (++na) : /garage|carport/i.test(l.label || '') ? null : 'IMPROVEMENT_OUTBUILDING' + (++no);
+    groups.push({ key: (adu ? 'ADU' : 'OUTBUILDING') + (i + 1), to, lines: [l], pct: X.obp, func: 0, ext: 0, soft: 0 }); });
+  const BOX = el(CA, 'IMPROVEMENT_COST_AND_DEPRECIATED_VALUES'); const DET = CA.querySelector ? [...CA.children].find(k => k.localName === 'COST_APPROACH_DETAIL') : null; if (DET) CA.insertBefore(BOX, DET.nextSibling);
+  const RL = SVC ? ([...SVC.children].find(k => k.localName === 'RELATIONSHIPS') || el(SVC, 'RELATIONSHIPS')) : null;
+  groups.forEach(gp => { const cost = gp.lines.reduce((t, l) => t + X.lineCost(l), 0) + gp.soft; if (!cost) return;
+    const lab = 'IMPROVEMENT_COST_AND_DEPRECIATED_VALUE_SubjectProperty_' + gp.key; const V = el(BOX, 'IMPROVEMENT_COST_AND_DEPRECIATED_VALUE', { 'xlink:label': lab });
+    const IC = el(V, 'IMPROVEMENT_COST'); const RR = el(IC, 'REPLACEMENT_REPRODUCTION_COSTS');
+    gp.lines.forEach(l => { const c = X.lineCost(l); if (!c) return; const R = el(RR, 'REPLACEMENT_REPRODUCTION_COST'); const area = num(l.area);
+      leaf(R, 'PricePerAreaAmount', area ? (Math.round(c / area * 100) / 100).toFixed(2) : null); leaf(R, 'ReplacementOrReproductionCostAmount', Math.round(c)); leaf(R, 'ReplacementOrReproductionCostAreaMeasure', area ? Math.round(area) : null, { AreaUnitOfMeasureType: 'SquareFeet' });
+      leaf(R, 'ReplacementOrReproductionCostAreaType', l.t); if (l.t === 'Other') leaf(R, 'ReplacementOrReproductionCostAreaTypeOtherDescription', String(l.label || 'Other').slice(0, 40)); });
+    if (gp.soft) { const R = el(RR, 'REPLACEMENT_REPRODUCTION_COST'); leaf(R, 'ReplacementOrReproductionCostAmount', Math.round(gp.soft)); leaf(R, 'ReplacementOrReproductionCostAreaType', 'Other'); leaf(R, 'ReplacementOrReproductionCostAreaTypeOtherDescription', 'Soft costs and fees'); }
+    const phys = cost * gp.pct / 100, tot = phys + gp.func + gp.ext;
+    leaf(el(V, 'IMPROVEMENT_DEPRECIATED_VALUE_SUMMARY'), 'ImprovementEstimatedTotalCostAmount', Math.round(Math.max(0, cost - tot)));
+    const D = el(V, 'IMPROVEMENT_DEPRECIATION'); if (gp.ext) { leaf(D, 'DepreciationExternalAmount', Math.round(gp.ext)); leaf(D, 'DepreciationExternalPercent', (gp.ext / cost * 100).toFixed(2)); }
+    if (gp.func) { leaf(D, 'DepreciationFunctionalAmount', Math.round(gp.func)); leaf(D, 'DepreciationFunctionalPercent', (gp.func / cost * 100).toFixed(2)); }
+    leaf(D, 'DepreciationPhysicalAmount', Math.round(phys)); leaf(D, 'DepreciationPhysicalPercent', (+gp.pct).toFixed(2)); leaf(D, 'DepreciationTotalAmount', Math.round(tot));
+    if (RL && gp.to) el(RL, 'RELATIONSHIP', { 'xlink:arcrole': 'urn:fdc:mismo.org:2009:residential/IMPROVEMENT_COST_AND_DEPRECIATED_VALUE_IsAssociatedWith_IMPROVEMENT', 'xlink:from': lab, 'xlink:to': gp.to }); });
+  if (!BOX.children.length) BOX.remove();
+  const S = K.site.filter(s => num(s.amt)); if (S.length) { const B = el(CA, 'SITE_IMPROVEMENTS_AS_IS_COSTS'); const ex = [...CA.children].find(k => k.localName === 'VALUATION_APPROACH_EXCLUSION_REASONS'); if (ex) CA.insertBefore(B, ex);
+    S.forEach(s => { const e = el(B, 'SITE_IMPROVEMENTS_AS_IS_COST'); leaf(e, 'SiteImprovementAsIsCostAmount', Math.round(num(s.amt))); leaf(e, 'SiteImprovementDescription', String(s.desc || 'Site improvements').slice(0, 96)); }); }
 }
 
 document.addEventListener('change', e => { if (e.target.dataset && e.target.dataset.landv) setTimeout(costRedraw, 50); });

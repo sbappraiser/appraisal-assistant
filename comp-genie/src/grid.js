@@ -668,7 +668,7 @@ async function buildFullReport(J) {
   const mapFiles = []; { const L = typeof mapsForReport === 'function' ? await mapsForReport(J) : []; if (L.length) { const IMS = child(child(child(SUBJ, 'INSPECTIONS'), 'INSPECTION'), 'IMAGES');
     for (const m of L) { const im = sub.createElementNS(NS, 'IMAGE'); IMS.appendChild(im); leaf(im, 'ImageCaptionCommentDescription', m.cap); leaf(im, 'ImageCategoryType', m.cat); leaf(im, 'ImageFileLocationIdentifier', '\\\\Images\\' + m.file); leaf(im, 'MIMETypeIdentifier', 'image/jpeg');
       mapFiles.push({ name: 'Images/' + m.file, data: m.blob }); } } }
-  const xml = '<?xml version="1.0" encoding="UTF-8"?>\n<!--Subject from the UAD Field Inspection app, comps and adjustment grid from Comp Genie, for import into Appraise-It Pro (Home > Import Forms).-->\n' + new XMLSerializer().serializeToString(sub.documentElement);
+  const xml = '<?xml version="1.0" encoding="UTF-8"?>\n<!--Subject from the UAD Field Inspection app, comps and adjustment grid from Comp Genie, for import into Appraise-It Pro (Home > Import Forms).-->\n' + (xsdSort(sub.documentElement), new XMLSerializer().serializeToString(sub.documentElement));   // schema (XSD) element order
   const entries = [{ name: jobBase() + ' - Full report.xml', data: xml }];
   for (const [k, v] of files) if (/^SFREP\/Images\//i.test(k)) entries.push({ name: k.replace(/^SFREP\//i, ''), data: v });
   for (const c of used) { const fr = frontOf(c); if (fr) { const r = await DB.get('photos', fr.id); if (r) entries.push({ name: 'Images/' + photoName(c), data: r.blob }); } }
