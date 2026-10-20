@@ -1098,7 +1098,7 @@ function renderExport() {
   return `<section class="group open"><div class="ghead static"><span class="gtitle">Save & export</span></div>
     <div class="exp"><div class="${DB.persistent ? 'info' : 'warn-box'}">${DB.persistent ? 'Everything is saved on this iPad as you work, with or without a signal. Export when you are back on Wi-Fi or have a USB-C drive plugged in.' : 'This browser is not saving to the iPad. Export now so nothing is lost.'}</div>
       ${req ? `<div class="warn-box">${req} required item${req === 1 ? ' is' : 's are'} still open. You can export anyway; the notes will list them.</div>` : ''}</div>
-    <div class="exp"><h3>Workfile package</h3><p>One .zip for your desktop workfile: readable inspection notes (open in any browser), every photo named by its label, the SFREP import file, and a backup you can load back into this app for a revision.</p>
+    <div class="exp"><h3>Workfile package</h3><p>One .zip for your desktop workfile: readable inspection notes (open in any browser), the SFREP import file with its photos (SFREP › Images), the workfile-only photos (Photos), each photo once, and a backup you can load back into this app for a revision.</p>
       <div class="row"><button class="btn primary" data-export="workfile">Export workfile package</button></div></div>
     <div class="exp"><h3>SFREP import file</h3><p>A UAD 3.6 .zip (XML plus Images folder) for Appraise-It Pro: Home → Import Forms. Square footage is left blank for you to enter from your sketch.</p>
       <div class="row"><button class="btn cyan" data-export="sfrep">Export SFREP file</button></div></div>

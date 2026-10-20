@@ -15,11 +15,11 @@ function photoFileNames(ins) {
 }
 
 /* ---------------- Readable notes (HTML for the workfile) ---------------- */
-function notesHTML(ins, names) {
+function notesHTML(ins, names, srcOf) {
   const issues = computeIssues(ins);
   const row = (l, v) => v ? `<tr><th>${esc(l)}</th><td>${esc(v)}</td></tr>` : '';
   const fieldRows = (fields, d) => fields.filter(f => !['photo', 'info', 'crs'].includes(f.t) && isShown(f, d, ins)).map(f => row(f.l, f.t === 'calc' ? String(f.calc(ins)) : f.t === 'review' ? (f.items(ins) || []).map(i => i.label + ': ' + (i.value || '—')).join('; ') : valText(f, d[f.k], d))).join('');
-  const pics = list => list.length ? `<div class="pics">${list.map(p => `<figure><img src="Photos/${encodeURI(names.get(p.id))}" alt=""><figcaption>${esc(p.label)}</figcaption></figure>`).join('')}</div>` : '';
+  const pics = list => list.length ? `<div class="pics">${list.map(p => `<figure><img src="${srcOf ? srcOf(p) : 'Photos/' + encodeURI(names.get(p.id))}" alt=""><figcaption>${esc(p.label)}</figcaption></figure>`).join('')}</div>` : '';
   let body = '';
   SECTIONS.forEach(sec => {
     let s = '';
@@ -492,11 +492,14 @@ async function doExport(kind, btn) {
     let blob, fname;
     if (kind === 'workfile') {
       const sNames = sfrepNames(names);
-      const sfrepPhotos = ins.photos.filter(p => !p.extra || p.toReport);
+      const sfrepPhotos = ins.photos.filter(p => !p.extra || p.toReport); const inSfrep = new Set(sfrepPhotos.map(p => p.id));
+      /* each photo once (Oct 20 2026: her workfile was 77 MB because every report photo was in Photos/ AND SFREP/Images/):
+         report photos live in SFREP/Images (so the SFREP folder still imports on its own), workfile-only photos in Photos/ */
+      const srcOf = p => inSfrep.has(p.id) ? 'SFREP/Images/' + encodeURI(sNames.get(p.id)) : 'Photos/' + encodeURI(names.get(p.id));
       const entries = [
-        { name: 'Inspection Notes.html', data: notesHTML(ins, names) },
+        { name: 'Inspection Notes.html', data: notesHTML(ins, names, srcOf) },
         { name: 'inspection-backup.json', data: JSON.stringify({ app: 'uad36-inspect', version: 1, inspection: ins }) },
-        ...(await photoEntries(ins, names, 'Photos/')),
+        ...(await photoEntries({ ...ins, photos: ins.photos.filter(p => !inSfrep.has(p.id)) }, names, 'Photos/')),
         ...(await originalEntries(ins, names, 'Photos – unblurred originals (workfile only)/')),
         { name: 'SFREP/' + base + '.xml', data: buildMISMO(ins, sNames) },
       ];
@@ -526,7 +529,7 @@ async function restoreBackup(file) {
     const names = photoFileNames(ins); let n = 0;
     if (await DB.get('inspections', ins.id)) { ins.id = uid(); ins.data.property.fileName = insTitle(ins) + ' (restored copy)'; }
     for (const p of ins.photos) {
-      const bytes = files.get('Photos/' + names.get(p.id)); if (!bytes) continue;
+      const bytes = files.get('Photos/' + names.get(p.id)) || files.get('SFREP/Images/' + sfrepNames(names).get(p.id)); if (!bytes) continue;
       const blob = new Blob([bytes], { type: 'image/jpeg' }); const { thumb } = await processImage(new File([blob], 'p.jpg', { type: 'image/jpeg' }));
       const ob = files.get('Photos – unblurred originals (workfile only)/' + names.get(p.id));
       if (await DB.get('photos', p.id)) p.id = uid();

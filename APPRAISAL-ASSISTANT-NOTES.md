@@ -567,3 +567,6 @@ Decisions (her, Oct 19–20): "Exterior of dwelling" instead of left/right/side 
 - Facts: comp heat/cool from MLS Heating/Cooling (coolText; "No cooling listed" shown as "None listed", treated as none), carport, bsmtUnf = bsmtSf − bsmtFin; subject heat/cool (systems.heat/cool), carport, bsmtUnf (sketch bgUnf), func (condition.func), constr. BUG fixed: "Horse facilities" showed for every MLS comp (MLS horse = 'No' was truthy).
 - Each grid line shows its UAD name in small grey (Add Other: “name” for her lines).
 - Location (site influence) ▾ pick (locPick): A-1 SiteInfluenceType list, impact + proximity per influence, Other (45). Text "Neutral: Residential; Adverse: Busy roadway (Bordering)"; siParse reads her 2.6 codes (BusyRd, AdjPrk, Schl, Comm, Train, WtrFr…). Flood zone / easement / private road → their own 3.6 lines. Subject placeholder (from the iPad) made darker so it does not look empty.
+
+## iPad 6x-1020-1824 – workfile half the size (Oct 20 2026)
+- Her workfile was 77 MB: every report photo was in Photos/ and again in SFREP/Images/. Now each photo once: report photos only in SFREP/Images (SFREP folder still imports by itself; the genie reads it), workfile-only photos in Photos/. Inspection Notes.html links to whichever folder; restoreBackup reads Photos/ or SFREP/Images/. Photos stay 2400 px (sharpness).
