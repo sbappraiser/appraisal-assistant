@@ -286,7 +286,7 @@ function mkTable(R, src, which) {
 /* a CSV for a search box. A small file next to a loaded search is ADDED to it (her Oct 20 2026 loss: a one-sale CSV
    replaced the whole search); a full export replaces it. The search before is kept: "Bring back the previous search". */
 async function mkAddSearch(file, which, how) {
-  try { const rows = parseMarketCsv(await G.readText(file)); const m = which === 'micro' ? MI() : M(); const old = m.rows || [];
+  try { const rows = parseMarketCsv(await G.readText(file)); rows.forEach(r => { r.src = file.name; }); const m = which === 'micro' ? MI() : M(); const old = (m.rows || []).map(r => r.src ? r : { ...r, src: !/ \+ /.test(m.file || '') ? m.file : '' });
     let mode = how || 'replace';
     if (!how && old.length && rows.length < Math.max(5, old.length / 2)) mode = confirm(`${file.name} has ${rows.length} listing${rows.length === 1 ? '' : 's'}; your search has ${old.length}.\n\nOK = ADD ${rows.length === 1 ? 'it' : 'them'} to your search (keeps the other ${old.length}).\nCancel = REPLACE the whole search with this file.`) ? 'add' : 'replace';
     m.prev = { rows: old, file: m.file, exclude: { ...(m.exclude || {}) }, types: m.types, at: new Date().toISOString() };
@@ -301,7 +301,7 @@ async function mkAddSearch(file, which, how) {
 function mkCsvDocsHTML(which) {
   const m = which === 'micro' ? MI() : M(); const cs = (cur.docs || []).filter(d => /\.csv$/i.test(d.name || ''));
   const prev = m.prev && (m.prev.rows || []).length ? `<button type="button" class="btn small" data-mkprev="${which}">↶ Bring back the previous search (${m.prev.rows.length} listings${m.prev.file ? ' – ' + h(m.prev.file) : ''})</button>` : '';
-  return cs.length || prev ? `<div class="mkcsvs">${prev}${cs.length ? '<span class="help">Or use a CSV already in this order:</span>' + cs.map(d => `<button type="button" class="btn small ghost" data-mkcsv="${which}|${h(d.id)}" title="Replace the search with this file">${h(d.name)}</button>`).join('') : ''}</div>` : '';
+  return cs.length || prev ? `<div class="mkcsvs">${prev}${cs.length ? '<span class="help">Or use a CSV already in this order:</span>' + cs.map(d => { const n = (m.rows || []).filter(r => (r.src || (!/ \+ /.test(m.file || '') ? m.file : '')) === d.name).length; return `<span class="mkcsv"><button type="button" class="btn small ghost" data-mkcsv="${which}|${h(d.id)}" title="Load this file again (replace or add)">${h(d.name)}${n ? ` <small>${n} in the search</small>` : ''}</button><button type="button" class="btn small ghost mkx" data-mkcsvdel="${which}|${h(d.id)}" title="Remove this file: its listings come out of the search and the file is deleted from the order" aria-label="Remove ${h(d.name)}">✕</button></span>`; }).join('') : ''}</div>` : '';
 }
 async function mkAddStats(file) {
   try { toast('Reading the statistics PDF…'); const st = parseStatsPdf(await pdfItems(file)); st.file = file.name; MK.stats[st.ym] = st; await mkSave('stats');
@@ -417,6 +417,11 @@ function mkRender(redraft) {
   const fd = $('#mkFromDocs'); if (fd) fd.onclick = async () => { const d = cur.docs.find(d => d.type === 'marketSearch' && /\.csv$/i.test(d.name)); const f = await docFile(d.id); if (f) mkAddSearch(f); };
   box.querySelectorAll('[data-mkcsv]').forEach(bt => bt.onclick = async e => { e.stopPropagation(); const [w, id] = bt.dataset.mkcsv.split('|'); const rec = await ODB.get('docs', id); const d = (cur.docs || []).find(x => x.id === id); if (!rec || !rec.blob) { toast('That file is not stored any more'); return; }
     const ask = confirm('Replace the search with ' + (d ? d.name : 'this file') + '?\n\nOK = replace the whole search · Cancel = add its listings to the search'); await mkAddSearch(new File([rec.blob], d ? d.name : 'search.csv', { type: 'text/csv' }), w, ask ? 'replace' : 'add'); });
+  box.querySelectorAll('[data-mkcsvdel]').forEach(bt => bt.onclick = async e => { e.stopPropagation(); const [w, id] = bt.dataset.mkcsvdel.split('|'); const q = w === 'micro' ? MI() : M(); const d = (cur.docs || []).find(x => x.id === id); if (!d) return;
+    const mine = r => (r.src || (!/ \+ /.test(q.file || '') ? q.file : '')) === d.name; const n = (q.rows || []).filter(mine).length;
+    if (!confirm(`Remove ${d.name}?` + (n ? `\n\nIts ${n} listing${n === 1 ? '' : 's'} come out of the search (the others stay).` : '') + '\nThe file is deleted from this order. “Bring back the previous search” can undo the listings.')) return;
+    if (n) { q.prev = { rows: q.rows, file: q.file, exclude: { ...(q.exclude || {}) }, types: q.types, at: new Date().toISOString() }; q.rows = q.rows.filter(r => !mine(r)); q.file = String(q.file || '').split(' + ').filter(x => x && x !== d.name).join(' + '); mkChanged(); }
+    await removeDoc(id); mkRender(true); toast(d.name + ' removed' + (n ? ` – ${n} listing${n === 1 ? '' : 's'} taken out of the search` : '')); });
   box.querySelectorAll('[data-mkprev]').forEach(bt => bt.onclick = e => { e.stopPropagation(); const q = bt.dataset.mkprev === 'micro' ? MI() : M(); const P = q.prev; if (!P) return; const now = { rows: q.rows, file: q.file, exclude: q.exclude, types: q.types };
     Object.assign(q, { rows: P.rows, file: P.file, exclude: P.exclude || {}, types: P.types }); q.prev = now; mkChanged(); mkRender(true); toast('The previous search is back (' + q.rows.length + ' listings)'); });
   box.querySelectorAll('[data-mkfix]').forEach(inp => inp.onchange = () => { const [w, mls, k] = inp.dataset.mkfix.split('|'); const q = w === 'micro' ? MI() : m; q.fix = q.fix || {}; const f = q.fixDraft = q.fixDraft || {}; f[mls] = f[mls] || {};
