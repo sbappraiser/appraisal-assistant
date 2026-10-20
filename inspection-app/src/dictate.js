@@ -527,6 +527,10 @@ function dictParse(text, ins) {
   // "Roof condition typical wear and tear", "Converted area no", "Exterior quality Q4"), plus component conditions said
   // with the part ("windows and foundation typical wear and tear"). A sentence that is only that does not go to the notes.
   const dkUsed = dkLabelAnswers(text, put);
+  // a loft: how it is reached ("loft with ladder access" / "stairs to the loft") – a ladder loft is never a counted room
+  { const lw = dkNorm(text); const room = rooms.findIndex(r => r.list === 'rooms' && r.type === 'Loft');
+    if (room >= 0) { if (/ loft (?:with |by |via |has )?(?:a )?(?:ladder|ship s ladder|ships ladder)| ladder (?:to|up to|access to) (?:the )?loft /.test(lw) || / loft [a-z ]{0,20}ladder access /.test(lw)) put('L:rooms.loftAccess', 'Ladder', room);
+      else if (/ loft (?:with |by |via |has )?(?:a )?(?:stairs|staircase|stairway)| stairs (?:to|up to|lead to) (?:the )?loft /.test(lw)) put('L:rooms.loftAccess', 'Stairs', room); } }
   // leftovers: a sentence with words that were not used goes, as she said it, into the notes of the room or area she was in – nothing is lost
   const stAt = j => { let st = { room: null, tabs: [] }; for (const o of marks) { if (o.i > j) break; if (o.st) st = o.st; } return st; };
   const sub = t => !DICT_FILLER.has(t.s) && !DICT_FILLER.has(t.w) && !NOTE_NOISE.has(t.s) && !/^\d+$/.test(t.s) && t.s.length >= 3;

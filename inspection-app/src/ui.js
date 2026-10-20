@@ -336,7 +336,7 @@ function renderSection(sec) {
       const showList = g.list && (!g.listShow || g.listShow(ins.data[sec.id], ins));
       const next = vis[gi + 1];
       body = `${fieldsHtml ? `<div class="fields two">${fieldsHtml}</div>` : ''}${showList ? renderList(g.list) : ''}
-        <div class="gfoot"><button class="btn donecheck" data-donegroup="${g.id}" data-next="${next ? next.id : ''}"><span class="gcheck sm ${green ? 'on' : ''}" aria-hidden="true">✓</span><span>${next ? 'Done – next: ' + esc(next.title) : 'Done with ' + esc(sec.title)}</span></button></div>`;
+        <div class="gfoot"><button class="btn donecheck" data-donegroup="${g.id}" data-next="${next ? next.id : ''}"><span class="gcheck sm ${green ? 'on' : ''}" aria-hidden="true">✓</span><span>Done with ${esc(g.title)}</span></button></div>`;
     }
     return `<section class="group ${open ? 'open' : 'closed'} ${app.cur === g.id && open ? 'current' : ''}" id="grp-${g.id}">
       <div class="ghead-row"><button class="gcheck ${green ? 'on' : ''}" data-check="${g.id}" aria-pressed="${green}" aria-label="${green ? 'Reviewed' : 'Mark reviewed'}">✓</button><button class="ghead" data-group="${g.id}" aria-expanded="${open}"><span class="chev">${open ? '▾' : '▸'}</span><span class="gtitle">${esc(g.title)}</span>${g.list ? `<span class="count">${n} added</span>` : ''}${status}</button></div>

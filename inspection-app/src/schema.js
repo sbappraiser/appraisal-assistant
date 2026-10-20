@@ -248,6 +248,8 @@ const LISTS = {
       { k: 'type', l: 'Which room?', t: 'one', req: true, o: opts(...ROOM_TYPES) },
       { k: 'label', l: 'Custom name (optional)', t: 'text', help: 'e.g. "Upstairs Family Room"', show: it => !!it.type },
       { k: 'level', l: 'Level', t: 'one', req: it => !!it.type, o: LEVELS_ALL, uad: 'LevelType', show: it => !!it.type },
+      { k: 'loftAccess', l: 'Loft reached by', t: 'one', o: opts('Stairs', 'Ladder', 'Other'), show: it => it.type === 'Loft', help: 'A loft reached by a ladder is never counted as a room.' },
+      { k: 'loftCeil', l: 'Loft ceiling height meets ANSI (7 ft or more over at least half the floor; under 5 ft not counted)?', t: 'yn', show: it => it.type === 'Loft' && it.loftAccess === 'Stairs', help: 'Only a loft with stairs and an ANSI-compliant ceiling counts as a main room.' },
       { k: 'flooring', l: 'Flooring', t: 'multi', o: FLOORING, show: it => !!it.type },
       { k: 'ceilS', l: 'Ceiling type', t: 'multi', o: CEIL_S, show: it => !!it.type },
       { k: 'hasFeat', l: 'Any room features?', t: 'yn', show: it => !!it.type },
@@ -427,8 +429,10 @@ function sketchItems(ins) {
   out.push({ label: 'Sketch image', value: !S.imageAt ? 'Not made yet – open the sketch and tap Back to inspection' : S.imageAt + 5000 < S.updated ? 'Older than the drawing – open the sketch and tap Back to refresh it' : 'Up to date' });
   return out;
 }
+/* her rule (Oct 20 2026): a loft is a main room only with stairs (never a ladder) and an ANSI-compliant ceiling height */
+const loftCounts = r => r.type !== 'Loft' || (r.loftAccess === 'Stairs' && r.loftCeil === true);
 function countItems(ins) {
-  const L = ins.lists; const main = L.rooms.filter(r => COUNT_ROOMS.includes(r.type));
+  const L = ins.lists; const main = L.rooms.filter(r => COUNT_ROOMS.includes(r.type) && loftCounts(r));
   const beds = L.bedrooms.length, fb = L.baths.filter(b => b.kind === 'FullBathroom').length, hb = L.baths.filter(b => b.kind === 'HalfBathroom').length;
   const kit = Math.min(1, L.kitchens.length); const total = main.length + kit + beds;
   const out = [
