@@ -56,7 +56,7 @@ function tsSales(J) {   // her archive sales in the segment, plus closed sales f
   // closed sales from this job (her MLS search, PDFs, CORT) that are not already in the archive
   const job = { n: 0, skipped: 0, site: 0 };
   (J.comps || []).forEach(c => {
-    const C = compFacts(c, J); if (!C.price || !C.sale) return; if (!/closed|sold/i.test(String(V(c, 'status') || 'Closed'))) return;
+    const C = compFacts(c, J); if (!C.price || !C.sale) return; if (!/closed|sold|settled/i.test(String(V(c, 'status') || 'Closed'))) return;
     if (!seg.test({ zip: String(V(c, 'zip') || ''), nbhd: V(c, 'nbhd') || '' })) return;
     const month = String(C.sale).slice(0, 7); const addr = (c.src.arch[0] && c.src.arch[0].v && archRowAddr(c)) || '';
     if (c.src.arch.some(a => a.v && String(a.v.saleDate || '').slice(0, 7) === month)) return;   // the archive already has this sale
