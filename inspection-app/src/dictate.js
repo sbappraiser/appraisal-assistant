@@ -312,8 +312,39 @@ function dkLabelAnswers(text, put) {
     if (any && dkNum(sn).trim().split(' ').every(w => !w || vocab.has(w) || /^\d+$/.test(w) || w.length < 2)) full.add(sn); });
   return full;
 }
+
+/* ---- iPad dictation puts a comma at every pause: "stone, tile, flooring" → "stone tile flooring" (6x) ----
+   Commas are taken out only inside a known phrase (any 2–4 word choice in the app: Stone Tile, Crown Molding,
+   Recessed Lighting, Shaker Cabinets …) and before the thing the words describe (flooring, counters, roof …),
+   so a real list ("carpet, tile, hardwood") keeps its commas. */
+let DK_PHR = null;
+function dkPhrases() {
+  if (DK_PHR) return DK_PHR; const set = new Set(); const nrm = l => String(l || '').toLowerCase().replace(/\([^)]*\)/g, ' ').replace(/&/g, ' and ').replace(/[\/–—-]/g, ' ').replace(/[^a-z0-9 ]+/g, '').replace(/\s+/g, ' ').trim();
+  const add = l => { const n = nrm(l); const k = n.split(' ').length; if (k >= 2 && k <= 4) set.add(n); };
+  const fromF = f => { try { const O = typeof f.o === 'function' ? [] : (f.o || []); O.forEach(o => add(Array.isArray(o) ? o[1] : o)); } catch (e) {} };
+  try { SECTIONS.forEach(sec => sec.groups.forEach(g => g.fields.forEach(fromF))); Object.values(LISTS).forEach(L => (L.fields || []).forEach(fromF)); } catch (e) {}
+  try { (typeof ROOM_TYPES !== 'undefined' ? ROOM_TYPES : []).forEach(add); (typeof APPLIANCES !== 'undefined' ? APPLIANCES : []).forEach(a => add(a.l)); } catch (e) {}
+  ['crown molding', 'recessed lighting', 'stone tile', 'tile shower', 'tub shower', 'shower over tub', 'walk in closet', 'walk in shower', 'stainless steel', 'composition shingle', 'clay tile', 'concrete tile', 'stamped concrete', 'cultured marble', 'solid surface', 'quartz countertops', 'stone countertops', 'wood beam', 'wood beams', 'vaulted ceiling', 'vaulted ceilings', 'french doors', 'sliding glass door', 'sliding glass doors', 'dual pane', 'vinyl windows', 'wood windows', 'ceiling fan', 'ceiling fans'].forEach(add);
+  ['carpet tile'].forEach(x => set.delete(x));   // "carpet, tile, hardwood" is a list of three floors
+  set.add('vaulted wood beam'); set.add('vaulted wood beams'); set.add('vaulted wood beam ceiling');
+  return (DK_PHR = set);
+}
+const DK_HEADN = /,\s+(?=(?:flooring|floors?|counters?|countertops?|counter tops?|cabinets?|cabinetry|roof|roofing|siding|windows?|doors?|molding|moulding|lighting|ceilings?|fencing|fence|walls?|shower|showers|tub|vanity|vanities|backsplash|appliances|pavers|walkways?|patio|decking|trim|surround|finish(?:es)?)\b)/gi;
+function dkCommaFix(text) {
+  let t = String(text || '').replace(/\b(?:bolted|bolden|bolton|bolt it|volted|vaulted)\s*,?\s+wood\s*,?\s+beam(s?)\b/gi, (m, pl) => 'vaulted wood beam' + pl);   // her "bolted, wood, beam"
+  { let s = t; s = s.replace(/\bhard\s+would\b/gi, 'hardwood').replace(/\b(engineered|vaulted|natural|stained|painted|exposed|reclaimed|solid|real)\s+would\b/gi, '$1 wood').replace(/\bwould(?=[ ,]+(?:floor|floors|flooring|beams?|deck|decking|fence|fencing|siding|cabinets?|cabinetry|windows?|stove|burning|paneling|panelling|shingles?|shakes?|trim|ceilings?|frame|framed|doors?|stairs|railings?|pergola|trellis|planks?|look|grain|tones?|tile|laminate|burning)\b)/gi, m => m[0] === 'W' ? 'Wood' : 'wood'); t = s; }   // "would" = wood before flooring, beams, deck … (her iPad)
+  if (!/,/.test(t)) return t; const P = dkPhrases();
+  const parts = t.split(/(\s*,\s*|\s+)/); const W = [], S = []; parts.forEach((x, i) => { if (i % 2 === 0) W.push(x); else S.push(x); });
+  const bare = w => w.toLowerCase().replace(/[^a-z0-9]+/g, ''); const stop = w => /[.;:!?]$/.test(w);
+  for (let i = 0; i < W.length; i++) for (let n = 4; n >= 2; n--) { if (i + n > W.length) continue; let ok = true, comma = false;
+    for (let k = i; k < i + n - 1; k++) { if (stop(W[k])) { ok = false; break; } if (/,/.test(S[k] || '')) comma = true; }
+    if (!ok || !comma) continue; const ph = W.slice(i, i + n).map(bare).join(' '); if (!P.has(ph)) continue;
+    for (let k = i; k < i + n - 1; k++) S[k] = ' '; i += n - 2; break; }
+  let out = ''; W.forEach((w, i) => { out += w + (i < S.length ? S[i] : ''); });
+  return out.replace(DK_HEADN, ' ');
+}
 function dictParse(text, ins) {
-  text = dkLines(dkSpoken(text));
+  text = dkLines(dkCommaFix(dkSpoken(text)));
   const IX = dictIndex(); const T = dictTokens(text); const n = T.length;
   const at = (i, ph) => { for (let j = 0; j < ph.length; j++) { const t = T[i + j]; if (!t || t.br || t.s !== ph[j]) return false; } return true; };
   const longest = (i, list) => { let best = null; list.forEach(e => { if ((!best || e.ph.length > best.ph.length) && at(i, e.ph)) best = e; }); return best; };
