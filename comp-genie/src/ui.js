@@ -79,7 +79,7 @@ function orderMicro(o) {   // one CSV, or several she added together on the Mark
 const microIn = (J, M) => (J.files || []).some(f => f.kind === 'MLS export' && f.name === M.file);
 /* the micro search is her comps to start: when nothing is on the grid yet, its listings go on it in the Comps considered order –
    closed sales by closing date (most recent first), then pendings, then actives. After that she adds and removes them herself. */
-const gridInDateOrder = J => { const u = J.comps.filter(c => c.use).sort((a, b) => a.use - b.use); const d = u.slice().sort(compOrder); return u.every((c, i) => c === d[i]); };
+const gridInDateOrder = J => { const u = J.comps.filter(c => c.use).sort((a, b) => a.use - b.use); const d = u.slice().sort(compOrder); return u.every((c, i) => c === d[i] && c.use === i + 1); };
 function gridDateOrder(J) { J.comps.filter(c => c.use).sort(compOrder).forEach((c, i) => { c.use = i + 1; }); }
 /* after the comps are on the grid: which still need their CRS report (one drop takes them all; each is matched by APN or address) */
 function photoNeedHTML(J) {   // the front photo in the square after the comp number comes from the MLS photos zip
@@ -354,6 +354,7 @@ function homeHTML() {
 function render() { const y = window.scrollY; renderPage(); if (Math.abs(window.scrollY - y) > 2) window.scrollTo(0, y); requestAnimationFrame(() => { if (Math.abs(window.scrollY - y) > 2 && !render.top) window.scrollTo(0, y); render.top = false; }); }
 function renderPage() {
   const J = app.job; const root = $('#app');
+  if (J && !J.gridManual && J.comps.some(c => c.use) && !gridInDateOrder(J)) { gridDateOrder(J); save(); }   // her rule: the grid is in closing-date order unless she numbered it herself
   if (CPOP) { const c = J && J.comps.find(x => x.id === CPOP.id); root.innerHTML = c ? `<header class="top pop"><h1>Comp Genie</h1><span class="pill">${esc(J.name)}</span><span class="grow"></span><small>stays in step with your other windows</small></header>` + detailHTML(c) : '<p class="help">That comp is no longer in this assignment.</p>'; document.title = (c ? compTitle(c) : 'Comp') + ' · ' + (J ? J.name : ''); fillImages(); return; }
   if (POP) { root.innerHTML = popHTML(J); document.title = `Comps ${POP.from}–${POP.to} · ${J.name}`; wbUndoBar(); return; }
   if (app.home || !J) { root.innerHTML = homeHTML(); document.title = 'Comp Genie'; return; }
@@ -693,7 +694,7 @@ document.addEventListener('click', async e => {
     case 'gridall': { const J = app.job; const ord = !J.comps.some(c => c.use) || gridInDateOrder(J); let n = Math.max(0, ...J.comps.map(c => c.use || 0));
       const add = J.comps.filter(c => !c.use && !c.notUsed).sort(compOrder); add.forEach(c => { c.use = ++n; }); if (ord) gridDateOrder(J); save(); render();
       toast(`${add.length} comp${add.length === 1 ? '' : 's'} put on the grid` + (ord ? ' in closing-date order (comp 1 = the most recent)' : ' after the ones you numbered') + '. Remove takes one off and lists it under Analyzed – not used.', 7000); break; }
-    case 'gridorder': gridDateOrder(app.job); save(); render(); toast('Grid numbered in closing-date order – comp 1 is the most recent'); break;
+    case 'gridorder': gridDateOrder(app.job); app.job.gridManual = false; save(); render(); toast('Grid numbered in closing-date order – comp 1 is the most recent'); break;
     case 'pullmicro': { const o = (app.orders || []).find(x => x.id === app.job.orderId); if (o) await pullMicro(o); break; }
     case 'x-csv': exportCsv(); break;
     case 'x-photos': exportPhotos(); break;
@@ -712,7 +713,11 @@ document.addEventListener('change', async e => {
   if (t.dataset.act === 'pickjob' && !t.value) { app.home = true; render.top = true; render(); window.scrollTo(0, 0); return; }
   if (t.dataset.act === 'pickjob') { app.home = false; app.job = app.jobs.find(j => j.id === t.value); app.sel = null; await DB.put('kv', { id: 'lastJob', v: app.job.id }); await loadPhotos(); render(); return; }
   if (t.dataset.act === 'showall') { app.showAll = t.checked; render(); return; }
-  if (t.dataset.use) { const c = app.job.comps.find(x => x.id === t.dataset.use); const n = t.value ? +t.value : null; if (!n && c.use) { markNotUsed(c); app.nuAsk = c.id; } if (n) app.job.comps.forEach(x => { if (x !== c && x.use === n) x.use = null; }); c.use = n; save(); render(); return; }
+  if (t.dataset.use) { const J = app.job; const c = J.comps.find(x => x.id === t.dataset.use); const n = t.value ? +t.value : null;
+    // her own number: the comp moves to that place and the others close up behind it (nothing is bumped off the grid); from now on the grid keeps her order
+    const list = J.comps.filter(x => x.use && x !== c).sort((a, b) => a.use - b.use);
+    if (!n) { if (c.use) { markNotUsed(c); app.nuAsk = c.id; } c.use = null; } else { list.splice(Math.min(n - 1, list.length), 0, c); delete c.notUsed; }
+    list.forEach((x, i) => { x.use = i + 1; }); J.gridManual = !gridInDateOrder(J); save(); render(); return; }
   if (t.dataset.archpick) { const c = app.job.comps.find(x => x.id === t.dataset.archpick); c.archPick = +t.value; save(); render(); return; }
   if (t.dataset.cortpick) { const c = app.job.comps.find(x => x.id === t.dataset.cortpick); c.cortPick = +t.value; save(); render(); return; }
   if (t.dataset.edit) { const c = app.job.comps.find(x => x.id === app.sel); let f = FIELD[t.dataset.edit];
