@@ -59,7 +59,7 @@ function archCanon(a) {
     mls: a.mls_no || '', addr: [a.street_number, a.street_name].filter(Boolean).join(' '), unit: a.unit || '', city: a.city || '', zip: a.zip || '', apn: a.apn || '', nbhd: a.neighborhood || '',
     status: a.listing_status || (isListing ? 'Listing' : a.record_role === 'subject' ? '' : (a.price ? 'Closed' : '')),
     salePrice: isListing ? null : a.price, listPrice: isListing ? a.price : null, saleDate: isListing ? '' : (a.sale_month || ''), contractDate: a.contract_month || '', dom: a.dom, saleType: a.sale_type || '', financing: a.financing || '', concessions: a.concession_amt,
-    verification: a.verification || '', lprDays: a.lpr_days,
+    verification: a.verification || '', lprDays: a.lpr_days, sfSource: a.record_role === 'subject' || /\bfiles\b|inspection|pers\.?\s*insp/i.test(a.verification || '') ? 'Measured (my inspection)' : '',   // she measured it only when she inspected it: her subject, or "Files" / "Inspection" in her 2.6 verification
     siteSf: a.site_sf, usableSf: a.usable_sf, landSplit: a.land_split || '', topo: a.topography || '',
     locRating: a.location_rating || '', locFactors: String(a.location_factors || '').split(';').filter(Boolean).map(x => LOC_TEXT[x] || x).join('; '),
     viewRating: a.view_rating || '', viewTypes: String(a.view_types || '').split(';').filter(Boolean).join('; '), viewRange: a.view_panoramic ? 'Panoramic' : a.view_limited ? 'Limited' : '',
@@ -87,7 +87,8 @@ function archLabel(a) {
 
 /* ---------------- 2. MLS export (flexmls CSV) ---------------- */
 const MLS_STATUS = { A: 'Active', P: 'Pending', C: 'Closed', X: 'Expired', W: 'Withdrawn', K: 'Cancelled', U: 'Under Contract', S: 'Closed' };
-const SF_SOURCE = { M: 'Measured', P: 'Public Records', O: 'Other/See Remarks', A: 'Appraisal', B: 'Builder', S: 'Seller' };
+const SF_SOURCE = { M: 'MLS', P: 'Public records', O: 'Other/See Remarks', A: 'Appraisal', B: 'Builder', S: 'Seller' };   // her rule (Oct 20 2026): the agent's "Measured" is the MLS, not her measurement
+const sfSrc = t => { t = String(t || '').trim(); return /^measured$/i.test(t) ? 'MLS' : t; };
 /* ---------------- CRS Data "Prospecting" export (a neighborhood sales search, Oct 20 2026) ----------------
    CRITERIA lines, then "DATA_START", then a header row. Owner names and mailing addresses are never kept. */
 const isCrsExport = text => /^\s*"?DATA_START"?\s*$/m.test(String(text || '')) && /Last Sale Amount/i.test(String(text || ''));
@@ -149,7 +150,7 @@ function mlsCanon(raw, G, g) {
     mlsCondition: list('Condition'), yearBuilt: num(g('Year Built')), assessorYB: num(g('Assessor Year Built')),
     beds: num(g('Total Bedrooms')), full: num(g('Total Full Baths')), half: num(g('Total Half Baths')), bathsTotal: num(g('Total Bathrooms')),
     gla: num(g('Total SqFt.', 'Total SqFt')), mainSf: num(g('Main House SqFt')), otherSf: num(g('Other Structures SqFt')), assessorSf: num(g('Assessor SqFt')),
-    sfSource: SF_SOURCE[g('Source')] || g('Source'), basement: has('Rooms', /Basement/) ? 'Basement' : (g('Basement') || ''),
+    sfSource: SF_SOURCE[g('Source')] || sfSrc(g('Source')), basement: has('Rooms', /Basement/) ? 'Basement' : (g('Basement') || ''),
     garage: garN, garageType: garType, carport: cpN, driveway: uncN,
     heatCool: [list('Heating'), list('Cooling') || 'No cooling listed'].filter(Boolean).join(' / '), heating: list('Heating'), cooling: list('Cooling'),
     energy: [has('Amenities', /Solar PV/) || (G['Electric'] || []).length ? 'Solar' + ((G['Electric'] || []).length ? ' (' + G['Electric'].join(', ') + ')' : '') : '', has('Amenities', /Battery/) ? 'Battery' : '', has('Amenities', /Generator/) ? 'Generator' : ''].filter(Boolean).join('; '),
@@ -231,7 +232,7 @@ function pdfCanon(p) {
     otherSf: num(d['Other Structures SqFt']), cityLimits: d['Within City Limits Y/N'] || '', propType: d['TYP'] || '',
     dom: num(d['Days on Market']) ?? (me ? me.dom : null), cdom: num(d['Cumulative Days on Market']) ?? (me ? me.cdom : null),
     terms: d['Terms'] || '', concessionsOffered: d['Seller Consider Concessions'] || '',
-    sfSource: d['Source'] || '', gla: num(d['Total SqFt.']), mainSf: num(d['Main House SqFt']), yearBuilt: num(d['Year Built']),
+    sfSource: sfSrc(d['Source']), gla: num(d['Total SqFt.']), mainSf: num(d['Main House SqFt']), yearBuilt: num(d['Year Built']),
     beds: num(d['Total Bedrooms']), full: num(d['Total Full Baths']), half: num(d['Total Half Baths']), acres: num(d['Apx # Acres']),
     siteSf: num(d['Apx Lot SqFt']) || (num(d['Apx # Acres']) ? Math.round(num(d['Apx # Acres']) * 43560) : null),
     lat: num(d['Geo Lat']), lon: num(d['Geo Lon']), style: d['Style'] || '', mlsCondition: d['Condition'] || '', viewTypes: d['View'] || '', topo: d['Location/Topo'] || '',

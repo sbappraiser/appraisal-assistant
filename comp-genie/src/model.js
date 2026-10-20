@@ -200,7 +200,9 @@ function defaultOrder(c, f) {
   switch (f.kind) {
     case 'sale': if (f.k === 'financing') return matched ? ['arch', 'crs', 'cort'] : ['crs', 'cort'];   // Oct 20 2026: MLS is not a good source for financing – only the recorded loan (CRS, CORT) or her own archive   // her note: the recorded loan (CRS mortgage history, CORT lender) shows the financing
       return matched ? ['arch', 'mls', 'pdf', 'cort', 'crs'] : ['mls', 'pdf', 'cort', ...(sale && sale.from === 'crs' ? ['crs'] : [])];   // a sale only in CRS (not in the MLS): its recorded sale
-    case 'listing': return ['pdf', 'mls', ...(matched ? ['arch'] : []), ...(sale && sale.from === 'arch' ? ['arch'] : [])];
+    case 'listing': if (f.k === 'sfSource' && a && a.v && a.v.sfSource) { const gl = num(V(c, 'gla')), ag = num(a.v.gla); if (gl && ag && Math.abs(gl - ag) <= 1) return ['arch', 'pdf', 'mls']; }   // her measurement counts only when the GLA in use is the one she measured
+      if (f.k === 'sfSource') return ['pdf', 'mls'];
+      return ['pdf', 'mls', ...(matched ? ['arch'] : []), ...(sale && sale.from === 'arch' ? ['arch'] : [])];
     case 'phys': return recent ? ['arch', 'mls', 'pdf', 'crs', 'cort'] : ['mls', 'pdf', 'arch', 'crs', 'cort'];
     case 'geo': return ['mls', 'pdf', 'crs'];
     default: return ['arch', 'mls', 'pdf', 'crs', 'cort'];
