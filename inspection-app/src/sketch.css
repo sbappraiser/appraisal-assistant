@@ -66,3 +66,21 @@ html.testcopy .skbar, html.testcopy .bar { border-bottom-color: #7b2cbf; }
 .key{touch-action:manipulation;user-select:none;-webkit-user-select:none}.key.hit{background:var(--cyan,#ffb25c)}
 .sendbtn{background:#e6e6e6;border-color:#bdbdbd;color:#333}.sendbtn.sent{background:#1e7a3c;border-color:#1e7a3c;color:#fff}
 .sugs{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}.sugs:empty{display:none}
+
+/* 6x (her ask, Oct 20 2026): bigger drawing, smaller buttons */
+.skbar { padding: 4px 8px; padding-top: calc(4px + env(safe-area-inset-top, 0px)); gap: 6px; border-bottom-width: 3px; }
+.skbar .btn { min-height: 34px; padding: 3px 10px; font-size: 14px; } .sktitle b { font-size: 15px; } .sktitle span { font-size: 12px; }
+.sklevels { padding: 3px 8px; gap: 4px; } .chip.lv, .chip.pg { min-height: 30px; padding: 2px 9px; font-size: 13px; }
+.skpanel { padding: 4px 8px calc(4px + env(safe-area-inset-bottom, 0px)); border-top-width: 2px; }
+.ctx { font-size: 14px; gap: 5px; padding: 2px 2px 4px; min-height: 30px; } .ctx .btn, .ctx .btn.sm { min-height: 30px; padding: 2px 8px; font-size: 13px; } .ctx .help { font-size: 12px; }
+.ctx .rotb { min-width: 40px; min-height: 32px; font-size: 18px; } .ctx .rotbar select { min-height: 30px; } .ctx .nmpos { margin-top: 2px; gap: 4px; }
+.pad { gap: 6px; grid-template-columns: minmax(200px, 1fr) minmax(170px, .9fr) minmax(150px, .8fr); }
+.keys, .arrows, .acts, .acts .two { gap: 4px; }
+.entry { font-size: 19px; min-height: 34px; padding: 2px 10px; border-width: 2px; }
+.key { min-height: 38px; font-size: 19px; } .key.arr { min-height: 42px; font-size: 22px; } .key.angle { font-size: 13px; }
+.btn.big { min-height: 36px; font-size: 14px; padding: 2px 8px; }
+.skinfo { font-size: 13px; padding: 3px 8px; } .skinfo .btn { min-height: 28px; font-size: 12px; }
+.dlrow .btn.sm { min-height: 32px; } .dlread { font-size: 17px; }
+.ctx select, .ctx select.txt, .ctx .txt { min-height: 30px; font-size: 14px; padding: 2px 6px; width: auto; border-width: 2px; }
+.key { min-height: 34px; } .key.arr { min-height: 38px; }
+body.padmin .pad { display: none; }

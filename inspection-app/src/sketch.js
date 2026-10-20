@@ -450,9 +450,10 @@ function dimText(a, p, q, hi, i) {
   const mx = (X1 + X2) / 2, my = (Y1 + Y2) / 2;
   if (a.closed && a.pts.length > 2) { const tp = toFt(mx + nx * 6, my + ny * 6); if (inPoly(tp, shape(a))) { nx = -nx; ny = -ny; } if ([10, 18, 26].some(k => inNeighbour(a, toFt(mx + nx * k, my + ny * k)))) { nx = -nx; ny = -ny; } }
   let ang = Math.atan2(Y2 - Y1, X2 - X1); if (ang > Math.PI / 2 || ang < -Math.PI / 2) ang += Math.PI;
-  ctx.save(); ctx.translate(mx + nx * 12, my + ny * 12); ctx.rotate(ang); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   const calc = a.calc && a.calc[i], ins = a.inside && a.inside[i];
-  ctx.font = `${hi ? 700 : 500} ${(hi ? 15 : 12) * DS()}px system-ui,sans-serif`; ctx.fillStyle = hi ? '#c75b00' : calc ? '#1e5bd8' : '#333'; ctx.fillText((calc ? '≈ ' : '') + r1(L).toFixed(1) + "'" + (calc ? ' calc' : '') + (ins ? ' (in)' : ''), 0, 0); ctx.restore();
+  ctx.font = `${hi ? 700 : 500} ${(hi ? 15 : 12) * DS()}px system-ui,sans-serif`; const tw = ctx.measureText((calc ? '≈ ' : '') + r1(L).toFixed(1) + "'" + (calc ? ' calc' : '') + (ins ? ' (in)' : '')).width;
+  const off = 7 + Math.abs(nx) * tw / 2 + Math.abs(ny) * 7 * DS();   // text level (side to side), pushed clear of the wall
+  ctx.save(); ctx.translate(mx + nx * off, my + ny * off); ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = hi ? '#c75b00' : calc ? '#1e5bd8' : '#333'; ctx.fillText((calc ? '≈ ' : '') + r1(L).toFixed(1) + "'" + (calc ? ' calc' : '') + (ins ? ' (in)' : ''), 0, 0); ctx.restore();
   if (calc) { ctx.save(); ctx.setLineDash([8, 6]); ctx.strokeStyle = '#1e5bd8'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(X1, Y1); ctx.lineTo(X2, Y2); ctx.stroke(); ctx.restore(); }
 }
 
@@ -520,7 +521,7 @@ function dragEnd(from, ft) { // where a dragged wall ends: line-up dots, corners
 /* ---------- actions ---------- */
 const curArea = () => SK.sk.areas.find(a => a.id === SK.drawId);
 function startArea(defId) { SK.mode = 'start'; SK.pendingDef = defId; SK.sel = null; SK.cursor = null; renderPanel(); draw(); }
-function placeStart(ft, exact) { pushUndo(); const p = exact ? [r3(ft[0]), r3(ft[1])] : snapPoint(ft); SK.lastDef = SK.pendingDef; SK.cursor = null; const a = { id: uid(), def: SK.pendingDef, level: SK.level, pg: SK.pg, pts: [p], closed: false }; SK.sk.areas.push(a); SK.drawId = a.id; SK.mode = 'draw'; markDirty(); draw(); renderPanel(); }
+function placeStart(ft, exact) { if (document.body.classList.contains('padmin')) { document.body.classList.remove('padmin'); const pb = document.getElementById('skPadBtn'); if (pb) pb.textContent = '⌄ Hide keypad'; setTimeout(sizeCanvas, 30); } pushUndo(); const p = exact ? [r3(ft[0]), r3(ft[1])] : snapPoint(ft); SK.lastDef = SK.pendingDef; SK.cursor = null; const a = { id: uid(), def: SK.pendingDef, level: SK.level, pg: SK.pg, pts: [p], closed: false }; SK.sk.areas.push(a); SK.drawId = a.id; SK.mode = 'draw'; markDirty(); draw(); renderPanel(); }
 function addWallTo(pt) {
   const a = curArea(); if (!a) return; pushUndo(); a.pts.push([r3(pt[0]), r3(pt[1])]); SK.entry = '';
   if (a.pts.length >= 4 && Math.hypot(a.pts[a.pts.length - 1][0] - a.pts[0][0], a.pts[a.pts.length - 1][1] - a.pts[0][1]) < 0.06) { a.pts.pop(); finishArea(true); return; }
@@ -555,6 +556,19 @@ function closeSquare() { const a = curArea(); if (!a) return; if (a.pts.length <
   const c = ok(cA) || !ok(cB) ? cA : cB;
   const k = a.pts.length; a.pts.push([r3(c[0]), r3(c[1])]); a.calc[k - 1] = true; a.calc[k] = true;
   setTimeout(() => toast('Two walls filled in at a square corner – marked “calc”. Check them with your tape.'), 2700); finishArea(true); }
+/* tap a wall › Remove: a closed area opens at that wall (drawing continues from one end of the gap);
+   an open area loses an end wall (a middle wall cannot go – the outline would split in two) */
+function removeWall(a, i) {
+  if (!a) return; const n = a.pts.length; const map = (o, f) => { if (!o) return o; const r = {}; Object.keys(o).forEach(k => { const j = f(+k); if (j !== null) r[j] = o[k]; }); return r; };
+  if (a.closed) { pushUndo(); const sh = k => k === i ? null : ((k - (i + 1)) % n + n) % n;
+    a.pts = [...a.pts.slice(i + 1), ...a.pts.slice(0, i + 1)]; a.arcs = map(a.arcs, sh); a.calc = map(a.calc, sh); a.inside = map(a.inside, sh); a.closed = false;
+    SK.drawId = a.id; SK.mode = 'draw'; SK.sel = null; toast('Wall removed – the area is open. Draw from the orange end, or ⇄ Other end, then close it.'); markDirty(); draw(); renderPanel(); return; }
+  if (i === n - 2) { pushUndo(); a.pts.pop(); ['arcs', 'calc', 'inside'].forEach(k => { if (a[k]) delete a[k][i]; }); }
+  else if (i === 0) { pushUndo(); a.pts.shift(); const sh = k => k === 0 ? null : k - 1; a.arcs = map(a.arcs, sh); a.calc = map(a.calc, sh); a.inside = map(a.inside, sh); }
+  else return toast('Remove walls from either end of an open outline (tap the first or last wall)');
+  if (a.pts.length < 2) { SK.sk.areas = SK.sk.areas.filter(x => x !== a); SK.drawId = null; SK.mode = 'select'; SK.sel = null; toast('Area removed'); }
+  else { SK.drawId = a.id; SK.mode = 'draw'; SK.sel = null; toast('Wall removed – keep drawing'); }
+  markDirty(); draw(); renderPanel(); }
 /* she hit a gate: keep drawing from the corner where she started */
 function flipEnds() { const a = curArea(); if (!a || a.pts.length < 2) return toast('Draw a wall first'); pushUndo(); const n = a.pts.length; a.pts.reverse();
   const remap = o => { if (!o) return o; const r = {}; Object.keys(o).forEach(i => { const j = n - 2 - +i; if (j >= 0) r[j] = o[i]; }); return r; };
@@ -783,6 +797,7 @@ function renderShell() {
     <span class="saved" id="skSaved">Saved ✓</span><span class="ver">v ${typeof BUILD !== 'undefined' ? BUILD : '?'}</span>
     <button class="btn" id="skUndo">↶ Undo</button><button class="btn" id="skRedo">↷</button>
     <button class="btn sendbtn ${SK.sentClean ? 'sent' : ''}" id="skSend" title="Save the area totals and the sketch image to the inspection">${SK.sentClean ? 'Saved to inspection ✓' : 'Save to inspection'}</button>
+    <button class="btn" id="skPadBtn" title="Hide or show the keypad to see more of the sketch">${document.body.classList.contains('padmin') ? '⌃ Keypad' : '⌄ Hide keypad'}</button>
     <button class="btn" id="skMenu">☰ More</button>
   </header>
   <div class="sklevels" id="skLevels"></div>
@@ -795,6 +810,7 @@ function renderShell() {
   document.getElementById('skBack').onclick = goBack;
   document.getElementById('skUndo').onclick = doUndo; document.getElementById('skRedo').onclick = doRedo;
   document.getElementById('skMenu').onclick = openMenu;
+  document.getElementById('skPadBtn').onclick = () => { const on = !document.body.classList.contains('padmin'); document.body.classList.toggle('padmin', on); try { localStorage.setItem('skPadMin', on ? '1' : '0'); } catch (e) {} document.getElementById('skPadBtn').textContent = on ? '⌃ Keypad' : '⌄ Hide keypad'; setTimeout(sizeCanvas, 30); };
   document.getElementById('skSend').onclick = sendNow;
   document.getElementById('skSheetBg').addEventListener('click', e => { if (e.target.id === 'skSheetBg') closeSheet(); });
   renderLevels(); renderPanel(); renderInfo();
@@ -853,14 +869,14 @@ function renderPanel() {
   else if (sel && sel.type === 'wall') { const ar = SK.sk.areas.find(x => x.id === sel.id); const ws = walls(ar).find(w => w[0] === sel.i); const L = ws ? r1(wallLen(ws[1], ws[2])) : 0; const closing = ar.closed && sel.i === ar.pts.length - 1;
     ctxHtml = `<div class="ctx"><b>Wall: ${L.toFixed(1)} ft</b>${closing ? ' · closing wall (adjusts by itself)' : ''} of ${esc(ar.name || defOf(ar.def).name)}
       ${closing ? '' : `<label class="inl">New length <input id="skWallLen" class="txt num" inputmode="decimal" value="${L.toFixed(1)}"></label><button class="btn primary sm" id="skWallSet">Apply</button>`}
-      <button class="btn sm" id="skCurve">⌒ ${ar.arcs && ar.arcs[sel.i] ? 'Edit curve' : 'Curve this wall'}</button><button class="btn sm" id="skWallArea">Select the area</button>${ar.closed ? '' : '<button class="btn primary sm" id="skContinue">✎ Continue drawing this area</button>'}
+      <button class="btn sm" id="skCurve">⌒ ${ar.arcs && ar.arcs[sel.i] ? 'Edit curve' : 'Curve this wall'}</button><button class="btn sm" id="skWallArea">Select the area</button>${ar.closed ? '' : '<button class="btn primary sm" id="skContinue">✎ Continue drawing this area</button>'}<button class="btn sm danger" id="skWallDel">✂ Remove this wall${ar.closed ? ' (opens the area here)' : ''}</button>
       ${ar.calc && ar.calc[sel.i] ? '<span class="help">≈ calculated, not measured. <button class="btn sm" id="skCalcOk">I measured it</button></span>' : ''}</div>`; }
   else if (sel && sel.type === 'all') ctxHtml = `<div class="ctx"><b>Turn the whole sketch</b> (all levels, labels and symbols) <div class="nmpos">${rotBar('all')}<button class="btn primary sm" id="rotDone">Done</button></div></div>`;
   else if (sel && sel.type === 'area') { const ar = SK.sk.areas.find(x => x.id === sel.id); const C = computeAreas(); const d = defOf(ar.def);
     ctxHtml = `<div class="ctx"><b>${esc(ar.name || d.name)}</b> · ${Math.round(C.net.get(ar.id) || 0).toLocaleString()} sf${C.net.get(ar.id) !== C.gross.get(ar.id) ? ` net (${Math.round(C.gross.get(ar.id)).toLocaleString()} gross)` : ''} · ${esc(BUCKETS[d.bucket].l)}
       <button class="btn sm" id="skAreaProps">Properties</button><button class="btn sm" id="skReopen">Edit walls</button><button class="btn sm" id="skCopyLv">⧉ Copy to level</button><button class="btn sm" id="skMovePg">Move to page</button><button class="btn sm danger" id="skDel">Delete</button>
       <div class="nmpos"><b>Turn</b> ${rotBar('a' + ar.id)}</div>
-      <div class="nmpos"><b>Name</b> ${[['', 'Inside'], ['above', '↑ Above'], ['below', '↓ Below'], ['left', '← Left'], ['right', 'Right →']].map(([v, t]) => `<button class="btn sm ${(ar.nameAt || '') === v ? 'on' : ''}" data-np="${v}">${t}</button>`).join('')}${ar.nameAt && typeof ar.nameAt === 'object' ? '<span class="help">(moved by hand)</span>' : ''}</div>
+      ${ar.nameAt ? '<button class="btn sm" data-np="">Put the name back inside</button>' : ''}
       <span class="help">Drag the area to move it · drag its name to put the name anywhere.</span></div>`; }
   else if (sel && sel.type === 'symbol') { const y = (SK.sk.symbols || []).find(x => x.id === sel.id);
     ctxHtml = `<div class="ctx"><b>${esc(SYMBOLS[y.type].n)}</b> · width <button class="btn sm" data-sz="w:-0.5">−</button><input class="txt num sz" id="syW" inputmode="decimal" value="${y.w.toFixed(1)}"><button class="btn sm" data-sz="w:0.5">+</button>
@@ -944,6 +960,7 @@ function renderPanel() {
   on('skFlip', flipEnds); on('skSquare', closeSquare);
   on('skInside', () => { SK.insideOn = !SK.insideOn; renderPanel(); toast(SK.insideOn ? `Inside measurements: ${Math.round(wallT() * 24)} in added to each wall until you turn it off` : 'Back to outside measurements'); });
   on('skWallT', () => askNumber('Wall thickness (inches)', 'Added at each end of a wall you measured inside. Stucco on wood frame is about 6 in.', String(Math.round(wallT() * 12)), v => { if (v > 0 && v < 30) { SK.lib.wallT = v / 12; saveLib(); renderPanel(); } }));
+  on('skWallDel', () => removeWall(SK.sk.areas.find(x => x.id === sel.id), sel.i));
   on('skContinue', () => { const ar = SK.sk.areas.find(x => x.id === sel.id); SK.drawId = ar.id; SK.mode = 'draw'; SK.sel = null; toast('Keep drawing from the orange end – ⇄ Other end switches ends'); draw(); renderPanel(); });
   on('skCalcOk', () => { const ar = SK.sk.areas.find(x => x.id === sel.id); pushUndo(); delete ar.calc[sel.i]; markDirty(); draw(); renderPanel(); });
   if (SK.dial) wireDial(el); if (SK.curve) wireCurve(el);
@@ -1213,7 +1230,7 @@ function drawLevelBlock(g, k, X0, Y0, s, bb, C) { // one level's drawing at scal
       if (ag) { const [bx, by] = T(ag.B); g.fillText('⌒ ' + f1(ag.len) + "'", bx, by); g.restore(); return; }
       const [X1, Y1] = T(p), [X2, Y2] = T(q); const px = Math.hypot(X2 - X1, Y2 - Y1); let nx = -(Y2 - Y1) / px, ny = (X2 - X1) / px; const mx = (X1 + X2) / 2, my = (Y1 + Y2) / 2;
       if (a.closed) { const ft = k => [bb.x0 + (mx + nx * k - X0) / s, bb.y0 + (my + ny * k - Y0) / s]; if (inPoly(ft(6), shape(a))) { nx = -nx; ny = -ny; } if ([10, 18, 26].some(k => inNeighbour(a, ft(k)))) { nx = -nx; ny = -ny; } }
-      let ang = Math.atan2(Y2 - Y1, X2 - X1); if (ang > Math.PI / 2 || ang < -Math.PI / 2) ang += Math.PI; g.translate(mx + nx * 13, my + ny * 13); g.rotate(ang); g.fillText(f1(L) + "'", 0, 0); g.restore(); });
+      const tw = g.measureText(f1(L) + "'").width, off = 8 + Math.abs(nx) * tw / 2 + Math.abs(ny) * 9 * DS(); g.translate(mx + nx * off, my + ny * off); g.fillText(f1(L) + "'", 0, 0); g.restore(); });
     if (a.closed && defOf(a.def).bucket !== 'LIV') { const [cx, cy] = T(namePt(a, C, s, 16 * TS())); g.textAlign = 'center'; g.fillStyle = '#000'; g.font = '600 ' + fs(16); g.fillText(a.name || defOf(a.def).name, cx, cy - 2); g.font = fs(15); g.fillText(f1(C.net.get(a.id)) + ' sf', cx, cy + 18); } });
   drawIWalls(g, T, s, IW().filter(w => inBlk(w, k)), null);
   (SK.sk.symbols || []).filter(x => inBlk(x, k)).forEach(x => drawSymbol(g, x, T, s, false));
@@ -1310,6 +1327,7 @@ const skWatch = setTimeout(() => { if (!document.getElementById('skCanvas')) skF
   SK.level = SK.sk.level || 'L1'; SK.pg = SK.sk.pg || 1; if (!pageList().some(x => x.n === SK.pg)) SK.pg = 1; try { SK.showDots = localStorage.getItem('skDots') !== '0'; } catch (e) {}
   document.title = 'Sketch – ' + ((SK.ins.data && SK.ins.data.property && SK.ins.data.property.fileName) || 'Inspection');
   try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {}); } catch (e) {}
+  try { document.body.classList.toggle('padmin', localStorage.getItem('skPadMin') === '1'); } catch (e) {}
   SK.step = 'drawing the screen'; renderShell(); setSaved(true); SK.step = 'open';
   if (!DB.persistent) toast('Warning: this page cannot save to the iPad. Open the app from its Home Screen icon.');
   if (SK.sk.view && SK.sk.view.s) { SK.view = SK.sk.view; draw(); } else { fitView(); draw(); }
