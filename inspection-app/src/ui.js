@@ -510,7 +510,7 @@ async function startFromOrder(id) {
   p.addr = street || p.addr; if (o.unit) p.unit = o.unit;
   if (o.inspDate) p.inspDate = o.inspDate;
   if (o.permits) { p.permits = o.permits; if (o.permits.zoning && !ins.data.site.zoneCode) ins.data.site.zoneCode = o.permits.zoning; }
-  p.order = { id: o.id, fileNo: o.fileNo, client: o.client, type: o.type, reportForm: o.reportForm || '', effDate: o.effDate, inspDate: o.inspDate, inspTime: o.inspTime, access: o.access || {}, todos: o.todos || [], done: {}, notes: o.notes || '',
+  p.order = { id: o.id, fileNo: o.fileNo, aiUse: o.aiUse || '', client: o.client, type: o.type, reportForm: o.reportForm || '', effDate: o.effDate, inspDate: o.inspDate, inspTime: o.inspTime, access: o.access || {}, todos: o.todos || [], done: {}, notes: o.notes || '',
     listings: o.listings || [], docs: o.docs || [], plans: o.plans || [], apn: o.apn || '', lat: o.lat || '', lon: o.lon || '' };
   await DB.put('inspections', ins); toast('Inspection started from order ' + (o.fileNo || street)); openInspection(ins.id);
 }

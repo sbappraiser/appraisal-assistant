@@ -9,6 +9,8 @@
 const HW_SEL = [
   // hub
   'textarea[data-ce="text"]', 'textarea[data-mk="comment"]', 'textarea[data-mk="boundary"]', 'textarea[data-mk="criteria"]', 'textarea[data-mcx="summary"]', '#pbComment', '#f_ea', '#f_hc', '#f_extra', '#f_rightsNot',
+  // iPad inspection app: the section summaries (your added comment, or the final wording when you edit it)
+  'textarea[data-comment]', 'textarea[data-final]',
   // comp genie
   '#drText', 'textarea[data-gnote]', 'textarea[data-landc]', 'textarea[data-ck="comment"]', 'textarea[data-ik="comment"]', 'textarea[data-rpt="reconNote"]', 'textarea[data-rpt="hbuNote"]', 'textarea[data-rpt="sowNote"]', 'textarea[data-rpt="priorSvcText"]', 'textarea[data-rpt="addlCondText"]', 'textarea[data-rpt="rightsNot"]'].join(',');
 const HW_BIAS = /\b(pride of ownership|desirable|undesirable|safe (?:area|neighborhood|community|street)|unsafe|crime|dangerous|exclusive|prestigious|upscale|elite|family[- ]friendly|young famil(?:y|ies)|kids|singles|retirees|elderly|seniors|church\w*|synagogue|mosque|ethnic\w*|integrated|diverse|master (?:bed(?:room)?|bath|suite)|man cave|handicap(?:ped)?|wheelchair[- ]bound|good (?:neighborhood|area|location)|bad (?:neighborhood|area)|neighborhood)\b/gi;
@@ -18,6 +20,7 @@ function hwOrderAi(ta) {   // 'Yes' | 'Redacted' | 'No' | 'library'
   if (ta.matches('textarea[data-ce="text"]')) return 'library';
   try { if (typeof cur !== 'undefined' && cur && document.getElementById('f_fileNo')) return cur.aiUse || ''; } catch (e) {}
   try { if (typeof app !== 'undefined' && app.job && typeof orderOf === 'function') { const o = orderOf(app.job); return (o && o.aiUse) || ''; } } catch (e) {}
+  try { if (typeof app !== 'undefined' && app.ins && app.ins.data) { const O = (app.ins.data.property || {}).order; return (O && O.aiUse) || ''; } } catch (e) {}   // iPad: the order's AI setting came with the order
   return '';
 }
 function hwScrub(t, mode) {
@@ -42,7 +45,7 @@ const HW_FIELDS = [
   ['#f_hc', 'Hypothetical condition(s) (USPAP): state the condition contrary to fact, why it is used, and that its use might affect the assignment results.'],
   ['#f_rightsNot, textarea[data-rpt="rightsNot"]', 'Rights not included in the appraisal (540 characters).'],
   ['#drText', 'Sales Comparison Approach commentary (UAD 3.6): why the comparables were selected, the adjustments and their support, and the range and reconciliation of the adjusted prices. The grid itself is reported separately.'],
-  ['textarea[data-gnote]', 'Sales comparison grid note.'], ['textarea[data-ik="comment"]', 'Income Approach – Income Analysis Comment (5,000 characters): comparable rentals and the subject market rent, the GRM from rented sales, the indicated value, and the weight given (single-family homes are mostly owner-occupied).'], ['textarea[data-ck="comment"]', 'Cost Approach – Cost Analysis Comment (5,000 characters): source of cost new (her local contractor budgets, CCCI-indexed; BOE AH 531 check), cost type and method, depreciation (age-life: effective age / economic life), functional and external obsolescence, site improvements as is, and the weight given to the approach.'], ['textarea[data-landc]', 'Cost Approach – Site Estimated Value Comment (2,500 characters): how the site value was estimated (the land sales and their range).'],
+  ['textarea[data-comment]', 'iPad section summary – her added comment, placed after the automatic checkbox summary of that UAD 3.6 section (view, site, exterior, interior, ADU, outbuilding, functional, vehicle storage, amenities, energy, disaster mitigation …); the summary already states the checked items, so do not repeat them.'], ['textarea[data-final]', 'iPad section summary – the final wording of that UAD 3.6 section commentary (it replaces the automatic summary); keep every fact she wrote.'], ['textarea[data-gnote]', 'Sales comparison grid note.'], ['textarea[data-ik="comment"]', 'Income Approach – Income Analysis Comment (5,000 characters): comparable rentals and the subject market rent, the GRM from rented sales, the indicated value, and the weight given (single-family homes are mostly owner-occupied).'], ['textarea[data-ck="comment"]', 'Cost Approach – Cost Analysis Comment (5,000 characters): source of cost new (her local contractor budgets, CCCI-indexed; BOE AH 531 check), cost type and method, depreciation (age-life: effective age / economic life), functional and external obsolescence, site improvements as is, and the weight given to the approach.'], ['textarea[data-landc]', 'Cost Approach – Site Estimated Value Comment (2,500 characters): how the site value was estimated (the land sales and their range).'],
   ['textarea[data-rpt="reconNote"]', 'Reconciliation commentary: the weight given to each approach and why, leading to the final opinion of value.'],
   ['textarea[data-rpt="hbuNote"]', 'Highest and Best Use commentary: the four tests (legally permissible, physically possible, financially feasible, maximally productive) as improved.'],
   ['textarea[data-rpt="sowNote"]', 'Assignment Information and Scope of Work commentary.'], ['textarea[data-rpt="priorSvcText"]', 'Prior services disclosure (1,250 characters): services performed regarding the subject within the three years before acceptance of the assignment.'],
@@ -62,7 +65,10 @@ async function hwRun(ta, box) {
   if (!draft) return say('Type what you want to say first, in your own words – then tap Help me write.');
   const mode = hwOrderAi(ta);
   if (mode === 'No') return say('This order is set to <b>No AI</b>, so nothing is sent. Change the order’s AI use to Yes or Redacted to use Help me write.', 'warn');
-  if (!hwKey()) return say('No Claude key is saved on this computer. Add it in the Appraisal Assistant › Standard wording › AI settings.', 'warn');
+  if (!hwKey()) { if (typeof app !== 'undefined' && app.ins) { say(`No Claude key on this iPad yet. Paste it once (the same key as on your computer – Appraisal Assistant › Standard wording › AI settings). It stays on this iPad only.<div class="hw-row" style="margin-top:6px"><input type="password" class="txt hw-key" placeholder="sk-ant-…" style="flex:1;min-width:200px"><button type="button" class="btn sm hw-keysave">Save key</button></div>`, 'warn');
+      const b = box.querySelector('.hw-keysave'); if (b) b.onclick = () => { const v = (box.querySelector('.hw-key').value || '').trim(); if (!/^sk-/.test(v)) { alert('That does not look like a Claude key (it starts with sk-).'); return; } try { localStorage.setItem('aa.claudeKey', v); } catch (e) {} hwRun(ta, box); }; return; }
+    return say('No Claude key is saved on this computer. Add it in the Appraisal Assistant › Standard wording › AI settings.', 'warn'); }
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) return say('No internet here – Help me write needs a connection. Your draft is saved; try again when you have signal.', 'warn');
   const lim = +ta.getAttribute('maxlength') || 0; const text = hwScrub(draft, mode);
   say('Claude is writing…');
   try {

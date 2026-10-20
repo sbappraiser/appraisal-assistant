@@ -703,6 +703,7 @@ mark.blank{background:#fff3a8;padding:0 2px;border-radius:3px}.cmt textarea{widt
       <li>Your orders are kept inside Chrome. If Chrome clears its site data (a setting, a cleanup program, a new computer) they are gone – on Oct 19 2026 Chrome’s “Delete data sites have saved … when you close all windows” erased them on a restart.</li>
       <li>On the <b>Home</b> page, card <b>Automatic backup</b>: click <b>Choose a backup folder…</b> and pick (or make) a folder in <b>OneDrive</b>, e.g. OneDrive › Appraisal Assistant Backups. Click <b>View files</b> / <b>Save changes</b> when Chrome asks.</li>
       <li>From then on a backup is saved there by itself every day you work (about 1½ minutes after you save, and when you leave the page) – orders, clients, documents, your lists and your Comp genie assignments. Today’s file is replaced as you work; the last 30 days are kept.</li>
+      <li><b>Help me write on the iPad</b>: the section summaries (your added comment, or Edit final wording) have <b>✍ Help me write</b>, the same as on the computer (3.6 wording, your writing rules, biased-word check). The first time, paste your Claude key on the iPad (same key as Standard wording › AI settings); it stays on the iPad. It follows the order's AI setting (No AI = nothing sent) and needs internet.</li>
       <li>Each document (PDFs, plans, iPad workfiles…) is saved <b>once</b>, in the <b>Appraisal Assistant documents</b> folder inside your backup folder; the daily backup file holds your orders, clients, lists and Comp genie assignments, so it stays small. Keep that folder with the backups. Older daily backups made before Oct 20, 2026 still hold a copy of every document – you can delete those once a new one has been saved. <b>Back up</b> at the top still makes one complete file with everything in it.</li>
       <li>After a restart Chrome may ask again: the Home page shows <b>Allow today’s backup</b> – one click.</li>
       <li>If Chrome ever comes up empty, the Home page shows <b>Restore from my backup folder…</b> – pick the folder and the newest backup comes back. The Comp genie’s archive and CORT table are not in the backup (drop their files again).</li>
@@ -752,7 +753,7 @@ mark.blank{background:#fff3a8;padding:0 2px;border-radius:3px}.cmt textarea{widt
 </div>
 <div id="toast" role="status" hidden></div>
 <script>
-const BUILD='o1-1020-1916';
+const BUILD='o1-1020-1918';
 const G = (() => {
 /* ---------------- small helpers ---------------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -5103,6 +5104,8 @@ window.addEventListener('DOMContentLoaded', () => { const b = document.getElemen
 const HW_SEL = [
   // hub
   'textarea[data-ce="text"]', 'textarea[data-mk="comment"]', 'textarea[data-mk="boundary"]', 'textarea[data-mk="criteria"]', 'textarea[data-mcx="summary"]', '#pbComment', '#f_ea', '#f_hc', '#f_extra', '#f_rightsNot',
+  // iPad inspection app: the section summaries (your added comment, or the final wording when you edit it)
+  'textarea[data-comment]', 'textarea[data-final]',
   // comp genie
   '#drText', 'textarea[data-gnote]', 'textarea[data-landc]', 'textarea[data-ck="comment"]', 'textarea[data-ik="comment"]', 'textarea[data-rpt="reconNote"]', 'textarea[data-rpt="hbuNote"]', 'textarea[data-rpt="sowNote"]', 'textarea[data-rpt="priorSvcText"]', 'textarea[data-rpt="addlCondText"]', 'textarea[data-rpt="rightsNot"]'].join(',');
 const HW_BIAS = /\b(pride of ownership|desirable|undesirable|safe (?:area|neighborhood|community|street)|unsafe|crime|dangerous|exclusive|prestigious|upscale|elite|family[- ]friendly|young famil(?:y|ies)|kids|singles|retirees|elderly|seniors|church\w*|synagogue|mosque|ethnic\w*|integrated|diverse|master (?:bed(?:room)?|bath|suite)|man cave|handicap(?:ped)?|wheelchair[- ]bound|good (?:neighborhood|area|location)|bad (?:neighborhood|area)|neighborhood)\b/gi;
@@ -5112,6 +5115,7 @@ function hwOrderAi(ta) {   // 'Yes' | 'Redacted' | 'No' | 'library'
   if (ta.matches('textarea[data-ce="text"]')) return 'library';
   try { if (typeof cur !== 'undefined' && cur && document.getElementById('f_fileNo')) return cur.aiUse || ''; } catch (e) {}
   try { if (typeof app !== 'undefined' && app.job && typeof orderOf === 'function') { const o = orderOf(app.job); return (o && o.aiUse) || ''; } } catch (e) {}
+  try { if (typeof app !== 'undefined' && app.ins && app.ins.data) { const O = (app.ins.data.property || {}).order; return (O && O.aiUse) || ''; } } catch (e) {}   // iPad: the order's AI setting came with the order
   return '';
 }
 function hwScrub(t, mode) {
@@ -5136,7 +5140,7 @@ const HW_FIELDS = [
   ['#f_hc', 'Hypothetical condition(s) (USPAP): state the condition contrary to fact, why it is used, and that its use might affect the assignment results.'],
   ['#f_rightsNot, textarea[data-rpt="rightsNot"]', 'Rights not included in the appraisal (540 characters).'],
   ['#drText', 'Sales Comparison Approach commentary (UAD 3.6): why the comparables were selected, the adjustments and their support, and the range and reconciliation of the adjusted prices. The grid itself is reported separately.'],
-  ['textarea[data-gnote]', 'Sales comparison grid note.'], ['textarea[data-ik="comment"]', 'Income Approach – Income Analysis Comment (5,000 characters): comparable rentals and the subject market rent, the GRM from rented sales, the indicated value, and the weight given (single-family homes are mostly owner-occupied).'], ['textarea[data-ck="comment"]', 'Cost Approach – Cost Analysis Comment (5,000 characters): source of cost new (her local contractor budgets, CCCI-indexed; BOE AH 531 check), cost type and method, depreciation (age-life: effective age / economic life), functional and external obsolescence, site improvements as is, and the weight given to the approach.'], ['textarea[data-landc]', 'Cost Approach – Site Estimated Value Comment (2,500 characters): how the site value was estimated (the land sales and their range).'],
+  ['textarea[data-comment]', 'iPad section summary – her added comment, placed after the automatic checkbox summary of that UAD 3.6 section (view, site, exterior, interior, ADU, outbuilding, functional, vehicle storage, amenities, energy, disaster mitigation …); the summary already states the checked items, so do not repeat them.'], ['textarea[data-final]', 'iPad section summary – the final wording of that UAD 3.6 section commentary (it replaces the automatic summary); keep every fact she wrote.'], ['textarea[data-gnote]', 'Sales comparison grid note.'], ['textarea[data-ik="comment"]', 'Income Approach – Income Analysis Comment (5,000 characters): comparable rentals and the subject market rent, the GRM from rented sales, the indicated value, and the weight given (single-family homes are mostly owner-occupied).'], ['textarea[data-ck="comment"]', 'Cost Approach – Cost Analysis Comment (5,000 characters): source of cost new (her local contractor budgets, CCCI-indexed; BOE AH 531 check), cost type and method, depreciation (age-life: effective age / economic life), functional and external obsolescence, site improvements as is, and the weight given to the approach.'], ['textarea[data-landc]', 'Cost Approach – Site Estimated Value Comment (2,500 characters): how the site value was estimated (the land sales and their range).'],
   ['textarea[data-rpt="reconNote"]', 'Reconciliation commentary: the weight given to each approach and why, leading to the final opinion of value.'],
   ['textarea[data-rpt="hbuNote"]', 'Highest and Best Use commentary: the four tests (legally permissible, physically possible, financially feasible, maximally productive) as improved.'],
   ['textarea[data-rpt="sowNote"]', 'Assignment Information and Scope of Work commentary.'], ['textarea[data-rpt="priorSvcText"]', 'Prior services disclosure (1,250 characters): services performed regarding the subject within the three years before acceptance of the assignment.'],
@@ -5156,7 +5160,10 @@ async function hwRun(ta, box) {
   if (!draft) return say('Type what you want to say first, in your own words – then tap Help me write.');
   const mode = hwOrderAi(ta);
   if (mode === 'No') return say('This order is set to <b>No AI</b>, so nothing is sent. Change the order’s AI use to Yes or Redacted to use Help me write.', 'warn');
-  if (!hwKey()) return say('No Claude key is saved on this computer. Add it in the Appraisal Assistant › Standard wording › AI settings.', 'warn');
+  if (!hwKey()) { if (typeof app !== 'undefined' && app.ins) { say(`No Claude key on this iPad yet. Paste it once (the same key as on your computer – Appraisal Assistant › Standard wording › AI settings). It stays on this iPad only.<div class="hw-row" style="margin-top:6px"><input type="password" class="txt hw-key" placeholder="sk-ant-…" style="flex:1;min-width:200px"><button type="button" class="btn sm hw-keysave">Save key</button></div>`, 'warn');
+      const b = box.querySelector('.hw-keysave'); if (b) b.onclick = () => { const v = (box.querySelector('.hw-key').value || '').trim(); if (!/^sk-/.test(v)) { alert('That does not look like a Claude key (it starts with sk-).'); return; } try { localStorage.setItem('aa.claudeKey', v); } catch (e) {} hwRun(ta, box); }; return; }
+    return say('No Claude key is saved on this computer. Add it in the Appraisal Assistant › Standard wording › AI settings.', 'warn'); }
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) return say('No internet here – Help me write needs a connection. Your draft is saved; try again when you have signal.', 'warn');
   const lim = +ta.getAttribute('maxlength') || 0; const text = hwScrub(draft, mode);
   say('Claude is writing…');
   try {
