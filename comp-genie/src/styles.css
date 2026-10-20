@@ -236,3 +236,5 @@ body:not(.classic) table.grid thead th{font-size:15px;color:#000}
 .flagbox .flags li,.flagbox .flags li.warn{color:#b00000;font-weight:700}.flagbox .flags li.info{color:#b00000;font-weight:600}
 table.cmp tr.flagrow th,table.cmp tr.flagrow td.using{background:#ffd6d6}.flagmk{color:#d40000;font-weight:800}
 #detail,.detail{scroll-margin-top:var(--toph,120px)}
+.overcall{display:block;color:#d40000;font-weight:800;font-size:12px}
+small.rdays{display:block}

@@ -39,7 +39,7 @@ function wbSlice(all) {
   return all.slice(WB.page * WB.per, WB.page * WB.per + WB.per);
 }
 const WB_ROWS = row => !wbLean() || row[3] || ['price', 'prox'].includes(row[0]) || !!GRID_INFO[row[0]] || row[0] === 'structure';   /* her listing lines and HOA facts show in Workbook view too */
-const WB_NOEDIT = ['ppsf', 'src', 'prox'];
+const WB_NOEDIT = ['ppsf', 'src', 'prox', 'overList'];
 /* a line's entry as text, for the subject or a comp (what "=" / "=2" copies) */
 function wbFactText(id, F) {
   if (id === 'baths') return blank(F.full) ? '' : `${F.full}/${F.half || 0}`;

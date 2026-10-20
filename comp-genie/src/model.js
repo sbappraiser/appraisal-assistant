@@ -280,6 +280,8 @@ function compFlags(c, job) {
   const used = val(c, 'salePrice'); const Sv = srcVals(c);
   ['crs', 'cort'].forEach(s => { const rp = Sv[s] && Sv[s].salePrice; if (used.v && rp && used.src !== s && Math.abs(rp - used.v) > Math.max(1000, used.v * 0.002) && (s !== 'cort' || !sale || !Sv.cort.saleDate || Math.abs(monthsBetween(Sv.cort.saleDate, sale.date)) <= 2))
     F.push({ sev: 'warn', t: `Recorded price (${SRC[s].short}) ${money(rp)} differs from the price used, ${money(used.v)} (${SRC[used.src].short}) – explain in the report which is the effective sale price and why (credit, personal property, recording error)` }); });
+  { const lp = num(V(c, 'listPrice')) || num(V(c, 'origList')), pr = num(V(c, 'salePrice')), dm = num(V(c, 'cdom')) || num(V(c, 'dom')); if (pr && lp && pr > lp && /closed|sold|settled/i.test(String(V(c, 'status') || 'Closed'))) { const t = `Sold ${money(pr - lp)} over the list price (${(pr / lp * 100).toFixed(1)}%)`;
+    if (dm !== null && dm >= 30) F.push({ sev: 'warn', t: t + ` after ${dm} days on market – call the agent to find out why` }); else F.push({ sev: 'info', t: t + (dm !== null ? ` in ${dm} days on market` : '') + (dm !== null && dm <= 14 ? ' – likely multiple offers' : '') }); } }
   const dom = V(c, 'dom'), cdom = V(c, 'cdom'); if (dom && cdom && cdom > dom + 30) F.push({ sev: 'info', t: `Relisted: ${dom} days on this listing, ${cdom} cumulative` });
   const op = V(c, 'origList'); if (op && price && price < op * 0.85) F.push({ sev: 'info', t: `Sold ${Math.round((1 - price / op) * 100)}% under the original list price` });
   c.src.cort.forEach(t => { if (t.conf !== null && t.conf < 60) F.push({ sev: 'warn', t: `CORT line read with low confidence (${t.conf}) – check it against the scan ${t.file || ''}` }); });
