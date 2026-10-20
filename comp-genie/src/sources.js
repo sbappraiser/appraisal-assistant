@@ -46,6 +46,9 @@ function archiveSuggest(q, n = 8) {
 }
 const VIEW_UAD = { Residential: 'Residential', Water: 'Ocean', Mountain: 'Mountain', 'City Skyline': 'Skyline', Woods: 'Woods', 'Golf Course': 'GolfCourse', Canyon: 'Valley', 'City Street': 'CityStreet', Pastoral: 'Pastoral', Park: 'Park', 'Garden Setting': 'Residential', 'Power Lines': 'Other' };
 const LOC_TEXT = { Res: 'Residential', BusyRd: 'Busy road', ShrDrv: 'Shared drive', PvtLn: 'Private lane', WtrFr: 'Waterfront', InterLot: 'Interior lot', PvtRd: 'Private road', FwyNse: 'Freeway noise', Noise: 'Noise', FldZn: 'Flood zone', Rural: 'Rural', Train: 'Train', 'Debris/Fire': 'Debris flow / fire', FlagLot: 'Flag lot', AdjPrk: 'Adjacent park', Gated: 'Gated', Comm: 'Commercial', DrvEsmt: 'Driveway easement', Schl: 'School', FldWy: 'Floodway', Esmt: 'Easement', SecondRow: 'Second row', NrWtr: 'Near water', LotsToAmenity: 'Lots to amenity' };
+/* the 2.6 Design (Style) line: DT1;Ranch = detached, 1 story, ranch – AT attached, SD semi-detached, RT row, GR/MR/HR garden/mid/high-rise; the digits are the stories (DT4, RT3 …) */
+function archDesign(v) { const m = String(v || '').match(/^\s*(DT|AT|SD|RT|GR|MR|HR)\s*(\d+(?:\.\d)?)?/i); if (!m) return {};
+  return { attach: { DT: 'Detached', AT: 'Attached', SD: 'Semi-detached', RT: 'Row', GR: 'Garden', MR: 'Mid-rise', HR: 'High-rise' }[m[1].toUpperCase()], stories: m[2] ? +m[2] : null, code: (m[1] + (m[2] || '')).toUpperCase() }; }
 function archCanon(a) {
   const am = String(a.amenities || '').split(';');
   const acc = (() => { try { return JSON.parse(a.accessory_json || '[]'); } catch (e) { return []; } })();
@@ -60,7 +63,7 @@ function archCanon(a) {
     siteSf: a.site_sf, usableSf: a.usable_sf, landSplit: a.land_split || '', topo: a.topography || '',
     locRating: a.location_rating || '', locFactors: String(a.location_factors || '').split(';').filter(Boolean).map(x => LOC_TEXT[x] || x).join('; '),
     viewRating: a.view_rating || '', viewTypes: String(a.view_types || '').split(';').filter(Boolean).join('; '), viewRange: a.view_panoramic ? 'Panoramic' : a.view_limited ? 'Limited' : '',
-    attach: a.attachment || '', style: a.style || '', stories: a.stories,
+    attach: a.attachment || archDesign(a.design_raw).attach || '', style: a.style || '', stories: a.stories ?? archDesign(a.design_raw).stories, designRaw: a.design_raw || '',
     quality: a.quality ? 'Q' + a.quality + (a.quality_mod || '') : '', condition: a.condition ? 'C' + a.condition + (a.condition_mod || '') : '',
     yearBuilt: a.year_built_est || (a.actual_age != null && a.entered_date ? +String(a.entered_date).slice(0, 4) - a.actual_age : null), effAge: a.effective_age,
     rooms: a.rooms, beds: a.beds, bgBeds: a.bg_beds, full: a.baths_full, half: a.baths_half, gla: a.gla, bsmtSf: a.bsmt_sf, bsmtFin: a.bsmt_fin_sf,

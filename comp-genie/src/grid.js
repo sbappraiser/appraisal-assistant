@@ -36,6 +36,7 @@ const ADJ_ROWS = [
   ['year', 'Year built', 'Dwelling', 'YearBuilt'],
   ['style', 'Design (style)', 'Dwelling', 'DwellingStyle'],
   ['attach', 'Attached / detached', 'Dwelling', 'AttachedOrDetached', 'attach'],
+  ['levels', 'Levels (stories)', 'Dwelling', 'LivingUnitLevelCount'],   // her note (Oct 20 2026): on the 3.6 grid; MLS story tag, or her 2.6 Design line (DT1, DT2, AT2 …) in the archive
   ['structure', 'Structure (low-rise, mid-rise, townhouse…)', 'Dwelling', null],
   ['unitPos', 'Unit location (interior / corner / end)', 'Dwelling', 'CornerUnit', 'unitPos'],
   ['floor', 'Floor (unit level)', 'Dwelling', 'LivingUnitFloorNumber'],
@@ -160,7 +161,7 @@ function subjFacts(J) {
   const I = J.subject.insp || {}, T = G0(J).subj, crs = J.subject.crs || {};
   const f = { price: '', ppsf: '', src: 'Inspection ' + (I.inspDate ? showDate(I.inspDate) : ''), prox: '', terms: '', conc: '', contract: '', sale: '', dom: '',
     site: I.siteSf || num(crs.lotSf) || null, usable: I.usableAc ?? null, loc: I.loc || '', view: I.view || '', topo: I.topo || '', nbhd: I.nbhd || '', land: I.land || '',
-    style: I.style || '', attach: I.attach || '', status: '', listPrice: '', origList: '', listDate: '', lastRed: '', redDays: '', cdom: '', project: I.project || '', hoa: I.hoa ?? null, hoaAmen: I.hoaAmen || '', landCommon: '', structure: I.structure || '', unitPos: I.unitPos || '', floor: I.floor ?? null, year: I.year || num(crs.yearBuilt) || null, q: I.q || '', c: I.c || '', rooms: I.rooms ?? null, beds: I.beds ?? null, full: I.full ?? null, half: I.half ?? null,
+    style: I.style || '', attach: I.attach || '', levels: I.levels ?? null, status: '', listPrice: '', origList: '', listDate: '', lastRed: '', redDays: '', cdom: '', project: I.project || '', hoa: I.hoa ?? null, hoaAmen: I.hoaAmen || '', landCommon: '', structure: I.structure || '', unitPos: I.unitPos || '', floor: I.floor ?? null, year: I.year || num(crs.yearBuilt) || null, q: I.q || '', c: I.c || '', rooms: I.rooms ?? null, beds: I.beds ?? null, full: I.full ?? null, half: I.half ?? null,
     gla: I.gla ?? null, bsmt: I.bsmt ?? null, garage: I.garage ?? null, energy: I.energy || '', pool: I.pool || '', courts: I.courts || '', porch: I.porch || '', adu: I.adu || '', other: I.other || '' };
   Object.entries(T).forEach(([k, v]) => { if (!blank(v)) f[k] = v; });
   f._fine = { q: fineOf(J, 'subj', 'q'), c: fineOf(J, 'subj', 'c') };
@@ -172,7 +173,7 @@ function compFacts(c, J) {
   const F0 = { price: num(g('salePrice')), src: g('mls') ? 'MLS ' + g('mls') : (c.src.cort.length ? 'CORT' : c.src.arch.length ? 'Your archive' : ''), prox: px ? px.mi.toFixed(2) + ' mi ' + px.dir.replace(/([a-z])([A-Z])/, '$1 $2') : '',
     terms: g('financing') || '', conc: num(g('concessions')), contract: g('contractDate') || '', sale: g('saleDate') || '', dom: g('dom'),
     site: num(g('siteSf')), usable: acOf(num(g('usableSf'))), loc: [g('locRating'), g('locFactors')].filter(Boolean).join(': '), view: [g('viewRating'), g('viewTypes')].filter(Boolean).join(': '),
-    topo: g('topo') || '', nbhd: g('nbhd') || '', land: g('landscaping') || '', style: g('style') || '', attach: g('attach') || '', status: g('status') || '', listPrice: num(g('listPrice')), origList: num(g('origList')), listDate: g('listDate') || '', lastRed: g('lastRed') || '', cdom: num(g('cdom')), project: g('project') || '', hoa: num(g('hoa')), hoaAmen: g('hoaAmen') || '', landCommon: g('landCommon') || '', structure: g('structure') || '', unitPos: g('unitPos') || '', floor: g('floor') ?? null, year: num(g('yearBuilt')), q: g('quality') || '', c: g('condition') || '',
+    topo: g('topo') || '', nbhd: g('nbhd') || '', land: g('landscaping') || '', style: g('style') || '', attach: g('attach') || '', levels: num(g('stories')), status: g('status') || '', listPrice: num(g('listPrice')), origList: num(g('origList')), listDate: g('listDate') || '', lastRed: g('lastRed') || '', cdom: num(g('cdom')), project: g('project') || '', hoa: num(g('hoa')), hoaAmen: g('hoaAmen') || '', landCommon: g('landCommon') || '', structure: g('structure') || '', unitPos: g('unitPos') || '', floor: g('floor') ?? null, year: num(g('yearBuilt')), q: g('quality') || '', c: g('condition') || '',
     rooms: num(g('rooms')), beds: num(g('beds')), full: num(g('full')), half: num(g('half')), gla: num(g('gla')), bsmt: num(g('bsmtFin')), garage: num(g('garage')), energy: g('energy') || '',
     pool: [yes(g('pool')) ? 'Pool' : '', yes(g('spa')) ? 'Spa' : ''].filter(Boolean).join(', ') || (g('pool') && !yes(g('pool')) ? 'None' : ''), courts: [yes(g('tennis')) ? 'Tennis court' : '', yes(g('sport')) ? 'Sport court' : ''].filter(Boolean).join(', '), porch: g('porch') || '', adu: [g('adu'), g('guest'), g('accessory')].filter(Boolean).join('; '),
     other: [g('horse') ? 'Horse facilities' : ''].filter(Boolean).join(', '), _id: c.id, aduSf: g('aduSf'), aduBaths: g('aduBaths') };
@@ -426,7 +427,7 @@ async function ingestInspection(files, name) {
   { const TM = { Low: 'low', Middle: 'mid', High: 'high' }, g = G0(app.job); g.fine = g.fine || {}; g.fine.subj = g.fine.subj || {};   // her low / middle / high from the iPad (Oct 20 2026) – only when she has not picked one here
     const C = D.condition || {}; if (C.oqTier && !g.fine.subj.q) g.fine.subj.q = TM[C.oqTier]; if (C.ocTier && !g.fine.subj.c) g.fine.subj.c = TM[C.ocTier]; }
   s.insp = { file: name, inspDate: D.property.inspDate, gla: T.agFin || null, bsmt: T.bgFin || 0, beds: (L.bedrooms || []).length, full: (L.baths || []).filter(x => x.kind === 'FullBathroom').length,
-    half: (L.baths || []).filter(x => x.kind === 'HalfBathroom').length, year: num(D.front.yearBuilt), q: D.condition.oq || '', c: D.condition.oc || '', style: D.front.design || '',
+    half: (L.baths || []).filter(x => x.kind === 'HalfBathroom').length, year: num(D.front.yearBuilt), q: D.condition.oq || '', c: D.condition.oc || '', style: D.front.design || '', levels: (L.levels || []).filter(x => !x.grade || /Above/i.test(x.grade)).length || num(D.front.stories),
     siteSf: site, usableAc: D.site.usable === 'All Usable' && site ? acOf(site) : null, garage: D.garage.garShared ? 0 : (D.garage.hasGarage ? num(D.garage.garSpaces) : 0),
     view: [(D.site.view || []).join(', '), D.site.viewImpact].filter(Boolean).join(' – '), loc: [(D.site.influences || []).join(', '), D.site.inflImpact].filter(Boolean).join(' – '),
     topo: (D.site.topo || []).join(', '), energy: (D.systems.renew || []).filter(x => x !== 'None').join(', '),

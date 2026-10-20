@@ -591,7 +591,8 @@ mark.blank{background:#fff3a8;padding:0 2px;border-radius:3px}.cmt textarea{widt
       <li>Those box 2 listings (every CSV you added there, minus the ones you unticked) come into the <b>Comp genie</b> by themselves when you open the order there, and go on the grid to start – closed sales newest first, then pendings, then actives. Nothing is put on the grid if you already have comps on it. Then the red box in <b>Add comps</b> lists each grid comp that still needs its CRS report: click <b>Choose CRS PDFs</b> and pick them all at once – each one finds its comp by APN or address.</li>
       <li>In the Comp genie, <b>Comps considered</b> is in closing-date order (most recent first) and the grid numbers follow it: comp 1 = the most recent sale. <b>Grid all</b> puts every comp not on the grid (except ones you took off) on it in that order; <b>+ Grid</b> slots one into its date place; <b>Remove</b> takes one off, the others move up, and it is listed under <b>Analyzed – not used</b>. Picking a number in a comp's drop-down moves it to that place and the others close up behind it (none is taken off the grid); after that the genie keeps your order, and <b>Number the grid in closing-date order</b> puts them back in date order.</li>
       <li>The ✕ on a comp offers: <b>Keep as not used</b>, <b>Keep as not used + save to my comp database</b>, <b>Save to my comp database, then remove</b>, or <b>Remove</b>. The page stays where you are.</li>
-      <li>The <b>Stories</b> column comes from the MLS listing (Single Story / Two Story); it is blank when the listing does not say.</li>
+      <li>The <b>Stories</b> column comes from the MLS listing (Single Story / Two Story); when the listing does not say, it comes from your archive's 2.6 Design line (DT1;Ranch = detached 1 story, DT2, AT2, SD2 …, marked “archive”). The same number is the <b>Levels (stories)</b> line on the grid (UAD 3.6 Levels).</li>
+      <li>Click the 📷 square of a comp with no photo: if your archive has its front photo, it connects your archive photos; otherwise choose the MLS photos zip or a picture of the front.</li>
       <li>The small picture after the comp number is the front photo. It comes from the MLS photos zip (Flexmls: tick the listings › Download photos, drop the zip in Add comps). When the MLS has none, the front photo from your <b>archive</b> is used: click <b>Connect archive photos</b> at the top once and pick your ACI <b>Research Photos</b> folder (C:\Program Files (x86)\ACI32\Databases\ACI Research\Research Photos – if Chrome will not open it there, copy the folder to Documents and pick the copy). After Chrome restarts, click <b>Archive photos – click to reconnect</b>.</li>
       <li>Open <b>1004MC – Market Conditions Addendum</b> under box 3 (it opens by itself when the order's report form is UAD 2.6).</li>
       <li>The grid has the three periods ending on the effective date: prior 7–12 months, prior 4–6 months and the current 3 months – sales, absorption rate, active listings, months of supply, median sale price, sales DOM, median list price, listings DOM and sale price as % of list price. Active listings are counted as of the end of each period.</li>
@@ -742,7 +743,7 @@ mark.blank{background:#fff3a8;padding:0 2px;border-radius:3px}.cmt textarea{widt
 </div>
 <div id="toast" role="status" hidden></div>
 <script>
-const BUILD='o1-1020-1751';
+const BUILD='o1-1020-1803';
 const G = (() => {
 /* ---------------- small helpers ---------------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -1063,6 +1064,9 @@ function archiveSuggest(q, n = 8) {
 }
 const VIEW_UAD = { Residential: 'Residential', Water: 'Ocean', Mountain: 'Mountain', 'City Skyline': 'Skyline', Woods: 'Woods', 'Golf Course': 'GolfCourse', Canyon: 'Valley', 'City Street': 'CityStreet', Pastoral: 'Pastoral', Park: 'Park', 'Garden Setting': 'Residential', 'Power Lines': 'Other' };
 const LOC_TEXT = { Res: 'Residential', BusyRd: 'Busy road', ShrDrv: 'Shared drive', PvtLn: 'Private lane', WtrFr: 'Waterfront', InterLot: 'Interior lot', PvtRd: 'Private road', FwyNse: 'Freeway noise', Noise: 'Noise', FldZn: 'Flood zone', Rural: 'Rural', Train: 'Train', 'Debris/Fire': 'Debris flow / fire', FlagLot: 'Flag lot', AdjPrk: 'Adjacent park', Gated: 'Gated', Comm: 'Commercial', DrvEsmt: 'Driveway easement', Schl: 'School', FldWy: 'Floodway', Esmt: 'Easement', SecondRow: 'Second row', NrWtr: 'Near water', LotsToAmenity: 'Lots to amenity' };
+/* the 2.6 Design (Style) line: DT1;Ranch = detached, 1 story, ranch – AT attached, SD semi-detached, RT row, GR/MR/HR garden/mid/high-rise; the digits are the stories (DT4, RT3 …) */
+function archDesign(v) { const m = String(v || '').match(/^\s*(DT|AT|SD|RT|GR|MR|HR)\s*(\d+(?:\.\d)?)?/i); if (!m) return {};
+  return { attach: { DT: 'Detached', AT: 'Attached', SD: 'Semi-detached', RT: 'Row', GR: 'Garden', MR: 'Mid-rise', HR: 'High-rise' }[m[1].toUpperCase()], stories: m[2] ? +m[2] : null, code: (m[1] + (m[2] || '')).toUpperCase() }; }
 function archCanon(a) {
   const am = String(a.amenities || '').split(';');
   const acc = (() => { try { return JSON.parse(a.accessory_json || '[]'); } catch (e) { return []; } })();
@@ -1077,7 +1081,7 @@ function archCanon(a) {
     siteSf: a.site_sf, usableSf: a.usable_sf, landSplit: a.land_split || '', topo: a.topography || '',
     locRating: a.location_rating || '', locFactors: String(a.location_factors || '').split(';').filter(Boolean).map(x => LOC_TEXT[x] || x).join('; '),
     viewRating: a.view_rating || '', viewTypes: String(a.view_types || '').split(';').filter(Boolean).join('; '), viewRange: a.view_panoramic ? 'Panoramic' : a.view_limited ? 'Limited' : '',
-    attach: a.attachment || '', style: a.style || '', stories: a.stories,
+    attach: a.attachment || archDesign(a.design_raw).attach || '', style: a.style || '', stories: a.stories ?? archDesign(a.design_raw).stories, designRaw: a.design_raw || '',
     quality: a.quality ? 'Q' + a.quality + (a.quality_mod || '') : '', condition: a.condition ? 'C' + a.condition + (a.condition_mod || '') : '',
     yearBuilt: a.year_built_est || (a.actual_age != null && a.entered_date ? +String(a.entered_date).slice(0, 4) - a.actual_age : null), effAge: a.effective_age,
     rooms: a.rooms, beds: a.beds, bgBeds: a.bg_beds, full: a.baths_full, half: a.baths_half, gla: a.gla, bsmtSf: a.bsmt_sf, bsmtFin: a.bsmt_fin_sf,

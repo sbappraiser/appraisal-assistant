@@ -167,3 +167,5 @@ tr.landon td { background: #eefbf3; }
 .detail .dmore .flags li{break-inside:avoid}
 
 .pill.ver{font-weight:700;color:#b00000;border-color:#e3b3b3;background:#fff}
+
+button.nothumb{border:1px dashed #b8c2cc;cursor:pointer;padding:0}button.nothumb:hover{background:#fff3e0;opacity:1}

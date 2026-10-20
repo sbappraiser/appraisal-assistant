@@ -156,11 +156,12 @@ async function saveNow() { if (!app.job) return; app.job.updated = Date.now(); a
 
 /* ---------------- photos ---------------- */
 app.photos = []; // [{id, mls, n, name}] for this job (blobs stay in storage)
-async function loadPhotos() { app.photos = app.job ? (await DB.byJob(app.job.id)).map(p => ({ id: p.id, mls: p.mls, arch: p.arch, n: p.n, name: p.name, file: p.file })) : []; }
+async function loadPhotos() { app.photos = app.job ? (await DB.byJob(app.job.id)).map(p => ({ id: p.id, mls: p.mls, arch: p.arch, comp: p.comp, n: p.n, name: p.name, file: p.file })) : []; }
 const archPhotoNames = c => [...new Set((c.src.arch || []).map(a => String(a.photo || '').trim()).filter(Boolean))];
 const photosOf = c => { const m = V(c, 'mls'); const mlsPs = m ? app.photos.filter(p => p.mls === m).sort((a, b) => a.n - b.n) : [];
   const an = archPhotoNames(c); const archPs = an.length ? app.photos.filter(p => p.arch && an.includes(p.arch)).sort((a, b) => an.indexOf(a.arch) - an.indexOf(b.arch)) : [];
-  return [...mlsPs, ...archPs]; };   // MLS photos first; your archive's front photo when the MLS has none (her note, Oct 20 2026)
+  const own = app.photos.filter(p => p.comp === c.id).sort((a, b) => a.n - b.n);
+  return [...mlsPs, ...own, ...archPs]; };   // MLS photos first; your archive's front photo when the MLS has none (her note, Oct 20 2026)
 /* ---- your archive's front photos: ACI keeps them in "ACI Research\Research Photos" as R…F.IMG (JPEG). She connects a copy of that folder once;
    Chrome remembers it (asks again with one click after a restart). Only the photos of this assignment's comps are copied in. ---- */
 const AP = { dir: null, state: '' };   // state: '' not connected · 'ask' connected before, needs a click · 'ok'
@@ -450,10 +451,13 @@ function compsTable(J) {
     const st = V(c, 'status') || ((currentSale(c) || {}).status || '');
     return `<tr class="${c.id === app.sel ? 'sel' : ''} ${c.use ? 'used' : ''}" data-open="${c.id}">
       <td class="usecell"><button class="btn small${c.use ? '' : ' primary'}" data-quse="${c.id}" title="${c.use ? 'Take it off the grid' : 'Put it on the grid as the next comp'}">${c.use ? 'Remove' : '+ Grid'}</button><select data-use="${c.id}" aria-label="Use as comp number" title="Or pick its comp number">${'<option value="">–</option>'}${Array.from({ length: maxUse }, (_, i) => `<option ${c.use === i + 1 ? 'selected' : ''}>${i + 1}</option>`).join('')}</select></td>
-      <td>${fr ? `<img class="thumb" data-photo="${fr.id}" alt="">` : `<span class="nothumb" title="${c.mls || V(c, 'mls') ? 'Drop the MLS photos zip in Add comps – the first photo (the front) shows here' : 'Not in the MLS – no MLS photo'}">${c.mls || V(c, 'mls') ? '📷' : ''}</span>`}</td>
+      <td>${fr ? `<img class="thumb" data-photo="${fr.id}" alt="">` : `<button type="button" class="nothumb" data-pickphoto="${c.id}" title="${archPhotoNames(c).length && AP.state !== 'ok' ? 'Your archive has a front photo of this one – click to connect your archive photos' : 'Click to add a photo: the MLS photos zip, or a picture of the front'}">📷</button>`}</td>
       <td><b>${esc(compTitle(c))}</b><br><small>${esc(V(c, 'mls') ? 'MLS ' + V(c, 'mls') : '')}</small></td>
       <td>${esc(st)}</td><td class="r">${money(V(c, 'salePrice') || V(c, 'listPrice'))}${!V(c, 'salePrice') && V(c, 'listPrice') ? '<br><small>list</small>' : ''}</td>
-      <td>${esc(showDate(V(c, 'saleDate') || V(c, 'contractDate')))}</td><td class="r">${int(V(c, 'gla'))}</td><td>${(() => { const tg = (c.src.mls && c.src.mls.storyTags) || []; if (tg.length) return esc(tg.map(x => x.replace(/ Story$/i, '').replace(/-?Level$/i, ' level').replace(/^Tri level$/i, 'Tri-level')).join(', ')); const n = (c.src.mls && c.src.mls.stories) || (c.src.pdf && c.src.pdf.stories) || null; return n ? (n === 1 ? 'Single' : n === 2 ? 'Two' : n === 3 ? 'Three' : esc(n)) : ''; })()}</td><td class="r">${esc(fmt(FIELD.siteSf, V(c, 'siteSf')))}</td>
+      <td>${esc(showDate(V(c, 'saleDate') || V(c, 'contractDate')))}</td><td class="r">${int(V(c, 'gla'))}</td><td>${(() => { const tg = (c.src.mls && c.src.mls.storyTags) || []; if (tg.length) return esc(tg.map(x => x.replace(/ Story$/i, '').replace(/-?Level$/i, ' level').replace(/^Tri level$/i, 'Tri-level')).join(', ')); const word = n => n === 1 ? 'Single' : n === 2 ? 'Two' : n === 3 ? 'Three' : n === 4 ? 'Four' : esc(n);
+      const n = (c.src.mls && c.src.mls.stories) || (c.src.pdf && c.src.pdf.stories) || null; if (n) return word(n);
+      const a = archChosen(c) || (c.src.arch || [])[0]; const an = a && a.v && a.v.stories;   // her 2.6 Design line (DT1;Ranch) in your archive
+      return an ? `<span title="From your archive: ${esc(a.v.designRaw || '')}">${word(an)} <small class="muted">archive</small></span>` : ''; })()}</td><td class="r">${esc(fmt(FIELD.siteSf, V(c, 'siteSf')))}</td>
       <td>${esc([V(c, 'quality'), V(c, 'condition')].filter(Boolean).join(' / '))}</td><td><small>${esc([V(c, 'viewRating'), V(c, 'viewTypes')].filter(Boolean).join(': ')).slice(0, 40)}</small></td>
       <td class="r">${px ? px.mi.toFixed(2) + '<br><small>' + px.dir.replace(/([a-z])([A-Z])/, '$1 $2') + '</small>' : ''}</td>
       <td>${sourcesOf(c).map(s => `<span class="src">${esc(s)}</span>`).join(' ')}</td>
@@ -589,6 +593,14 @@ async function backupJob() {
 /* ---------------- events ---------------- */
 function openComp(id) { app.sel = id; render(); const d = $('#detail'); if (d) d.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
 document.addEventListener('click', async e => {
+  { const pp = e.target.closest('[data-pickphoto]'); if (pp) { e.stopPropagation(); const c = app.job && app.job.comps.find(x => x.id === pp.dataset.pickphoto); if (!c) return;
+      if (archPhotoNames(c).length && AP.state !== 'ok') { await archPhotoConnect(); return; }
+      const inp = document.createElement('input'); inp.type = 'file'; inp.multiple = true; inp.accept = '.zip,image/*';
+      inp.onchange = async () => { const fs = [...inp.files]; if (!fs.length) return; const zips = fs.filter(f => /\.zip$/i.test(f.name)), imgs = fs.filter(f => /^image\//.test(f.type) || /\.(jpe?g|png|webp|heic)$/i.test(f.name));
+        if (zips.length) await ingest(zips);
+        if (imgs.length) { let k = 0; for (const f of imgs) { const id = app.job.id + ':comp:' + c.id + ':' + Date.now() + '_' + (k++); await DB.put('photos', { id, jobId: app.job.id, mls: '', comp: c.id, n: 100 + k, name: f.name, file: 'picked', blob: f }); if (!c.front) c.front = id; }
+          await loadPhotos(); save(); render(); toast(`${imgs.length} photo${imgs.length > 1 ? 's' : ''} added to ${compTitle(c)}`); } };
+      inp.click(); return; } }
   const gt = e.target.closest('[data-gtiers]');
   if (gt) { const G = G0(app.job); const tx = tiersText(app.job); if (!tx) { toast('Enter the quality and condition ratings first'); return; }
     G.note = String(G.note || '').replace(/Within the UAD quality and condition ratings[^]*?within each rating\./, '').trim(); G.note = [G.note, tx].filter(Boolean).join(' '); save(); renderKeepFocus(); toast('Added to the sales comparison comment – read it over'); return; }
