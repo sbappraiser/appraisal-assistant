@@ -442,6 +442,8 @@ function dictParse(text, ins) {
         // her fine rating ("low Q4", "high C3", "C3 plus"): the report gets the whole step, the low/high goes in her notes
         const pre = T[m.i - 1], post = T[m.i + 1]; const fine = pre && !pre.br && /^(low|high|mid|middle|solid|strong|weak|upper|lower)$/.test(pre.s) ? pre.w + ' ' + R : post && !post.br && /^(plus|minus)$/.test(post.s) ? R + ' ' + post.w : null;
         const fineTxt = f => { const m = /^(\w+) ([QC]\d)$/i.exec(f), n = /^([QC]\d) (plus|minus)$/i.exec(f); if (m && /^(high|upper|strong)$/i.test(m[1])) return m[2].toUpperCase() + '+'; if (m && /^(low|lower|weak)$/i.test(m[1])) return m[2].toUpperCase() + '-'; if (n) return n[1].toUpperCase() + (/plus/i.test(n[2]) ? '+' : '-'); return f; };
+        if (fine) { const tw = (pre && fine.startsWith(pre.w) ? pre.s : post.s); const tier = /^(high|upper|strong|plus)$/.test(tw) ? 'High' : /^(low|lower|weak|minus)$/.test(tw) ? 'Low' : /^(mid|middle|solid)$/.test(tw) ? 'Middle' : null;
+          if (tier) put({ ext: 'front.e', int: 'interior.i', all: 'condition.o' }[where] + (s[0] === 'q' ? 'q' : 'c') + 'Tier', tier); }
         if (fine) { (pre && fine.startsWith(pre.w) ? pre : post).item = true; put({ ext: 'front.note', int: 'interior.note', all: 'condition.supp' }[where], { ext: 'Exterior', int: 'Interior', all: 'Overall' }[where] + (s[0] === 'q' ? ' quality ' : ' condition ') + fineTxt(fine) + ' (report: ' + R + ').'); }
         return; }
       if (/^frontelev/.test(s)) { const inch = +s.slice(9); const B = ['UpToOneFoot', 'OneToTwoFeet', 'TwoToThreeFeet', 'ThreeToFourFeet', 'FourToFiveFeet', 'FiveToSixFeet', 'SixToSevenFeet', 'SevenToEightFeet', 'EightToNineFeet', 'NineToTenFeet'];

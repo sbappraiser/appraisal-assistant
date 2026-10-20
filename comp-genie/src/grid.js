@@ -423,6 +423,8 @@ async function ingestInspection(files, name) {
   const xmlName = [...files.keys()].find(k => /^SFREP\/[^/]+\.xml$/i.test(k));
   const site = num(crs.lotSf) || null;
   const s = app.job.subject;
+  { const TM = { Low: 'low', Middle: 'mid', High: 'high' }, g = G0(app.job); g.fine = g.fine || {}; g.fine.subj = g.fine.subj || {};   // her low / middle / high from the iPad (Oct 20 2026) – only when she has not picked one here
+    const C = D.condition || {}; if (C.oqTier && !g.fine.subj.q) g.fine.subj.q = TM[C.oqTier]; if (C.ocTier && !g.fine.subj.c) g.fine.subj.c = TM[C.ocTier]; }
   s.insp = { file: name, inspDate: D.property.inspDate, gla: T.agFin || null, bsmt: T.bgFin || 0, beds: (L.bedrooms || []).length, full: (L.baths || []).filter(x => x.kind === 'FullBathroom').length,
     half: (L.baths || []).filter(x => x.kind === 'HalfBathroom').length, year: num(D.front.yearBuilt), q: D.condition.oq || '', c: D.condition.oc || '', style: D.front.design || '',
     siteSf: site, usableAc: D.site.usable === 'All Usable' && site ? acOf(site) : null, garage: D.garage.garShared ? 0 : (D.garage.hasGarage ? num(D.garage.garSpaces) : 0),
