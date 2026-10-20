@@ -212,3 +212,7 @@ input::placeholder,textarea::placeholder{color:#5a6672}
 .bulk{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin:8px 0;padding:6px 10px;background:#f4f7fa;border:1px solid var(--line);border-radius:8px;font-size:14px}.bulk .bsel{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
 table.comps th.ck,table.comps td.ck{width:26px;text-align:center;padding-left:4px;padding-right:2px}table.comps td.ck input,table.comps th.ck input{width:17px;height:17px;cursor:pointer}
 .nutag{color:#7a3d00;font-weight:600;font-size:12px}
+/* her ask Oct 20 2026: vertical lines between Using, Your value and each source column */
+table.cmp td,table.cmp thead th{border-left:1px solid #b9c3cd}table.cmp tr>th:first-child{border-left:0}table.cmp td.mine{border-left:2px solid #6f7d8a;border-right:2px solid #6f7d8a}
+table.cmp td.mine input.txt.echo{color:#1f2a35;background:#fbfcfd}table.cmp td.mine input.txt.own{background:#fff4c2;font-weight:700}
+table.cmp td.srccell[data-pick]{cursor:pointer}table.cmp td.srccell[data-pick]:hover{outline:2px solid #ff8a00;outline-offset:-2px}

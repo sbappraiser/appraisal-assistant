@@ -517,7 +517,8 @@ function detailHTML(c) {
     const dis = disagree(c, f.k);
     return head + `<tr><th>${esc(f.l)}${dis ? ' <span class="diff" title="Sources disagree">≠</span>' : ''}</th>
       <td class="using">${esc(fmt(f, u.v))}${u.src ? ` <span class="tag ${u.src}">${esc(SRC[u.src].short)}</span>` : ''}${(c.pick[f.k] || !blank(c.edit[f.k])) ? ` <button class="lnk" data-reset="${f.k}" title="Back to the automatic choice">↺</button>` : ''}</td>
-      <td><input class="txt sm" data-edit="${f.k}" value="${esc(blank(c.edit[f.k]) ? '' : (f.t === 'date' ? showDate(c.edit[f.k]) : c.edit[f.k]))}" placeholder="your value"></td>
+      <td class="mine">${(() => { const own = !blank(c.edit[f.k]); const echo = own ? '' : (blank(u.v) ? '' : String(fmt(f, u.v)));   // her ask Oct 20 2026: the box shows the value in use (the green one); it becomes hers only when she changes it
+        return `<input class="txt sm${own ? ' own' : ' echo'}" data-edit="${f.k}" ${own ? '' : `data-echo="${esc(echo)}"`} value="${esc(own ? (f.t === 'date' ? showDate(c.edit[f.k]) : c.edit[f.k]) : echo)}" placeholder="type your value" title="${own ? 'Your value – ↺ goes back to the sources' : 'The value in use (green). Type over it to use your own.'}">`; })()}</td>
       ${cols.map(s => cellHTML(c, f, s, S, u)).join('')}</tr>`;
   }).join('');
   const archSel = c.src.arch.length ? `<select data-archpick="${c.id}">${c.src.arch.map(a => `<option value="${a.rec}" ${archChosen(c) && archChosen(c).rec === a.rec ? 'selected' : ''}>${esc(a.label)}</option>`).join('')}</select>` : '';
@@ -765,6 +766,7 @@ document.addEventListener('change', async e => {
     list.forEach((x, i) => { x.use = i + 1; }); J.gridManual = !gridInDateOrder(J); save(); render(); return; }
   if (t.dataset.archpick) { const c = app.job.comps.find(x => x.id === t.dataset.archpick); c.archPick = +t.value; save(); render(); return; }
   if (t.dataset.cortpick) { const c = app.job.comps.find(x => x.id === t.dataset.cortpick); c.cortPick = +t.value; save(); render(); return; }
+  if (t.dataset.edit && 'echo' in t.dataset && String(t.value).trim() === String(t.dataset.echo).trim()) return;   // unchanged copy of the value in use – not her own
   if (t.dataset.edit) { const c = app.job.comps.find(x => x.id === app.sel); let f = FIELD[t.dataset.edit];
     if (f.k === 'mlsCondition' && /^\s*(?:(?:low|mid|high)\s+)?c\s*[1-6]\s*[+-]?\s*$/i.test(t.value)) { f = FIELD.condition; toast('A C rating goes in the Condition line (the one the grid uses) – moved it there', 6000); }   // she typed C3- in the MLS words line
     { const m = String(t.value || '').trim().toUpperCase().match(/^(?:(LOW|MID|HIGH)\s+)?([QC])\s*([1-6])\s*([+-])?$/); if (m && ['quality', 'condition'].includes(f.k) && (m[1] || m[4])) {   // "C3-" / "High Q3": UAD takes the whole rating; the tier goes to the grid
