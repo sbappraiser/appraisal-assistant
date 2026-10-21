@@ -424,7 +424,7 @@ function renderPage() {
   <section class="card st st-final" id="exportCard"><h2>Export</h2>${exportHTML(J)}</section>
   <footer class="foot">Comp Genie · your data stays on this computer · build ${typeof BUILD !== 'undefined' ? BUILD : ''}</footer>`;
   fillImages(); mapsRender(); { const t = document.querySelector('.top'); if (t) document.documentElement.style.setProperty('--toph', t.offsetHeight + 'px'); }   // the comp's sticky header sits under the top bar
-  hbarSync();
+  wbFit(); hbarSync();
 }
 /* Redraw after a field changes without losing your place: Tab moves on first, then the page is
    redrawn and the cursor is put back in the field you tabbed (or clicked) into. */
@@ -752,8 +752,8 @@ document.addEventListener('click', async e => {
     case 'starts-reset': if (confirm('Go back to the original starting-point list? Your changes to the list are replaced.')) { STARTS = JSON.parse(JSON.stringify(STARTS_DEFAULT)); await DB.put('kv', { id: 'starts', v: STARTS }); renderKeepFocus(); } break;
     case 'x-sfrep': exportSfrep(); break;
     case 'x-full': exportFullReport(); break;
-    case 'wb-prev': WB.page--; renderKeepFocus(); break;
-    case 'wb-next': WB.page++; renderKeepFocus(); break;
+    case 'wb-prev': wbScroll(-1); break;
+    case 'wb-next': wbScroll(1); break;
     case 'wb-arrange': app.wbArrange = !app.wbArrange; renderKeepFocus(); break;
     case 'wb-undo': wbUndo(); break;
     case 'wb-undo-x': WB.undo = null; wbUndoBar(); break;
@@ -958,5 +958,5 @@ function hbarSync() {
   b.scrollLeft = w.scrollLeft;
 }
 window.addEventListener('scroll', () => hbarSync(), { passive: true });
-window.addEventListener('resize', () => hbarSync());
+window.addEventListener('resize', () => { wbFit(); hbarSync(); });
 document.addEventListener('scroll', e => { if (e.target !== document && e.target !== HB && e.target.classList && !e.target.classList.contains('tablewrap')) hbarSync(); }, { capture: true, passive: true });

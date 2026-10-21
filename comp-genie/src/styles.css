@@ -282,3 +282,7 @@ table.grid tbody th{overflow-wrap:anywhere}
 .ginfo{display:inline-flex;align-items:center;justify-content:center;width:17px;height:17px;margin-left:5px;border-radius:50%;border:1.5px solid #2a64c5;background:#fff;color:#2a64c5;font:italic 700 11px Georgia,serif;cursor:pointer;vertical-align:1px;padding:0}
 .ginfo:hover{background:#2a64c5;color:#fff}
 .sheet.guide h3{font-size:15px;margin:12px 0 4px}.sheet.guide ul.gopts{columns:2;column-gap:22px;margin:4px 0 8px;padding-left:18px}.sheet.guide ul.gopts li{break-inside:avoid;margin:2px 0;font-size:14px}.sheet.guide code{font-size:12px}
+/* subject column stays put while the comps slide sideways (sticky next to the line names) */
+table.grid tbody td.subj,table.grid thead th:nth-child(2),table.grid tr.tot td:nth-child(2){position:sticky;left:var(--labw,230px);z-index:2}
+table.grid thead th:nth-child(2){z-index:4}table.grid tr.tot td:nth-child(2){background:var(--card,#fff)}
+#gridCard table.grid thead th:nth-child(2){z-index:5}#gridCard table.grid thead th:first-child{z-index:6}
