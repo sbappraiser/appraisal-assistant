@@ -97,11 +97,11 @@ function precheckHTML(J) {
   const T = app.pre && app.pre.job === J.id ? app.pre : null; const L = REVLOG || [];
   const list = T ? T.items : [];
   const must = list.filter(x => x.sev === 'Must fix'), chk = list.filter(x => x.sev !== 'Must fix');
-  const row = x => `<div class="rv"><span class="rvs rv-${x.sev === 'Must fix' ? 'Mustfix' : 'Check'}">${esc(x.sev)}</span><span class="rvm">${esc(x.msg)}${x.hint ? `<br><small>${esc(x.hint)}</small>` : ''}</span>${x.tick ? `<label class="tick"><input type="checkbox" data-revdone="${esc(x.rev)}"> Done in this report</label>` : ''}</div>`;
+  const row = (x, i) => { const g = preGo(J, x); return `<div class="rv${g ? ' rvgo' : ''}"${g ? ` data-prego="${i}" title="Click to go there"` : ''}><span class="rvs rv-${x.sev === 'Must fix' ? 'Mustfix' : 'Check'}">${esc(x.sev)}</span><span class="rvm">${esc(x.msg)}${x.hint ? `<br><small>${esc(x.hint)}</small>` : ''}${g ? ` <span class="rvlink">→ ${esc(g.label)}</span>` : ''}</span>${x.tick ? `<label class="tick"><input type="checkbox" data-revdone="${esc(x.rev)}"> Done in this report</label>` : ''}</div>`; };
   return `<h2>Pre-check <small>before you export</small></h2>
     <p class="help">Checks the full-report file against Fannie Mae's UAD 3.6 delivery spec (Appendix A-1: allowed values, number and date formats, lengths, empty fields), then your grid, then your revision log. Nothing is changed for you.</p>
     <div class="row"><button class="btn primary" data-act="pre-run">${T ? 'Check again' : 'Run the pre-check'}</button>${T ? `<small>${must.length} must fix · ${chk.length} to check${T.xmlErr ? ' · ' + esc(T.xmlErr) : ''}</small>` : ''}</div>
-    ${T ? (list.length ? must.map(row).join('') + chk.map(row).join('') : '<p class="ok">Nothing found. Ready to export.</p>') : ''}
+    ${T ? (list.length ? must.map(x => row(x, list.indexOf(x))).join('') + chk.map(x => row(x, list.indexOf(x))).join('') : '<p class="ok">Nothing found. Ready to export.</p>') : ''}
     ${T && T.wantExport ? `<div class="row"><button class="btn" data-act="x-full-anyway">${must.length ? 'Export anyway (I will fix it in SFREP)' : 'Export now'}</button></div>` : ''}
     <details class="revlog"${L.length && !app.revOpen ? '' : ' open'} data-revopen="1"><summary>Your revision log (${L.length}) – reviewer requests that become checks</summary>
       <p class="help">When a client or reviewer asks for a change, log it here. From then on every pre-check reminds you. If you give a word or phrase, I look for it in the report's comments; otherwise you tick it per report.</p>
@@ -117,3 +117,37 @@ async function precheckRun(J, wantExport) {
   app.pre = { job: J.id, items, xmlErr, wantExport: !!wantExport, at: Date.now() };
   return app.pre;
 }
+
+/* her ask (Oct 21 2026): each pre-check line takes her to the place to fix it – the step, then the box (scrolled to and outlined) */
+function preGo(J, x) { const m = String(x.msg || ''); const byUse = n => usedComps(J).find(c => +c.use === +n);
+  let r;
+  if ((r = m.match(/^Comp (\d+)\b/))) { const c = byUse(r[1]); if (!c) return null;
+    if (/weight/i.test(m)) return { stage: 'workbook', sel: `[data-gweight="${c.id}"]`, label: 'weight, Workbook grid' };
+    if (/usable lot/i.test(m)) return { stage: 'workbook', sel: `[data-gfact="${c.id}|usable"]`, label: 'comp ' + c.use + ' usable lot, Workbook grid' };
+    if (/quality/i.test(m) && !/no /i.test(m)) return { stage: 'workbook', sel: `[data-gfact="${c.id}|q"]`, label: 'comp ' + c.use + ' quality' };
+    if (/condition/i.test(m) && !/no /i.test(m)) return { stage: 'workbook', sel: `[data-gfact="${c.id}|c"]`, label: 'comp ' + c.use + ' condition' };
+    return { stage: 'workbook', comp: c.id, label: 'comp ' + c.use + ' in the Workbook' }; }
+  if ((r = m.match(/SALESCOMP(\d+)/))) { const c = byUse(r[1]); if (c) return { stage: 'workbook', comp: c.id, label: 'comp ' + c.use + ' in the Workbook' }; }
+  if ((r = m.match(/^Considered, not used: (.+) has no reason/))) { const c = J.comps.find(k => compTitle(k) === r[1]); return { stage: 'final', sel: c ? `[data-nu="${c.id}|report"]` : '#nuCard', up: '.nu', label: 'its reasons (Analyzed – not used)' }; }
+  if (/grid review flag/i.test(m)) return { stage: 'workbook', sel: '#gridCard .review', label: 'Review list under the grid' };
+  if (/sales comparison comment|indicated value from the sales comparison|is outside the adjusted range/i.test(m)) return { stage: 'workbook', sel: /comment/i.test(m) ? 'textarea[data-gnote]' : '[data-gvalue]', label: 'under the Workbook grid' };
+  if (/All rights included|Kind of rights|rights not appraised/i.test(m)) return { stage: 'final', text: 'All rights included', label: 'Report details' };
+  if (/Prior services|listed for sale in the past year/i.test(m)) return { stage: 'final', text: 'Prior services and certifications', label: 'Report details' };
+  if (/Scope of work/i.test(m)) return { stage: 'final', text: 'Scope of work', label: 'Report details' };
+  if (/exposure time/i.test(m)) return { stage: 'final', text: 'Value and reconciliation', label: 'Report details' };
+  if (/Workfile package/i.test(m)) return { stage: 'micro', sel: '#drop', label: 'drop it here (Comps considered)' };
+  if (/effective date/i.test(m)) return { stage: 'micro', sel: '[data-subj="eff"]', label: 'Subject card' };
+  if (/COST_APPROACH|REPLACEMENT_REPRODUCTION|IMPROVEMENT_COST|SiteEstimated|Cost approach/i.test(m)) return { stage: 'cost', sel: '#costCard', label: 'Cost approach' };
+  if (/^Subject ·/.test(m)) return { stage: 'final', sel: '#reportCard', label: 'Report details (or fix it on the iPad)' };
+  return null; }
+document.addEventListener('click', e => { const el = e.target.closest && e.target.closest('[data-prego]'); if (!el || !app.job || e.target.closest('input,label,button')) return;
+  const J = app.job, x = ((app.pre || {}).items || [])[+el.dataset.prego]; const g = x && preGo(J, x); if (!g) return;
+  J.stage = g.stage; if (g.comp) WB.cur = g.comp; save(); render.top = true; render();
+  setTimeout(() => { let t = null;
+    if (g.comp) t = document.querySelector(`#gridCard thead th[data-wbcol="${g.comp}"]`);
+    if (!t && g.sel) t = document.querySelector(g.sel); if (t && g.up && t.closest(g.up)) t = t.closest(g.up);
+    if (!t && g.text) t = [...document.querySelectorAll('#reportCard h3, #reportCard summary, #reportCard label, #reportCard span')].find(e => e.textContent.trim().startsWith(g.text));
+    if (!t) return; const d = t.closest('details'); if (d) d.open = true;
+    if (g.comp && typeof wbReveal === 'function') { try { wbReveal(t); } catch (er) {} }   /* slide the grid sideways to that comp */
+    t.scrollIntoView({ behavior: 'smooth', block: 'center' }); t.classList.add('goflash'); setTimeout(() => t.classList.remove('goflash'), 2600);
+    const f = t.matches('input,select,textarea') ? t : t.querySelector && t.querySelector('input,select,textarea'); if (f && !g.comp) setTimeout(() => f.focus({ preventScroll: true }), 500); }, 120); });

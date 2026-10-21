@@ -346,3 +346,5 @@ table.grid thead th[data-wbcol]{padding-top:4px;padding-bottom:3px;line-height:1
 table.grid thead th .ghsub{padding-bottom:2px}
 .sheet .legrid{display:grid;grid-template-columns:1fr 1fr;gap:6px 14px}.sheet .legrid .fld textarea{min-height:2.6em}
 table.tbl.cost input::placeholder{color:#9aa4ae;font-style:italic}
+.rv.rvgo{cursor:pointer}.rv.rvgo:hover{background:#fff6e8}.rvlink{color:#b35a00;font-weight:600;white-space:nowrap}
+.goflash{outline:3px solid #ff8a00!important;outline-offset:3px;border-radius:4px;transition:outline-color .4s}
