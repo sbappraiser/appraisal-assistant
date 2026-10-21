@@ -103,7 +103,7 @@ const ADJ_ROWS = [
 const LINE_EG = { siteChar: 'e.g. excess land, landlocked, road frontage, shape, wetlands, zero lot line, flag lot', topo: 'e.g. flat, sloping, rolling, rocky', drain: 'e.g. erosion, improper grading, standing water',
   easement: 'e.g. ingress/egress, utility, drainage, conservation', hazard: 'e.g. FEMA flood hazard area, none', primaryAccess: 'e.g. public street, private street', streetAccess: 'e.g. local road | asphalt, collector street | concrete (type and surface)',
   restrict: 'e.g. age, historic preservation, land use, rental', envCond: 'e.g. none, underground storage tank, radon', func: 'e.g. none, floor plan, ceiling height, overimprovement',
-  disaster: 'e.g. fire resistant exterior walls, noncombustible perimeter, fortified roof', zoning: 'legal, legal nonconforming, illegal, no zoning' };
+  stl: 'listings: the % you expect it to sell at (e.g. 98%) · sales show their actual %', disaster: 'e.g. fire resistant exterior walls, noncombustible perimeter, fortified roof', zoning: 'legal, legal nonconforming, illegal, no zoning' };
 const LOT_UTILITY = 'Usable Lot Area/Utility';      // her exact SFREP template "Add Other" row name (must match letter for letter)
 const RATES = { gla: ['$ per sq ft', 'subject − comp sq ft × rate'], agUnf: ['$ per sq ft', 'subject − comp unfinished above-grade sq ft × rate'], nsAbove: ['$ per sq ft', 'subject − comp non-standard above-grade sq ft × rate'], nsBelow: ['$ per sq ft', 'subject − comp non-standard below-grade sq ft × rate'], nonCont: ['$ per sq ft', 'subject − comp non-continuous sq ft × rate'], usableAc: ['$ per usable acre', 'subject − comp usable acres × rate'], bed: ['$ per bedroom', 'bedroom difference × rate'],
   bath: ['$ per full bath', 'full-bath difference × rate (half baths at half the rate)'], space: ['$ per garage space', 'space difference × rate'], timePct: ['% per month', 'months from sale to effective date × % × price'],
@@ -355,7 +355,7 @@ function compFacts0(c, J) {
   { const hc = val(c, 'heatCool'); if (hc.v && (hc.src === 'arch' || hc.src === 'edit') && !/ \/ /.test(String(hc.v))) { const A = archHC(hc.v); if (A.heat) F0.heat = A.heat; else if (!F0.heat) F0.heat = String(hc.v); if (A.cool) F0.cool = A.cool; } }   // her 2.6 Heating/Cooling line (FWA C/Air …) split into the 3.6 heating and cooling fields
   { const lr = val(c, 'locRating'); const E = c.edit || {}; if (lr.src === 'arch' && blank(E.locRating) && blank(E.locFactors)) { const A = archLoc36(g('locRating'), g('locFactors')); if (A.loc) F0.loc = A.loc; Object.entries(A.lines).forEach(([k, v]) => { if (blank(F0[k])) F0[k] = v; }); } }   // her 2.6 archive location in 3.6 terms
   F0.listing = isListingStatus(F0.status);
-  { const own = String((c.edit || {}).grid_stl || '').replace(/[^0-9.]/g, ''); if (F0.listing && own) F0.stl = (+own).toFixed(1) + '%'; }   // a listing: her anticipated sale-to-list ratio (F-1 22.01.35)
+  { const own = String((c.edit || {}).grid_stl || '').replace(/[^0-9.]/g, ''); if (F0.listing && own) { F0.stl = (+own).toFixed(1) + '%'; F0.stlOwn = true; } }   // a listing: her anticipated sale-to-list ratio (F-1 22.01.35)
   if (!F0.listing || !(c.edit || {}).grid_stl) { const lp = F0.listPrice || F0.origList; if (F0.price && lp) { F0.stl = (F0.price / lp * 100).toFixed(1) + '%'; F0.over = F0.price - lp; F0.overList = F0.over > 0 ? '+' + money(F0.over) + ' (' + F0.stl + ')' : 'No'; } }   // her ask Oct 20 2026: sold over the list price
   { if (offMlsSale(c) && blank(g('dom'))) { F0.dom = 0; F0.offMls = true; } if (offMlsSale(c) && blank(F0.status)) F0.status = 'Settled sale'; }   // F-1 22.01.07: 0 days on market when the sale was not listed on the open market (her Oct 20 2026 case: 719 Camino Cascada)
   { if (blank(F0.hazard)) F0.hazard = hazardOf(c); }
@@ -379,6 +379,8 @@ function showFact(k, v) {
 }
 /* the amount the rate gives, or null */
 function rateAmount(row, S, C, J) {
+  /* a listing (F-1 22.01.35 / .36): her anticipated sale-to-list ratio turns the list price into the expected sale price – the $ adjustment is the difference */
+  if (row[0] === 'stl') { if (!C.listing || C.price) return null; const r = num(String(C.stl || '').replace(/[^0-9.]/g, '')), lp = num(C.listPrice); if (!r || !lp || !(C.stlOwn)) return null; return Math.round(lp * (r / 100 - 1) / 500) * 500; }
   const R = G0(J).rates; const key = row[4];
   if (Array.isArray(key)) { let tot = 0, any = false; key.forEach(k => { const r = num(R[k]); if (!r) return; let x = null;
       if (['pool', 'spa', 'pond', 'lake', 'tennis', 'sport'].includes(k)) { const a = hasFeat(S, k), b = hasFeat(C, k); if (a !== null && b !== null) x = (a - b) * r; }
@@ -416,7 +418,7 @@ function compTotals(J, c) {
   const C = compFacts(c, J); let net = 0, gross = 0, lines = 0;
   // order as on the 3.6 grid (D-1 sample): Add Other rows first, then site, dwelling, units, quality/condition, amenities
   adjRows(J).filter(r => r[3] && rowShown(r, J)).sort((x, y) => (y[3] === 'OTHER') - (x[3] === 'OTHER')).forEach(r => { const a = cellAmount(J, c, r).v; if (a) { net += a; gross += Math.abs(a); lines++; } });
-  const price = C.price || 0; return { price, net, gross, lines, adj: price + net, netPct: price ? net / price * 100 : 0, grossPct: price ? gross / price * 100 : 0, adjPsf: C.gla ? (price + net) / C.gla : null };
+  const price = C.price || (C.listing ? num(C.listPrice) || 0 : 0); return { price, net, gross, lines,   /* a listing with no contract price starts from its list price */ adj: price + net, netPct: price ? net / price * 100 : 0, grossPct: price ? gross / price * 100 : 0, adjPsf: C.gla ? (price + net) / C.gla : null };
 }
 
 /* ---------------- the grid card ---------------- */
@@ -435,7 +437,7 @@ function gridHTML(J) {
     const cells = used.map(c => { const C = compFacts(c, J);
       let shown = id === 'beds' && C.bedsBg ? `${C.beds} (${C.bedsBg} below grade)` : id === 'baths' ? ([C.full, C.half].every(blank) ? '' : `${C.full ?? '–'} / ${C.half ?? 0}`) : id === 'ppsf' ? (C.price && C.gla ? money(C.price / C.gla) : '') : showFact(id, C[id]);
       if (!WB_NOEDIT.includes(id)) { /* she can change any comp fact right on the grid (Oct 19 2026), not only in Workbook view */ const raw = id === 'usable' ? (blank(C.usable) ? '' : C.usable + ' ac') : wbFactText(id, C);
-        shown = `<input class="txt sm fact${(PICK[id] || id === 'view') && !pkValid(id, raw, (c.edit || {})['pk_' + id]) ? ' bad' : ''}" data-gfact="${c.id}|${id}" value="${esc(raw)}" placeholder="${id === 'usable' ? 'Measure it (ac)' : id === 'contract' ? 'Unknown' : ''}" title="Type the comp's entry · = copies the subject · =2 copies comp 2">`; }
+        shown = `<input class="txt sm fact${(PICK[id] || id === 'view') && !pkValid(id, raw, (c.edit || {})['pk_' + id]) ? ' bad' : ''}" data-gfact="${c.id}|${id}" value="${esc(raw)}" placeholder="${id === 'usable' ? 'Measure it (ac)' : id === 'contract' ? 'Unknown' : id === 'stl' && C.listing ? 'e.g. 98%' : ''}" title="Type the comp's entry · = copies the subject · =2 copies comp 2">`; }
       else if (id === 'usable' && blank(C.usable)) shown = '<span class="measure">Measure it</span>'; else shown = id === 'src' ? esc(shown).replace(/\n/g, '<br>') : esc(shown);
       if (id === 'overList' && C.over > 0) { const dm = num(C.cdom) || num(C.dom); shown += dm === null ? '' : dm <= OVER_SHORT ? `<small class="muted rdays">${dm} days on market – likely multiple offers</small>` : dm >= OVER_LONG ? `<small class="overcall">${dm} days on market – call the agent</small>` : `<small class="muted rdays">${dm} days on market</small>`; }
       if (id === 'usable' && C.landSplit) { const t = splitText(C.landSplit); if (t) shown += `<small class="muted rdays" title="Your 2.6 land split. The usable figure counts the residential (r) part only – if the orchard or other part is usable for this comparison, type the total.">split: ${esc(t)}</small>`; }
