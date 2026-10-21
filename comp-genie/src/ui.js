@@ -165,7 +165,7 @@ function jobStatus(J) {   // for the green check on the Appraisal Assistant's Co
   let n; try { n = precheckGrid(J).filter(x => !/outside the adjusted range/.test(x.msg)).map(x => x.msg); } catch (e) { n = ['the grid could not be checked']; }
   return { n, at: Date.now() };
 }
-async function saveNow() { if (!app.job) return; app.job.updated = Date.now(); app.job.status = jobStatus(app.job);
+async function saveNow() { if (!app.job) return; app.job.updated = Date.now(); app.job.status = jobStatus(app.job); try { (window.__aaBC = window.__aaBC || new BroadcastChannel('aa-save')).postMessage('genie'); } catch (e) {}   /* tells the Appraisal Assistant to back up soon (her data folder) */
   if (app.job.orderId && window.parent !== window) { try { window.parent.postMessage({ type: 'aa-genie-status', order: app.job.orderId, n: app.job.status.n }, location.origin); } catch (e) {} }
   await DB.put('jobs', app.job); if (!POP && !CPOP) await DB.put('kv', { id: 'lastJob', v: app.job.id }); wbNotify(); if (!POP && !CPOP) { snapMaybe(app.job); myDbAuto(); } }
 

@@ -389,8 +389,8 @@ function showTab(t) { CUR_TAB = t;
 /* ---------- backup: one zip with every order, client, and document ---------- */
 async function backup() {
   saveLetter(true, true); toast('Making the backup…');
-  const B = await buildBackup();
-  download(new Uint8Array(await B.blob.arrayBuffer()), `Appraisal Assistant backup ${todayISO()}.zip`, 'application/zip');
+  const B = await buildBackup(); const lk = typeof VAULT !== 'undefined' && VAULT.on;
+  download(lk ? await vaultEnc(B.blob) : new Uint8Array(await B.blob.arrayBuffer()), `Appraisal Assistant backup ${todayISO()}.${lk ? 'locked' : 'zip'}`, lk ? 'application/octet-stream' : 'application/zip');
   toast(`Backup saved to Downloads: ${B.orders} orders, ${B.clients} clients, ${B.docs} documents` + (B.jobs ? `, ${B.jobs} Comp genie assignments` : ''));
 }
 /* one backup zip: orders, clients, documents, her lists – and the Comp genie's assignments and settings (same site) */
@@ -403,8 +403,8 @@ async function buildBackup(docsDir) {
   if (docsDir) data.docsFolder = AB_DOCS;
   const entries = [{ name: 'orders.json', data: enc.encode(JSON.stringify(data, null, 1)) }];
   if (docsDir) { const sub = await docsDir.getDirectoryHandle(AB_DOCS, { create: true }); const have = new Set(); for await (const [n] of sub.entries()) have.add(n);
-    for (const d of docs) { const fn = meta.find(m => m.id === d.id).file.replace(/^documents\//, ''); if (have.has(fn)) continue;   // written once; a document never changes after it is added
-      const fh = await sub.getFileHandle(fn, { create: true }); const w = await fh.createWritable(); await w.write(d.blob); await w.close(); } }
+    for (const d of docs) { const fn0 = meta.find(m => m.id === d.id).file.replace(/^documents\//, ''); const lk = typeof VAULT !== 'undefined' && VAULT.on; const fn = lk ? fn0 + '.locked' : fn0; if (have.has(fn)) continue;   // written once; a document never changes after it is added (locked: the .locked copy)
+      const fh = await sub.getFileHandle(fn, { create: true }); const w = await fh.createWritable(); await w.write(lk ? await vaultEnc(d.blob) : d.blob); await w.close(); } }
   else for (const d of docs) entries.push({ name: meta.find(m => m.id === d.id).file, data: new Uint8Array(await d.blob.arrayBuffer()) });
   const gn = await genieExport(); if (gn) entries.push({ name: 'comp-genie.json', data: enc.encode(JSON.stringify(gn)) });
   const zip = await G.makeZip(entries);
@@ -413,6 +413,7 @@ async function buildBackup(docsDir) {
 async function restore(file, folder) {
   try {
     let d, files = null;
+    { const u8 = new Uint8Array(await file.slice(0, 64).arrayBuffer()); if (typeof vaultIs === 'function' && vaultIs(u8.length > 36 ? new Uint8Array(await file.arrayBuffer()) : u8)) { const plain = await vaultDec(new Uint8Array(await file.arrayBuffer())); file = new File([plain], file.name.replace(/\.locked$/i, '') + '.zip'); } }   // a locked backup: her password opens it
     if (/\.zip$/i.test(file.name)) { files = await G.readZip(file); const j = files.get('orders.json'); if (!j) throw new Error('That zip is not an Appraisal Assistant backup.'); d = JSON.parse(new TextDecoder().decode(j)); }
     else d = JSON.parse(await file.text());
     if (!['engagement-letter-writer', 'appraisal-assistant'].includes(d.app)) throw new Error('That file is not an Appraisal Assistant or letter-writer backup.');
@@ -434,7 +435,8 @@ async function restore(file, folder) {
         if (!dir && typeof window.showDirectoryPicker === 'function') { toast('Pick your backup folder (the one with the “' + d.docsFolder + '” folder in it) so the documents come back too.', 8000); try { dir = await window.showDirectoryPicker({ id: 'aa-backup', mode: 'read', startIn: 'documents' }); } catch (e) { dir = null; } }
         try { sub = dir ? await dir.getDirectoryHandle(d.docsFolder) : null; } catch (e) { sub = null; toast('No “' + d.docsFolder + '” folder there – orders restored without their documents.', 8000); } }
       for (const m of d.docs) { if (have.has(m.id)) continue; let u8 = files.get(m.file);
-        if (!u8 && sub) { try { u8 = new Uint8Array(await (await (await sub.getFileHandle(m.file.replace(/^documents\//, ''))).getFile()).arrayBuffer()); } catch (e) { u8 = null; } }
+        if (!u8 && sub) { const fn = m.file.replace(/^documents\//, ''); try { u8 = new Uint8Array(await (await (await sub.getFileHandle(fn)).getFile()).arrayBuffer()); } catch (e) { u8 = null; }
+          if (!u8) { try { const L = new Uint8Array(await (await (await sub.getFileHandle(fn + '.locked')).getFile()).arrayBuffer()); u8 = await vaultDec(L); } catch (e) { u8 = null; } } }   // a locked document
         if (!u8) continue; const { file: _f, ...rest } = m; await ODB.put('docs', { ...rest, blob: new Blob([u8], { type: m.mime || '' }) }); nd++; } }
     contacts.sort((a, b) => (a.name || a.company || '').localeCompare(b.name || b.company || ''));
     store.set('contacts', contacts); store.set('aiText', aiText); renderLetters(); renderContacts();

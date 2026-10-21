@@ -34,16 +34,19 @@ async function abRun(force) {
   AB.busy = true;
   try {
     const B = await buildBackup(AB.dir);
-    const fh = await AB.dir.getFileHandle(abName(today), { create: true }); const w = await fh.createWritable(); await w.write(B.blob); await w.close();
+    const lk = typeof VAULT !== 'undefined' && VAULT.on; const nm = lk ? abName(today).replace(/\.zip$/, '.locked') : abName(today);   // her password lock: the day's file is saved locked
+    const fh = await AB.dir.getFileHandle(nm, { create: true }); const w = await fh.createWritable(); await w.write(lk ? await vaultEnc(B.blob) : B.blob); await w.close();
+    if (lk) await AB.dir.removeEntry(abName(today)).catch(() => {});   // no open copy of today's backup next to the locked one
     AB.last = { date: today, at: new Date().toISOString(), orders: B.orders, docs: B.docs, jobs: B.jobs, folder: AB.dir.name }; AB.dirty = false; AB.err = '';
     await ODB.put('kv', { id: 'ab:last', v: AB.last }); try { localStorage.setItem('aa.abLast', JSON.stringify(AB.last)); } catch (e) {}
-    const names = []; for await (const [n, h] of AB.dir.entries()) if (h.kind === 'file' && /^Appraisal Assistant backup \d{4}-\d{2}-\d{2}\.zip$/.test(n)) names.push(n);
-    names.sort().reverse().slice(AB_KEEP).forEach(n => AB.dir.removeEntry(n).catch(() => {}));
+    const names = []; for await (const [n, h] of AB.dir.entries()) if (h.kind === 'file' && /^Appraisal Assistant backup \d{4}-\d{2}-\d{2}\.(zip|locked)$/.test(n)) names.push(n);
+    names.sort().reverse(); { const seen = new Set(); names.filter(n => { const d = n.slice(27, 37); if (seen.has(d)) return false; seen.add(d); return true; }).slice(AB_KEEP).forEach(n => { const d = n.slice(27, 37); names.filter(x => x.slice(27, 37) === d).forEach(x => AB.dir.removeEntry(x).catch(() => {})); }); }   // the newest AB_KEEP days, locked or not
   } catch (e) { AB.err = e.message || String(e); console.warn('auto backup', e); }
   AB.busy = false; abRender();
 }
 function abSoon() { AB.dirty = true; clearTimeout(AB.t); AB.t = setTimeout(() => abRun(), 90 * 1000); }   // 1½ minutes after the last save
 async function abStart() {
+  if (typeof vaultLoad === 'function') await vaultLoad();
   try { if (navigator.storage && navigator.storage.persist && !(await navigator.storage.persisted())) await navigator.storage.persist(); } catch (e) {}   // ask Chrome to keep this site's storage (safety, Oct 21 2026)
   await abLoad(); abRender();
   setTimeout(() => abRun(), 8000);
@@ -55,11 +58,11 @@ async function abRestoreNewest() {
   try {
     let d = AB.dir; if (d && (await d.queryPermission({ mode: 'read' })) !== 'granted') { if ((await d.requestPermission({ mode: 'read' })) !== 'granted') d = null; }
     if (!d) { if (!abSupported()) { $('#restoreFile').click(); return; } d = await window.showDirectoryPicker({ id: 'aa-backup', mode: 'readwrite', startIn: 'documents' }); }
-    const names = []; for await (const [n, h] of d.entries()) if (h.kind === 'file' && /^Appraisal Assistant backup .*\.zip$/i.test(n)) names.push(n);
+    const names = []; for await (const [n, h] of d.entries()) if (h.kind === 'file' && /^Appraisal Assistant backup .*\.(zip|locked)$/i.test(n)) names.push(n);
     if (!names.length) { toast('No "Appraisal Assistant backup" files in that folder.', 6000); return; }
     names.sort().reverse(); let f = null, nm = '';
     for (const n of names) { const fl = await (await d.getFileHandle(n)).getFile();   // the newest backup that has orders in it (an empty one is skipped)
-      try { const z = await G.readZip(fl); const j = z.get('orders.json'); const o = j && JSON.parse(new TextDecoder().decode(j)); if (o && (o.letters || []).some(realOrder)) { f = fl; nm = n; break; } } catch (e) {} }
+      try { let src = fl; if (/\.locked$/i.test(n)) src = new File([await vaultDec(new Uint8Array(await fl.arrayBuffer()))], n.replace(/\.locked$/i, '.zip')); const z = await G.readZip(src); const j = z.get('orders.json'); const o = j && JSON.parse(new TextDecoder().decode(j)); if (o && (o.letters || []).some(realOrder)) { f = src; nm = n; break; } } catch (e) { if (/password|Not opened/.test(e.message || '')) throw e; } }
     if (!f) { toast('The backups in that folder have no orders in them yet.', 6000); return; }
     AB.dir = d; await ODB.put('kv', { id: 'ab:dir', v: d }); AB.perm = await d.queryPermission({ mode: 'readwrite' }).catch(() => 'prompt');
     toast('Restoring ' + nm + '…'); await restore(f, d); abRender();
@@ -73,14 +76,18 @@ function abCardHTML() {
   if (!abSupported()) body = `<p class="help">Automatic backup works in Chrome or Edge on a computer. Use <b>Back up</b> at the top instead.</p>`;
   else if (!AB.dir) body = `<p class="help warnTxt"><b>Automatic backup is off.</b> Your orders live only in this browser – if Chrome clears its site data they are gone. Pick a folder once (a folder in <b>OneDrive</b> is best, so it is also off this computer) and a backup is saved there by itself every day you work.</p><div class="row"><button type="button" class="btn primary" id="abChoose">Choose a backup folder…</button></div>`;
   else if (AB.perm !== 'granted') body = `<p class="help warnTxt"><b>Chrome needs your OK to keep backing up</b> to the folder “${h(AB.dir.name)}” (it asks again after a restart).</p><div class="row"><button type="button" class="btn primary" id="abAllow">Allow today’s backup</button><button type="button" class="btn ghost small" id="abChoose">Choose another folder</button></div>${last ? `<p class="help">${last}</p>` : ''}`;
-  else body = `<p class="help"><span class="ck">✓</span> Backing up to the folder <b>“${h(AB.dir.name)}”</b> – every day you work, the last ${AB_KEEP} days kept; each document is saved once in its “${AB_DOCS}” folder.${AB.busy ? ' Saving now…' : ''}</p>${last ? `<p class="help">${last}</p>` : ''}${AB.err ? `<p class="help warnTxt">The last backup did not save: ${h(AB.err)}</p>` : ''}<div class="row"><button type="button" class="btn small" id="abNow">Back up now</button><button type="button" class="btn ghost small" id="abChoose">Change folder</button></div>`;
+  else body = `<p class="help"><span class="ck">✓</span> Backing up to the folder <b>“${h(AB.dir.name)}”</b> – saved again about a minute and a half after each change (in the Appraisal Assistant or the Comp genie), the last ${AB_KEEP} days kept; each document is saved once in its “${AB_DOCS}” folder.${AB.busy ? ' Saving now…' : ''}</p>${last ? `<p class="help">${last}</p>` : ''}${AB.err ? `<p class="help warnTxt">The last backup did not save: ${h(AB.err)}</p>` : ''}<div class="row"><button type="button" class="btn small" id="abNow">Back up now</button><button type="button" class="btn ghost small" id="abChoose">Change folder</button></div>`;
   const rescue = empty ? `<div class="abempty"><p><b>No orders in this browser.</b> If Chrome cleared its data, bring everything back from your newest backup.</p><button type="button" class="btn primary" id="abRestore">Restore from my backup folder…</button> <small class="muted">or use Restore at the top to pick a backup file</small></div>` : '';
-  return `<h3>Automatic backup</h3>${rescue}${body}`;
+  const lock = !abSupported() ? '' : typeof VAULT !== 'undefined' && VAULT.on
+    ? `<p class="help"><span class="ck">✓</span> <b>🔒 Password lock on</b> – your backups in this folder are saved scrambled; only your password opens them (keep it in RoboForm).</p><div class="row">${AB.dir ? '<button type="button" class="btn" id="vaultOld">Lock the earlier backups in this folder</button>' : ''}<button type="button" class="btn ghost" id="vaultOff">Turn the lock off</button></div>`
+    : `<p class="help"><b>Password lock:</b> off – anyone who gets a copy of your backup files can read them.</p><div class="row"><button type="button" class="btn primary" id="vaultOn">🔒 Turn on the password lock</button></div>`;
+  return `<h3>Automatic backup – your data folder</h3>${rescue}${body}${lock}`;
 }
 function abRender() {
   const box = document.getElementById('abCard'); if (!box) return; box.innerHTML = abCardHTML();
   const on = (id, fn) => { const b = document.getElementById(id); if (b) b.onclick = fn; };
   on('abChoose', abChoose); on('abAllow', abAllow); on('abNow', () => abRun(true)); on('abRestore', abRestoreNewest);
+  on('vaultOn', vaultTurnOn); on('vaultOld', vaultLockOld); on('vaultOff', async () => { if (!confirm('Turn the password lock off? Backups from now on are saved unlocked; the locked ones stay locked.')) return; await vaultOff(); abRender(); });
 }
 
 /* ---- the Comp genie's own storage (same site, IndexedDB "appraisal-assistant"): assignments and her settings ---- */

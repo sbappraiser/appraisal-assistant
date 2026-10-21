@@ -226,6 +226,9 @@ mark.blank{background:#fff3a8;padding:0 2px;border-radius:3px}.cmt textarea{widt
 #panel-letter[data-otab="letter"] #docsSet, #panel-letter[data-otab="letter"] #reqSet, #panel-letter[data-otab="letter"] #notesSet { display: none !important; }
 #panel-letter[data-otab="docs"] .desk, #panel-letter[data-otab="scope"] .desk, #panel-letter[data-otab="letter"] .desk { grid-template-columns: minmax(0, 1fr); }
 #panel-letter[data-otab] .previewCol { order: -1; position: static; }
+.vaultbg { position: fixed; inset: 0; z-index: 90; background: rgba(15,25,40,.45); display: grid; place-items: center; }
+.vaultbox { background: #fff; border: 2px solid #1f3f66; border-radius: 14px; padding: 18px 20px; width: min(460px, 92vw); display: grid; gap: 10px; box-shadow: 0 16px 50px rgba(0,0,0,.3); }
+.vaultbox input { font-size: 17px; }
 /* ===== One look for every page (her requests Oct 21 2026) – shared by the Appraisal Assistant hub, the Comp genie and the iPad app.
    Her legend:  red * = required · green box = required · blue box = optional, goes into the report as more information ·
    grey box = not for you to fill in · purple writing = directions for you · red writing = a warning ·
@@ -317,7 +320,7 @@ nav.tabs button[aria-selected="true"] { background: var(--look-navy) !important;
     <button type="button" data-tab="wording" aria-selected="false">Standard wording</button>
     <button type="button" data-tab="help" aria-selected="false">Help</button>
   </nav>
-  <div class="toolrow"><button type="button" class="btn ghost" id="btnBackup">Back up</button><label class="btn ghost" for="restoreFile">Restore<input type="file" id="restoreFile" accept=".json,application/json"></label></div>
+  <div class="toolrow"><button type="button" class="btn ghost" id="btnBackup">Back up</button><label class="btn ghost" for="restoreFile">Restore<input type="file" id="restoreFile" accept=".locked,.zip,.json,application/json"></label></div>
 </header>
 <main>
 <section class="panel" id="panel-home" hidden><div id="homeBody"></div></section>
@@ -829,6 +832,7 @@ nav.tabs button[aria-selected="true"] { background: var(--look-navy) !important;
       <li><b>Red boxes in SFREP after the import:</b> the genie now sends what Fannie Mae's own sample sends – a <b>0</b> in every adjustment box with no adjustment, the comps' unfinished basement (0), interior and exterior quality and condition, "homeowner keeps up the outside", the data source for each comp's transfer history, the subject's market area name, and named units for a comp with an ADU. The recorded document number now comes in as the identifier of the <b>Assessor Record</b> source (SFREP's list has no "Deed"). What only you can answer is in the <b>Pre-check</b>: each comp's <b>street surface</b>, <b>view range</b> (Full, Partial, Seasonal) and <b>energy efficient features</b> (pick None when it has none) – click the line to go to the box; type <b>=</b> to copy the subject's.</li>
       <li><b>The order's steps:</b> at the top of each order – <b>① Documents</b> (drop every file for this order; if there is no engagement letter you are asked whether you need to write one), <b>② Engagement letter</b> (the order details and your letter, or the client's letter), <b>③ Scope of work</b> (approaches, highest and best use, added scope, extraordinary assumptions and hypothetical conditions – the Comp genie's Report details uses these), then <b>④ Inspection and comps</b> in the Comp genie. A green ✓ shows on each step that is complete.</li>
       <li><b>Steps 4–15 in the Comp genie</b> (the boxes at the top): 4 Inspection · 5 Market · 6 Comp selection · 7 Comp data · 8 Adjustments · 9 Adjustment support · 10 Sales comparison comment · 11 Cost approach · 12 Income approach · 13 Reconciliation (and report details) · 14 Exhibits and photos · 15 Pre-check and export. Click a step to go to it; a green ✓ shows when it is complete, and the red <b>Still to do</b> line under the steps lists what is left – click any item to go there.</li>
+      <li><b>Your data folder and the password lock</b> (Home › Automatic backup – your data folder): pick a folder on your computer once (Documents or OneDrive) – everything (orders, clients, documents, Comp genie assignments, land sales, cost database) is saved there about a minute and a half after each change, so your nightly backup copies it. <b>🔒 Turn on the password lock</b>: choose a password (10 characters or more – save it in RoboForm). From then on the files in that folder are saved scrambled; only your password opens them. <b>Lock the earlier backups in this folder</b> locks the files saved before, checks each one opens, and removes the unlocked copy. To bring a locked backup back: Restore (top) or Restore from my backup folder – you are asked for the password. If the password is lost, the locked files cannot be opened by anyone.</li>
       <li><b>⚙ Settings</b> (Comp genie, top bar): Classic (ACI) look; show line notes under the line names (otherwise each note is in that line's ⓘ – point at it); adjustment beside the entry; workbook view; open the grid on the page or in its own box; pick the grid lines; edit your starting points; My databases. Settings are kept on this computer for every assignment.</li>
       <li><b>Safety</b> (My databases, at the bottom): whether Chrome keeps this site's storage; a check that each database opened cleanly; <b>Recent changes</b> – each time CORT, land sales or the cost database is replaced, the version before is kept, and <b>Undo the last change</b> brings it back; and a checklist for protecting your computer and your clients' information. Your automatic daily backup (Home) includes your land sales and cost database; keep the archive and CORT source files in OneDrive.</li>
       <li><b>Review genie</b> (step 15, above the pre-check): click <b>Review this report</b>. It checks the <b>math</b> (net / gross adjustments, value inside the adjusted range, spread, cost lines = area × rate, effective age vs life, cost sum), <b>consistency</b> (living area in the grid, cost approach and iPad; values named in your comments; opinion vs sales comparison and cost), <b>USPAP</b> (a "subject to" value needs its hypothetical condition; the "might have affected the results" statement; highest and best use support; scope matches the order; engagement letter in the workfile), the <b>client's letter</b> (its requests, due date, client name), <b>Fannie Mae / Freddie Mac</b> (three closed sales, sales over 12 months, distance over a mile, time rate, living-area and price bracketing) and the <b>UAD 3.6 file</b> (the pre-check). Each finding links to the spot; a green ✓ shows on each part with nothing found. It never changes anything.</li>
@@ -955,7 +959,7 @@ nav.tabs button[aria-selected="true"] { background: var(--look-navy) !important;
 </div>
 <div id="toast" role="status" hidden></div>
 <script>
-const BUILD='o1-1021-1916';
+const BUILD='o1-1021-1922';
 const G = (() => {
 /* ---------------- small helpers ---------------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -4697,6 +4701,60 @@ function tabMarks(noRead) {
 window.addEventListener('message', e => { if (e.origin === location.origin && e.data && e.data.type === 'aa-genie-status') { if (e.data.order) { GENIE_ST[e.data.order] = { n: e.data.n || [], at: Date.now() }; tabMarks(true); } } });
 
 /* =====================================================================
+   Password lock for her data folder (her ask Oct 21 2026). The automatic backup in her own folder is written
+   scrambled (AES-256-GCM, key from her password with PBKDF2-SHA-256, 600,000 rounds) so the files her nightly
+   backup copies, OneDrive and a backup drive hold are unreadable without the password.
+   - The password itself is never stored. A locked key (one that cannot be read out) stays in this browser so
+     backups keep saving without asking; the password is asked only to open a locked backup (restore).
+   - File layout: "AAVAULT1" + salt (16 bytes) + iv (12 bytes) + ciphertext – the salt travels with the file,
+     so any copy opens on any computer with the password.
+   ===================================================================== */
+const VAULT = { on: false, key: null, salt: null, keys: new Map() };   // keys: salt (base64) → key typed in this session (restore)
+const VMAGIC = new TextEncoder().encode('AAVAULT1');
+const b64 = u8 => btoa(String.fromCharCode(...u8)), unb64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+async function vaultKey(password, salt) {
+  const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey({ name: 'PBKDF2', salt, iterations: 600000, hash: 'SHA-256' }, base, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']); }
+async function vaultLoad() { try { const r = await ODB.get('kv', 'vault'); if (r && r.v && r.v.key) { VAULT.on = true; VAULT.key = r.v.key; VAULT.salt = unb64(r.v.salt); VAULT.keys.set(r.v.salt, r.v.key); } } catch (e) { VAULT.on = false; } }
+async function vaultSetup(password) { const salt = crypto.getRandomValues(new Uint8Array(16)); const key = await vaultKey(password, salt);
+  await ODB.put('kv', { id: 'vault', v: { key, salt: b64(salt), since: new Date().toISOString() } }); VAULT.on = true; VAULT.key = key; VAULT.salt = salt; VAULT.keys.set(b64(salt), key); }
+async function vaultOff() { await ODB.put('kv', { id: 'vault', v: null }); VAULT.on = false; VAULT.key = null; VAULT.salt = null; }
+async function vaultEnc(data) { const u8 = data instanceof Uint8Array ? data : new Uint8Array(await (data instanceof Blob ? data.arrayBuffer() : new Blob([data]).arrayBuffer()));
+  const iv = crypto.getRandomValues(new Uint8Array(12)); const ct = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, VAULT.key, u8));
+  const out = new Uint8Array(8 + 16 + 12 + ct.length); out.set(VMAGIC, 0); out.set(VAULT.salt, 8); out.set(iv, 24); out.set(ct, 36); return out; }
+const vaultIs = u8 => u8 && u8.length > 36 && VMAGIC.every((b, i) => u8[i] === b);
+/* open a locked file: the key from this browser if it is the same lock, else asks for the password once per lock */
+async function vaultDec(u8) { const salt = u8.slice(8, 24), iv = u8.slice(24, 36), ct = u8.slice(36); const s = b64(salt);
+  for (let tries = 0; tries < 3; tries++) { let key = VAULT.keys.get(s);
+    if (!key) { const pw = await vaultAsk('This backup is locked. Type its password:'); if (pw === null) throw new Error('Not opened – no password typed.'); key = await vaultKey(pw, salt); }
+    try { const plain = new Uint8Array(await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, ct)); VAULT.keys.set(s, key); return plain; }
+    catch (e) { VAULT.keys.delete(s); toast('That password does not open this backup.', 5000); } }
+  throw new Error('The password did not open the backup.'); }
+/* a small password box (the browser's own prompt would show the password as she types) */
+function vaultAsk(msg, confirmToo) { return new Promise(res => { const bg = document.createElement('div'); bg.className = 'vaultbg';
+  bg.innerHTML = `<div class="vaultbox" role="dialog"><p><b>${h(msg)}</b></p><input type="password" id="vpw1" autocomplete="new-password" placeholder="Password">${confirmToo ? '<input type="password" id="vpw2" autocomplete="new-password" placeholder="Type it again">' : ''}<p class="help" id="vmsg"></p><div class="row"><button type="button" class="btn primary" id="vok">OK</button><button type="button" class="btn" id="vno">Cancel</button></div></div>`;
+  document.body.appendChild(bg); const p1 = bg.querySelector('#vpw1'); p1.focus();
+  const done = v => { bg.remove(); res(v); };
+  bg.querySelector('#vno').onclick = () => done(null);
+  const ok = () => { const a = p1.value; if (confirmToo) { const b = bg.querySelector('#vpw2').value; if (a.length < 10) { bg.querySelector('#vmsg').textContent = 'Use at least 10 characters – a short sentence is easiest to remember.'; return; } if (a !== b) { bg.querySelector('#vmsg').textContent = 'The two do not match.'; return; } } if (a) done(a); };
+  bg.querySelector('#vok').onclick = ok; bg.addEventListener('keydown', e => { if (e.key === 'Enter') ok(); if (e.key === 'Escape') done(null); }); }); }
+async function vaultTurnOn() {
+  const pw = await vaultAsk('Choose a password for your data folder. If you forget it, the locked backups cannot be opened by anyone – save it in RoboForm now.', true); if (!pw) return;
+  await vaultSetup(pw); toast('Password lock on – the next backup is saved locked.', 6000); if (typeof abRun === 'function') await abRun(true); abRender(); }
+/* lock the earlier, unlocked backups and documents in her folder: each one is locked, checked that it opens, then the open copy is removed */
+async function vaultLockOld() { if (!VAULT.on || !AB.dir) return; if (!confirm('Lock the earlier backups and documents in “' + AB.dir.name + '”? Each file is locked, checked, and then the unlocked copy is deleted from that folder.')) return;
+  let n = 0, bad = 0; const one = async (dir, name, top) => { const fh = await dir.getFileHandle(name); const u8 = new Uint8Array(await (await fh.getFile()).arrayBuffer()); if (vaultIs(u8)) return;
+    const enc = await vaultEnc(u8); const back = await vaultDec(enc); if (back.length !== u8.length || back.some((b, i) => b !== u8[i])) { bad++; return; }
+    const out = await dir.getFileHandle(top ? name.replace(/\.zip$/i, '.locked') : name + '.locked', { create: true }); const w = await out.createWritable(); await w.write(enc); await w.close();
+    await dir.removeEntry(name); n++; };
+  try { for await (const [nm, hd] of AB.dir.entries()) if (hd.kind === 'file' && /^Appraisal Assistant backup .*\.zip$/i.test(nm)) await one(AB.dir, nm, true);
+    let sub = null; try { sub = await AB.dir.getDirectoryHandle(AB_DOCS); } catch (e) {}
+    if (sub) { const L = []; for await (const [nm, hd] of sub.entries()) if (hd.kind === 'file' && !/\.locked$/.test(nm)) L.push(nm); for (const nm of L) await one(sub, nm); }
+    toast(`${n} earlier file${n === 1 ? '' : 's'} locked${bad ? ` · ${bad} left as they were (the check failed)` : ''}.`, 7000); } catch (e) { toast('Could not lock them all: ' + (e.message || e), 7000); }
+  abRender(); }
+try { const bc = new BroadcastChannel('aa-save'); bc.onmessage = () => { if (typeof abSoon === 'function') abSoon(); }; } catch (e) {}   // the Comp genie says when it saved, so its work is backed up too
+
+/* =====================================================================
    Automatic backup (Oct 19 2026 – after Chrome's "delete site data when you close all windows" setting erased
    her orders and the Comp genie on a restart). She picks a folder once (ideally in OneDrive); every day she
    uses the Appraisal Assistant a backup zip (orders, clients, documents, her lists, Comp genie assignments)
@@ -4732,16 +4790,19 @@ async function abRun(force) {
   AB.busy = true;
   try {
     const B = await buildBackup(AB.dir);
-    const fh = await AB.dir.getFileHandle(abName(today), { create: true }); const w = await fh.createWritable(); await w.write(B.blob); await w.close();
+    const lk = typeof VAULT !== 'undefined' && VAULT.on; const nm = lk ? abName(today).replace(/\.zip$/, '.locked') : abName(today);   // her password lock: the day's file is saved locked
+    const fh = await AB.dir.getFileHandle(nm, { create: true }); const w = await fh.createWritable(); await w.write(lk ? await vaultEnc(B.blob) : B.blob); await w.close();
+    if (lk) await AB.dir.removeEntry(abName(today)).catch(() => {});   // no open copy of today's backup next to the locked one
     AB.last = { date: today, at: new Date().toISOString(), orders: B.orders, docs: B.docs, jobs: B.jobs, folder: AB.dir.name }; AB.dirty = false; AB.err = '';
     await ODB.put('kv', { id: 'ab:last', v: AB.last }); try { localStorage.setItem('aa.abLast', JSON.stringify(AB.last)); } catch (e) {}
-    const names = []; for await (const [n, h] of AB.dir.entries()) if (h.kind === 'file' && /^Appraisal Assistant backup \d{4}-\d{2}-\d{2}\.zip$/.test(n)) names.push(n);
-    names.sort().reverse().slice(AB_KEEP).forEach(n => AB.dir.removeEntry(n).catch(() => {}));
+    const names = []; for await (const [n, h] of AB.dir.entries()) if (h.kind === 'file' && /^Appraisal Assistant backup \d{4}-\d{2}-\d{2}\.(zip|locked)$/.test(n)) names.push(n);
+    names.sort().reverse(); { const seen = new Set(); names.filter(n => { const d = n.slice(27, 37); if (seen.has(d)) return false; seen.add(d); return true; }).slice(AB_KEEP).forEach(n => { const d = n.slice(27, 37); names.filter(x => x.slice(27, 37) === d).forEach(x => AB.dir.removeEntry(x).catch(() => {})); }); }   // the newest AB_KEEP days, locked or not
   } catch (e) { AB.err = e.message || String(e); console.warn('auto backup', e); }
   AB.busy = false; abRender();
 }
 function abSoon() { AB.dirty = true; clearTimeout(AB.t); AB.t = setTimeout(() => abRun(), 90 * 1000); }   // 1½ minutes after the last save
 async function abStart() {
+  if (typeof vaultLoad === 'function') await vaultLoad();
   try { if (navigator.storage && navigator.storage.persist && !(await navigator.storage.persisted())) await navigator.storage.persist(); } catch (e) {}   // ask Chrome to keep this site's storage (safety, Oct 21 2026)
   await abLoad(); abRender();
   setTimeout(() => abRun(), 8000);
@@ -4753,11 +4814,11 @@ async function abRestoreNewest() {
   try {
     let d = AB.dir; if (d && (await d.queryPermission({ mode: 'read' })) !== 'granted') { if ((await d.requestPermission({ mode: 'read' })) !== 'granted') d = null; }
     if (!d) { if (!abSupported()) { $('#restoreFile').click(); return; } d = await window.showDirectoryPicker({ id: 'aa-backup', mode: 'readwrite', startIn: 'documents' }); }
-    const names = []; for await (const [n, h] of d.entries()) if (h.kind === 'file' && /^Appraisal Assistant backup .*\.zip$/i.test(n)) names.push(n);
+    const names = []; for await (const [n, h] of d.entries()) if (h.kind === 'file' && /^Appraisal Assistant backup .*\.(zip|locked)$/i.test(n)) names.push(n);
     if (!names.length) { toast('No "Appraisal Assistant backup" files in that folder.', 6000); return; }
     names.sort().reverse(); let f = null, nm = '';
     for (const n of names) { const fl = await (await d.getFileHandle(n)).getFile();   // the newest backup that has orders in it (an empty one is skipped)
-      try { const z = await G.readZip(fl); const j = z.get('orders.json'); const o = j && JSON.parse(new TextDecoder().decode(j)); if (o && (o.letters || []).some(realOrder)) { f = fl; nm = n; break; } } catch (e) {} }
+      try { let src = fl; if (/\.locked$/i.test(n)) src = new File([await vaultDec(new Uint8Array(await fl.arrayBuffer()))], n.replace(/\.locked$/i, '.zip')); const z = await G.readZip(src); const j = z.get('orders.json'); const o = j && JSON.parse(new TextDecoder().decode(j)); if (o && (o.letters || []).some(realOrder)) { f = src; nm = n; break; } } catch (e) { if (/password|Not opened/.test(e.message || '')) throw e; } }
     if (!f) { toast('The backups in that folder have no orders in them yet.', 6000); return; }
     AB.dir = d; await ODB.put('kv', { id: 'ab:dir', v: d }); AB.perm = await d.queryPermission({ mode: 'readwrite' }).catch(() => 'prompt');
     toast('Restoring ' + nm + '…'); await restore(f, d); abRender();
@@ -4771,14 +4832,18 @@ function abCardHTML() {
   if (!abSupported()) body = `<p class="help">Automatic backup works in Chrome or Edge on a computer. Use <b>Back up</b> at the top instead.</p>`;
   else if (!AB.dir) body = `<p class="help warnTxt"><b>Automatic backup is off.</b> Your orders live only in this browser – if Chrome clears its site data they are gone. Pick a folder once (a folder in <b>OneDrive</b> is best, so it is also off this computer) and a backup is saved there by itself every day you work.</p><div class="row"><button type="button" class="btn primary" id="abChoose">Choose a backup folder…</button></div>`;
   else if (AB.perm !== 'granted') body = `<p class="help warnTxt"><b>Chrome needs your OK to keep backing up</b> to the folder “${h(AB.dir.name)}” (it asks again after a restart).</p><div class="row"><button type="button" class="btn primary" id="abAllow">Allow today’s backup</button><button type="button" class="btn ghost small" id="abChoose">Choose another folder</button></div>${last ? `<p class="help">${last}</p>` : ''}`;
-  else body = `<p class="help"><span class="ck">✓</span> Backing up to the folder <b>“${h(AB.dir.name)}”</b> – every day you work, the last ${AB_KEEP} days kept; each document is saved once in its “${AB_DOCS}” folder.${AB.busy ? ' Saving now…' : ''}</p>${last ? `<p class="help">${last}</p>` : ''}${AB.err ? `<p class="help warnTxt">The last backup did not save: ${h(AB.err)}</p>` : ''}<div class="row"><button type="button" class="btn small" id="abNow">Back up now</button><button type="button" class="btn ghost small" id="abChoose">Change folder</button></div>`;
+  else body = `<p class="help"><span class="ck">✓</span> Backing up to the folder <b>“${h(AB.dir.name)}”</b> – saved again about a minute and a half after each change (in the Appraisal Assistant or the Comp genie), the last ${AB_KEEP} days kept; each document is saved once in its “${AB_DOCS}” folder.${AB.busy ? ' Saving now…' : ''}</p>${last ? `<p class="help">${last}</p>` : ''}${AB.err ? `<p class="help warnTxt">The last backup did not save: ${h(AB.err)}</p>` : ''}<div class="row"><button type="button" class="btn small" id="abNow">Back up now</button><button type="button" class="btn ghost small" id="abChoose">Change folder</button></div>`;
   const rescue = empty ? `<div class="abempty"><p><b>No orders in this browser.</b> If Chrome cleared its data, bring everything back from your newest backup.</p><button type="button" class="btn primary" id="abRestore">Restore from my backup folder…</button> <small class="muted">or use Restore at the top to pick a backup file</small></div>` : '';
-  return `<h3>Automatic backup</h3>${rescue}${body}`;
+  const lock = !abSupported() ? '' : typeof VAULT !== 'undefined' && VAULT.on
+    ? `<p class="help"><span class="ck">✓</span> <b>🔒 Password lock on</b> – your backups in this folder are saved scrambled; only your password opens them (keep it in RoboForm).</p><div class="row">${AB.dir ? '<button type="button" class="btn" id="vaultOld">Lock the earlier backups in this folder</button>' : ''}<button type="button" class="btn ghost" id="vaultOff">Turn the lock off</button></div>`
+    : `<p class="help"><b>Password lock:</b> off – anyone who gets a copy of your backup files can read them.</p><div class="row"><button type="button" class="btn primary" id="vaultOn">🔒 Turn on the password lock</button></div>`;
+  return `<h3>Automatic backup – your data folder</h3>${rescue}${body}${lock}`;
 }
 function abRender() {
   const box = document.getElementById('abCard'); if (!box) return; box.innerHTML = abCardHTML();
   const on = (id, fn) => { const b = document.getElementById(id); if (b) b.onclick = fn; };
   on('abChoose', abChoose); on('abAllow', abAllow); on('abNow', () => abRun(true)); on('abRestore', abRestoreNewest);
+  on('vaultOn', vaultTurnOn); on('vaultOld', vaultLockOld); on('vaultOff', async () => { if (!confirm('Turn the password lock off? Backups from now on are saved unlocked; the locked ones stay locked.')) return; await vaultOff(); abRender(); });
 }
 
 /* ---- the Comp genie's own storage (same site, IndexedDB "appraisal-assistant"): assignments and her settings ---- */
@@ -5200,8 +5265,8 @@ function showTab(t) { CUR_TAB = t;
 /* ---------- backup: one zip with every order, client, and document ---------- */
 async function backup() {
   saveLetter(true, true); toast('Making the backup…');
-  const B = await buildBackup();
-  download(new Uint8Array(await B.blob.arrayBuffer()), `Appraisal Assistant backup ${todayISO()}.zip`, 'application/zip');
+  const B = await buildBackup(); const lk = typeof VAULT !== 'undefined' && VAULT.on;
+  download(lk ? await vaultEnc(B.blob) : new Uint8Array(await B.blob.arrayBuffer()), `Appraisal Assistant backup ${todayISO()}.${lk ? 'locked' : 'zip'}`, lk ? 'application/octet-stream' : 'application/zip');
   toast(`Backup saved to Downloads: ${B.orders} orders, ${B.clients} clients, ${B.docs} documents` + (B.jobs ? `, ${B.jobs} Comp genie assignments` : ''));
 }
 /* one backup zip: orders, clients, documents, her lists – and the Comp genie's assignments and settings (same site) */
@@ -5214,8 +5279,8 @@ async function buildBackup(docsDir) {
   if (docsDir) data.docsFolder = AB_DOCS;
   const entries = [{ name: 'orders.json', data: enc.encode(JSON.stringify(data, null, 1)) }];
   if (docsDir) { const sub = await docsDir.getDirectoryHandle(AB_DOCS, { create: true }); const have = new Set(); for await (const [n] of sub.entries()) have.add(n);
-    for (const d of docs) { const fn = meta.find(m => m.id === d.id).file.replace(/^documents\//, ''); if (have.has(fn)) continue;   // written once; a document never changes after it is added
-      const fh = await sub.getFileHandle(fn, { create: true }); const w = await fh.createWritable(); await w.write(d.blob); await w.close(); } }
+    for (const d of docs) { const fn0 = meta.find(m => m.id === d.id).file.replace(/^documents\//, ''); const lk = typeof VAULT !== 'undefined' && VAULT.on; const fn = lk ? fn0 + '.locked' : fn0; if (have.has(fn)) continue;   // written once; a document never changes after it is added (locked: the .locked copy)
+      const fh = await sub.getFileHandle(fn, { create: true }); const w = await fh.createWritable(); await w.write(lk ? await vaultEnc(d.blob) : d.blob); await w.close(); } }
   else for (const d of docs) entries.push({ name: meta.find(m => m.id === d.id).file, data: new Uint8Array(await d.blob.arrayBuffer()) });
   const gn = await genieExport(); if (gn) entries.push({ name: 'comp-genie.json', data: enc.encode(JSON.stringify(gn)) });
   const zip = await G.makeZip(entries);
@@ -5224,6 +5289,7 @@ async function buildBackup(docsDir) {
 async function restore(file, folder) {
   try {
     let d, files = null;
+    { const u8 = new Uint8Array(await file.slice(0, 64).arrayBuffer()); if (typeof vaultIs === 'function' && vaultIs(u8.length > 36 ? new Uint8Array(await file.arrayBuffer()) : u8)) { const plain = await vaultDec(new Uint8Array(await file.arrayBuffer())); file = new File([plain], file.name.replace(/\.locked$/i, '') + '.zip'); } }   // a locked backup: her password opens it
     if (/\.zip$/i.test(file.name)) { files = await G.readZip(file); const j = files.get('orders.json'); if (!j) throw new Error('That zip is not an Appraisal Assistant backup.'); d = JSON.parse(new TextDecoder().decode(j)); }
     else d = JSON.parse(await file.text());
     if (!['engagement-letter-writer', 'appraisal-assistant'].includes(d.app)) throw new Error('That file is not an Appraisal Assistant or letter-writer backup.');
@@ -5245,7 +5311,8 @@ async function restore(file, folder) {
         if (!dir && typeof window.showDirectoryPicker === 'function') { toast('Pick your backup folder (the one with the “' + d.docsFolder + '” folder in it) so the documents come back too.', 8000); try { dir = await window.showDirectoryPicker({ id: 'aa-backup', mode: 'read', startIn: 'documents' }); } catch (e) { dir = null; } }
         try { sub = dir ? await dir.getDirectoryHandle(d.docsFolder) : null; } catch (e) { sub = null; toast('No “' + d.docsFolder + '” folder there – orders restored without their documents.', 8000); } }
       for (const m of d.docs) { if (have.has(m.id)) continue; let u8 = files.get(m.file);
-        if (!u8 && sub) { try { u8 = new Uint8Array(await (await (await sub.getFileHandle(m.file.replace(/^documents\//, ''))).getFile()).arrayBuffer()); } catch (e) { u8 = null; } }
+        if (!u8 && sub) { const fn = m.file.replace(/^documents\//, ''); try { u8 = new Uint8Array(await (await (await sub.getFileHandle(fn)).getFile()).arrayBuffer()); } catch (e) { u8 = null; }
+          if (!u8) { try { const L = new Uint8Array(await (await (await sub.getFileHandle(fn + '.locked')).getFile()).arrayBuffer()); u8 = await vaultDec(L); } catch (e) { u8 = null; } } }   // a locked document
         if (!u8) continue; const { file: _f, ...rest } = m; await ODB.put('docs', { ...rest, blob: new Blob([u8], { type: m.mime || '' }) }); nd++; } }
     contacts.sort((a, b) => (a.name || a.company || '').localeCompare(b.name || b.company || ''));
     store.set('contacts', contacts); store.set('aiText', aiText); renderLetters(); renderContacts();
@@ -5541,7 +5608,7 @@ if (typeof document !== 'undefined') {
     L.innerHTML = `<button class="x" aria-label="Close">×</button><h3>What the colors mean</h3><ul>${LEGEND.map(([s, t]) => `<li>${s}<span>${t}</span></li>`).join('')}</ul>`;
     L.querySelector('.x').onclick = () => L.remove(); document.body.appendChild(L); }
   let F = null; function corner() { if (!F) { F = document.createElement('div'); F.id = 'lookFile'; } const H = document.querySelector('header.top, .top');   // in the page's own top bar, at its right end (pages that redraw their top bar get it back)
-    if (H) { if (F.parentNode !== H) { F.className = 'inhead'; H.appendChild(F); const h = H.offsetHeight; if (h && getComputedStyle(H).position === 'sticky') document.documentElement.style.setProperty('--toph', h + 'px'); } }   // the genie keeps its grid under the top bar (--toph): adding this box can make the bar taller else if (F.parentNode !== document.body) { F.className = ''; document.body.appendChild(F); }
+    if (H) { if (F.parentNode !== H) { F.className = 'inhead'; H.appendChild(F); const h = H.offsetHeight; if (h && getComputedStyle(H).position === 'sticky') document.documentElement.style.setProperty('--toph', h + 'px'); } }   /* the genie keeps its grid under the top bar (--toph): adding this box can make the bar taller */ else if (F.parentNode !== document.body) { F.className = ''; document.body.appendChild(F); }
     let name = ''; try { name = typeof window.lookFileName === 'function' ? String(window.lookFileName() || '') : ''; } catch (e) {}
     const want = (name ? `<span title="The file you are working in">📄 ${name.replace(/[<>&]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]))}</span>` : '') + '<button type="button" data-lookleg="1" title="What the colors mean">ⓘ Colors</button>';
     if (F.innerHTML !== want) F.innerHTML = want; }
