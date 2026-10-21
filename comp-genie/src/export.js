@@ -94,7 +94,7 @@ function buildCompXML(PROPS, RELS, DSS, c, n, job) {
   if (price && gla) XV(cd, 'PricePerTotalStandardAboveGradeFinishedAreaAmount', Math.round(price / gla));
   XV(cd, 'PropertyOrdinalNumber', n);
   if (px) XV(cd, 'ProximityToSubjectDistanceLinearMeasure', px.mi.toFixed(2), { LinearUnitOfMeasureType: 'Miles' });
-  if (status !== 'SettledSale') { const own = num(String((c.edit || {}).grid_stl || '').replace(/[^0-9.]/g, '')); const r = own || (price && list ? price / list * 100 : null); if (r) XV(cd, 'SaleToListPriceRatioPercent', (+r).toFixed(2)); }   /* a listing: her anticipated ratio (F-1 22.01.35) */
+  if (status !== 'SettledSale') { const own = num(String((c.edit || {}).grid_stl || '').replace(/[^0-9.]/g, '')); const r = own || (price && list ? price / list * 100 : null); if (r) XV(cd, 'SaleToListPriceRatioPercent', Math.round(+r));   /* A-1: a positive whole number (102 = 102 %) */ }   /* a listing: her anticipated ratio (F-1 22.01.35) */
   cd.kids.sort((a, b) => a.tag.localeCompare(b.tag)); // UAD order is alphabetical inside COMPARABLE_DETAIL
   // ENERGY_EFFICIENCY_AND_GREEN
   const EN = compFacts(c, job).energy; const EP = typeof PICK !== 'undefined' && EN ? pkParse(PICK.energy, String(EN)) : null;   // her ▾ pick (Oct 20 2026): each renewable component with its ownership

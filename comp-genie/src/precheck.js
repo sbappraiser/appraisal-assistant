@@ -37,7 +37,9 @@ function precheckXML(xml) {
     if (!s) { if (el.namespaceURI === PRE_NS) unknown.set(key, (unknown.get(key) || 0) + 1); return; }
     if (v === '') { out.push({ sev: 'Must fix', msg: `${where(el)}: ${el.localName} is empty`, hint: 'Leave the field out or fill it in.' }); return; }
     let bad = '';
-    if (s.e) { if (!s.e.includes(v)) bad = `"${v.slice(0, 60)}" is not an allowed value`; }
+    /* A-1 lists "Garage" as the only Other description for an OUTBUILDING's cost line; the dwelling's Other line is free-form (rows 2466 / 2495) */
+    let dwOther = false; if (el.localName === 'ReplacementOrReproductionCostAreaTypeOtherDescription') { let a = el.parentElement; while (a && a.localName !== 'IMPROVEMENT_COST_AND_DEPRECIATED_VALUE') a = a.parentElement; dwOther = !a || !/OUTBUILDING|ADU/i.test(a.getAttributeNS('http://www.w3.org/1999/xlink', 'label') || ''); }
+    if (s.e && !dwOther) { if (!s.e.includes(v)) bad = `"${v.slice(0, 60)}" is not an allowed value`; }
     else if (s.t === 'Numeric' || s.t === 'Amount') bad = a1Num(v, s.f);
     else if (s.t === 'Date' || s.t === 'Datetime') bad = a1Date(v, s.f);
     else if (s.t === 'Boolean') bad = /^(true|false)$/.test(v) ? '' : 'must be true or false';
@@ -67,7 +69,7 @@ function precheckGrid(J) { if (!RC) return rcRun(() => precheckGrid(J));
     if (blank(R.expLow) && blank(R.expHigh)) out.push({ sev: 'Check', msg: 'No reasonable exposure time entered (Report details › Value and reconciliation).' }); }
   const tot = used.map(c => compTotals(J, c)).filter(t => t.price); const adj = tot.map(t => t.adj);
   if (!blank(G.value) && adj.length) { const v = num(G.value), lo = Math.min(...adj), hi = Math.max(...adj); if (v < lo || v > hi) out.push({ sev: 'Check', msg: `Your value ${money(v)} is outside the adjusted range ${money(lo)} – ${money(hi)}.`, hint: 'Explain it in the comment, or look again at the adjustments.' }); }
-  used.forEach(c => { const C = compFacts(c, J); const miss = [['sale price', C.price], ['sale date', C.sale], ['living area', C.gla], ['quality', C.q], ['condition', C.c]].filter(x => blank(x[1])).map(x => x[0]);
+  used.forEach(c => { const C = compFacts(c, J); const miss = [...(C.listing ? [['list price', C.listPrice]] : [['sale price', C.price], ['sale date', C.sale]]), ['living area', C.gla], ['quality', C.q], ['condition', C.c]].filter(x => blank(x[1])).map(x => x[0]);   /* a listing has no sale price or date yet */
     if (miss.length) out.push({ sev: 'Must fix', msg: `Comp ${c.use} (${compTitle(c)}): no ${miss.join(', ')}.` });
     ['q', 'c'].forEach(k => { if (C[k] && !/^[QC][1-6]$/i.test(String(C[k]).trim())) out.push({ sev: 'Must fix', msg: `Comp ${c.use}: ${k === 'q' ? 'quality' : 'condition'} "${C[k]}" is not a whole UAD rating – the low / mid / high tier stays on your grid, not in the UAD field.` }); });
     if (blank(C.usable) && !blank(S.usable)) out.push({ sev: 'Check', msg: `Comp ${c.use}: usable lot area is blank – measure it.` });
