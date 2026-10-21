@@ -44,6 +44,7 @@ async function abRun(force) {
 }
 function abSoon() { AB.dirty = true; clearTimeout(AB.t); AB.t = setTimeout(() => abRun(), 90 * 1000); }   // 1½ minutes after the last save
 async function abStart() {
+  try { if (navigator.storage && navigator.storage.persist && !(await navigator.storage.persisted())) await navigator.storage.persist(); } catch (e) {}   // ask Chrome to keep this site's storage (safety, Oct 21 2026)
   await abLoad(); abRender();
   setTimeout(() => abRun(), 8000);
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && AB.dirty) abRun(); });
@@ -97,7 +98,7 @@ async function genieExport() {
   try { if (indexedDB.databases) { const l = await indexedDB.databases(); if (!l.some(x => x.name === 'appraisal-assistant')) return null; } } catch (e) {}
   const d = await genieDB(false); if (!d) return null;
   try { if (!d.objectStoreNames.contains('jobs')) return null;
-    const jobs = await gTx(d, 'jobs', 'readonly', s => s.getAll()) || []; const kv = (await gTx(d, 'kv', 'readonly', s => s.getAll()) || []).filter(x => !GENIE_SKIP.has(x.id) && !/^snap/.test(x.id));
+    const jobs = await gTx(d, 'jobs', 'readonly', s => s.getAll()) || []; const kv = (await gTx(d, 'kv', 'readonly', s => s.getAll()) || []).filter(x => !GENIE_SKIP.has(x.id) && !/^snap|^prev:cort$/.test(x.id));   // prev:cort = the CORT table before its last change (reloaded from its files)
     return { app: 'comp-genie', saved: new Date().toISOString(), jobs, kv };
   } catch (e) { return null; } finally { d.close(); }
 }

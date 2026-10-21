@@ -15,7 +15,7 @@ function dbViewHTML() {
       add('Add CORT files (PDF or CSV)', '.pdf,.csv')],
     ['Land sales', landN ? ok(true, `${landN.toLocaleString()} sales`) : ok(false, 'none yet'),
       'Vacant land sales from MLS or CRS exports, with your own edits (location, access, view).', 'Cost approach › site value (land sales, extraction)',
-      add('Add land sales (MLS / CRS CSV or PDF)', '.csv,.pdf')],
+      add('Add land sales (your land sales workbook, Excel)', '.xlsx')],
     ['Construction cost database', cost ? ok(true, `${cost.projects.length} projects · ${cost.lines.length.toLocaleString()} budget lines${cost.decisions ? ' · your decisions applied' : ''}`) : ok(false, 'not loaded'),
       'Your contractors’ budgets: cost per square foot by area, quality and kind of project.', 'Cost approach › cost new and soft costs',
       add('Add the cost database (Excel .xlsx)', '.xlsx')],
@@ -25,5 +25,5 @@ function dbViewHTML() {
   <p class="help">The files that feed every assignment. Add files with the buttons, or drop them anywhere on this page – each one is recognized by what is in it and filed in the right database. Everything stays on this computer. Files for one assignment (engagement letter, contract, CRS report, plans, the iPad workfile) go in that order's <b>① Documents</b> instead.</p>
   <div class="dbcards">${cards.map(([t, st, what, where, btn]) => `<section class="card dbcard"><h2>${t} ${st}</h2><p>${what}</p><p class="dbuse"><b>Used in:</b> ${where}</p>${btn ? `<div class="row">${btn}</div>` : ''}</section>`).join('')}</div>
   <label class="drop" id="drop"><input type="file" multiple data-act="files" hidden><b>Or drop files here</b></label>
-  <section class="card"><h2>Keeping them safe</h2><p>Your databases live in this browser on this computer. <b>Back up</b> in the Appraisal Assistant saves your orders; keep the original files (archive, CORT emails, cost workbook) in OneDrive as well, so they can always be added again. Your original files are never changed here – a copy is read.</p></section>`;
+  ${typeof safetyHTML === 'function' ? safetyHTML() : ''}`;
 }

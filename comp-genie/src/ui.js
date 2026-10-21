@@ -392,7 +392,7 @@ function renderPage() {
     <span class="pill">${app.cort.length ? `CORT: ${app.cort.length} sales` : 'No CORT table'}</span><span class="pill" title="Your land sale and construction cost databases (shared with the cost approach)">${(app.land || []).length ? `Land sales: ${app.land.length}` : 'No land sales'} · ${app.costDb ? `Costs: ${app.costDb.projects.length} projects` : 'No cost database'}</span>
     <details class="adddb"><summary class="btn sm" title="Add files to your databases – or drop them anywhere on this page">📥 Add to my databases</summary><div class="adddbm">
       <label class="btn sm">CORT weekly closings (PDF / CSV)<input type="file" multiple accept=".pdf,.csv" data-act="files" hidden></label>
-      <label class="btn sm">Land sales (MLS / CRS CSV or PDF)<input type="file" multiple accept=".csv,.pdf" data-act="files" hidden></label>
+      <label class="btn sm">Land sales (your land sales workbook, Excel)<input type="file" multiple accept=".xlsx" data-act="files" hidden></label>
       <label class="btn sm">Construction cost database (Excel .xlsx)<input type="file" multiple accept=".xlsx" data-act="files" hidden></label>
       <label class="btn sm">Comp archive (Comp Archive.json.gz)<input type="file" multiple accept=".gz,.json" data-act="files" hidden></label>
       <a class="btn sm" href="?view=db" target="genie-dbs">All my databases – what each holds ↗</a>
