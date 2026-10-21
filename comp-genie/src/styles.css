@@ -234,7 +234,7 @@ body:not(.classic) table.grid thead th{font-size:15px;color:#000}
 .badge.flagred{background:#d40000;color:#fff;cursor:help}
 .flagbox{border:2px solid #d40000;background:#fff0f0;border-radius:8px;padding:8px 12px;margin:6px 0;color:#000}.flagbox>b{color:#b00000}
 .flagbox .flags li,.flagbox .flags li.warn{color:#b00000;font-weight:700}.flagbox .flags li.info{color:#b00000;font-weight:600}
-table.cmp tr.flagrow th,table.cmp tr.flagrow td.using{background:#ffd6d6}.flagmk{color:#d40000;font-weight:800}
+table.cmp tr.flagrow th,table.cmp tr.flagrow td.using,table.cmp tr.flagrow th{background:#ffb8b8}.flagmk{color:#d40000;font-weight:800}
 #detail,.detail{scroll-margin-top:var(--toph,120px)}
 .overcall{display:block;color:#d40000;font-weight:800;font-size:12px}
 small.rdays{display:block}
@@ -246,3 +246,6 @@ table.comps tr.nextflag td{background:#ffe1a8!important;transition:background .3
 #compsCard .tablewrap{max-height:calc(100vh - var(--toph,64px) - 24px);overflow:auto;border-top:1px solid var(--line)}
 table.comps thead th{position:sticky;top:0;z-index:3;background:#fff;box-shadow:0 1px 0 #9aa6b2}
 select.qcsel{font-weight:700;margin:2px 4px 2px 0}
+/* her ask Oct 20 2026: the Using column in light pink, easy to run down (yellow / red rows still show over it) */
+table.cmp td.using,table.cmp th.using{background:#ffe3ec}
+table.cmp tr.disrow td.using{background:#fff36b}table.cmp tr.flagrow td.using,table.cmp tr.flagrow th{background:#ffb8b8}
