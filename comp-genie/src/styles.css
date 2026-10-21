@@ -291,3 +291,5 @@ table.grid thead th,table.grid thead th:nth-child(n){background-image:linear-gra
 body.classic table.grid thead th{background-image:linear-gradient(#4a5866,#4a5866),linear-gradient(#4a5866,#4a5866)}
 /* her ask (Oct 20 2026): the comp names stay on screen while she scrolls down – the grid box itself sticks under the top bar */
 body:not(.popgrid) #gridCard .tablewrap{position:sticky;top:var(--toph,64px)}
+#acbox{position:fixed;z-index:60;background:#fff;border:1.5px solid #ff8a00;border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,.18);display:none;padding:3px 0;font-size:14px;max-width:340px}
+#acbox .aci{padding:4px 10px;cursor:pointer;white-space:nowrap}#acbox .aci.on,#acbox .aci:hover{background:#ffdcb5}#acbox .aci small{color:#6b7785}#acbox .acmore,#acbox .achint{padding:2px 10px;font-size:11.5px;color:#6b7785}#acbox .achint{border-top:1px solid #eef1f4;margin-top:2px}

@@ -101,7 +101,7 @@ const ADJ_ROWS = [
 })();
 /* examples under a line name instead of its 3.6 field name (her ask Oct 20 2026); the field name stays in the tooltip and the ⓘ guide */
 const LINE_EG = { siteChar: 'e.g. excess land, landlocked, road frontage, shape, wetlands, zero lot line, flag lot', topo: 'e.g. flat, sloping, rolling, rocky', drain: 'e.g. erosion, improper grading, standing water',
-  easement: 'e.g. ingress/egress, utility, drainage, conservation', hazard: 'e.g. FEMA flood hazard area, none', primaryAccess: 'e.g. public street, private street', streetAccess: 'e.g. local road, cul-de-sac, dead end · asphalt',
+  easement: 'e.g. ingress/egress, utility, drainage, conservation', hazard: 'e.g. FEMA flood hazard area, none', primaryAccess: 'e.g. public street, private street', streetAccess: 'e.g. local road | asphalt, collector street | concrete (type and surface)',
   restrict: 'e.g. age, historic preservation, land use, rental', envCond: 'e.g. none, underground storage tank, radon', func: 'e.g. none, floor plan, ceiling height, overimprovement',
   disaster: 'e.g. fire resistant exterior walls, noncombustible perimeter, fortified roof', zoning: 'legal, legal nonconforming, illegal, no zoning' };
 const LOT_UTILITY = 'Usable Lot Area/Utility';      // her exact SFREP template "Add Other" row name (must match letter for letter)
