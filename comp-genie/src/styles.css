@@ -327,3 +327,8 @@ table.grid tbody td input.adj,table.grid tbody td input.adj::placeholder{font-si
 table.grid tbody td input.adj:placeholder-shown{font-weight:400!important}table.grid tbody td input.adj:placeholder-shown::placeholder{font-weight:800!important}
 table.grid tbody td input.adj[placeholder="$ adj"]::placeholder{font-size:13px!important;font-weight:400!important;color:#8a96a3!important}
 table.grid tbody td.dsc,table.grid tbody td{font-size:14.5px}
+/* her ask (Oct 20 2026): rate boxes two across, short names */
+table.grid th .grates{display:grid;grid-template-columns:1fr 1fr;gap:4px 6px;margin-top:5px}
+table.grid th .grates .grate{margin:0}table.grid th .grates .grate label{display:flex;flex-direction:column;gap:1px;font-size:11px;line-height:1.15;color:#3d4a57;font-weight:500}
+table.grid th .grates .grate input{width:100%;min-width:0;box-sizing:border-box;font-size:13px;padding:2px 4px}
+table.grid th .grates i.fromdot{color:#0b7a5a;font-style:normal;font-size:9px;margin-left:3px;vertical-align:1px}
