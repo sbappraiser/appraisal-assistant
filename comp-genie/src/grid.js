@@ -471,20 +471,26 @@ function notUsedXML(PROPS, job) { let k = 0;
     if (N.reasons.length) { const RS = X(PN, 'PROPERTY_NOT_USED_REASONS'); N.reasons.forEach(r => { const e = X(RS, 'PROPERTY_NOT_USED_REASON'); XV(e, 'ReasonPropertyNotUsedType', r); if (r === 'Other') XV(e, 'ReasonPropertyNotUsedTypeOtherDescription', (N.other || 'Other').slice(0, 27)); }); }
     const sd = g('saleDate'); if (lst === 'SettledSale' && sd && String(sd).length === 10) { const h = X(X(P, 'SALES_HISTORIES'), 'SALES_HISTORY'); XV(h, 'OwnershipTransferDate', sd); XV(h, 'OwnershipTransferTransactionType', 'Sale'); }
   }); }
-async function saveToMyDb(c) {   // her own comp database: kept on this computer, merged into the archive at the next rebuild
-  const rec = await DB.get('kv', 'mycomps'); const list = (rec && rec.v) || []; const J = app.job;
+async function saveToMyDb(c, listIn) {   // her own comp database: kept on this computer, merged into the archive at the next rebuild
+  const rec = listIn ? null : await DB.get('kv', 'mycomps'); const list = listIn || (rec && rec.v) || []; const J = app.job;
   const values = Object.fromEntries(FIELDS.map(f => [f.k, V(c, f.k)]).filter(([, v]) => !blank(v)));
   const key = (values.addr || compTitle(c)) + '|' + (values.saleDate || values.contractDate || '');
   const strip = o => o ? JSON.parse(JSON.stringify(o, (k, v) => (/photo|image|blob|thumb/i.test(k) || v instanceof Blob) ? undefined : v)) : null;   // the data from each source, without photos (Oct 20 2026)
   const row = { key, saved: Date.now(), job: J.name, title: compTitle(c), values, sources: sourcesOf(c), sourceData: { mls: strip(c.src.mls), pdf: strip(c.src.pdf), crs: strip(c.src.crs), cort: strip(c.src.cort), archRecords: (c.src.arch || []).map(a => a.rec) }, notes: c.notes || '', flags: compFlags(c, J).map(f => f.t), edits: strip(c.edit), notUsed: c.notUsed || null, adjustments: J.grid && J.grid.cells ? J.grid.cells[c.id] || null : null,
-    tiers: { q: fineOf(J, c.id, 'q'), c: fineOf(J, c.id, 'c') }, landscaping: values.landscaping || null, compNo: c.use || null };   // her low / mid / high tiers: her database only, never UAD
+    tiers: { q: fineOf(J, c.id, 'q'), c: fineOf(J, c.id, 'c') }, landscaping: values.landscaping || null, compNo: c.use || null,
+    stage: c.use ? (c.final === false ? 'workbook' : 'workbook / final grid') : c.notUsed ? 'analyzed – not used' : 'micro (comps considered)', grid: (() => { try { const F = compFacts(c, J); return Object.fromEntries(adjRows(J).filter(r => !blank(F[r[0]])).map(r => [r[0], F[r[0]]])); } catch (e) { return null; } })(),
+    reports: [...new Set(Object.values(c.src || {}).flat().filter(o => o && o._file).map(o => ((J.files || []).find(f => f.id === o._file) || {}).name).filter(Boolean))], frontPhoto: (typeof frontOf === 'function' && frontOf(c) || {}).id || null, flagsChecked: c.flagOk || null };   // Oct 20 2026: the reports, front photo and grid lines linked to the comp   // her low / mid / high tiers: her database only, never UAD
   // her rule (Oct 19 2026): no duplicate entries – the same comp, only more aged or with the prior sales re-checked, replaces the saved one; anything else is kept as a new version
   const fam = x => x.key === key || String(x.key).startsWith(key + '|v');
   let same = list.findIndex(x => fam(x) && x.job === J.name);   // saved again from the same assignment: that version is updated
   if (same < 0) same = list.findIndex(x => fam(x) && sameButAged(x.values || {}, values));
   if (same >= 0) { row.key = list[same].key; row.jobs = [...new Set([...(list[same].jobs || [list[same].job]), J.name])]; list[same] = row; }
   else { const n = list.filter(fam).length; if (n) row.key = key + '|v' + (n + 1); row.jobs = [J.name]; list.push(row); }
-  await DB.put('kv', { id: 'mycomps', v: list }); return list.length; }
+  if (!listIn) await DB.put('kv', { id: 'mycomps', v: list }); return list.length; }
+/* her ask (Oct 20 2026): every comp she works on – comps considered (micro), workbook, final grid – is saved to her comp database by itself, the same comp updated, not duplicated */
+let MYDB_T = null;
+function myDbAuto() { clearTimeout(MYDB_T); MYDB_T = setTimeout(async () => { const J = app.job; if (!J || POP || CPOP) return; try { const rec = await DB.get('kv', 'mycomps'); const list = (rec && rec.v) || [];
+  for (const c of J.comps) if (c.use || c.notUsed || sourcesOf(c).length) await saveToMyDb(c, list); await DB.put('kv', { id: 'mycomps', v: list }); } catch (e) { console.warn('comp database', e); } }, 15000); }
 
 /* text for an Add Other row (subject or comp) */
 function otherDesc(r, F) {
@@ -776,3 +782,55 @@ const OVER_SHORT = 14, OVER_LONG = 30;
 /* her ask (Oct 20 2026): a real drop-down for the quality and condition ratings (Q1–Q6 / C1–C6, with the UAD definitions on hover) */
 function qcSel(who, id, cur) { const L = id.toUpperCase(); const m = String(cur || '').toUpperCase().match(new RegExp(L + '\\s*([1-6])')); const v = m ? L + m[1] : ''; const H = L === 'Q' ? Q_HELP : C_HELP;
   return `<select class="qcsel" data-qc="${who}|${id}" title="${esc(L === 'Q' ? 'Overall quality' : 'Overall condition')} – UAD 3.6 rating"><option value="">${L}–</option>${[1, 2, 3, 4, 5, 6].map(n => `<option value="${L}${n}" ${v === L + n ? 'selected' : ''} title="${esc(H[L + n] || '')}">${L}${n}</option>`).join('')}</select>`; }
+
+/* ==== her steps (Oct 20 2026): ① Comps considered (micro) → ② Workbook (confirm each comp, adjust) → ③ Final grid (review, export) ==== */
+/* the 3.6 grid lines one comp needs, and how many are filled in */
+function compLines(c, J) {
+  const C = compFacts(c, J); const rows = adjRows(J).filter(r => rowShown(r, J) && !GRID_INFO[r[0]] && !['ppsf', 'src', 'prox'].includes(r[0]));
+  const has = r => { const id = r[0]; if (id === 'baths') return !blank(C.full); if (id === 'garage') return !blank(C.garage) || ((c.edit || {}).vs || []).length > 0 || !!(c.edit || {}).vsNone; return !blank(C[id]) && C[id] !== ''; };
+  const L = rows.map(r => ({ id: r[0], label: r[1], req: GRID_KEEP.has(r[0]), done: has(r) }));
+  return { L, done: L.filter(x => x.done).length, n: L.length, reqLeft: L.filter(x => x.req && !x.done).length };
+}
+function linesBadge(c, J) { if (!c.use) return ''; const k = compLines(c, J); const ok = c.confirmed && !k.reqLeft;
+  return ` <span class="badge ${ok ? 'flagok' : k.reqLeft ? 'flagred' : ''}" title="${k.done} of ${k.n} grid lines filled in${k.reqLeft ? ` – ${k.reqLeft} required still empty` : ''}${c.confirmed ? ' · data confirmed' : ''}">${ok ? '✓ ' : ''}${k.done}/${k.n}</span>`; }
+/* the grid lines of one comp, top to bottom – on its page (and when popped out) */
+function compLinesHTML(c, J) {
+  if (!c.use) return '';
+  const S = subjFacts(J), C = compFacts(c, J); const k = compLines(c, J); const G = G0(J);
+  const rows = k.L.map(x => { const id = x.id; const raw = id === 'usable' ? (blank(C.usable) ? '' : String(C.usable)) : wbFactText(id, C);
+    const sv = id === 'baths' ? ([S.full, S.half].every(blank) ? '' : `${S.full ?? '–'} / ${S.half ?? 0}`) : showFact(id, S[id]);
+    const bad = (PICK[id] || id === 'view') && raw && !pkValid(id, raw, (c.edit || {})['pk_' + id]);
+    let ctl = WB_NOEDIT.includes(id) ? esc(showFact(id, C[id])) : `<input class="txt sm fact${bad ? ' bad' : ''}" data-gfact="${c.id}|${id}" value="${esc(raw)}" placeholder="${x.req ? 'required' : ''}">`;
+    if (id === 'q' || id === 'c') ctl += qcSel(c.id, id, C[id]) + fineSel(c.id, id, J); else if (id === 'view') ctl += vtSel(c.id, J, C.view); else if (id === 'loc') ctl += locBtn(c.id);
+    else if (id === 'garage') ctl += `${(c.edit || {}).grid_vsText ? `<small class="vsx">${esc(c.edit.grid_vsText)}</small>` : ''} <button type="button" class="btn xs" data-vspick="${c.id}">▾ vehicle storage</button>`; else ctl += pkBtn(c.id, id);
+    const a = adjRows(J).find(r => r[0] === id); const amt = a && a[3] ? cellAmount(J, c, a).v : null;
+    return `<tr class="${x.done ? '' : x.req ? 'linereq' : 'lineopt'}"><th>${x.req ? REQ_STAR : ''}${esc(x.label)}</th><td class="subj">${esc(sv || '')}</td><td>${ctl}</td><td class="r">${amt ? (amt > 0 ? '+' : '') + money(amt) : ''}</td></tr>`; }).join('');
+  const T = compTotals(J, c);
+  return `<h3>Grid lines for this comp <small>${k.done} of ${k.n} filled in${k.reqLeft ? ` · <b class="bad">${k.reqLeft} required still empty</b>` : ' · all required lines filled in'} – ⚙ Grid lines (in the workbook) picks which lines show</small></h3>
+    <div class="tablewrap"><table class="mini cmplines"><tr><th>Line</th><th>Subject</th><th>This comp</th><th class="r">Adjustment</th></tr>${rows}
+    <tr class="tot"><th>Adjusted price</th><td></td><td>${money(T.price)} ${T.net ? (T.net > 0 ? '+ ' : '− ') + money(Math.abs(T.net)) : ''}</td><td class="r"><b>${money(T.adj)}</b></td></tr></table></div>
+    <div class="row">${c.confirmed ? `<span class="ccdone">✓ Data confirmed</span> <button class="btn sm" data-act="unconfirm" data-id="${c.id}">Undo</button>` : `<button class="btn primary" data-act="confirm" data-id="${c.id}" ${k.reqLeft ? 'title="Some required lines are still empty – you can still mark it"' : ''}>✓ Data confirmed</button>`}
+      <button class="btn" data-act="nextconfirm" data-id="${c.id}">Next comp to confirm ▸</button></div>`;
+}
+/* the workbook strip: the comps in the workbook, one by one */
+function confirmStripHTML(J) {
+  const U = usedComps(J); if (!U.length) return '<h2>Workbook</h2><p class="help">No comps in the workbook yet – in ① Comps considered click <b>→ Workbook</b> (or tick them and <b>Put in the workbook</b>).</p>';
+  const left = U.filter(c => !c.confirmed).length;
+  return `<div class="row"><h2 style="margin:0">Workbook <small>${U.length} comps · ${left ? left + ' to confirm' : 'all confirmed ✓'}</small></h2><span class="grow"></span>${left ? `<button class="btn primary" data-act="nextconfirm">Confirm the next comp ▸</button>` : ''}</div>
+    <p class="help">Open each comp in turn (here or ↗ popped out): check the data against its sources, fill in its grid lines, notes and ratings, then click <b>✓ Data confirmed</b>. Then make your adjustments below, see the adjusted prices, and take comps out or add more. When it is ready, go to <b>③ Final grid</b>.</p>
+    <div class="cstrip">${U.map(c => { const f = compFlags(c, J).filter(x => !flagChecked(c, x)).length; return `<button class="cchip${c.confirmed ? ' ok' : ''}${app.sel === c.id ? ' on' : ''}" data-act="openwb" data-id="${c.id}"><b>${c.use}</b> ${esc(compTitle(c))}${linesBadge(c, J)}${f ? ` <span class="badge flagred">⚑ ${f}</span>` : ''}</button>`; }).join('')}</div>`;
+}
+/* ③ the final grid – read-only, laid out like the 3.6 grid */
+function finalGridHTML(J) {
+  const U = usedComps(J); if (!U.length) return '<h2>Final grid</h2><p class="help">Nothing in the workbook yet.</p>';
+  const S = subjFacts(J); let sec = '';
+  const rows = adjRows(J).filter(r => rowShown(r, J) && !GRID_INFO[r[0]]).map(r => { const [id, label, section, type] = r; const head = section !== sec ? `<tr class="grp"><th colspan="${2 + U.length}">${esc(section)}</th></tr>` : ''; sec = section;
+    const sv = id === 'baths' ? ([S.full, S.half].every(blank) ? '' : `${S.full ?? '–'} / ${S.half ?? 0}`) : showFact(id, S[id]);
+    return head + `<tr><th>${GRID_KEEP.has(id) ? REQ_STAR : ''}${esc(label)}</th><td class="subj">${esc(sv || '')}</td>${U.map(c => { const C = compFacts(c, J); const v = id === 'baths' ? ([C.full, C.half].every(blank) ? '' : `${C.full ?? '–'} / ${C.half ?? 0}`) : id === 'garage' && (c.edit || {}).grid_vsText ? c.edit.grid_vsText : showFact(id, C[id]);
+      const a = type ? cellAmount(J, c, r).v : null; return `<td>${blank(v) || v === '' ? (GRID_KEEP.has(id) ? '<span class="bad">missing</span>' : '') : esc(v)}${a ? `<div class="famt">${a > 0 ? '+' : '−'}${money(Math.abs(a))}</div>` : ''}</td>`; }).join('')}</tr>`; }).join('');
+  const T = U.map(c => compTotals(J, c));
+  const tot = (l, f) => `<tr class="tot"><th>${l}</th><td></td>${T.map(f).map(x => `<td>${x}</td>`).join('')}</tr>`;
+  return `<h2>Final grid <small>what goes to SFREP – read only; change things in ② Workbook</small></h2>
+    <div class="tablewrap"><table class="grid final"><thead><tr><th></th><th>Subject<br><span class="gaddr">${esc(J.subject.addr || '')}</span></th>${U.map(c => `<th>Comp ${c.use}<br><span class="gaddr">${esc(compTitle(c))}</span></th>`).join('')}</tr></thead><tbody>${rows}
+    ${tot('Net adjustment', t => `${t.net >= 0 ? '+' : '−'}${money(Math.abs(t.net))} (${t.netPct.toFixed(1)}%)`)}${tot('Gross adjustment', t => `${money(t.gross)} (${t.grossPct.toFixed(1)}%)`)}${tot('Adjusted price', t => `<b>${money(t.adj)}</b>`)}</tbody></table></div>`;
+}

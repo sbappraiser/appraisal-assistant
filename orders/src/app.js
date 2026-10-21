@@ -503,7 +503,7 @@ async function start() {
   const draft = store.get('draft', null); // an unsaved letter left in the old letter writer
   cur = pick ? { ...NEW_FIELDS, ...JSON.parse(JSON.stringify(pick)) } : (!letters.length && draft && draft.id) ? { ...blankLetter(), ...draft } : blankLetter();
   writeForm(cur); render(); renderLetters(); renderContacts();
-  showTab(q && pick ? 'letter' : 'home');
+  { const tb = new URLSearchParams(location.search).get('tab'); showTab(q && pick ? (['market', 'letter', 'genie'].includes(tb) ? tb : 'letter') : 'home'); }   // the Comp genie's ⓪ Market step opens the order's Market tab
   $('#build').textContent = 'Version ' + BUILD; { const bt = $('#buildTop'); if (bt) bt.textContent = 'Version ' + BUILD; } $('#rdBuild').textContent = BUILD;
   abStart();
   $('#helpSearch').addEventListener('input', e => { const q = e.target.value.trim().toLowerCase(); document.querySelectorAll('.help-page details').forEach(d => { const hit = !q || d.textContent.toLowerCase().includes(q); d.hidden = !hit; d.open = !!q && hit; }); });

@@ -249,3 +249,12 @@ select.qcsel{font-weight:700;margin:2px 4px 2px 0}
 /* her ask Oct 20 2026: the Using column in light pink, easy to run down (yellow / red rows still show over it) */
 table.cmp td.using,table.cmp th.using{background:#ffe3ec}
 table.cmp tr.disrow td.using{background:#fff36b}table.cmp tr.flagrow td.using,table.cmp tr.flagrow th{background:#ffb8b8}
+/* her steps (Oct 20 2026) */
+nav.steps{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 12px}
+.stepb{font:inherit;display:flex;flex-direction:column;align-items:flex-start;gap:1px;text-align:left;border:2px solid var(--line);background:#fff;color:#000;border-radius:10px;padding:8px 14px;cursor:pointer;text-decoration:none;min-width:190px}
+.stepb b{font-size:16px}.stepb small{color:#1a1a1a;font-size:12px}.stepb.on{border-color:#ff8a00;background:#fff3e0;box-shadow:0 0 0 2px #ffcf99}
+#app[data-stage="micro"] .st:not(.st-micro),#app[data-stage="workbook"] .st:not(.st-workbook),#app[data-stage="final"] .st:not(.st-final){display:none!important}
+.cstrip{display:flex;flex-wrap:wrap;gap:6px}.cchip{font:inherit;font-size:14px;border:1px solid var(--line);background:#fff;border-radius:8px;padding:6px 10px;cursor:pointer;color:#000}.cchip.ok{border-color:#8fcca0;background:var(--ok-l)}.cchip.on{outline:2px solid #ff8a00}
+table.cmplines th{text-align:left;font-weight:700}table.cmplines tr.linereq th,table.cmplines tr.linereq td{background:#fff36b}table.cmplines tr.lineopt td:nth-child(3){background:#f3f8ff}table.cmplines td.subj{background:#f4f6f8}
+table.grid.final td{font-size:14px}.famt{font-weight:700;color:#0b4fc4;font-size:13px}span.bad,b.bad{color:#d40000;font-weight:700}
+#wbStrip .cchip.nextflag{background:#ffe1a8}

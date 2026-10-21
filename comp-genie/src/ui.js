@@ -166,7 +166,7 @@ function jobStatus(J) {   // for the green check on the Appraisal Assistant's Co
 }
 async function saveNow() { if (!app.job) return; app.job.updated = Date.now(); app.job.status = jobStatus(app.job);
   if (app.job.orderId && window.parent !== window) { try { window.parent.postMessage({ type: 'aa-genie-status', order: app.job.orderId, n: app.job.status.n }, location.origin); } catch (e) {} }
-  await DB.put('jobs', app.job); if (!POP && !CPOP) await DB.put('kv', { id: 'lastJob', v: app.job.id }); wbNotify(); if (!POP && !CPOP) snapMaybe(app.job); }
+  await DB.put('jobs', app.job); if (!POP && !CPOP) await DB.put('kv', { id: 'lastJob', v: app.job.id }); wbNotify(); if (!POP && !CPOP) { snapMaybe(app.job); myDbAuto(); } }
 
 /* ---------------- photos ---------------- */
 app.photos = []; // [{id, mls, n, name}] for this job (blobs stay in storage)
@@ -378,6 +378,7 @@ function renderPage() {
   if (POP) { root.innerHTML = popHTML(J); document.title = `Comps ${POP.from}–${POP.to} · ${J.name}`; wbUndoBar(); return; }
   if (app.home || !J) { root.innerHTML = homeHTML(); document.title = 'Comp Genie'; return; }
   document.title = 'Comp Genie · ' + J.name;
+  root.dataset.stage = J.stage || (J.comps.some(c => c.use) ? 'workbook' : 'micro');
   root.innerHTML = `
   <header class="top"><h1>Comp Genie</h1><span class="pill ver" title="The Comp genie version – after Ctrl+R it should match the one I tell you">Version ${typeof BUILD !== 'undefined' ? BUILD : ''}</span>
     <span class="pill ${ARCH.loaded ? 'ok' : 'warn'}">${ARCH.loaded ? `Archive: ${ARCH.rows.length.toLocaleString()} records` : 'Archive not loaded'}</span>${archPhotoPill()}
@@ -390,9 +391,10 @@ function renderPage() {
     ${app.confirm === 'deljob' ? `<span class="confirm">Delete “${esc(J.name)}”? <button class="btn danger solid" data-act="deljob-yes">Delete</button><button class="btn" data-act="cancel">Keep</button></span>` : `<button class="btn danger" data-act="deljob">Delete</button>`}
   </header>
   ${ARCH.loaded ? '' : `<section class="card notice"><b>Load your comp archive${app.jobs.some(j => j.comps.length) ? ' in this browser' : ' once'}.</b> ${app.jobs.some(j => j.comps.length) ? 'Each browser (Chrome, Firefox, Edge) keeps its own copy, and this one has none yet. ' : ''}Drop <i>Comp Archive.json.gz</i> and <i>CORT Sales.csv</i> anywhere on this page (or <label class="link">choose it<input type="file" multiple data-act="files" hidden></label>). It is saved on this computer only; nothing is uploaded.</section>`}
+  ${stageBarHTML(J)}
   <div class="busy" id="busy" ${app.busy ? '' : 'hidden'}>${esc(app.busy)}</div>
-  <section class="card"><h2>Subject</h2>${subjectHTML(J)}</section>
-  <section class="card"><h2>Add comps</h2>
+  <section class="card st st-micro"><h2>Subject</h2>${subjectHTML(J)}</section>
+  <section class="card st st-micro"><h2>Add comps</h2>
     <div class="addrow"><div class="sugwrap"><input id="addr" class="txt big" placeholder="Type a comp address, e.g. 1181 Glenview" autocomplete="off" data-act="sugg"><div class="sugg" id="sugg"></div></div>
       <button class="btn primary" data-act="add">Add comp</button></div>
     <p class="help">If the address is in your archive, it fills in at once with every version you have. Then drop files to add to it.</p>
@@ -404,19 +406,21 @@ function renderPage() {
       <b>Drop files here</b> or click to choose: MLS export (.csv) · MLS photos (.zip) · MLS printout (.pdf) · CRS reports (.pdf) · CORT table (.csv) · comp archive (.gz) · your land sales or cost database (.xlsx)</label>
     ${(J.files || []).length ? `<details class="files"${crsNeedHTML(J) || /^rf:/.test(app.confirm || '') ? ' open' : ''}><summary><b>Files in this assignment</b> <small>${J.files.length}${crsNeedHTML(J) ? '' : ' · <span class="ccdone">✓</span> nothing else needed'} · (✕ takes a file back out)</small></summary><ul>${J.files.map(f => `<li>${esc(f.name)} <small>${esc(f.kind)}${f.n ? ', ' + f.n : ''}</small> ${app.confirm === 'rf:' + f.id ? `<span class="confirm">Take it out? <button class="btn danger solid sm" data-rfyes="${esc(f.id)}">Remove file</button><button class="btn sm" data-act="cancel">Keep</button></span>` : `<button class="btn sm" data-rf="${esc(f.id)}" title="Remove this file and what it added">✕</button>`}</li>`).join('')}</ul></details>` : ''}
   </section>
-  <section class="card" id="compsCard">${compsCardHTML(J)}</section>
-  <div id="detail">${app.sel ? detailHTML(J.comps.find(c => c.id === app.sel)) : ''}</div>
-  <section class="card" id="gridCard">${gridHTML(J)}</section>
-  <section class="card" id="mapCard"></section>
-  <section class="card" id="refCard">${refHTML(J)}</section>
-  <section class="card" id="costCard">${costHTML(J)}</section>
-  <section class="card" id="incomeCard">${incomeHTML(J)}</section>
-  <section class="card" id="nuCard">${notUsedHTML(J)}</section>
-  <section class="card" id="timeCard">${timeHTML(J)}</section>
-  <section class="card" id="supCard">${supHTML(J)}</section>
-  <section class="card" id="preCard">${precheckHTML(J)}</section>
-  <section class="card" id="reportCard">${reportHTML(J)}</section>
-  <section class="card" id="exportCard"><h2>Export</h2>${exportHTML(J)}</section>
+  <section class="card st st-micro" id="compsCard">${compsCardHTML(J)}</section>
+  <section class="card st st-workbook" id="wbStrip">${confirmStripHTML(J)}</section>
+  <div id="detail" class="st st-micro st-workbook">${app.sel ? detailHTML(J.comps.find(c => c.id === app.sel)) : ''}</div>
+  <section class="card st st-workbook" id="gridCard">${gridHTML(J)}</section>
+  <section class="card st st-final" id="finalCard">${finalGridHTML(J)}</section>
+  <section class="card st st-final" id="mapCard"></section>
+  <section class="card st st-workbook" id="refCard">${refHTML(J)}</section>
+  <section class="card st st-workbook" id="costCard">${costHTML(J)}</section>
+  <section class="card st st-workbook" id="incomeCard">${incomeHTML(J)}</section>
+  <section class="card st st-workbook st-final" id="nuCard">${notUsedHTML(J)}</section>
+  <section class="card st st-workbook" id="timeCard">${timeHTML(J)}</section>
+  <section class="card st st-workbook" id="supCard">${supHTML(J)}</section>
+  <section class="card st st-final" id="preCard">${precheckHTML(J)}</section>
+  <section class="card st st-final" id="reportCard">${reportHTML(J)}</section>
+  <section class="card st st-final" id="exportCard"><h2>Export</h2>${exportHTML(J)}</section>
   <footer class="foot">Comp Genie · your data stays on this computer · build ${typeof BUILD !== 'undefined' ? BUILD : ''}</footer>`;
   fillImages(); mapsRender(); { const t = document.querySelector('.top'); if (t) document.documentElement.style.setProperty('--toph', t.offsetHeight + 'px'); }   // the comp's sticky header sits under the top bar
 }
@@ -437,11 +441,11 @@ const CSEL = new Set();
 function bulkBarHTML(J) { if (!J.comps.length) return '';
   const n = CSEL.size; const off = J.comps.filter(c => !c.use).length;
   return `<div class="bulk"><b>Select:</b> <button class="lnk" data-act="csel" data-w="all">all ${J.comps.length}</button> · <button class="lnk" data-act="csel" data-w="off">not on the grid (${off})</button> · <button class="lnk" data-act="csel" data-w="none">none</button>
-    ${n ? `<span class="bsel"><b>${n} selected:</b> <button class="btn sm primary" data-act="bulkgrid">Put on the grid</button>
+    ${n ? `<span class="bsel"><b>${n} selected:</b> <button class="btn sm primary" data-act="bulkgrid">Put in the workbook</button>
       <button class="btn sm" data-act="bulknu">Analyzed – not used</button> reason <select data-bulkreason>${NOTUSED_REASONS.map(([v, l]) => `<option value="${v}" ${v === 'DesignOrStyleVariance' ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>
       <label class="inl"><input type="checkbox" data-bulkdb> also save to my comp database</label> <button class="btn sm" data-act="bulkdb" title="Save the ticked comps to your comp database (on this computer; merged into your archive at the next rebuild) – they stay where they are">Save to my comp database</button></span>` : '<small class="muted">tick comps in the first column, or use a quick select</small>'}</div>`; }
 const compsCardHTML = J => J.ccDone ? `<div class="row"><h2 style="margin:0"><span class="ccdone">✓</span> Comps considered <small>${J.comps.length} · done</small></h2><span class="grow"></span><button class="btn sm" data-act="ccopen" title="Show the list again">Show ▾</button></div>`
-  : `<div class="row"><h2 style="margin:0">Comps considered <small>${J.comps.length}</small></h2><span class="grow"></span>${J.comps.length ? `<button class="btn sm" data-act="ccdone" title="Mark the list finished and fold it away (Show ▾ brings it back)" style="color:var(--ok);border-color:#8fcca0">✓ Done – collapse</button>` : ''}${(() => { const n = J.comps.filter(c => !c.use && !c.notUsed).length; return n ? `<button class="btn sm primary" data-act="gridall" title="Puts on the grid every comp that is not on the grid yet and not already listed under Analyzed – not used, in closing-date order">Grid the undecided (${n})</button>` : ''; })()}${J.comps.filter(c => c.use).length > 1 && !gridInDateOrder(J) ? `<button class="btn sm" data-act="gridorder" title="Comp 1 = the most recent closing, as in this list">Number the grid in closing-date order</button>` : ''}${J.comps.length ? (app.confirm === 'rmall' ? `<span class="confirm">Remove all ${J.comps.length} comps from this assignment? <button class="btn danger solid sm" data-act="rmall-yes">Remove all</button><button class="btn sm" data-act="cancel">Keep</button></span>` : `<button class="btn sm danger" data-act="rmall">Remove all comps</button>`) : ''}</div>${bulkBarHTML(J)}${compsTable(J)}`;
+  : `<div class="row"><h2 style="margin:0">Comps considered <small>${J.comps.length}</small></h2><span class="grow"></span>${J.comps.length ? `<button class="btn sm" data-act="ccdone" title="Mark the list finished and fold it away (Show ▾ brings it back)" style="color:var(--ok);border-color:#8fcca0">✓ Done – collapse</button>` : ''}${(() => { const n = J.comps.filter(c => !c.use && !c.notUsed).length; return n ? `<button class="btn sm primary" data-act="gridall" title="Puts on the grid every comp that is not on the grid yet and not already listed under Analyzed – not used, in closing-date order">All undecided → Workbook (${n})</button>` : ''; })()}${J.comps.filter(c => c.use).length > 1 && !gridInDateOrder(J) ? `<button class="btn sm" data-act="gridorder" title="Comp 1 = the most recent closing, as in this list">Number the grid in closing-date order</button>` : ''}${J.comps.length ? (app.confirm === 'rmall' ? `<span class="confirm">Remove all ${J.comps.length} comps from this assignment? <button class="btn danger solid sm" data-act="rmall-yes">Remove all</button><button class="btn sm" data-act="cancel">Keep</button></span>` : `<button class="btn sm danger" data-act="rmall">Remove all comps</button>`) : ''}</div>${bulkBarHTML(J)}${compsTable(J)}`;
 /* Redraw only what depends on a typed value, so the field you are in (and the next one you Tab to) is never replaced. */
 function renderParts(opts = {}) { return rcRun(() => renderParts0(opts)); }
 function renderParts0(opts = {}) {
@@ -478,20 +482,20 @@ function compsTable(J) {
   const rows = [...J.comps].sort(compOrder);
   [...CSEL].forEach(id => { if (!J.comps.some(c => c.id === id)) CSEL.delete(id); });
   const maxUse = Math.max(9, J.comps.length);
-  return `<div class="tablewrap"><table class="comps"><thead><tr><th class="ck"><input type="checkbox" data-cselall title="Select all" ${J.comps.length && J.comps.every(c => CSEL.has(c.id)) ? 'checked' : ''}></th><th>Use as</th><th></th><th>Address</th><th>Status</th><th class="r">Price</th><th>Date</th><th class="r">GLA</th><th title="From the MLS listing (Construction: Single Story, Two Story, Split Level, Tri-Level); blank when the agent did not tick one or the sale is not in the MLS">Stories</th><th class="r">Site</th><th>Q / C</th><th>View</th><th class="r">Miles</th><th>Sources</th><th></th></tr></thead><tbody>
+  return `<div class="tablewrap"><table class="comps"><thead><tr><th class="ck"><input type="checkbox" data-cselall title="Select all" ${J.comps.length && J.comps.every(c => CSEL.has(c.id)) ? 'checked' : ''}></th><th>Use as</th><th></th><th>Address</th><th>Status</th><th class="r">Price</th><th>Date</th><th class="r">GLA</th><th title="From the MLS listing (Construction: Single Story, Two Story, Split Level, Tri-Level); blank when the agent did not tick one or the sale is not in the MLS">Stories</th><th class="r">Site</th><th>Q / C</th><th>Location</th><th>View</th><th class="r" title="Usable lot area / utility">Usable</th><th class="r">Miles</th><th>Sources</th><th></th></tr></thead><tbody>
   ${rows.map(c => { const fr = frontOf(c); const px = proximity(c, J); const flAll = compFlags(c, J); const fl = flAll.filter(x => !flagChecked(c, x)); const warn = fl.filter(x => x.sev === 'warn').length;
     const st = V(c, 'status') || ((currentSale(c) || {}).status || '');
     return `<tr class="${c.id === app.sel ? 'sel' : ''} ${c.use ? 'used' : ''}" data-open="${c.id}">
       <td class="ck"><input type="checkbox" data-csel="${c.id}" ${CSEL.has(c.id) ? 'checked' : ''} aria-label="Select"></td>
-      <td class="usecell"><button class="btn small${c.use ? '' : ' primary'}" data-quse="${c.id}" title="${c.use ? 'Take it off the grid' : 'Put it on the grid as the next comp'}">${c.use ? 'Remove' : '+ Grid'}</button><select data-use="${c.id}" aria-label="Use as comp number" title="Or pick its comp number">${'<option value="">–</option>'}${Array.from({ length: maxUse }, (_, i) => `<option ${c.use === i + 1 ? 'selected' : ''}>${i + 1}</option>`).join('')}</select>${!c.use && c.notUsed ? '<br><small class="nutag">analyzed – not used</small>' : ''}</td>
+      <td class="usecell"><button class="btn small${c.use ? '' : ' primary'}" data-quse="${c.id}" title="${c.use ? 'Take it out of the workbook (it stays here, under Analyzed – not used)' : 'Move it to the workbook as the next comp'}">${c.use ? 'Out of workbook' : '→ Workbook'}</button><select data-use="${c.id}" aria-label="Use as comp number" title="Or pick its comp number">${'<option value="">–</option>'}${Array.from({ length: maxUse }, (_, i) => `<option ${c.use === i + 1 ? 'selected' : ''}>${i + 1}</option>`).join('')}</select>${!c.use && c.notUsed ? '<br><small class="nutag">analyzed – not used</small>' : ''}</td>
       <td>${fr ? `<img class="thumb" data-photo="${fr.id}" alt="">` : `<button type="button" class="nothumb" data-pickphoto="${c.id}" title="${archPhotoNames(c).length && AP.state !== 'ok' ? 'Your archive has a front photo of this one – click to connect your archive photos' : 'Click to add a photo: the MLS photos zip, or a picture of the front'}">📷</button>`}</td>
-      <td><b>${esc(compTitle(c))}</b>${c.use && fl.length ? ` <span class="badge flagred" title="${esc(fl.map(x => x.t).join('\n'))}">⚑ ${fl.length}</span>` : c.use && flAll.length ? ' <span class="badge flagok" title="All flags checked">✓</span>' : ''}<br><small>${esc(V(c, 'mls') ? 'MLS ' + V(c, 'mls') : '')}</small> <button class="btn xs" data-act="cpop" data-id="${c.id}" title="Open this comp in its own window you can move to another screen">↗ pop out</button></td>
+      <td><b>${esc(compTitle(c))}</b>${linesBadge(c, J)}${c.use && fl.length ? ` <span class="badge flagred" title="${esc(fl.map(x => x.t).join('\n'))}">⚑ ${fl.length}</span>` : c.use && flAll.length ? ' <span class="badge flagok" title="All flags checked">✓</span>' : ''}<br><small>${esc(V(c, 'mls') ? 'MLS ' + V(c, 'mls') : '')}</small> <button class="btn xs" data-act="cpop" data-id="${c.id}" title="Open this comp in its own window you can move to another screen">↗ pop out</button></td>
       <td>${esc(statusText(st))}</td><td class="r">${money(V(c, 'salePrice') || V(c, 'listPrice'))}${!V(c, 'salePrice') && V(c, 'listPrice') ? '<br><small>list</small>' : ''}</td>
       <td>${esc(showDate(V(c, 'saleDate') || V(c, 'contractDate')))}</td><td class="r">${int(V(c, 'gla'))}</td><td>${(() => { const tg = (c.src.mls && c.src.mls.storyTags) || []; if (tg.length) return esc(tg.map(x => x.replace(/ Story$/i, '').replace(/-?Level$/i, ' level').replace(/^Tri level$/i, 'Tri-level')).join(', ')); const word = n => n === 1 ? 'Single' : n === 2 ? 'Two' : n === 3 ? 'Three' : n === 4 ? 'Four' : esc(n);
       const n = (c.src.mls && c.src.mls.stories) || (c.src.pdf && c.src.pdf.stories) || null; if (n) return word(n);
       const a = archChosen(c) || (c.src.arch || [])[0]; const an = a && a.v && a.v.stories;   // her 2.6 Design line (DT1;Ranch) in your archive
       return an ? `<span title="From your archive: ${esc(a.v.designRaw || '')}">${word(an)} <small class="muted">archive</small></span>` : ''; })()}</td><td class="r">${esc(fmt(FIELD.siteSf, V(c, 'siteSf')))}</td>
-      <td>${esc([V(c, 'quality'), V(c, 'condition')].filter(Boolean).join(' / '))}</td><td><small>${esc([V(c, 'viewRating'), V(c, 'viewTypes')].filter(Boolean).join(': ')).slice(0, 40)}</small></td>
+      <td>${esc([V(c, 'quality'), V(c, 'condition')].filter(Boolean).join(' / '))}</td><td><small>${esc((() => { const F = compFacts(c, J); return String(F.loc || '').slice(0, 40); })())}</small></td><td><small>${esc([V(c, 'viewRating'), V(c, 'viewTypes')].filter(Boolean).join(': ')).slice(0, 40)}</small></td><td class="r">${(() => { const u = compFacts(c, J).usable; return blank(u) ? '' : (+u).toFixed(2) + ' ac'; })()}</td>
       <td class="r">${px ? px.mi.toFixed(2) + '<br><small>' + px.dir.replace(/([a-z])([A-Z])/, '$1 $2') + '</small>' : ''}</td>
       <td>${sourcesOf(c).map(s => `<span class="src">${esc(s)}</span>`).join(' ')}</td>
       <td>${app.confirm === 'rm:' + c.id ? `<span class="rmask">Keep it as analyzed – not used? <button class="btn sm primary" data-rmnu="${c.id}">Keep as not used</button><button class="btn sm primary" data-rmnu="${c.id}" data-nudb="1" title="Listed under Analyzed – not used, and saved to your comp database">Keep as not used + save to my comp database</button><button class="btn sm" data-rmdb="${c.id}">Save to my comp database, then remove</button><button class="btn danger solid sm" data-rmyes="${c.id}">Remove</button><button class="btn sm" data-act="cancel">Cancel</button></span>` : `<button class="btn sm" data-rm="${c.id}" title="Remove from this list">✕</button>`}</td></tr>`; }).join('')}
@@ -565,6 +569,7 @@ function detailHTML(c) {
     <h3>Field by field <small>click any source value to use it, or type your own</small></h3>
     <div class="tablewrap"><table class="cmp"><colgroup><col style="width:200px"><col style="width:190px"><col style="width:120px">${cols.map(() => '<col>').join('')}</colgroup><thead><tr><th>Field</th><th class="using">Using</th><th>Your value</th>${cols.map(s => `<th>${esc(SRC[s].name)}${s === 'arch' ? '<br>' + (c.src.arch.length ? archSel : '<small class="muted">not in your database</small>') : s === 'cort' ? '<br>' + cortSel : s === 'mls' && !c.src.mls ? '<br><small class="muted">drop the MLS export</small>' : s === 'crs' ? (c.src.crs ? '' : '<br><small class="muted">no CRS PDF yet – public-record figures from the MLS show here</small>') : ''}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table></div>
     <p><label><input type="checkbox" data-act="showall" ${app.showAll ? 'checked' : ''}> Show empty fields too</label></p>
+    ${compLinesHTML(c, J)}
     <h3>Prior sales and transfers</h3>
     ${prior.length ? `<table class="mini"><tr><th>Date</th><th class="r">Price</th><th>Type</th><th>Before this sale</th><th>From</th></tr>${prior.map(s => `<tr class="${s.monthsBefore > 0 && s.monthsBefore <= 12 ? 'hot' : ''}"><td>${esc(showDate(s.date))}</td><td class="r">${money(s.price)}</td><td>${esc(s.inst || s.type || '')}</td><td>${s.monthsBefore != null ? Math.round(s.monthsBefore) + ' mo' : ''}</td><td><small>${esc(s.src)}</small></td></tr>`).join('')}</table>` : '<p class="help">None found in the sources you have loaded.</p>'}
     ${p && (p.listings || []).length ? `<h3>Listing history (MLS printout)</h3><table class="mini"><tr><th>MLS #</th><th>Status</th><th class="r">Price</th><th>Date</th><th class="r">DOM</th><th class="r">CDOM</th></tr>${p.listings.map(h => `<tr class="${h.mls === p.mls ? 'hot' : ''}"><td>${esc(h.mls)}</td><td>${esc(h.status)}</td><td class="r">${money(h.price)}</td><td>${esc(showDate(h.date))}</td><td class="r">${int(h.dom)}</td><td class="r">${int(h.cdom)}</td></tr>`).join('')}</table>
@@ -677,8 +682,8 @@ document.addEventListener('click', async e => {
     if (nb.dataset.nuback) { delete c.notUsed; if (app.nuAsk === id) app.nuAsk = null; save(); render(); return; }
     return; }
   { const q = e.target.closest('[data-quse]'); if (q && app.job) { e.stopPropagation(); const c = app.job.comps.find(x => x.id === q.dataset.quse); if (!c) return;
-      if (c.use) { const ord = gridInDateOrder(app.job); markNotUsed(c); app.nuAsk = c.id; c.use = null; if (ord) gridDateOrder(app.job); toast('Taken off the grid – listed under Analyzed – not used (below the grid). Pick the reason there.' + (ord ? ' The others moved up.' : '')); }
-      else { const ord = gridInDateOrder(app.job); const taken = new Set(app.job.comps.map(x => x.use).filter(Boolean)); let n = 1; while (taken.has(n)) n++; c.use = n; delete c.notUsed; if (ord) gridDateOrder(app.job); toast(`On the grid as comp ${c.use}` + (ord && c.use !== n ? ' (in closing-date order)' : '')); }
+      if (c.use) { const ord = gridInDateOrder(app.job); markNotUsed(c); app.nuAsk = c.id; c.use = null; if (ord) gridDateOrder(app.job); toast('Taken out of the workbook – listed under Analyzed – not used. Pick the reason there.' + (ord ? ' The others moved up.' : '')); }
+      else { const ord = gridInDateOrder(app.job); const taken = new Set(app.job.comps.map(x => x.use).filter(Boolean)); let n = 1; while (taken.has(n)) n++; c.use = n; delete c.notUsed; if (ord) gridDateOrder(app.job); toast(`In the workbook as comp ${c.use}` + (ord && c.use !== n ? ' (in closing-date order)' : '')); }
       save(); render(); return; } }
   { const ro = e.target.closest('[data-refopen],[data-refclose]'); if (ro && app.job) { app.ref = app.ref || { tab: 'land', area: null, q: '', newOnly: true }; if (ro.dataset.refopen) { app.ref.openFor = app.job.id; app.ref.closedFor = null; } else { app.ref.closedFor = app.job.id; app.ref.openFor = null; } const c = $('#refCard'); if (c) c.innerHTML = refHTML(app.job); return; } }
   { const rt = e.target.closest('[data-reftab]'); if (rt && app.job) { app.ref = app.ref || {}; app.ref.tab = rt.dataset.reftab; const c = $('#refCard'); if (c) c.innerHTML = refHTML(app.job); return; } }
@@ -719,6 +724,12 @@ document.addEventListener('click', async e => {
     case 'openjob': { const j = app.jobs.find(x => x.id === t.dataset.id); if (!j) break; app.home = false; app.job = j; app.sel = null; await DB.put('kv', { id: 'lastJob', v: j.id }); await loadPhotos(); render.top = true; render(); window.scrollTo(0, 0); break; }
     case 'deljob': app.confirm = 'deljob'; render(); break;
     case 'snaps': snapPick(); break;
+    case 'stage': app.job.stage = t.dataset.s; save(); render.top = true; render(); window.scrollTo(0, 0); break;
+    case 'openwb': openComp(t.dataset.id); break;
+    case 'confirm': { const c = app.job.comps.find(x => x.id === t.dataset.id); if (c) { c.confirmed = Date.now(); save(); render(); toast('Comp ' + c.use + ' – data confirmed ✓'); } break; }
+    case 'unconfirm': { const c = app.job.comps.find(x => x.id === t.dataset.id); if (c) { delete c.confirmed; save(); render(); } break; }
+    case 'nextconfirm': { const U = usedComps(app.job); const i = U.findIndex(c => c.id === t.dataset.id); const n = [...U.slice(i + 1), ...U.slice(0, Math.max(0, i))].find(c => !c.confirmed && c.id !== t.dataset.id) || (i < 0 ? U.find(c => !c.confirmed) : null);
+      if (n) { if (app.job.stage !== 'workbook') app.job.stage = 'workbook'; openComp(n.id); } else toast('All comps in the workbook are confirmed ✓ – make your adjustments, then go to ③ Final grid', 6000); break; }
     case 'deljob-yes': { await snapTake(app.job, 'before delete'); const id = app.job.id; await DB.del('jobs', id); for (const p of await DB.byJob(id)) await DB.del('photos', p.id); app.jobs = app.jobs.filter(j => j.id !== id); app.job = app.jobs[0] || null; app.confirm = null; app.home = true; await loadPhotos(); render.top = true; render(); window.scrollTo(0, 0); toast('Assignment deleted'); break; }
     case 'cancel': app.confirm = null; render(); break;
     case 'rmall': app.confirm = 'rmall'; render(); break;
@@ -758,11 +769,11 @@ document.addEventListener('click', async e => {
     case 'glreset': { const G = G0(app.job); delete G.lines; if (GRID_DEFAULT && GRID_DEFAULT.custom) { G.custom = G.custom || []; GRID_DEFAULT.custom.forEach(x => { if (!G.custom.some(y => y.id === x.id)) G.custom.push({ ...x }); }); } save(); render(); toast('Back to your default lines'); break; }
     case 'gridall': { const J = app.job; const ord = !J.comps.some(c => c.use) || gridInDateOrder(J); let n = Math.max(0, ...J.comps.map(c => c.use || 0));
       const add = J.comps.filter(c => !c.use && !c.notUsed).sort(compOrder); add.forEach(c => { c.use = ++n; }); if (ord) gridDateOrder(J); save(); render();
-      toast(`${add.length} comp${add.length === 1 ? '' : 's'} put on the grid` + (ord ? ' in closing-date order (comp 1 = the most recent)' : ' after the ones you numbered') + '. Remove takes one off and lists it under Analyzed – not used.', 7000); break; }
+      toast(`${add.length} comp${add.length === 1 ? '' : 's'} moved to the workbook` + (ord ? ' in closing-date order (comp 1 = the most recent)' : ' after the ones you numbered') + '. Remove takes one off and lists it under Analyzed – not used.', 7000); break; }
     case 'csel': { const w = t.dataset.w; CSEL.clear(); if (w !== 'none') app.job.comps.filter(c => w === 'all' || !c.use).forEach(c => CSEL.add(c.id)); render(); break; }
     case 'bulkgrid': { const J = app.job; const ord = !J.comps.some(c => c.use) || gridInDateOrder(J); let n = Math.max(0, ...J.comps.map(c => c.use || 0));
       const add = J.comps.filter(c => CSEL.has(c.id) && !c.use).sort(compOrder); add.forEach(c => { c.use = ++n; delete c.notUsed; }); if (ord) gridDateOrder(J); CSEL.clear(); save(); render();
-      toast(`${add.length} comp${add.length === 1 ? '' : 's'} put on the grid` + (ord ? ' in closing-date order' : ''), 6000); break; }
+      toast(`${add.length} comp${add.length === 1 ? '' : 's'} moved to the workbook` + (ord ? ' in closing-date order' : ''), 6000); break; }
     case 'bulkdb': { const L = app.job.comps.filter(c => CSEL.has(c.id)); for (const c of L) await saveToMyDb(c); CSEL.clear(); save(); render(); toast(`${L.length} comp${L.length === 1 ? '' : 's'} saved to your comp database – each with its sources, your notes, flags and any adjustments`, 6000); break; }
     case 'bulknu': { const J = app.job; const why = ($('[data-bulkreason]') || {}).value || 'Other'; const db = ($('[data-bulkdb]') || {}).checked; const ord = gridInDateOrder(J);
       const L = J.comps.filter(c => CSEL.has(c.id)); L.forEach(c => { markNotUsed(c); if (!c.notUsed.reasons.includes(why)) c.notUsed.reasons.push(why); }); if (ord) gridDateOrder(J);
@@ -872,8 +883,8 @@ if (!CPOP && !POP && WBC) WBC.addEventListener('message', e => { const d = e.dat
   const open = c => c.use && compFlags(c, J).some(f => !flagChecked(c, f));
   const next = [...L.slice(i + 1), ...L.slice(0, Math.max(0, i))].find(c => c.id !== d.cpopClosed && open(c));
   if (J.ccDone) { J.ccDone = false; save(); } render();
-  setTimeout(() => { if (next) { const tr = document.querySelector(`table.comps tr[data-open="${CSS.escape(next.id)}"]`); if (tr) { tr.scrollIntoView({ behavior: 'smooth', block: 'center' }); tr.classList.add('nextflag'); const b = tr.querySelector('[data-act="cpop"]'); if (b) b.focus({ preventScroll: true }); setTimeout(() => tr.classList.remove('nextflag'), 6000); }
-      toast('Next comp with flags: ' + compTitle(next) + ' (comp ' + next.use + ') – press Enter to pop it out', 6000); }
+  setTimeout(() => { if (next) { const tr = (J.stage === 'micro' ? document.querySelector(`table.comps tr[data-open="${CSS.escape(next.id)}"]`) : null) || document.querySelector(`#wbStrip [data-act="openwb"][data-id="${CSS.escape(next.id)}"]`) || document.querySelector(`table.comps tr[data-open="${CSS.escape(next.id)}"]`); if (tr) { tr.scrollIntoView({ behavior: 'smooth', block: 'center' }); tr.classList.add('nextflag'); const b = tr.matches('button') ? tr : tr.querySelector('[data-act="cpop"]'); if (b) b.focus({ preventScroll: true }); setTimeout(() => tr.classList.remove('nextflag'), 6000); }
+      toast('Next comp with flags: ' + compTitle(next) + ' (comp ' + next.use + ') – press Enter to open it', 6000); }
     else { const cc = document.getElementById('compsCard'); if (cc) cc.scrollIntoView({ behavior: 'smooth', block: 'start' }); toast('No more flags on the comps on your grid ✓', 5000); } }, 150); });
 
 /* her Appraisal Assistant daily backup (.zip with comp-genie.json): pick an assignment saved in it and bring it back as a copy – nothing here is overwritten (Oct 20 2026) */
@@ -907,3 +918,10 @@ async function snapMaybe(j) { try { const t = SNAP_LAST[j.id] || ((await snapIdx
 async function snapPick() { const L = (await snapIdx()).sort((a, b) => b.at - a.at); if (!L.length) { toast('No earlier versions saved yet – they start being kept as you work from now on', 6000); return; }
   const jobs = []; for (const x of L.slice(0, 60)) { const r = await DB.get('kv', x.key); if (r && r.v) { const j = r.v; j.updated = x.at; j.name = j.name + (x.why ? ' (' + x.why + ')' : ''); jobs.push(j); } }
   const z = new Map([['comp-genie.json', new TextEncoder().encode(JSON.stringify({ app: 'comp-genie', saved: new Date().toISOString(), jobs }))]]); backupPick(z, 'earlier versions kept in this browser'); }
+
+/* her steps (Oct 20 2026) */
+function stageBarHTML(J) { const st = J.stage || (J.comps.some(c => c.use) ? 'workbook' : 'micro'); const U = usedComps(J); const conf = U.filter(c => c.confirmed).length;
+  const o = (app.orders || []).find(x => x.id === J.orderId);
+  const step = (k, n, l, sub) => `<button class="stepb${st === k ? ' on' : ''}" data-act="stage" data-s="${k}"><b>${n}</b> ${l}<small>${sub}</small></button>`;
+  return `<nav class="steps">${o ? `<a class="stepb" href="../appraisal-assistant/?order=${encodeURIComponent(o.id)}&tab=market" target="_top" title="Macro, then micro – the order's Market tab in the Appraisal Assistant"><b>⓪</b> Market<small>macro → micro</small></a>` : ''}
+    ${step('micro', '①', 'Comps considered', `${J.comps.length} · screen, pick for the workbook`)}${step('workbook', '②', 'Workbook', U.length ? `${U.length} comps · ${conf} confirmed · adjust` : 'confirm each comp, adjust')}${step('final', '③', 'Final grid', 'review · export to SFREP')}</nav>`; }
