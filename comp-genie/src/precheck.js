@@ -67,12 +67,14 @@ function precheckGrid(J) { if (!RC) return rcRun(() => precheckGrid(J));
     if (R.priorSvc === 'true' && !String(R.priorSvcText || '').trim()) out.push({ sev: 'Must fix', msg: 'Prior services is Yes – describe the services (Report details).' });
     if (R.listedYear !== 'true' && R.listedYear !== 'false' && F.listedYear === undefined) out.push({ sev: 'Must fix', msg: 'Answer "Subject listed for sale in the past year?" (Report details › Prior services and certifications).' });
     [['sowCost', 'Cost approach developed?'], ['sowIncome', 'Income approach developed?'], ['sowRent', 'Rent schedule included?'], ['sowAddlUser', 'Intended users besides the client?']].forEach(([k, l]) => { if (R[k] !== 'true' && R[k] !== 'false' && F[k] === undefined) out.push({ sev: 'Must fix', msg: `Scope of work: answer "${l}" (Report details).` }); });
+    if (blank(num(String(R.opinion || '').replace(/[$,\s]/g, '')))) out.push({ sev: 'Must fix', msg: 'Opinion of market value is blank (Report details › Value and reconciliation) – it is the value on page 1 of the report.', hint: blank(G.value) ? '' : 'The grey ' + money(G.value) + ' there is only your sales comparison value as a hint – type your final value.' });   /* her Oct 21 import: page 1 Opinion of Market Value was blank */
     if (blank(R.expLow) && blank(R.expHigh)) out.push({ sev: 'Check', msg: 'No reasonable exposure time entered (Report details › Value and reconciliation).' }); }
   const tot = used.map(c => compTotals(J, c)).filter(t => t.price); const adj = tot.map(t => t.adj);
   if (!blank(G.value) && adj.length) { const v = num(G.value), lo = Math.min(...adj), hi = Math.max(...adj); if (v < lo || v > hi) out.push({ sev: 'Check', msg: `Your value ${money(v)} is outside the adjusted range ${money(lo)} – ${money(hi)}.`, hint: 'Explain it in the comment, or look again at the adjustments.' }); }
   used.forEach(c => { const C = compFacts(c, J); const miss = [...(C.listing ? [['list price', C.listPrice]] : [['sale price', C.price], ['sale date', C.sale]]), ['living area', C.gla], ['quality', C.q], ['condition', C.c]].filter(x => blank(x[1])).map(x => x[0]);   /* a listing has no sale price or date yet */
     if (miss.length) out.push({ sev: 'Must fix', msg: `Comp ${c.use} (${compTitle(c)}): no ${miss.join(', ')}.` });
     ['q', 'c'].forEach(k => { if (C[k] && !/^[QC][1-6]$/i.test(String(C[k]).trim())) out.push({ sev: 'Must fix', msg: `Comp ${c.use}: ${k === 'q' ? 'quality' : 'condition'} "${C[k]}" is not a whole UAD rating – the low / mid / high tier stays on your grid, not in the UAD field.` }); });
+    if (!/attach/i.test(String(C.attach || '')) || /detach/i.test(String(C.attach || ''))) { if (blank(C.constr)) out.push({ sev: 'Must fix', msg: `Comp ${c.use}: Construction method is blank – 3.6 requires it for a detached dwelling (Site built, Modular, Manufactured …). Type = in the box to copy the subject's.` }); }   /* her Oct 21 import showed "—" */
     if (blank(C.usable) && !blank(S.usable)) out.push({ sev: 'Check', msg: `Comp ${c.use}: usable lot area is blank – measure it.` });
     if (!G.weights[c.id]) out.push({ sev: 'Check', msg: `Comp ${c.use}: no weight chosen for reconciliation.` }); });
   ['q', 'c'].forEach(k => { if (S[k] && !/^[QC][1-6]$/i.test(String(S[k]).trim())) out.push({ sev: 'Must fix', msg: `Subject ${k === 'q' ? 'quality' : 'condition'} "${S[k]}" is not a whole UAD rating.` }); });
@@ -122,6 +124,7 @@ async function precheckRun(J, wantExport) {
 /* her ask (Oct 21 2026): each pre-check line takes her to the place to fix it – the step, then the box (scrolled to and outlined) */
 function preGo(J, x) { const m = String(x.msg || ''); const byUse = n => usedComps(J).find(c => +c.use === +n);
   let r;
+  if ((r = m.match(/^Comp (\d+): Construction method/))) { const c = byUse(r[1]); if (c) return { stage: 'workbook', sel: `[data-gfact="${c.id}|constr"]`, label: 'comp ' + c.use + ' construction method' }; }
   if ((r = m.match(/^Comp (\d+)\b/))) { const c = byUse(r[1]); if (!c) return null;
     if (/weight/i.test(m)) return { stage: 'workbook', sel: `[data-gweight="${c.id}"]`, label: 'weight, Workbook grid' };
     if (/usable lot/i.test(m)) return { stage: 'workbook', sel: `[data-gfact="${c.id}|usable"]`, label: 'comp ' + c.use + ' usable lot, Workbook grid' };
@@ -135,6 +138,8 @@ function preGo(J, x) { const m = String(x.msg || ''); const byUse = n => usedCom
   if (/All rights included|Kind of rights|rights not appraised/i.test(m)) return { stage: 'final', text: 'All rights included', label: 'Report details' };
   if (/Prior services|listed for sale in the past year/i.test(m)) return { stage: 'final', text: 'Prior services and certifications', label: 'Report details' };
   if (/Scope of work/i.test(m)) return { stage: 'final', text: 'Scope of work', label: 'Report details' };
+  if (/Opinion of market value/i.test(m)) return { stage: 'final', text: 'Opinion of market value', label: 'Report details' };
+  if ((r = m.match(/^Comp (\d+): Construction method/))) { const c = byUse(r[1]); if (c) return { stage: 'workbook', sel: `[data-gfact="${c.id}|constr"]`, label: 'comp ' + c.use + ' construction method' }; }
   if (/exposure time/i.test(m)) return { stage: 'final', text: 'Value and reconciliation', label: 'Report details' };
   if (/Workfile package/i.test(m)) return { stage: 'micro', sel: '#drop', label: 'drop it here (Comps considered)' };
   if (/effective date/i.test(m)) return { stage: 'micro', sel: '[data-subj="eff"]', label: 'Subject card' };
