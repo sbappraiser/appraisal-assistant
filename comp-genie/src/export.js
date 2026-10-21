@@ -150,7 +150,7 @@ function buildCompXML(PROPS, RELS, DSS, c, n, job) {
   const inProj = !blank(g('hoa')) && +g('hoa') > 0; XV(pd, 'PropertyEstateType', 'FeeSimple'); XV(pd, 'PropertyInProjectIndicator', inProj || mode !== 'house' ? 'true' : 'false'); XV(pd, 'PUDIndicator', inProj && /detach/i.test(g('attach') || '') ? 'true' : 'false');
   // SALES_CONTRACTS
   const sc = X(X(X(P, 'SALES_CONTRACTS'), 'SALES_CONTRACT'), 'SALES_CONTRACT_DETAIL'); const conc = num(g('concessions'));
-  if (status === 'SettledSale') { if (conc !== null) { XV(sc, 'SalesConcessionAmountKnownIndicator', 'true'); XV(sc, 'SalesConcessionIndicator', conc > 0 ? 'true' : 'false'); } else if (/^yes/i.test(g('concessionsYN') || '')) { XV(sc, 'SalesConcessionAmountKnownIndicator', 'false'); XV(sc, 'SalesConcessionIndicator', 'true'); } }
+  if (status === 'SettledSale') { if (conc !== null) { if (conc > 0) XV(sc, 'SalesConcessionAmountKnownIndicator', 'true'); XV(sc, 'SalesConcessionIndicator', conc > 0 ? 'true' : 'false'); }   /* F-1: amount known only asked when there are concessions */ else if (/^yes/i.test(g('concessionsYN') || '')) { XV(sc, 'SalesConcessionAmountKnownIndicator', 'false'); XV(sc, 'SalesConcessionIndicator', 'true'); } else if (/^no/i.test(g('concessionsYN') || '')) XV(sc, 'SalesConcessionIndicator', 'false'); }
   if (status === 'Pending' && price) XV(sc, 'SalesContractAmount', price);
   XV(sc, 'SalesContractDate', isoDate(g('contractDate')).length === 10 ? isoDate(g('contractDate')) : null);
   if (conc) XV(sc, 'TotalSalesConcessionAmount', conc);

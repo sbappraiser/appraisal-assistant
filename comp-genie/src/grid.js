@@ -327,13 +327,16 @@ function impNorm(F, M) { M = M || {}; try { if (F.loc) { const L = siParse(F.loc
 function splitText(v) { let o = v; if (typeof v === 'string') { try { o = JSON.parse(v); } catch (e) { return v; } } if (!o || typeof o !== 'object') return '';
   const L = { r: 'residential', o: 'orchard' }; const k = Object.keys(o).filter(x => +o[x] > 0); if (k.length < 2 && !k.some(x => x !== 'r')) return '';
   return k.map(x => `${+o[x] >= 100 ? (+o[x] / 43560).toFixed(2) : o[x]} ac ${L[x] || x}`).join(' · '); }
+/* the split back in her 2.6 form: {"r":0.62,"o":2.15} → "0.62r/2.15o" */
+function splitRaw(v) { let o = v; if (typeof v === 'string') { try { o = JSON.parse(v); } catch (e) { return ''; } } if (!o || typeof o !== 'object') return '';
+  const k = Object.keys(o).filter(x => +o[x] > 0); if (k.length < 2) return ''; return k.map(x => (+o[x] >= 100 ? +(+o[x] / 43560).toFixed(2) : +o[x]) + x).join('/'); }
 /* lines she emptied with Ctrl+Z (c.zap = {lineId: true}) stay empty even when a source has a value – until she types one */
 function zapFacts(c, F) { if (!c.zap) return F; for (const id in c.zap) { if (id === 'baths') { F.full = null; F.half = null; } F[id] = id === 'beds' ? null : ''; } return F; }
 function compFacts0(c, J) {
   const g = k => V(c, k); const px = proximity(c, J);
   const DN = docNoOf(c); const F0 = { price: num(g('salePrice')), src: [g('mls') ? 'MLS ' + g('mls') : '', DN ? docText(c, true) : '', !g('mls') && !DN ? (c.src.crs ? 'CRS Data' : c.src.cort.length ? 'CORT' : c.src.arch.length ? 'Your archive' : '') : ''].filter(Boolean).join('\n'),   /* her layout (Oct 20 2026): MLS 26-2071, then Doc #21129 on the next line; the date is the Sale date line's */ prox: px ? px.mi.toFixed(2) + ' mi ' + px.dir.replace(/([a-z])([A-Z])/, '$1 $2') : '',
-    terms: termsText(g('financing')), xferTerms: g('saleType') && typeof PICK !== 'undefined' ? (/^Other:/.test(String(g('saleType'))) ? String(g('saleType')) : ((PICK.xferTerms.opts.find(o => o[0] === uadSaleType(g('saleType'))) || [])[1] || '')) : '', conc: num(g('concessions')), contract: g('contractDate') || '', sale: g('saleDate') || '', dom: g('dom'),
-    site: num(g('siteSf')), usable: acOf(num(g('usableSf'))), landSplit: g('landSplit') || '', loc: [g('locRating'), g('locFactors')].filter(Boolean).join(': '), view: [g('viewRating'), g('viewTypes')].filter(Boolean).join(': '),
+    terms: termsText(g('financing')), xferTerms: g('saleType') && typeof PICK !== 'undefined' ? (/^Other:/.test(String(g('saleType'))) ? String(g('saleType')) : ((PICK.xferTerms.opts.find(o => o[0] === uadSaleType(g('saleType'))) || [])[1] || '')) : '', conc: num(g('concessions')), concYN: g('concessionsYN') || '', contract: g('contractDate') || '', sale: g('saleDate') || '', dom: g('dom'),
+    site: num(g('siteSf')), usable: acOf(num(g('usableSf'))), landSplit: g('landSplit') || '', usableOwn: !blank((c.edit || {}).usableSf), loc: [g('locRating'), g('locFactors')].filter(Boolean).join(': '), view: [g('viewRating'), g('viewTypes')].filter(Boolean).join(': '),
     topo: g('topo') || '', nbhd: g('nbhd') || '', land: g('landscaping') || '', style: g('style') || '', attach: g('attach') || '', levels: num(g('stories')), status: statusText(g('status')), listPrice: num(g('listPrice')), origList: num(g('origList')), listDate: g('listDate') || '', lastRed: g('lastRed') || '', cdom: num(g('cdom')), project: g('project') || '', hoa: num(g('hoa')), hoaAmen: g('hoaAmen') || '', landCommon: g('landCommon') || '', structure: g('structure') || '', unitPos: g('unitPos') || '', floor: g('floor') ?? null, year: num(g('yearBuilt')), q: g('quality') || '', c: g('condition') || '',
     rooms: num(g('rooms')), beds: num(g('beds')), full: num(g('full')), half: num(g('half')), gla: num(g('gla')), bsmt: num(g('bsmtFin')), garage: num(g('garage')), energy: g('energy') || '',
     pool: [yes(g('pool')) ? 'Pool' : '', yes(g('spa')) ? 'Spa' : ''].filter(Boolean).join(', ') || (g('pool') && !yes(g('pool')) ? 'None' : ''), courts: [yes(g('tennis')) ? 'Tennis court' : '', yes(g('sport')) ? 'Sport court' : ''].filter(Boolean).join(', '), porch: g('porch') || '', adu: [g('adu'), g('guest'), g('accessory')].filter(Boolean).join('; '),
@@ -423,6 +426,7 @@ function gridHTML(J) {
       if (id === 'overList' && C.over > 0) { const dm = num(C.cdom) || num(C.dom); shown += dm === null ? '' : dm <= OVER_SHORT ? `<small class="muted rdays">${dm} days on market – likely multiple offers</small>` : dm >= OVER_LONG ? `<small class="overcall">${dm} days on market – call the agent</small>` : `<small class="muted rdays">${dm} days on market</small>`; }
       if (id === 'usable' && C.landSplit) { const t = splitText(C.landSplit); if (t) shown += `<small class="muted rdays" title="Your 2.6 land split. The usable figure counts the residential (r) part only – if the orchard or other part is usable for this comparison, type the total.">split: ${esc(t)}</small>`; }
       if (id === 'lastRed') { const d = redDaysOf(C); shown += d !== null ? `<small class="muted rdays">${d} day${d === 1 ? '' : 's'} to pending</small>` : (C.lastRed ? '<small class="muted rdays">no contract date</small>' : ''); }
+      if (id === 'conc') shown += concSel(c.id, C);
       if (id === 'q' || id === 'c') shown += qcSel(c.id, id, C[id]) + fineSel(c.id, id, J); if (id === 'view') shown += vtSel(c.id, J, C.view); if (id === 'loc') shown += locBtn(c.id); else if (id === 'q' || id === 'c') {} else if (id === 'garage') shown += `${C.tandem ? `<small class="vsx" title="From your 2.6 Functional utility line – 3.6 has no tandem field; mention it in your comment">${esc(C.tandem)}</small>` : ''}${(c.edit || {}).grid_vsText ? `<small class="vsx">${esc(c.edit.grid_vsText)}</small>` : ''} <button type="button" class="btn xs" data-vspick="${c.id}" title="Type | spaces | attachment (UAD 3.6 vehicle storage)">▾ pick</button>`; else shown += pkBtn(c.id, id);
       if (!type) return `<td>${shown}</td>`;
       const a = cellAmount(J, c, row);
@@ -519,7 +523,8 @@ function myDbAuto() { clearTimeout(MYDB_T); MYDB_T = setTimeout(async () => { co
 
 /* text for an Add Other row (subject or comp) */
 function otherDesc(r, F) {
-  if (r[0] === 'usable') return blank(F.usable) ? '' : (+F.usable).toFixed(2) + ' ac';
+  if (r[0] === 'usable') { if (F.landSplit && !F.usableOwn) { const t = splitRaw(F.landSplit); if (t) return t; }   // her rule (Oct 20 2026): the 2.6 utility as she wrote it ("0.62r/2.15o"), without the neighborhood
+    return blank(F.usable) ? '' : (+F.usable).toFixed(2) + ' ac'; }
   return String(F[r[0]] || '').trim();
 }
 
@@ -805,6 +810,16 @@ function statusText(s) { s = String(s || '').trim(); if (!s) return ''; if (/^(c
 const OVER_SHORT = 14, OVER_LONG = 30;
 
 /* her ask (Oct 20 2026): a real drop-down for the quality and condition ratings (Q1–Q6 / C1–C6, with the UAD definitions on hover) */
+/* Known sales concessions (F-1 22.01.05): No · Yes, amount known (type it) · Yes, amount unknown */
+const concState = C => C.conc === 0 || (C.conc === null && /^n/i.test(C.concYN || '')) ? 'no' : C.conc > 0 ? 'known' : /^y/i.test(C.concYN || '') ? 'unknown' : '';
+function concSel(who, C) { const v = concState(C);
+  return ` <select class="fine${v ? '' : ' arch'}" data-gconc="${who}" title="UAD 3.6 Known sales concessions – No; Yes with the amount (type it in the box); Yes, amount unknown">${[['', 'pick…'], ['no', 'No'], ['known', 'Yes – amount known'], ['unknown', 'Yes – amount unknown']].map(([k, l]) => `<option value="${k}" ${k === v ? 'selected' : ''}>${l}</option>`).join('')}</select>`; }
+function concSet(J, c, v) { const E = c.edit = c.edit || {}; const unz = () => { if (c.zapK) { delete c.zapK.concessions; delete c.zapK.concessionsYN; if (!Object.keys(c.zapK).length) delete c.zapK; } if (c.zap) { delete c.zap.conc; if (!Object.keys(c.zap).length) delete c.zap; } };
+  unz();
+  if (v === 'no') { E.concessions = 0; E.concessionsYN = 'No'; }
+  else if (v === 'known') { E.concessionsYN = 'Yes'; if (!(num(E.concessions) > 0)) delete E.concessions; }
+  else if (v === 'unknown') { E.concessionsYN = 'Yes'; delete E.concessions; c.zapK = c.zapK || {}; c.zapK.concessions = true; }   // no amount, even if a source has one
+  else { delete E.concessions; delete E.concessionsYN; } }
 function qcSel(who, id, cur) { const L = id.toUpperCase(); const m = String(cur || '').toUpperCase().match(new RegExp(L + '\\s*([1-6])')); const v = m ? L + m[1] : ''; const H = L === 'Q' ? Q_HELP : C_HELP;
   return `<select class="qcsel" data-qc="${who}|${id}" title="${esc(L === 'Q' ? 'Overall quality' : 'Overall condition')} – UAD 3.6 rating"><option value="">${L}–</option>${[1, 2, 3, 4, 5, 6].map(n => `<option value="${L}${n}" ${v === L + n ? 'selected' : ''} title="${esc(H[L + n] || '')}">${L}${n}</option>`).join('')}</select>`; }
 

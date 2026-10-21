@@ -842,6 +842,8 @@ document.addEventListener('change', async e => {
   if (t.dataset.refarea !== undefined || t.dataset.refnew !== undefined) { const R = app.ref; if (t.dataset.refarea !== undefined) R.area = t.value; if (t.dataset.refnew !== undefined) R.newOnly = t.checked; const c = $('#refCard'); if (c) c.innerHTML = refHTML(app.job); return; }
   if (t.dataset.gmode) { const G = G0(app.job); G.mode = t.value; if (t.value === 'condo' && !G.tier) G.tier = 'condo'; save(); renderKeepFocus(); return; }
   if (t.dataset.gvt) { const G = G0(app.job); G.viewT = G.viewT || {}; const w = t.dataset.gvt; if (t.value === '') { delete G.viewT[w]; } else { G.viewT[w] = +t.value; vtRemember(app.job, w, +t.value); } save(); renderKeepFocus(); return; }
+  if (t.dataset.gconc) { const c = app.job.comps.find(x => x.id === t.dataset.gconc); if (!c) return; concSet(app.job, c, t.value); save(); renderKeepFocus();
+    if (t.value === 'known') setTimeout(() => { const el = document.querySelector(`[data-gfact="${c.id}|conc"]`); if (el) { el.focus(); el.select(); } }, 50); return; }
   if (t.dataset.qc) { const [who, k] = t.dataset.qc.split('|'); pkSave(app.job, who, k, t.value); return; }   // the Q / C drop-down
   if (t.dataset.gfine) { const G = G0(app.job); G.fine = G.fine || {}; const [who, k] = t.dataset.gfine.split('|'); G.fine[who] = G.fine[who] || {}; G.fine[who][k] = t.value; save(); renderKeepFocus(); return; }
   if (t.dataset.gok !== undefined) { const G = G0(app.job); G.ok = G.ok || {}; const v = t.value.trim(); if (v) G.ok[t.dataset.gok] = v; else delete G.ok[t.dataset.gok]; save(); renderKeepFocus(); return; }

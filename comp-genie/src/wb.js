@@ -85,6 +85,8 @@ function wbFactSet(J, c, id, text) {
     case 'courts': put('tennis', t === '' ? null : /tennis/i.test(t) ? 'Yes' : 'No'); put('sport', t === '' ? null : /sport|pickleball|basketball/i.test(t) ? 'Yes' : 'No'); return;
     case 'adu': { put('adu', t || null); const sf = t.match(/(\d[\d,]*)\s*(sf|sq)/i), ba = t.match(/(\d+(\.\d)?)\s*bath/i); put('aduSf', t === '' ? null : sf ? n(sf[1]) : (/^(no|none)$/i.test(t) ? 0 : null)); put('aduBaths', t === '' ? null : ba ? +ba[1] : 0); return; }
   }
+  if (id === 'conc') { if (/^\s*(no|none|n|0)\s*$/i.test(t)) { concSet(J, c, 'no'); return; } if (/unknown|^\s*y(es)?\s*$/i.test(t)) { concSet(J, c, 'unknown'); return; }
+    if (t !== '' && n(t) !== null) { put('concessions', n(t)); put('concessionsYN', n(t) > 0 ? 'Yes' : 'No'); return; } }   // typed: No / 0, an amount, or Yes (amount unknown)
   const k = WB_EDIT[id]; if (!k) { put('grid_' + id, t || null); return; }   // a line with no source field (Cooling, Functional utility, her own lines …): her entry
   const f = FIELD[k] || {}; put(k, t === '' ? null : ['int', 'num', 'money'].includes(f.t) || ['siteSf', 'yearBuilt', 'gla', 'bsmtFin', 'garage', 'salePrice', 'concessions', 'dom', 'cdom', 'listPrice', 'origList', 'hoa', 'redDays'].includes(k) ? n(t) : ['listDate', 'lastRed'].includes(k) ? (isoDate(t) || t) : t);
 }
