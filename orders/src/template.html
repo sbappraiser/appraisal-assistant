@@ -69,7 +69,10 @@ table.mcq th { color: #c00000 !important; font-size: 14px !important; font-weigh
 /* Market tab: darker reading text, and the boxes you fill in clearly boxes (her ask, Oct 20 2026) */
 #mkBody { --muted: color-mix(in srgb, var(--ink) 78%, var(--panel)); color: var(--ink); }
 #mkBody .help, #mkBody small, #mkBody .muted, #mkBody th { color: var(--muted); }
-#mkBody .help { font-size: 14px; } #mkBody table.facts th { color: var(--ink); font-weight: 600; }
+/* her ask Oct 20 2026: the Market tab in a larger font */
+#mkBody { font-size: 16px; } #mkBody table.facts { font-size: 16px; } #mkBody table.facts th, #mkBody table.facts td { padding: 6px 8px; } #mkBody table.facts.uad th { font-size: 15px; } #mkBody table.facts.uad th .sfn { font-size: 13px; color: #333; }
+#mkBody .eyebrow.mkhd { font-size: 18px; } #mkBody .mkcard h3 { font-size: 20px; } #mkBody .mkcard h4 { font-size: 17px; } #mkBody textarea, #mkBody input, #mkBody select { font-size: 15px; } #mkBody details summary { font-size: 17px; } #mkBody .mc table.facts, #mkBody .mc select { font-size: 15px; }
+#mkBody .help { font-size: 15px; } #mkBody table.facts th { color: var(--ink); font-weight: 600; }
 #mkBody input:not([type=checkbox]):not([type=radio]):not([type=file]), #mkBody select, #mkBody textarea {
   background: var(--panel) !important; color: var(--ink); border: 2px solid color-mix(in srgb, var(--ink) 55%, var(--panel)) !important; border-radius: 6px; font-size: 15px; box-shadow: inset 0 1px 2px rgba(0,0,0,.08); }
 #mkBody input:focus, #mkBody select:focus, #mkBody textarea:focus { outline: 3px solid #f0a020; outline-offset: 1px; border-color: #b36b00 !important; }

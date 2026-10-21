@@ -244,6 +244,7 @@ function drawPriceTrend(cv, R, perSf) {
   if (line.length > 1) { g.strokeStyle = GC.line; g.lineWidth = 3; g.beginPath(); line.forEach((p, i) => i ? g.lineTo(p.x, p.y) : g.moveTo(p.x, p.y)); g.stroke(); }
   line.forEach(p => { g.beginPath(); g.arc(p.x, p.y, 5, 0, Math.PI * 2); g.fillStyle = GC.line; g.fill(); });
   if (S.length < 12) { g.fillStyle = GC.muted; g.font = 'italic 18px Inter, Arial, sans-serif'; g.fillText(`Few sales (${S.length}): read the trend with care.`, L, f.H - 22); }
+  chartLegend(g, RR, [[GC.dot, 'dot', 'a sale'], [GC.line, 'line', (few ? 'quarterly' : 'monthly') + ' median']]);
 }
 /* macro (market area boundary) and micro (competing properties) side by side, for her price-trend conclusion (Oct 20 2026).
    Sale prices, not price per sq ft (her rule). Each line = median by quarter (or month when there are 3+ sales a month). */
@@ -270,6 +271,7 @@ function drawTrendBoth(cv, RA, RM) {
     if (pts.length > 1) { g.strokeStyle = line; g.lineWidth = 4; g.beginPath(); pts.forEach((p, i) => i ? g.lineTo(p.x, p.y) : g.moveTo(p.x, p.y)); g.stroke(); }
     pts.forEach(p => { g.beginPath(); g.arc(p.x, p.y, 6, 0, Math.PI * 2); g.fillStyle = line; g.fill(); });
     const tc = trendChange(R); const txt = `${name}: ${S.length} sales` + (tc ? ` · median ${moneyShort(tc.a)} → ${moneyShort(tc.b)} (${tc.pct >= 0 ? '+' : ''}${tc.pct.toFixed(1)}%, about ${tc.perMo >= 0 ? '+' : ''}${tc.perMo.toFixed(2)}% a month)` : ' · too few sales to read a change');
+    chartLegend(g, RR, sets.flatMap(([nm, , d, l]) => [[d, 'dot', (nm.split(' – ')[0]) + ' sale'], [l, 'line', (nm.split(' – ')[0]) + ' median']]));
     g.font = '600 18px Inter, Arial, sans-serif'; const w = g.measureText(txt).width; const yy = 134 + si * 30; g.fillStyle = 'rgba(255,255,255,.9)'; g.fillRect(L + 6, yy - 20, w + 34, 28); g.fillStyle = line; g.fillRect(L + 12, yy - 10, 16, 6); g.fillText(txt, L + 34, yy); });
 }
 function drawAbsorption(cv, R) {
@@ -539,3 +541,8 @@ function mkStatsTable(S, ym) {
     ${row('Closed sales', 'sold')}${row('Entered escrow', 'escrow')}${row('Median sale price', 'medSale', 1)}${row('Median w/o Hope Ranch/Montecito', 'medSaleX', 1)}${row('Average sale price', 'avgSale', 1)}${row('Active listings', 'active')}${row('New listings', 'newL')}${row('Median list price', 'medList', 1)}${row('Sold volume', 'volume', 1)}</table>
     <p class="help">${monthName(ym)}: ${s.total ?? '—'} sales, median ${$m(s.medSold)}, average ${s.dom ?? '—'} days on market (${s.cdom ?? '—'} continuous) · ${ca.total ?? '—'} current active listings.</p>`;
 }
+
+/* her ask (Oct 20 2026): a legend on the price-trend graphs – what each dot and line colour means */
+function chartLegend(g, RR, items) { g.save(); g.font = '600 18px Inter, Arial, sans-serif'; g.textAlign = 'left'; const y = 680 - 20;   // one row under the month labels, right-aligned (so it is also in the saved picture)
+  const ws = items.map(x => g.measureText(x[2]).width + 40); let x = RR - ws.reduce((a, b) => a + b, 0) - 20 * (items.length - 1);
+  items.forEach(([c, kind, label], i) => { g.fillStyle = c; if (kind === 'dot') { g.beginPath(); g.arc(x + 10, y - 6, 7, 0, Math.PI * 2); g.fill(); } else { g.fillRect(x, y - 8, 24, 5); g.beginPath(); g.arc(x + 12, y - 6, 5, 0, Math.PI * 2); g.fill(); } g.fillStyle = '#000'; g.fillText(label, x + 32, y); x += ws[i] + 20; }); g.restore(); }
