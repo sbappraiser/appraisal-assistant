@@ -59,7 +59,7 @@ function costHTML(J) {
       <label>Method <select data-ck="siteMethod">${[['SalesComparison', 'Sales comparison'], ['Extraction', 'Extraction'], ['Allocation', 'Allocation'], ['Other', 'Other']].map(([v, n]) => `<option value="${v}" ${K.siteMethod === v ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
       <span class="help">${K.siteMethod === 'SalesComparison' ? 'Sales comparison: tick your land sales in the Land sales card above – same value and comment. With no competitive land sales, pick Extraction or Allocation here (3.6 asks for land comparables only with Sales comparison).' : 'Same site value as the Land sales card. No land sales need to be ticked for this method.'}</span></div>
     ${K.siteMethod === 'Extraction' ? extrHTML(J, K) : ''}
-    ${K.siteMethod !== 'SalesComparison' || !landJob(J).use.length ? `<label class="fld"><span>Site value comment (3.6 Reconciliation of Site Value, 2,500 characters)</span><textarea class="txt" data-sitec="1" rows="5">${esc(landJob(J).comment != null ? landJob(J).comment : siteDraft(J))}</textarea></label>
+    ${K.siteMethod !== 'SalesComparison' || !landJob(J).use.length ? `<label class="fld"><span>Site value comment (3.6 Reconciliation of Site Value, 2,500 characters)</span><textarea class="txt" data-sitec="1" rows="5">${esc(landJob(J).comment != null ? landJob(J).comment : (landJob(J).lastSite = siteDraft(J)))}</textarea></label>
       <div class="row"><button class="btn sm ghost" data-siteredraft="1">Write it again from the ${K.siteMethod === 'Extraction' ? 'extraction sales' : 'method'}</button></div>` : ''}
     <h3>Cost new</h3><div class="tablewrap"><table class="tbl cost"><thead><tr><th>Item</th><th class="r">Sq ft</th><th class="r">$ / sq ft</th><th class="r">Cost new</th><th></th><th></th></tr></thead><tbody>${rows}
       <tr><td>Soft costs and fees (permits, design, engineering, utility and school fees)</td><td></td><td></td><td class="r"><input class="txt xs num" data-ck="soft" value="${nf(K.soft)}" inputmode="numeric" style="width:8em"></td><td></td><td></td></tr>
@@ -102,7 +102,7 @@ document.addEventListener('click', e => { const t = e.target.closest && e.target
   if (t.dataset.ceadd) K.ext.push({ id: uid() }); else if (t.dataset.cedel) K.ext = K.ext.filter(x => x.id !== t.dataset.cedel); else if (t.dataset.siteredraft) landJob(J).comment = null;
   save(); costRedraw(); });
 document.addEventListener('change', e => { const t = e.target; if (!app.job || !(t.dataset.ce || t.dataset.sitec || t.dataset.cerate)) return; const J = app.job, K = costJob(J), LD = landJob(J);
-  if (t.dataset.sitec) { LD.comment = t.value; save(); return; }
+  if (t.dataset.sitec) { LD.comment = t.value === LD.lastSite ? null : t.value; save(); return; }
   if (t.dataset.cerate) { K.extRate = num(String(t.value).replace(/[^0-9.]/g, '')) || null; save(); costRedraw(); return; }
   const [id, k] = t.dataset.ce.split('|'); const x = (K.ext || []).find(o => o.id === id); if (!x) return; x[k] = ['price', 'impr', 'site'].includes(k) ? (t.value.trim() === '' ? null : num(String(t.value).replace(/[^0-9.]/g, ''))) : t.value.trim();
   if (LD.comment != null && LD.comment === LD.lastSite) LD.comment = null; save(); costRedraw(); });

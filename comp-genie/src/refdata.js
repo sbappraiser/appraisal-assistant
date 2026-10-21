@@ -125,7 +125,7 @@ async function landRedraw() { const c = $('#refCard'); if (c && app.job) { const
 document.addEventListener('change', e => { const t = e.target; if (!t.dataset || !app.job) return; const LD = landJob(app.job);
   if (t.dataset.landuse !== undefined) { const id = t.dataset.landuse; LD.use = t.checked ? [...new Set([...LD.use, id])] : LD.use.filter(x => x !== id); if (LD.comment != null && LD.comment === LD.lastDraft) LD.comment = null; landRedraw(); }
   else if (t.dataset.landf !== undefined) { const k = t.dataset.landf; const v = k === 'years' ? +t.value : num(String(t.value).replace(/[^0-9.]/g, '')); LD.f[k] = v || (k === 'years' ? 0 : null); landRedraw(); }
-  else if (t.dataset.landv !== undefined) { LD.value = num(String(t.value).replace(/[^0-9.]/g, '')) || null; if (LD.comment == null || LD.comment === LD.lastDraft) LD.comment = null; landRedraw(); }
+  else if (t.dataset.landv !== undefined) { LD.value = num(String(t.value).replace(/[^0-9.]/g, '')) || null; if (LD.comment == null || LD.comment === LD.lastDraft || LD.comment === LD.lastSite) LD.comment = null; landRedraw(); }   /* the drafted comment follows a new value; one she edited stays */
   else if (t.dataset.landc !== undefined) { LD.comment = t.value; saveNow(); } });
 document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('[data-landreset],[data-landclear],[data-landcopy],[data-landredraft]'); if (!b || !app.job) return; const LD = landJob(app.job);
   if (b.dataset.landreset) { const s = (subjFacts(app.job) || {}).site; LD.f = { years: 5 }; if (s) { LD.f.minSite = Math.round(s / 2); LD.f.maxSite = Math.round(s * 2); } landRedraw(); }
