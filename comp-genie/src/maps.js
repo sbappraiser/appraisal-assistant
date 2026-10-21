@@ -16,6 +16,8 @@ const MAP_SRC = {
 };
 const lon2x = (lon, z) => (lon + 180) / 360 * TILE * 2 ** z;
 const lat2y = (lat, z) => { const r = lat * Math.PI / 180; return (1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2 * TILE * 2 ** z; };
+const x2lon = (x, z) => x / (TILE * 2 ** z) * 360 - 180;
+const y2lat = (y, z) => Math.atan(Math.sinh(Math.PI * (1 - 2 * y / (TILE * 2 ** z)))) * 180 / Math.PI;
 const imgLoad = url => new Promise(res => { const i = new Image(); i.crossOrigin = 'anonymous'; i.onload = () => res(i); i.onerror = () => res(null); i.src = url; });
 async function mapsGet(J) { const r = await DB.get('kv', 'maps:' + J.id); return (r && r.v) || {}; }
 async function mapsPut(J, M) { await DB.put('kv', { id: 'maps:' + J.id, v: M }); }
@@ -74,7 +76,11 @@ function callouts(ctx, W, H, items) {
     if (!best) best = { x: Math.min(Math.max(10, it.px[0] - w / 2), W - w - 10), y: Math.min(Math.max(10, it.px[1] - h - 60), H - h - 40), w, h };
     best.it = it; boxes.push(best); it.box = best;
   }
-  const col = it => it.kind === 'subj' ? '#c00000' : it.kind === 'rent' ? '#0a7a35' : it.kind === 'land' ? '#b8860b' : '#1565d8';
+  paintCallouts(ctx, order);
+}
+const calloutCol = it => it.kind === 'subj' ? '#c00000' : it.kind === 'rent' ? '#0a7a35' : it.kind === 'land' ? '#b8860b' : '#1565d8';
+function calloutSize(ctx, it) { const F = 27, LH = 32; const lw = Math.max(...it.lines.map((l, i) => { ctx.font = (i === 0 ? 'bold ' : '') + F + 'px Arial'; return ctx.measureText(l).width; })); return { w: Math.ceil(lw + 34), h: it.lines.length * LH + 20 }; }
+function paintCallouts(ctx, order) { const F = 27, LH = 32; const col = calloutCol;
   for (const it of order) { const b = it.box; const c = col(it); const bx = b.x + b.w / 2, by = b.y + b.h / 2;   // wedge pointer from the box middle to the pin
     const ang = Math.atan2(it.px[1] - by, it.px[0] - bx), nx = Math.cos(ang + Math.PI / 2) * 13, ny = Math.sin(ang + Math.PI / 2) * 13;
     ctx.fillStyle = c; ctx.beginPath(); ctx.moveTo(bx + nx, by + ny); ctx.lineTo(bx - nx, by - ny); ctx.lineTo(it.px[0], it.px[1]); ctx.closePath(); ctx.fill(); }
@@ -99,13 +105,14 @@ async function makeLocationMap(J, kind) {
   const items = [{ kind: 'subj', p: sp, lines: ['Subject', ...addrLines(S.addr + (S.unit ? ' #' + S.unit : ''), S.city, S.zip)] }];
   list.forEach((c, i) => { const p = kind === 'rent' ? (c.lat ? { lat: c.lat, lon: c.lon } : null) : geoOf(c); if (!p) return;
     const mi = milesBetween(sp, p), dir = directionOf(sp, p);
-    items.push({ kind: kind === 'rent' ? 'rent' : 'comp', p, lines: [kind === 'rent' ? 'Comparable Rental ' + (i + 1) : 'Comparable Sale ' + c.use, ...(kind === 'rent' ? addrLines(c.addr, c.city, c.zip) : addrLines(V(c, 'addr') || compTitle(c), V(c, 'city') || '', V(c, 'zip') || '')), mi != null ? `${mi.toFixed(2)} miles ${dirShort(dir)}` : ''].filter(Boolean) }); });
+    items.push({ cid: kind === 'rent' ? null : c.id, kind: kind === 'rent' ? 'rent' : 'comp', p, lines: [kind === 'rent' ? 'Comparable Rental ' + (i + 1) : 'Comparable Sale ' + c.use, ...(kind === 'rent' ? addrLines(c.addr, c.city, c.zip) : addrLines(V(c, 'addr') || compTitle(c), V(c, 'city') || '', V(c, 'zip') || '')), mi != null ? `${mi.toFixed(2)} miles ${dirShort(dir)}` : ''].filter(Boolean) }); });
   MAPS.busy = 'Drawing the map…'; mapsRender();
   const pts = items.map(x => x.p); const B = await drawBase(ctx, W, H, pts, 'street', { x: 420, y: 330 });
   items.forEach(it => { it.px = B.xy(it.p); }); callouts(ctx, W, H, items); credit(ctx, W, H, MAP_SRC.street.credit);
   MAPS.busy = ''; if (B.bad === B.total) { toast('The street map would not load (no internet, or the map server is busy) – try again in a minute', 7000); mapsRender(); return; }
   let blob; try { blob = await toJpeg(cv); } catch (e) { toast('Chrome would not save the map picture: ' + (e.message || e), 7000); mapsRender(); return; }
-  const M = await mapsGet(J); M[kind === 'rent' ? 'rent' : 'loc'] = { blob, at: Date.now(), n: items.length - 1, use: true }; await mapsPut(J, M);
+  const layout = { kind, W, H, z: B.z, center: { lon: x2lon(B.ox + W / 2, B.z), lat: y2lat(B.oy + H / 2, B.z) }, items: items.map(it => ({ kind: it.kind, p: it.p, lines: it.lines, cid: it.cid || null, off: [it.box.x - it.px[0], it.box.y - it.px[1]] })) };
+  const M = await mapsGet(J); M[kind === 'rent' ? 'rent' : 'loc'] = { blob, at: Date.now(), n: items.length - 1, use: true, layout }; await mapsPut(J, M);
   toast(`${kind === 'rent' ? 'Rental' : 'Location'} map made – subject and ${items.length - 1} ${kind === 'rent' ? 'rental' : 'comp'}${items.length > 2 ? 's' : ''}`); mapsRender();
 }
 
@@ -187,7 +194,7 @@ async function mapsRender() {
     const own = `<label class="btn sm">Use my own picture<input type="file" accept="image/*" data-mapown="${k}" hidden></label>`;
     return `<div class="mapbox"><b>${MAP_LABEL[k]}</b>${m ? `<a href="${MAP_URL[k]}" target="_blank" title="Open full size"><img src="${MAP_URL[k]}" alt="${MAP_LABEL[k]}"></a><small class="muted">${esc(m.src || (m.n ? 'subject + ' + m.n : ''))} · ${new Date(m.at).toLocaleString()}</small>
       <label class="check"><input type="checkbox" data-mapuse="${k}" ${m.use !== false ? 'checked' : ''}> Put it in the SFREP report</label>` : '<div class="mapempty">not made yet</div>'}
-      <div class="row">${btn}${k === 'aerial' || k === 'flood' ? own : ''}${m ? `<a class="btn sm" href="${MAP_URL[k]}" download="${MAP_IMG[k][2]}">Save picture</a><button class="btn sm" data-mapdel="${k}">✕</button>` : ''}</div>
+      <div class="row">${btn}${k === 'aerial' || k === 'flood' ? own : ''}${m && m.layout ? `<button class="btn sm" data-mapedit="${k}">Edit map</button>` : ''}${m ? `<a class="btn sm" href="${MAP_URL[k]}" download="${MAP_IMG[k][2]}">Save picture</a><button class="btn sm" data-mapdel="${k}">✕</button>` : ''}</div>
       ${k === 'flood' && m && m.zone ? `<small>FEMA zone <b>${esc(m.zone.zone)}</b>${m.panel ? ` · panel ${esc(m.panel.panel)}${m.panel.date ? ' · effective ' + esc(showDate(m.panel.date)) : ''}` : ''}</small>` : ''}</div>`; };
   box.innerHTML = `<h2>Maps and exhibits <small>location map, aerial view, flood map – they go into the SFREP report</small></h2>
     ${MAPS.busy ? `<p class="help"><b>${esc(MAPS.busy)}</b></p>` : ''}
@@ -209,3 +216,59 @@ document.addEventListener('change', async e => {
 });
 /* for the full report: the pictures she kept ticked */
 async function mapsForReport(J) { const M = await mapsGet(J); return Object.keys(MAP_IMG).filter(k => M[k] && M[k].blob && M[k].use !== false).map(k => ({ k, blob: M[k].blob, cat: MAP_IMG[k][0], cap: MAP_IMG[k][1], file: MAP_IMG[k][2] })); }
+
+/* ---- her ask (Oct 20 2026): fix the location map by hand – drag a label, drag the map, zoom, change a label's words,
+   move a dot that is in the wrong place; Save redraws the picture for the report ---- */
+async function drawBaseAt(ctx, W, H, src, z, center) {
+  const S = MAP_SRC[src]; z = Math.max(3, Math.min(S.max, z)); const ox = lon2x(center.lon, z) - W / 2, oy = lat2y(center.lat, z) - H / 2;
+  const t0x = Math.floor(ox / TILE), t1x = Math.floor((ox + W) / TILE), t0y = Math.floor(oy / TILE), t1y = Math.floor((oy + H) / TILE);
+  ctx.fillStyle = '#e8eef2'; ctx.fillRect(0, 0, W, H); const jobs = [];
+  for (let tx = t0x; tx <= t1x; tx++) for (let ty = t0y; ty <= t1y; ty++) jobs.push(imgLoad(S.url(z, ((tx % 2 ** z) + 2 ** z) % 2 ** z, ty)).then(im => { if (im) ctx.drawImage(im, tx * TILE - ox, ty * TILE - oy); }));
+  await Promise.all(jobs); return { z, ox, oy, xy: p => [lon2x(p.lon, z) - ox, lat2y(p.lat, z) - oy] };
+}
+async function mapEdit(J, key) {
+  const M = await mapsGet(J); const m = M[key]; if (!m || !m.layout) { toast('Make the map again first – maps made before this update cannot be edited'); return; }
+  const L = JSON.parse(JSON.stringify(m.layout)); const W = L.W, H = L.H;
+  const bg = document.createElement('div'); bg.className = 'sheet-bg mapedit';
+  bg.innerHTML = `<div class="sheet mapsheet"><div class="mehead"><h2>Edit the map</h2>
+    <span class="row"><button class="btn sm" data-me="in">＋ Zoom in</button><button class="btn sm" data-me="out">－ Zoom out</button><button class="btn sm" data-me="auto">Place labels for me</button>
+    <span class="grow"></span><button class="btn primary" data-me="save">Save the map</button><button class="btn" data-me="cancel">Cancel</button></span></div>
+    <p class="help">Drag a <b>label</b> to move it (its pointer follows). Drag the <b>map</b> to slide it. Drag a <b>dot</b> only if the house is in the wrong place – that corrects its location and distance. Change the words on the right.</p>
+    <div class="mebody"><div class="mecv"><canvas></canvas><div class="mebusy" hidden>Loading the map…</div></div><div class="meside">${L.items.map((it, i) => `<label class="fld"><span>${it.kind === 'subj' ? 'Subject' : it.lines[0]}</span><textarea rows="${it.lines.length}" data-mel="${i}">${esc(it.lines.join('\n'))}</textarea></label>`).join('')}</div></div></div>`;
+  document.body.appendChild(bg);
+  const cv = bg.querySelector('canvas'); cv.width = W; cv.height = H; const ctx = cv.getContext('2d');
+  const base = document.createElement('canvas'); base.width = W; base.height = H; const bctx = base.getContext('2d'); let B = null, panDx = 0, panDy = 0;
+  const busy = on => { bg.querySelector('.mebusy').hidden = !on; };
+  const place = () => L.items.forEach(it => { it.px = B.xy(it.p); const sz = calloutSize(ctx, it); it.box = { x: Math.round(it.px[0] + it.off[0]), y: Math.round(it.px[1] + it.off[1]), w: sz.w, h: sz.h }; });
+  const paint = () => { ctx.clearRect(0, 0, W, H); ctx.drawImage(base, panDx, panDy); if (panDx || panDy) { ctx.save(); ctx.translate(panDx, panDy); } paintCallouts(ctx, L.items); if (panDx || panDy) ctx.restore(); credit(ctx, W, H, MAP_SRC.street.credit); };
+  const loadBase = async () => { busy(true); B = await drawBaseAt(bctx, W, H, 'street', L.z, L.center); L.z = B.z; busy(false); place(); paint(); };
+  await loadBase();
+  const at = e => { const r = cv.getBoundingClientRect(); return [(e.clientX - r.left) * W / r.width, (e.clientY - r.top) * H / r.height]; };
+  let drag = null;
+  cv.addEventListener('pointerdown', e => { const [x, y] = at(e); cv.setPointerCapture(e.pointerId);
+    const dot = L.items.slice().reverse().find(it => Math.hypot(it.px[0] - x, it.px[1] - y) < 22);
+    const box = L.items.slice().reverse().find(it => x >= it.box.x && x <= it.box.x + it.box.w && y >= it.box.y && y <= it.box.y + it.box.h);
+    drag = dot ? { t: 'dot', it: dot, x, y } : box ? { t: 'box', it: box, x, y } : { t: 'pan', x, y }; });
+  cv.addEventListener('pointermove', e => { if (!drag) { const [x, y] = at(e); const onDot = L.items.some(it => Math.hypot(it.px[0] - x, it.px[1] - y) < 22), onBox = L.items.some(it => x >= it.box.x && x <= it.box.x + it.box.w && y >= it.box.y && y <= it.box.y + it.box.h); cv.style.cursor = onDot ? 'crosshair' : onBox ? 'move' : 'grab'; return; }
+    const [x, y] = at(e); const dx = x - drag.x, dy = y - drag.y; drag.x = x; drag.y = y;
+    if (drag.t === 'box') { drag.it.box.x += dx; drag.it.box.y += dy; drag.it.off = [drag.it.box.x - drag.it.px[0], drag.it.box.y - drag.it.px[1]]; }
+    else if (drag.t === 'dot') { drag.it.px = [drag.it.px[0] + dx, drag.it.px[1] + dy]; drag.it.off = [drag.it.box.x - drag.it.px[0], drag.it.box.y - drag.it.px[1]]; drag.it.moved = true; }
+    else { panDx += dx; panDy += dy; }
+    paint(); });
+  cv.addEventListener('pointerup', async () => { const d = drag; drag = null; if (!d) return;
+    if (d.t === 'dot') { const it = d.it; it.p = { lat: y2lat(B.oy + it.px[1], B.z), lon: x2lon(B.ox + it.px[0], B.z) };
+      const sp = L.items.find(x => x.kind === 'subj'); if (it.kind !== 'subj' && sp) { const mi = milesBetween(sp.p, it.p), dir = directionOf(sp.p, it.p); const k = it.lines.findIndex(l => /miles/.test(l)); if (k >= 0 && mi != null) { it.lines[k] = `${mi.toFixed(2)} miles ${dirShort(dir)}`; const ta = bg.querySelector(`[data-mel="${L.items.indexOf(it)}"]`); if (ta) ta.value = it.lines.join('\n'); } }
+      place(); paint(); }
+    if (d.t === 'pan' && (panDx || panDy)) { L.center = { lon: x2lon(B.ox + W / 2 - panDx, B.z), lat: y2lat(B.oy + H / 2 - panDy, B.z) }; panDx = 0; panDy = 0; await loadBase(); } });
+  bg.addEventListener('input', e => { const i = e.target.dataset.mel; if (i === undefined) return; L.items[+i].lines = e.target.value.split('\n').filter(x => x.trim() !== ''); place(); paint(); });
+  const close = () => bg.remove();
+  bg.addEventListener('click', async e => { const b = e.target.closest('[data-me]'); if (!b) return; const a = b.dataset.me;
+    if (a === 'cancel') close();
+    else if (a === 'in' || a === 'out') { L.z += a === 'in' ? 1 : -1; const k = a === 'in' ? 2 : 0.5; L.items.forEach(it => { if (it.kind) {} }); await loadBase(); }
+    else if (a === 'auto') { L.items.forEach(it => { delete it.box; }); const tmp = document.createElement('canvas'); tmp.width = W; tmp.height = H; const tctx = tmp.getContext('2d'); L.items.forEach(it => { it.px = B.xy(it.p); }); callouts(tctx, W, H, L.items); L.items.forEach(it => { it.off = [it.box.x - it.px[0], it.box.y - it.px[1]]; }); paint(); }
+    else if (a === 'save') { paint(); let blob; try { blob = await toJpeg(cv); } catch (x) { toast('Chrome would not save the map picture: ' + (x.message || x), 7000); return; }
+      L.items.forEach(it => { if (it.moved && it.kind === 'subj') { J.subject.lat = +it.p.lat.toFixed(6); J.subject.lon = +it.p.lon.toFixed(6); }
+        if (it.moved && it.cid) { const c = J.comps.find(x => x.id === it.cid); if (c) { c.edit = c.edit || {}; c.edit.lat = +it.p.lat.toFixed(6); c.edit.lon = +it.p.lon.toFixed(6); c.geo = { lat: it.p.lat, lon: it.p.lon, src: 'moved on the map' }; } } delete it.moved; delete it.px; delete it.box; });
+      const M2 = await mapsGet(J); M2[key] = { ...(M2[key] || {}), blob, at: Date.now(), layout: L, use: M2[key] ? M2[key].use : true }; await mapsPut(J, M2); save(); close(); render(); mapsRender(); toast('Map saved'); } });
+}
+document.addEventListener('click', e => { const b = e.target.closest('[data-mapedit]'); if (b && app.job) mapEdit(app.job, b.dataset.mapedit); });
