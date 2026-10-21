@@ -17,7 +17,7 @@ const WIN = Math.random().toString(36).slice(2);
 const WB = { page: 0, cur: null, undo: null,
   get on() { if (POP) return true; try { return localStorage.getItem('genie-wb') === '1'; } catch (e) { return false; } },
   set on(v) { try { localStorage.setItem('genie-wb', v ? '1' : '0'); } catch (e) {} },
-  get per() { try { return +(localStorage.getItem('genie-wb-per') || 3); } catch (e) { return 3; } },
+  get per() { try { return +(localStorage.getItem('genie-wb-per') || 6); } catch (e) { return 6; } },
   set per(v) { try { localStorage.setItem('genie-wb-per', String(v)); } catch (e) {} } };
 const CPOP = (() => { const q = new URLSearchParams(location.search); return q.get('pop') === 'comp' ? { id: q.get('id') || '', job: q.get('job') || '' } : null; })();   // one comp in its own window (her request, Oct 19 2026)
 let WBC = null; try { WBC = new BroadcastChannel('comp-genie'); } catch (e) {}
