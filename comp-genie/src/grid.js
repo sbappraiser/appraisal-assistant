@@ -1011,7 +1011,40 @@ function sfrepTypeHTML(J) { const used = usedComps(J); if (!used.length) return 
   const lines = rows.map(r => { const cells = used.map(c => { const a = cellAmount(J, c, r).v; const C = compFacts(c, J); const d = r[3] === 'OTHER' ? otherDesc(r, C) : ''; return { a, d }; });
     const sd = r[3] === 'OTHER' ? otherDesc(r, S) : ''; if (!sd && cells.every(x => !x.a && !x.d)) return '';
     return `<tr><td><b>${esc(r[1])}</b>${r[3] === 'OTHER' ? `<br><small class="muted">your Add Other line – type the descriptions too</small>` : ''}</td>${r[3] === 'OTHER' ? `<td>${esc(sd)}</td>` : '<td></td>'}${cells.map(x => `<td class="r">${x.d ? esc(x.d) + '<br>' : ''}${x.a ? `<b>${x.a > 0 ? '+' : ''}${Math.round(x.a).toLocaleString()}</b>` : x.d ? '<span class="muted">0</span>' : ''}</td>`).join('')}</tr>`; }).filter(Boolean);
-  if (!lines.length) return '';
-  return `<details class="sfrepType" open><summary><b>Type these into SFREP after the import</b> <small>(${lines.length} line${lines.length > 1 ? 's' : ''}) – SFREP's import skips them, even in Fannie Mae's own sample</small></summary>
+  if (!lines.length) return `<p><button class="btn primary" data-act="sfrep-sheet">🖨 SFREP after the import – checklist to print</button></p>`;
+  return `<p><button class="btn primary" data-act="sfrep-sheet">🖨 SFREP after the import – checklist to print</button></p><details class="sfrepType" open><summary><b>Type these into SFREP after the import</b> <small>(${lines.length} line${lines.length > 1 ? 's' : ''}) – SFREP's import skips them, even in Fannie Mae's own sample</small></summary>
     <div class="tablewrap"><table class="tbl"><thead><tr><th>Line</th><th>Subject</th>${used.map(c => `<th class="r">Comp ${c.use}<br><small>${esc(compTitle(c))}</small></th>`).join('')}</tr></thead><tbody>${lines.join('')}</tbody></table></div>
     <p class="help">Everything else on your grid (sale data, site, view, location, quality, condition, cooling, water features, outdoor living, vehicle storage …) comes in with the import. Check each comp's net adjustment in SFREP against your grid when you are done.</p></details>`; }
+/* ===== her "SFREP after the import" sheet (Oct 21 2026): one printable page in SFREP's screen order – what she still types or checks, with a box to tick ===== */
+function sfrepSheetHTML(J) { const used = usedComps(J), S = subjFacts(J); const ck = t => `<li><span class="bx"></span><span>${t}</span></li>`;
+  const rows = adjRows(J).filter(r => r[3] && rowShown(r, J) && (r[3] === 'OTHER' ? true : SFREP_DROPS(isObSlot(r[0]) ? (/^aduU/.test(r[0]) ? 'AccessoryDwellingUnitLocation' : 'Outbuilding') : r[3])));
+  const grid = rows.map(r => { const cells = used.map(c => { const a = cellAmount(J, c, r).v; const d = r[3] === 'OTHER' ? otherDesc(r, compFacts(c, J)) : ''; return { a, d }; }); const sd = r[3] === 'OTHER' ? otherDesc(r, S) : '';
+    if (!sd && cells.every(x => !x.a && !x.d)) return ''; return `<tr><td><span class="bx"></span> <b>${esc(r[1])}</b>${r[3] === 'OTHER' ? '<br><small>Add Other line – type the descriptions too</small>' : ''}</td><td>${esc(sd)}</td>${cells.map(x => `<td class="r">${x.d ? esc(x.d) + '<br>' : ''}${x.a ? `<b>${x.a > 0 ? '+' : ''}${Math.round(x.a).toLocaleString()}</b>` : x.d ? '0' : ''}</td>`).join('')}</tr>`; }).filter(Boolean).join('');
+  const tot = used.map(c => compTotals(J, c)); const noPhoto = used.filter(c => !c.front);
+  const R = typeof RE === 'function' ? RE(J) : R0(J);
+  return `<!doctype html><html><head><meta charset="utf-8"><title>SFREP after the import – ${esc(J.name)}</title><style>
+  body{font:15px/1.45 Arial,sans-serif;color:#000;margin:24px}h1{font-size:20px;margin:0 0 4px}h2{font-size:16px;background:#1f3f66;color:#fff;padding:4px 8px;margin:18px 0 6px}
+  ul{list-style:none;padding:0;margin:0}li{margin:5px 0;display:flex;gap:8px}.bx{flex:none;display:inline-block;width:14px;height:14px;border:1.5px solid #000;margin-top:2px}
+  table{border-collapse:collapse;width:100%;font-size:13.5px}th,td{border:1px solid #888;padding:3px 6px;vertical-align:top}th{background:#eee}.r{text-align:right}small{color:#444}
+  .noprint{margin:0 0 12px}@media print{.noprint{display:none}h2{-webkit-print-color-adjust:exact;print-color-adjust:exact}}</style></head><body>
+  <div class="noprint"><button onclick="print()">Print</button></div>
+  <h1>SFREP after the import – ${esc(J.name)}</h1><p>Import first (Home › Import Forms, your template, Include adjustments, Overwrite populated fields off), then go down this page in SFREP's order and tick each box.</p>
+  <h2>Subject</h2><ul>
+    ${ck('<b>Environmental condition</b> and <b>Accessibility feature</b> rows that came in red and blank: if the answer is None, click <i>Remove</i> on that row (SFREP does not take "None").')}
+    ${ck('<b>Outbuildings</b>: if an Outbuilding Type is red, pick its type (a shed that is not real property comes in blank) and add its front photo.')}
+    ${ck('<b>Legal description</b> and <b>Subject property commentary</b> are filled in.')}</ul>
+  <h2>Sales comparison approach</h2>
+  ${grid ? `<p>Type these – SFREP's import skips them (even in Fannie Mae's own sample):</p><table><thead><tr><th>Line</th><th>Subject</th>${used.map(c => `<th class="r">Comp ${c.use}<br><small>${esc(compTitle(c))}</small></th>`).join('')}</tr></thead><tbody>${grid}</tbody></table>` : '<p>No skipped lines on this grid.</p>'}
+  <p><b>Then check each comp's net adjustment and adjusted price in SFREP against your grid:</b></p>
+  <table><thead><tr><th></th>${used.map(c => `<th class="r">Comp ${c.use}</th>`).join('')}</tr></thead><tbody>
+    <tr><td><span class="bx"></span> Net adjustment</td>${tot.map(t => `<td class="r">${t.net >= 0 ? '+' : '−'}${money(Math.abs(Math.round(t.net)))}</td>`).join('')}</tr>
+    <tr><td><span class="bx"></span> Adjusted price</td>${tot.map(t => `<td class="r">${money(Math.round(t.adj))}</td>`).join('')}</tr></tbody></table>
+  <ul>${noPhoto.length ? ck(`<b>Comp photos</b>: add a front photo for ${noPhoto.map(c => 'comp ' + c.use + ' (' + esc(compTitle(c)) + ')').join(', ')}.`) : ck('<b>Comp photos</b> came in – check each one shows.')}
+    ${ck('<b>Analysis of Prior Sale and Transfer History</b> of the comparable sales is filled in.')}</ul>
+  <h2>Cost approach</h2><ul>${ck('Each cost line, depreciation and the site value match the Comp genie' + (J.costOn ? '' : ' (or the section is answered “not developed”)') + '.')}</ul>
+  <h2>Reconciliation</h2><ul>${ck('<b>Opinion of market value</b> ' + (R.opinion ? money(num(String(R.opinion).replace(/[$,\\s]/g, ''))) : '(blank in the genie – type it)') + ', exposure time and the reconciliation comment.')}
+    ${ck('<b>Reason for exclusion</b> for any approach not developed.')}</ul>
+  <h2>Certification and signature</h2><ul>${ck('<b>Scope of inspection by appraiser</b> (exterior / interior) and the inspection date.')}${ck('<b>Date of signature and report</b>, then sign.')}${ck('Run SFREP’s own check (UCDP / compliance) and clear what it lists.')}</ul>
+  </body></html>`; }
+function sfrepSheetOpen(J) { const w = window.open('', 'sfrep-sheet-' + J.id, 'width=1000,height=1100'); if (!w) { toast('Chrome blocked the window – allow pop-ups for this page'); return; } w.document.write(sfrepSheetHTML(J)); w.document.close(); }
+document.addEventListener('click', e => { if (e.target.closest && e.target.closest('[data-act="sfrep-sheet"]') && app.job) sfrepSheetOpen(app.job); });

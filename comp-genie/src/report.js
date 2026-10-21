@@ -12,6 +12,8 @@ const VCOND = [['AsIs', 'As is'], ['SubjectToRepair', 'Subject to repair'], ['Su
 /* her three boxes → UAD 3.6 Additional Scope of Work (one 2,500-character field) */
 const sowText = R => [String(R.sowNote || '').trim(), String(R.eaNote || '').trim() ? 'Extraordinary assumptions: ' + String(R.eaNote).trim() : '', String(R.hcNote || '').trim() ? 'Hypothetical conditions: ' + String(R.hcNote).trim() : ''].filter(Boolean).join('\n\n');
 const sowAny = R => !!sowText(R); const sowLen = R => sowText(R).length;
+/* her appraiser details (from her SFREP signature page, Oct 21 2026) */
+const APPRAISER_ME = { first: 'Jennifer', middle: 'L', last: 'Heath', company: 'Jennifer Heath, LLC', addr: '5662 Calle Real, PNB #103', city: 'Goleta', state: 'CA', zip: '93117', licType: 'CertifiedResidential', lic: 'AR017399', licState: 'CA', licExp: '2027-03-04' };
 const EXCL_REASONS = [['NotNecessaryForCredibleResults', 'Not necessary for credible results'], ['InsufficientData', 'Insufficient data'], ['LackOfLandSales', 'Lack of land sales'], ['DifficultyEstimatingDepreciation', 'Difficulty estimating depreciation'], ['Other', 'Other']];
 const HBU_TESTS = [['legal', 'Legally permissible'], ['phys', 'Physically possible'], ['fin', 'Financially feasible'], ['max', 'Maximally productive']];
 const ORDER_ASSIGN = { uadPurchase: 'Purchase', uadRefi: 'Refinance', uadHeloc: 'HomeEquity', uadConstruction: 'Construction', construction: 'Construction' };
@@ -94,6 +96,7 @@ function reportHTML(J) {
       <label class="fld"><span>Assignment reason</span>${sel('assign', ASSIGN, F.assign)}</label>
       ${rv(J, 'assign') === 'Other' ? `<label class="fld"><span>Other reason</span>${inp('assignOther', 'e.g. Estate settlement')}</label>` : ''}
       <label class="fld"><span>Property valuation method</span>${sel('vmethod', VMETHOD, 'TraditionalAppraisal', 'usual')}</label>
+      <label class="fld"><span>Measurement standard (your sketch)</span>${sel('measStd', [['AmericanNationalStandardsInstitute', 'ANSI Z765'], ['AmericanMeasurementStandard', 'American Measurement Standard'], ['Other', 'Other']], 'AmericanNationalStandardsInstitute', 'usual')}</label>
       <label class="fld"><span>Property data report used instead of an inspection?</span>${yn('pdr', false)}</label>
       <label class="fld"><span>Your file number</span>${inp('fileNo')}</label>
       <label class="fld"><span>Effective date</span>${inp('eff', 'YYYY-MM-DD')}</label>
@@ -133,6 +136,7 @@ function reportHTML(J) {
       <label class="fld"><span>Additional certifications by you?</span>${yn('addlCert', false)}</label>
       <label class="fld"><span>Is this a reconsideration of value?</span>${yn('reconsider', false)}</label>
       <label class="fld"><span>Subject listed for sale in the past year?</span>${yn('listedYear', F.listedYear)}</label></section>
+    ${typeof cmtBoxesHTML === 'function' ? cmtBoxesHTML(J) : ''}
     <section><h3>Value and reconciliation</h3>
       <label class="fld"><span>Opinion of market value</span>${inp('opinion', !blank(G.value) ? money(G.value) + ' (sales comparison)' : '$')}</label>
       <label class="fld"><span>Market value condition</span>${sel('vcond', VCOND, 'AsIs', 'usual')}</label>
@@ -211,7 +215,7 @@ function writeReportXML(doc, NS, J, SUBJ, VA, SVC) {
   const asg = rv(J, 'assign'); set(sow, 'ValuationAssignmentType', asg); if (asg === 'Other') set(sow, 'ValuationAssignmentTypeOtherDescription', (R.assignOther || '').slice(0, 33) || null);
   const rd = path(VR, 'VALUATION_REPORT_DETAIL');
   set(rd, 'AppraiserFileIdentifier', rv(J, 'fileNo')); set(rd, 'PropertyDataReportIndicator', tf('pdr', 'false'));
-  set(rd, 'SketchExistsIndicator', 'true'); set(rd, 'ValuationReportInspectionCertificationType', F.insp);
+  set(rd, 'MeasurementStandardPublisherType', rv(J, 'measStd') || 'AmericanNationalStandardsInstitute'); set(rd, 'SketchExistsIndicator', 'true');   /* A-1 3300.0007: required with a sketch (her Oct 21 import: Sketch › Measurement Standard blank) */ set(rd, 'ValuationReportInspectionCertificationType', F.insp);
   { const fb = (k, def) => tf(k, def === true ? 'true' : def === false ? 'false' : undefined);   // the order's answer when she has not chosen
     set(sow, 'CostApproachIndicator', fb('sowCost', F.sowCost)); set(sow, 'IncomeApproachIndicator', fb('sowIncome', F.sowIncome)); set(sow, 'RentScheduleIndicator', fb('sowRent', F.sowRent));
     set(sow, 'GovernmentAgencyAppraisalIndicator', fb('sowGov', false)); if (R.sowGov === 'true' && R.govType) set(sow, 'GovernmentAgencyAppraisalType', R.govType);
@@ -249,6 +253,7 @@ function writeReportXML(doc, NS, J, SUBJ, VA, SVC) {
   if (HBU_TESTS.some(([k]) => H[k]) || R.hbuPresent) { const hb = child(SITE, 'HIGHEST_AND_BEST_USE');
     set(hb, 'FinanciallyFeasibleIndicator', String(!!H.fin)); set(hb, 'LegallyPermissibleIndicator', String(!!H.legal)); set(hb, 'MaximallyProductiveIndicator', String(!!H.max)); set(hb, 'PhysicallyPossibleIndicator', String(!!H.phys)); set(hb, 'SiteHighestBestUseIndicator', R.hbuPresent || null); }
   comment('HighestAndBestUse', R.hbuNote, 4000);
+  if (typeof CMT_BOXES !== 'undefined') CMT_BOXES.forEach(([k, cat, , max]) => comment(cat, String(R[k] || '').trim(), max));   // her comment boxes for SFREP (cmtdraft.js)
   // usable lot area in the site comment (it cannot be a site influence)
   const S = subjFacts(J);
   if (!blank(S.usable)) { const VC = child(VR, 'VALUATION_COMMENTARIES'); const line = `Usable Lot Area/Utility: ${(+S.usable).toFixed(2)} ac.`;
@@ -273,7 +278,16 @@ function writeReportXML(doc, NS, J, SUBJ, VA, SVC) {
     const p = num(String(K.price || '').replace(/[$,\s]/g, '')); set(sc, 'SalesContractAmount', p); set(sc, 'SalesContractDate', isoDate(K.cdate) || null); set(sc, 'SalesContractExistsIndicator', 'true'); set(sc, 'SalesContractReviewedIndicator', 'true');
     set(sc, 'SaleType', K.saleType); const ca = num(String(K.concAmt || '').replace(/[$,\s]/g, '')); if (ca !== null) set(sc, 'TotalSalesConcessionAmount', ca);
     comment('SalesContract', K.cmt, 5000); }
-  // parties: client, lender, AMC (the appraiser stays as your SFREP template has her)
+  /* the appraiser (A-1 2400.0041 / .0047 / .0051, required) and who completed the inspection (D-1: INSPECTION_CompletedBy_ROLE) –
+     her Oct 21 import showed Scope of Inspection by Appraiser red. Her details (APPRAISER_ME); with Overwrite off SFREP keeps her own profile. */
+  { const M = APPRAISER_ME; const PS = child(SVC, 'PARTIES'); const P = add(PS, 'PARTY'); const nm = path(P, 'INDIVIDUAL', 'NAME'); set(nm, 'FirstName', M.first); set(nm, 'LastName', M.last); if (M.middle) set(nm, 'MiddleName', M.middle);
+    const ad = path(P, 'ADDRESSES', 'ADDRESS'); set(ad, 'AddressLineText', M.addr); set(ad, 'CityName', M.city); set(ad, 'PostalCode', M.zip); set(ad, 'StateCode', M.state);
+    const RO = child(child(P, 'ROLES'), 'ROLE'); RO.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:label', 'ROLE_Appraiser'); set(path(RO, 'APPRAISER', 'APPRAISER_DETAIL'), 'AppraiserCompanyName', M.company);
+    const L = path(RO, 'LICENSES', 'LICENSE'); set(child(L, 'APPRAISER_LICENSE'), 'AppraiserLicenseType', M.licType); const LD = child(L, 'LICENSE_DETAIL'); set(LD, 'LicenseExpirationDate', M.licExp); set(LD, 'LicenseIdentifier', M.lic); set(LD, 'LicenseIssuingAuthorityStateCode', M.licState);
+    set(child(RO, 'ROLE_DETAIL'), 'PartyRoleType', 'Appraiser');
+    const insp = [...SUBJ.getElementsByTagNameNS(NS, 'INSPECTION')].find(x => (x.getAttributeNS('http://www.w3.org/1999/xlink', 'label') || '') === 'INSPECTION_Appraiser');
+    if (insp) { const RL = child(SVC, 'RELATIONSHIPS'); const r = doc.createElementNS(NS, 'RELATIONSHIP'); const XLN = 'http://www.w3.org/1999/xlink'; r.setAttributeNS(XLN, 'xlink:arcrole', 'urn:fdc:mismo.org:2009:residential/INSPECTION_CompletedBy_ROLE'); r.setAttributeNS(XLN, 'xlink:from', 'INSPECTION_Appraiser'); r.setAttributeNS(XLN, 'xlink:to', 'ROLE_Appraiser'); RL.appendChild(r); } }
+  // parties: client, lender, AMC
   const parties = [[rv(J, 'client'), rv(J, 'clientAddr1'), rv(J, 'clientAddr2'), 'Client'], [rv(J, 'lender'), F.lenderAddr1, F.lenderAddr2, 'Lender'], [rv(J, 'amc'), F.amcAddr1, F.amcAddr2, 'ManagementCompany']].filter(p => p[0]);
   if (parties.length) { const PS = child(SVC, 'PARTIES');
     parties.forEach(([name, a1, a2, role]) => { const P = add(PS, 'PARTY'); const le = child(P, 'LEGAL_ENTITY'); set(child(le, 'LEGAL_ENTITY_DETAIL'), 'FullName', name.slice(0, 100));

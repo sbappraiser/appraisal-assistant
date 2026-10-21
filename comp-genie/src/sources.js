@@ -167,7 +167,7 @@ function mlsCanon(raw, G, g) {
     hoaAmen: (G['Condo/CO-OP/PUD'] || []).filter(x => !/^(Attached|Detached|End Unit|Corner.*|Interior.*|Association Fee.*|\d.*)$/i.test(x)).join('; '),
     project: g('Complex Name', 'Complex', 'Project Name', 'Condo/CO-OP/PUD: Complex Name'),
     lat: num(g('Geo Lat', 'Latitude')), lon: num(g('Geo Lon', 'Longitude')),
-    remarks: g('Public Remarks'), privateRemarks: g('Private Remarks'), water: list('Water/Sewer'), roof: list('Roof'), foundation: list('Foundation'),
+    remarks: g('Public Remarks'), privateRemarks: g('Private Remarks'), water: list('Water/Sewer'), roof: list('Roof'), exterior: list('Exterior'), foundation: list('Foundation'),
     remodel: [has('Amenities', /Remodeled Kitchen/) ? 'Remodeled kitchen' : '', has('Amenities', /Remodeled Bath/) ? 'Remodeled bath' : '', has('Condition', /Updated|Remodeled/) ? 'Updated/Remodeled' : ''].filter(Boolean).join('; '),
     listAgent: g('Listing Member'), sellAgent: g('Selling Member'),
   };

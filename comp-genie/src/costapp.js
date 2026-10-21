@@ -166,7 +166,7 @@ function costAgeXML(J, K, doc, NS, child, set, VR, SVC) {
   const DS = child(VA, 'DATA_SOURCES'); [...DS.children].filter(k => k.getAttributeNS(XL, 'label') === 'DATA_SOURCE_CostApproach').forEach(k => k.remove());
   const e = doc.createElementNS(NS, 'DATA_SOURCE'); e.setAttributeNS(XL, 'xlink:label', 'DATA_SOURCE_CostApproach'); DS.appendChild(e);
   const lf = (t, v) => { if (!v) return; const x = doc.createElementNS(NS, t); x.textContent = v; e.appendChild(x); };
-  lf('DataSourceEffectiveDate', eff); lf('DataSourceName', 'Local contractor budgets');   /* A-1: 33 characters */ lf('DataSourceType', 'BuilderOrDeveloper');
+  lf('DataSourceEffectiveDate', eff); lf('DataSourceType', 'BuilderOrDeveloper');   /* A-1 1100.0066: a name only for a cost service – SFREP read 'Local contractor budgets' as Cost Service Provider "Other" (red, her Oct 21 import) */
   const RL = [...SVC.children].find(k => k.localName === 'RELATIONSHIPS'); if (RL) { const r = doc.createElementNS(NS, 'RELATIONSHIP'); r.setAttributeNS(XL, 'xlink:arcrole', 'urn:fdc:mismo.org:2009:residential/DATA_SOURCE_IsDataSourceFor_COST_APPROACH'); r.setAttributeNS(XL, 'xlink:from', 'DATA_SOURCE_CostApproach'); r.setAttributeNS(XL, 'xlink:to', 'COST_APPROACH_Subject'); RL.appendChild(r); } }
 /* line by line (UAD 3.6 schema, D-1 MH1 sample): COST_APPROACH / IMPROVEMENT_COST_AND_DEPRECIATED_VALUES – one per building (dwelling, each ADU / outbuilding),
    its REPLACEMENT_REPRODUCTION_COSTS, depreciation and depreciated value, linked to the iPad's IMPROVEMENT; then SITE_IMPROVEMENTS_AS_IS_COSTS. */
