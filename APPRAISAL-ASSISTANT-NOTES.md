@@ -670,3 +670,4 @@ Decisions (her, Oct 19–20): "Exterior of dwelling" instead of left/right/side 
 - g2-1021-0050: doc # in her format – last 5 digits + recording date ('Doc #06575 03/04/2026') on the grid and as the Deed DataSourceIdentifier; docNoOf also reads her archive verification '#06575 03/04/26' (date within 2 months of the sale).
 - g2-1021-0057: workbook comps per page default 6 (choices 3,4,5,6,9,all); grid scrolls in its own box (side-to-side bar always on screen), sticky comp names and line names.
 - g2-1021-0101: Pop out 'all comps' (POP to=99, full-screen window): body.popgrid – the grid box fills the window, horizontal scroll bar at the window bottom, wheel scrolls up/down, sticky comp names / line names.
+- g2-1021-0103: comp page column 'Your value' renamed 'New value'.
