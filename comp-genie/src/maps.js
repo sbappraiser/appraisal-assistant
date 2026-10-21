@@ -18,7 +18,9 @@ const lon2x = (lon, z) => (lon + 180) / 360 * TILE * 2 ** z;
 const lat2y = (lat, z) => { const r = lat * Math.PI / 180; return (1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2 * TILE * 2 ** z; };
 const x2lon = (x, z) => x / (TILE * 2 ** z) * 360 - 180;
 const y2lat = (y, z) => Math.atan(Math.sinh(Math.PI * (1 - 2 * y / (TILE * 2 ** z)))) * 180 / Math.PI;
-const imgLoad = url => new Promise(res => { const i = new Image(); i.crossOrigin = 'anonymous'; i.onload = () => res(i); i.onerror = () => res(null); i.src = url; });
+const imgLoad = (url, ms) => new Promise(res => { const i = new Image(); let done = false; const fin = v => { if (done) return; done = true; clearTimeout(t); res(v); }; const t = setTimeout(() => { fin(null); try { i.src = ''; } catch (e) {} }, ms || 30000);   // a picture that never comes no longer locks the maps
+  i.crossOrigin = 'anonymous'; i.onload = () => fin(i); i.onerror = () => fin(null); i.src = url; });
+const fetchT = (u, ms) => { const ac = new AbortController(); const t = setTimeout(() => ac.abort(), ms || 20000); return fetch(u, { signal: ac.signal }).finally(() => clearTimeout(t)); };
 async function mapsGet(J) { const r = await DB.get('kv', 'maps:' + J.id); return (r && r.v) || {}; }
 async function mapsPut(J, M) { await DB.put('kv', { id: 'maps:' + J.id, v: M }); }
 const geoOf = c => { const la = num(V(c, 'lat')), lo = num(V(c, 'lon')); if (la && lo) return { lat: la, lon: lo }; return c.geo && c.geo.lat ? c.geo : null; };
@@ -29,7 +31,7 @@ async function geocodeMissing(J, list) {
   for (const c of need) {
     const q = [V(c, 'addr') || compTitle(c), V(c, 'city') || J.subject.city || 'Santa Barbara', 'CA', V(c, 'zip') || ''].filter(Boolean).join(', ');
     MAPS.busy = `Finding ${compTitle(c)} on the map…`; mapsRender();
-    try { const r = await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=us&q=' + encodeURIComponent(q)); const a = await r.json();
+    try { const r = await fetchT('https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=us&q=' + encodeURIComponent(q)); const a = await r.json();
       if (a && a[0]) { c.geo = { lat: +a[0].lat, lon: +a[0].lon, src: 'address lookup' }; n++; } else miss.push(compTitle(c)); } catch (e) { miss.push(compTitle(c)); }
     await new Promise(r => setTimeout(r, 1100));   // Nominatim: at most one lookup a second
   }
@@ -156,11 +158,11 @@ async function makeAerial(J, widthM) {
 const NFHL = 'https://hazards.fema.gov/arcgis/rest/services/public/NFHL/MapServer';
 async function femaZoneAt(p) {   // Flood Hazard Zones layer (28)
   try { const u = `${NFHL}/28/query?geometry=${p.lon},${p.lat}&geometryType=esriGeometryPoint&inSR=4326&spatialRel=esriSpatialRelIntersects&outFields=FLD_ZONE,ZONE_SUBTY,SFHA_TF,DFIRM_ID&returnGeometry=false&f=json`;
-    const r = await (await fetch(u)).json(); const a = r && r.features && r.features[0] && r.features[0].attributes; if (!a) return null;
+    const r = await (await fetchT(u)).json(); const a = r && r.features && r.features[0] && r.features[0].attributes; if (!a) return null;
     return { zone: a.FLD_ZONE, sub: a.ZONE_SUBTY || '', sfha: a.SFHA_TF === 'T', dfirm: a.DFIRM_ID || '' }; } catch (e) { return null; } }
 async function femaPanelAt(p) {   // FIRM Panels layer (3)
   try { const u = `${NFHL}/3/query?geometry=${p.lon},${p.lat}&geometryType=esriGeometryPoint&inSR=4326&spatialRel=esriSpatialRelIntersects&outFields=FIRM_PAN,EFF_DATE,PANEL_TYP&returnGeometry=false&f=json`;
-    const r = await (await fetch(u)).json(); const a = r && r.features && r.features[0] && r.features[0].attributes; if (!a) return null;
+    const r = await (await fetchT(u)).json(); const a = r && r.features && r.features[0] && r.features[0].attributes; if (!a) return null;
     return { panel: a.FIRM_PAN, date: a.EFF_DATE ? new Date(a.EFF_DATE).toISOString().slice(0, 10) : '' }; } catch (e) { return null; } }
 async function makeFloodMap(J) {
   const S = J.subject; const sp = { lat: num(S.lat), lon: num(S.lon) }; if (!sp.lat) { toast('The subject has no latitude / longitude yet'); return; }
@@ -223,8 +225,11 @@ async function mapsRender() {
 document.addEventListener('click', async e => {
   const b = e.target.closest('[data-map],[data-mapdel]'); if (!b || !app.job) return; const J = app.job;
   if (b.dataset.mapdel) { const M = await mapsGet(J); delete M[b.dataset.mapdel]; await mapsPut(J, M); mapsRender(); return; }
-  if (MAPS.busy) { toast('Still working on the last map…'); return; }
-  const k = b.dataset.map; if (k === 'loc' || k === 'rent') await makeLocationMap(J, k); else if (k === 'aerial') await makeAerial(J); else if (k === 'flood') await makeFloodMap(J);
+  if (MAPS.busy && Date.now() - (MAPS.since || 0) < 90000) { toast('Still working on the last map – ' + MAPS.busy); return; }
+  const k = b.dataset.map; MAPS.since = Date.now(); b.disabled = true; const was = b.textContent; b.textContent = 'Working…';
+  try { if (k === 'loc' || k === 'rent') await makeLocationMap(J, k); else if (k === 'aerial') await makeAerial(J); else if (k === 'flood') await makeFloodMap(J); }
+  catch (x) { console.warn('map', x); toast('That map could not be made: ' + (x.message || x) + ' – try again in a minute, or use your own picture', 9000); }
+  finally { MAPS.busy = ''; MAPS.since = 0; b.disabled = false; b.textContent = was; mapsRender(); }
 });
 document.addEventListener('change', async e => {
   const t = e.target; if (!app.job) return;
@@ -288,4 +293,4 @@ async function mapEdit(J, key) {
         if (it.moved && it.cid) { const c = J.comps.find(x => x.id === it.cid); if (c) { c.edit = c.edit || {}; c.edit.lat = +it.p.lat.toFixed(6); c.edit.lon = +it.p.lon.toFixed(6); c.geo = { lat: it.p.lat, lon: it.p.lon, src: 'moved on the map' }; } } delete it.moved; delete it.px; delete it.box; });
       const M2 = await mapsGet(J); M2[key] = { ...(M2[key] || {}), blob, at: Date.now(), layout: L, use: M2[key] ? M2[key].use : true }; await mapsPut(J, M2); save(); close(); render(); mapsRender(); toast('Map saved'); } });
 }
-document.addEventListener('click', e => { const b = e.target.closest('[data-mapedit]'); if (b && app.job) mapEdit(app.job, b.dataset.mapedit); const a = e.target.closest('[data-aerialw]'); if (a && app.job && !MAPS.busy) makeAerial(app.job, +a.dataset.aerialw); });
+document.addEventListener('click', e => { const b = e.target.closest('[data-mapedit]'); if (b && app.job) mapEdit(app.job, b.dataset.mapedit); const a = e.target.closest('[data-aerialw]'); if (a && app.job) { if (MAPS.busy && Date.now() - (MAPS.since || 0) < 90000) { toast('Still working on the last map'); return; } MAPS.since = Date.now(); makeAerial(app.job, +a.dataset.aerialw).catch(x => toast('The aerial could not be made: ' + (x.message || x), 8000)).finally(() => { MAPS.busy = ''; MAPS.since = 0; mapsRender(); }); } });
