@@ -345,3 +345,4 @@ table.grid thead th .ghsub span:last-child{white-space:nowrap;width:auto;min-wid
 table.grid thead th[data-wbcol]{padding-top:4px;padding-bottom:3px;line-height:1.25}
 table.grid thead th .ghsub{padding-bottom:2px}
 .sheet .legrid{display:grid;grid-template-columns:1fr 1fr;gap:6px 14px}.sheet .legrid .fld textarea{min-height:2.6em}
+table.tbl.cost input::placeholder{color:#9aa4ae;font-style:italic}
