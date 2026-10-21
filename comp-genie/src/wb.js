@@ -162,7 +162,7 @@ function wbMark(el) { const k = FOCUS_KEYS.map(k => [k, el.getAttribute && el.ge
   document.querySelectorAll('.lastcell').forEach(x => x.classList.remove('lastcell')); el.classList.add('lastcell'); }
 function wbColTint() { let st = document.getElementById('curcolcss'); if (!st) { st = document.createElement('style'); st.id = 'curcolcss'; document.head.appendChild(st); }
   const ths = [...document.querySelectorAll('#gridCard table.grid thead th')]; const i = WB.cur ? ths.findIndex(h => h.dataset.wbcol === WB.cur) : -1; ths.forEach(h => { if (h.dataset.wbcol) h.classList.toggle('cur', h.dataset.wbcol === WB.cur); });
-  st.textContent = i < 0 ? '' : `#gridCard table.grid tbody td[data-cc="${WB.cur}"]:not(.dsc){background:#fff1de!important} #gridCard table.grid tbody td.dsc[data-cc="${WB.cur}"]{box-shadow:inset 0 0 0 2px #ff8a00} #gridCard table.grid thead th[data-wbcol="${WB.cur}"]{background:#ffd29a!important;box-shadow:inset 0 -3px 0 #ff8a00}`;
+  st.textContent = i < 0 ? '' : `#gridCard table.grid tbody td[data-cc="${WB.cur}"]{background:#fff9c4!important} #gridCard table.grid tbody td.dsc[data-cc="${WB.cur}"]{box-shadow:inset 2px 0 0 #e0b400} #gridCard table.grid tbody td.adjc[data-cc="${WB.cur}"]{box-shadow:inset -2px 0 0 #e0b400} #gridCard table.grid thead th[data-wbcol="${WB.cur}"]{background:#fff3a0!important;box-shadow:inset 0 -3px 0 #e0b400}`;
   if (WB_LAST) { const el = document.querySelector(`[${WB_LAST[0]}="${CSS.escape(WB_LAST[1])}"]`); if (el && !el.classList.contains('lastcell')) { document.querySelectorAll('.lastcell').forEach(x => x.classList.remove('lastcell')); el.classList.add('lastcell'); } } }
 let WB_EQ = null, WB_ZAP = false;
 document.addEventListener('keydown', async e => {
