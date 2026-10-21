@@ -56,7 +56,7 @@ const ADJ_ROWS = [
   ['structure', 'Structure (low-rise, mid-rise, townhouse…)', 'Dwelling', null],
   ['unitPos', 'Unit location (interior / corner / end)', 'Dwelling', 'CornerUnit', 'unitPos'],
   ['floor', 'Floor (unit level)', 'Dwelling', 'LivingUnitFloorNumber'],
-  ['energy', 'Energy efficient features', 'Dwelling', 'EnergyEfficientAndGreenFeatures'],
+  ['energy', 'Energy efficient features', 'Dwelling', 'EnergyEfficientAndGreenFeatures', 'solar'],   // her ask Oct 20 2026: a $ rate for owned solar
   ['constr', 'Construction method', 'Dwelling', 'ConstructionMethod'],
   ['disaster', 'Disaster mitigation features', 'Dwelling', 'DisasterMitigationFeatures'],
   ['heat', 'Heating', 'Dwelling', 'HeatingSystem'],
@@ -137,6 +137,7 @@ function vtSel(who, J, text) { const I = vtInfo(J, who, text); const lab = t => 
 const aduNums = F => { if (F.aduSf !== undefined && F.aduSf !== null && F.aduSf !== '') return { sf: +F.aduSf || 0, baths: +F.aduBaths || 0 };
   const t = String(F.adu || ''); if (!t.trim() || /^(no|none)$/i.test(t.trim())) return { sf: 0, baths: 0 };
   const sf = t.match(/([\d,]{2,})\s*(?:sf|sq|square)/i), ba = t.match(/(\d+(?:\.\d)?)\s*(?:full\s*)?ba/i); return { sf: sf ? +sf[1].replace(/,/g, '') : null, baths: ba ? +ba[1] : 0 }; };
+RATES.solar = ['$ solar (owned)', 'owned solar: has / has not – leased or PPA solar counts as none'];
 RATES.halfBath = ['$ per half bath', 'half-bath difference × rate (blank = half the full-bath rate)'];
 
 /* ---------------- her starting points by market segment and value tier (Oct 18 2026) ----------------
@@ -397,10 +398,13 @@ function rateAmount(row, S, C, J) {
   if (key === 'bsmtFin') { const dd = d(S.bsmt || 0, C.bsmt); x = dd === null ? null : dd * r; }
   if (key === 'bsmtUnf') { const dd = d(S.bsmtUnf || 0, C.bsmtUnf); x = dd === null ? null : dd * r; }
   if (['agUnf', 'nsAbove', 'nsBelow', 'nonCont'].includes(key)) { const n = v => blank(v) ? null : num(String(v).replace(/[^0-9.]/g, '')); const dd = d(n(S[key]) || 0, n(C[key])); x = dd === null ? null : dd * r; }   // her ask Oct 20 2026: a $ per sq ft rate on these lines too
+  if (key === 'solar') { const a = solarOwned(S.energy), b = solarOwned(C.energy); x = a === null || b === null ? null : (a - b) * r; }
   if (key === 'cool') { const a = coolHas(S.cool), b = coolHas(C.cool); x = a === null || b === null ? null : (a - b) * r; }
   if (key === 'timePct') { const eff = J.subject.eff; if (!C.sale || !eff || !C.price) return null; const m = monthsBetween(C.sale, eff); x = m === null ? null : C.price * r / 100 * m; }
   return x === null ? null : Math.round(x / 500) * 500;
 }
+/* owned solar (1), none / leased / PPA (0), unknown (null) – from the Energy efficient features entry */
+function solarOwned(t) { const v = String(t || '').trim(); if (!v) return null; if (!/solar|pv\b|photovolt/i.test(v)) return 0; return /lease|ppa|power purchase/i.test(v) && !/solar\s*\(?owned/i.test(v) ? 0 : 1; }
 function cellAmount(J, c, row) {
   const v = ((G0(J).cells[c.id] || {})[row[0]]); if (!blank(v)) return { v: +v, own: true };
   const S = subjFacts(J), C = compFacts(c, J); const a = rateAmount(row, S, C, J); return { v: a, own: false };
