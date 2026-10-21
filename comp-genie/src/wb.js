@@ -108,15 +108,15 @@ function wbBar(J, all) {
   return `<div class="wbbar"><label class="chk"><input type="checkbox" data-wbon="1" ${on ? 'checked' : ''}> <b>Workbook view</b> <small>only the lines you adjust · type comp facts in the grid</small></label>
     ${on ? `<label>Comps per page <select data-wbper="1">${[3, 4, 5, 6, 9, 99].map(n => `<option value="${n}" ${n === per ? 'selected' : ''}>${n === 99 ? 'all' : n}</option>`).join('')}</select></label>
       ${per < 99 && pages > 1 ? `<span class="pager"><button class="btn sm" data-act="wb-prev" ${WB.page ? '' : 'disabled'}>◀</button> comps ${WB.page * per + 1}–${Math.min(all.length, WB.page * per + per)} of ${all.length} <button class="btn sm" data-act="wb-next" ${WB.page < pages - 1 ? '' : 'disabled'}>▶</button></span>` : ''}` : ''}
-    <span class="grow"></span><span class="pops">Pop out ${pops.map(([a, b]) => `<button class="btn sm" data-wbpop="${a}|${b}" title="Opens the grid for comps ${a}–${b} in its own window – drag it to another monitor">${a}–${b}</button>`).join('')}</span>
+    <span class="grow"></span><span class="pops">Pop out <button class="btn sm primary" data-wbpop="1|99" title="All the comps side by side in their own window – the side-to-side scroll bar stays at the bottom of the window; scroll up and down with the mouse wheel">all comps</button> ${pops.map(([a, b]) => `<button class="btn sm" data-wbpop="${a}|${b}" title="Opens the grid for comps ${a}–${b} in its own window – drag it to another monitor">${a}–${b}</button>`).join('')}</span>
     <button class="btn sm" data-act="wb-arrange">${app.wbArrange ? 'Close arrange' : 'Arrange'}</button></div>
     ${app.wbArrange ? `<div class="wbarr">${all.map((c, i) => `<div><b>#${c.use}</b> ${esc(compTitle(c))} <button class="btn sm" data-wbmv="${c.id}|${c.use - 1}" ${i ? '' : 'disabled'}>▲</button><button class="btn sm" data-wbmv="${c.id}|${c.use + 1}" ${i < all.length - 1 ? '' : 'disabled'}>▼</button> move to # <input class="txt xs" data-wbto="${c.id}" inputmode="numeric" placeholder="${c.use}"></div>`).join('')}</div>` : ''}
     ${on ? `<p class="help keys">Keys: <b>Tab</b> same line, next comp · <b>Enter</b> next line · <b>=</b> same as the subject · <b>=2</b> same as comp 2 · <b>Ctrl+Shift+2</b> swap this comp with comp 2 · <b>Ctrl+Z</b> (outside a box) take this comp off the grid.</p>` : ''}`;
 }
 function popHTML(J) {
   const all = usedComps(J); const L = all.slice(POP.from - 1, POP.to);
-  return `<header class="top pop"><h1>Comp Genie</h1><span class="pill">${esc(J.name)}</span><span class="pill">Comps ${POP.from}–${POP.to}</span><span class="grow"></span>
-    <button class="btn sm" data-wbpage="-3">◀ ${Math.max(1, POP.from - 3)}–${Math.max(3, POP.to - 3)}</button><button class="btn sm" data-wbpage="3">${POP.from + 3}–${POP.to + 3} ▶</button><small>stays in step with your other windows</small></header>
+  const allc = POP.to >= 99; return `<header class="top pop"><h1>Comp Genie</h1><span class="pill">${esc(J.name)}</span><span class="pill">${allc ? `All ${all.length} comps` : `Comps ${POP.from}–${POP.to}`}</span><span class="grow"></span>
+    ${allc ? '' : `<button class="btn sm" data-wbpage="-3">◀ ${Math.max(1, POP.from - 3)}–${Math.max(3, POP.to - 3)}</button><button class="btn sm" data-wbpage="3">${POP.from + 3}–${POP.to + 3} ▶</button>`}<small>stays in step with your other windows</small></header>
     <section class="card" id="gridCard">${L.length ? gridHTML(J) : `<p class="help">No comps ${POP.from}–${POP.to} on the grid yet.</p>`}</section>`;
 }
 /* where the cursor is: the comp of the focused cell, or the last one she was in */

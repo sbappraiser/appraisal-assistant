@@ -16,7 +16,8 @@ async function start() {
   app.orders = await readOrders();
   await archPhotoInit(); try { if (localStorage.getItem('genie.classic') === '1') document.body.classList.add('classic'); } catch (e) {} try { const gl = await DB.get('kv', 'gridLines'); if (gl && gl.v) GRID_DEFAULT = gl.v; } catch (e) {}
   const oq = new URLSearchParams(location.search).get('order');
-  if (new URLSearchParams(location.search).get('embed')) document.body.classList.add('embed');   // inside the Appraisal Assistant's Comp genie tab
+  if (new URLSearchParams(location.search).get('embed')) document.body.classList.add('embed');
+  if (POP) document.body.classList.add('popgrid');   // inside the Appraisal Assistant's Comp genie tab
   if (CPOP) app.sel = CPOP.id;
   app.home = !POP && !CPOP && !oq && !new URLSearchParams(location.search).get('job');   // her request (Oct 19 2026): open on the list of assignments, not the last one
   if (oq) { history.replaceState(null, '', location.pathname); const o = app.orders.find(x => x.id === oq); if (o) await jobFromOrder(o); else toast('That order was not found in this browser. Open the Appraisal Assistant in this same browser (Chrome).', 6000); }
@@ -664,7 +665,7 @@ document.addEventListener('click', async e => {
   if (su) { const G = G0(app.job); const k = su.dataset.sensuse, v = +su.dataset.v; G.rates[k] = v; G.rateFrom = G.rateFrom || {}; G.rateFrom[k] = 'sensitivity (tightest adjusted range, ' + usedComps(app.job).length + ' comps)'; save(); app.sens = { job: app.job.id, res: sensRun(app.job) }; renderKeepFocus(); toast((SENS_LABEL[k] || k) + ': ' + sensFmt(k, v) + ' – every comp is recalculated'); return; }
   const wp = e.target.closest('[data-act]') && e.target.closest('[data-wbcol]') ? null : e.target.closest('[data-wbpop],[data-wbmv],[data-wbpage],[data-wbcol]');   // a button inside a column header (MLS link) is its own click
   if (wp) { const d = wp.dataset;
-    if (d.wbpop) { const [a, b] = d.wbpop.split('|'); await saveNow(); window.open(`${location.pathname}?pop=grid&from=${a}&to=${b}&job=${encodeURIComponent(app.job.id)}`, 'genie-grid-' + a, 'width=1000,height=1100'); return; }
+    if (d.wbpop) { const [a, b] = d.wbpop.split('|'); await saveNow(); window.open(`${location.pathname}?pop=grid&from=${a}&to=${b}&job=${encodeURIComponent(app.job.id)}`, 'genie-grid-' + a + (+b >= 99 ? 'all' : ''), +b >= 99 ? `width=${Math.min(screen.availWidth, 1900)},height=${screen.availHeight}` : 'width=1000,height=1100'); return; }
     if (d.wbmv) { const [id, to] = d.wbmv.split('|'); wbMove(app.job, id, +to); save(); renderKeepFocus(); return; }
     if (d.wbpage) { const k = +d.wbpage; const a = Math.max(1, POP.from + k), b = a + (POP.to - POP.from); location.search = `?pop=grid&from=${a}&to=${b}&job=${encodeURIComponent(POP.job)}`; return; }
     if (d.wbcol) { WB.cur = d.wbcol; document.querySelectorAll('[data-wbcol]').forEach(x => x.classList.toggle('cur', x.dataset.wbcol === WB.cur)); return; } }

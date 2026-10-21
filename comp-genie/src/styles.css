@@ -265,3 +265,6 @@ button.wbtick:hover{border-color:#1e7a3c;background:#eef8f1}button.wbtick.on{bac
 #gridCard .tablewrap{max-height:calc(100vh - var(--toph,64px) - 30px);overflow:auto}
 #gridCard table.grid thead th{position:sticky;top:0;z-index:4}
 #gridCard table.grid thead th:first-child{z-index:6}
+/* the popped-out workbook (her ask Oct 20 2026): the grid fills the window – side-to-side bar at the bottom, mouse wheel up and down */
+body.popgrid{overflow:hidden}body.popgrid #app{max-width:none;padding-bottom:0}body.popgrid #gridCard{margin:0;padding:6px}
+body.popgrid #gridCard .tablewrap{height:calc(100vh - var(--toph,60px) - 24px);max-height:none;overflow:auto}
