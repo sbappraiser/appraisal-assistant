@@ -8,8 +8,15 @@
 const COST_AREA = [['StandardFinishedAreaAboveGrade', 'Living area above grade'], ['StandardFinishedAreaBelowGrade', 'Finished below grade'], ['UnfinishedAreaBelowGrade', 'Unfinished below grade'],
   ['UnfinishedAreaAboveGrade', 'Unfinished above grade'], ['NonStandardFinishedAreaAboveGrade', 'Non-standard finished above grade'], ['NonStandardFinishedAreaBelowGrade', 'Non-standard finished below grade'],
   ['AttachedGarage', 'Attached garage'], ['BuiltInGarage', 'Built-in garage'], ['Carport', 'Carport'], ['Foundation', 'Foundation'], ['Other', 'Other (ADU, guest house, detached garage, outbuilding …)']];
-function costMedians() { const C = app.costDb; if (!C) return {}; const P = C.projects.filter(p => !isRemodel(p)); const v = k => median(P.map(p => num(p.s[k])));
-  return { bd: v('Building direct $/SF GLA – indexed'), ex: v('Existing-site basis $/SF GLA – indexed'), gar: median(C.projects.map(p => num(p.s['Garage – $/SF garage']))), pool: median(C.projects.map(p => num(p.s['Pool & spa']))), land: median(C.projects.map(p => num(p.s['Landscaping & irrigation']))), n: P.length, ...softMed(C) }; }
+/* her ask (Oct 21 2026): a Goleta tract home should not take its cost from Montecito estates – the budgets used are the ones in her
+   area / quality filter (J.costF: noMont = leave out Montecito and Hope Ranch; q = 'near' (±1 Q), 'same' or 'all') */
+const qNum = t => { const m = String(t || '').match(/Q\s*([1-6])/i); return m ? +m[1] : null; };
+const COST_LUX = /montecito|hope ranch|golden quadrangle|san ysidro|toro canyon/i;
+function costF(J) { if (!J) return { noMont: false, q: 'all' }; if (!J.costF) { const S = subjFacts(J) || {}; const where = [J.subject.addr, J.subject.city, J.subject.zip, S.nbhd].join(' '); J.costF = { noMont: !/montecito|93108|hope ranch/i.test(where), q: qNum(S.q) ? 'near' : 'all' }; } return J.costF; }
+function costPick(J, newOnly) { const C = app.costDb; if (!C) return []; const F = costF(J); const sq = qNum((subjFacts(J) || {}).q);
+  return C.projects.filter(p => (!newOnly || !isRemodel(p)) && (!F.noMont || !COST_LUX.test(String(p.f['Submarket'] || ''))) && (F.q === 'all' || !sq || (qNum(p.f['Quality rating']) !== null && (F.q === 'same' ? qNum(p.f['Quality rating']) === sq : Math.abs(qNum(p.f['Quality rating']) - sq) <= 1)))); }
+function costMedians(J) { const C = app.costDb; if (!C) return {}; J = J || app.job; const P = costPick(J, true), A = costPick(J, false); const v = k => median(P.map(p => num(p.s[k])));
+  return { bd: v('Building direct $/SF GLA – indexed'), ex: v('Existing-site basis $/SF GLA – indexed'), gar: median(A.map(p => num(p.s['Garage – $/SF garage'])).filter(x => x > 0)), pool: median(A.map(p => num(p.s['Pool & spa'])).filter(x => x > 0)), land: median(A.map(p => num(p.s['Landscaping & irrigation'])).filter(x => x > 0)), n: P.length, ...softMed(C) }; }
 /* her budgets (Oct 21 2026): most carry no soft costs (the owner pays design and permits outside the contractor's budget) – only the ones
    that include them (5–20 % of hard cost) give the typical soft-cost percent */
 function softMed(C) { const key = (p, re) => { const k = Object.keys(p.s).find(x => re.test(x)); return k ? num(p.s[k]) || 0 : 0; };
@@ -36,7 +43,7 @@ function costCalc(J) {
   const ind = land + depDw + depOb + siteImp; return { dw, hardDw, softAmt, ob, phys, obp, physAmt, depDw, depOb, siteImp, land, ind, lineCost, rounded: Math.round(ind / 1000) * 1000 };
 }
 function costDraft(J) {
-  const K = costJob(J), X = costCalc(J), M = costMedians(); const pct = v => (Math.round(v * 10) / 10) + '%';
+  const K = costJob(J), X = costCalc(J), M = costMedians(J); const pct = v => (Math.round(v * 10) / 10) + '%';
   let t = `The cost approach was developed using ${K.type === 'Reproduction' ? 'reproduction' : 'replacement'} cost new by the ${({ ComparativeUnit: 'comparative unit', UnitInPlace: 'unit-in-place', QuantitySurvey: 'quantity survey', Other: 'cost' })[K.method]} method.`;
   t += ` Cost new is based on local contractor budgets${M.n ? ` (${M.n} new-construction projects)` : ''} brought to the effective date with the California Construction Cost Index${(app.boe || {}).cls ? ", and checked against the California State Board of Equalization Assessors' Handbook 531" : ''}.`;   /* only when she ran the BOE check (picked a class) */
   const liv = K.lines.find(l => l.t === 'StandardFinishedAreaAboveGrade'); if (liv && num(liv.rate)) t += ` The living area is estimated at ${money(liv.rate)} per square foot.`;
@@ -50,7 +57,7 @@ function costDraft(J) {
 function costHTML(J) {
   const o = typeof orderOf === 'function' ? orderOf(J) : null; const want = (R0(J) || {}).sowCost; const on = J.costOn ?? (want === 'true' || (o && o.apCost));
   if (!on) return `<div class="row"><h2 style="margin:0">Cost approach</h2><span class="grow"></span><button class="btn sm" data-cost="on">Develop the cost approach</button></div><p class="help">Not developed for this assignment (the order says ${o && o.apCost ? 'it is' : 'it is not'} needed).</p>`;
-  const K = costJob(J), X = costCalc(J), M = costMedians(); const LD = landJob(J);
+  const K = costJob(J), X = costCalc(J), M = costMedians(J); const LD = landJob(J);
   const nf = v => blank(v) || v === '' ? '' : Math.round(+v).toLocaleString();
   const rows = K.lines.map(l => `<tr><td><select data-cl="${l.id}|t">${COST_AREA.map(([k, n]) => `<option value="${k}" ${l.t === k ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select><input class="txt sm" data-cl="${l.id}|label" value="${esc(l.label || '')}" style="width:16em"></td>
     <td class="r"><input class="txt xs num" data-cl="${l.id}|area" value="${nf(l.area)}" inputmode="numeric" style="width:6em"></td><td class="r">${(() => { const sug = l.t === 'StandardFinishedAreaAboveGrade' && M.bd ? Math.round(M.bd) : /Garage|Carport/.test(l.t) && M.gar ? Math.round(M.gar) : null;
@@ -62,7 +69,7 @@ function costHTML(J) {
   return `<div class="row"><h2 style="margin:0">Cost approach <small>UAD 3.6 Cost Approach · your rates, ages and amounts</small></h2><span class="grow"></span><button class="btn sm ghost" data-cost="off">Not developed</button></div>
     <div class="row"><label>Cost <select data-ck="type">${['Replacement', 'Reproduction'].map(v => `<option ${K.type === v ? 'selected' : ''}>${v}</option>`).join('')}</select></label>
       <label>Method <select data-ck="method">${[['ComparativeUnit', 'Comparative unit ($/sq ft)'], ['UnitInPlace', 'Unit in place'], ['QuantitySurvey', 'Quantity survey'], ['Other', 'Other']].map(([v, n]) => `<option value="${v}" ${K.method === v ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
-      <span class="help">${M.n ? `Your budgets: median building direct ${money(M.bd)}/sf · existing-site basis ${money(M.ex)}/sf · garage ${money(M.gar)}/sf (${M.n} new-construction projects, CCCI-indexed) – the grey numbers.` : 'Drop your Construction_Cost_Database.xlsx to see your medians.'} BOE check: the Construction costs tab above.</span></div>
+      <span class="help">${M.n ? `Your budgets: median building direct ${money(M.bd)}/sf · existing-site basis ${money(M.ex)}/sf · garage ${money(M.gar)}/sf (${M.n} new-construction projects in your filters on the Construction costs tab above – area and quality – CCCI-indexed).` : app.costDb ? 'None of your new-construction budgets is in your filters (Construction costs tab above) – widen them, or type your own $/sf.' : 'Drop your Construction_Cost_Database.xlsx to see your medians.'} BOE check: the Construction costs tab above.</span></div>
     <h3>Site value</h3><div class="row"><label>Site value $<input class="txt num" data-landv="1" value="${LD.value ? Math.round(LD.value).toLocaleString() : ''}" inputmode="numeric" style="width:10em"></label>
       <label>Method <select data-ck="siteMethod">${[['SalesComparison', 'Sales comparison'], ['Extraction', 'Extraction'], ['Allocation', 'Allocation'], ['Other', 'Other']].map(([v, n]) => `<option value="${v}" ${K.siteMethod === v ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
       <span class="help">${K.siteMethod === 'SalesComparison' ? 'Sales comparison: tick your land sales in the Land sales card above – same value and comment. With no competitive land sales, pick Extraction or Allocation here (3.6 asks for land comparables only with Sales comparison).' : 'Same site value as the Land sales card. No land sales need to be ticked for this method.'}</span></div>
