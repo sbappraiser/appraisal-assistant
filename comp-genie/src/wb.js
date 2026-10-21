@@ -43,7 +43,7 @@ function wbFit() {
   const ths = [...t.querySelectorAll('thead th')]; if (ths.length < 3) return;
   const n = ths.length - 2; t.style.setProperty('--labw', ths[0].offsetWidth + 'px');
   if (!WB.on || WB.per >= 99 || n <= WB.per) { ths.slice(2).forEach(h => { h.style.minWidth = ''; }); t.style.width = ''; return; }
-  const fixed = ths[0].offsetWidth + ths[1].offsetWidth, cw = Math.max(110, Math.floor((w.clientWidth - fixed) / WB.per));
+  const fixed = ths[0].offsetWidth + ths[1].offsetWidth, cw = Math.max(document.body.classList.contains('sbs') ? 290 : 110, Math.floor((w.clientWidth - fixed) / WB.per));
   ths.slice(2).forEach(h => { h.style.minWidth = h.style.width = cw + 'px'; }); t.style.width = (fixed + cw * n) + 'px';
   wbPagerText();
 }
@@ -137,7 +137,7 @@ function wbBar(J, all) {
   if (POP) return '';
   const on = WB.on; const per = WB.per; const pages = Math.max(1, Math.ceil(all.length / per));
   const pops = []; for (let a = 1; a <= Math.max(all.length, 3); a += 3) pops.push([a, Math.min(a + 2, Math.max(all.length, a + 2))]);
-  return `<div class="wbbar"><label class="chk"><input type="checkbox" data-wbon="1" ${on ? 'checked' : ''}> <b>Workbook view</b> <small>only the lines you adjust · type comp facts in the grid</small></label>
+  return `<div class="wbbar"><label class="chk" title="Like your 2.6 grid: each comp's $ adjustment in its own column beside the entry (fewer comps fit across – slide for the rest). SFREP gets the same 3.6 lines either way."><input type="checkbox" data-sbs="1" ${document.body.classList.contains('sbs') ? 'checked' : ''}> <b>Adjustment beside the entry</b></label> <label class="chk"><input type="checkbox" data-wbon="1" ${on ? 'checked' : ''}> <b>Workbook view</b> <small>only the lines you adjust · type comp facts in the grid</small></label>
     ${on ? `<label title="How many comps fit across the screen – all of them stay in the grid; slide to the others with the scroll bar at the bottom or ◀ ▶">Comps across <select data-wbper="1">${[3, 4, 5, 6, 9, 99].map(n => `<option value="${n}" ${n === per ? 'selected' : ''}>${n === 99 ? 'all' : n}</option>`).join('')}</select></label>
       ${per < 99 && pages > 1 ? `<span class="pager"><button class="btn sm" data-act="wb-prev" disabled title="Slide back">◀</button> <span class="pgtxt">comps 1–${Math.min(all.length, per)} of ${all.length}</span> <button class="btn sm" data-act="wb-next" title="Slide to the next comps">▶</button></span>` : ''}` : ''}
     <span class="grow"></span><span class="pops">Pop out <button class="btn sm primary" data-wbpop="1|99" title="All the comps side by side in their own window – the side-to-side scroll bar stays at the bottom of the window; scroll up and down with the mouse wheel">all comps</button> ${pops.map(([a, b]) => `<button class="btn sm" data-wbpop="${a}|${b}" title="Opens the grid for comps ${a}–${b} in its own window – drag it to another monitor">${a}–${b}</button>`).join('')}</span>

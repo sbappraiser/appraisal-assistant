@@ -14,7 +14,7 @@ async function start() {
   const last = await DB.get('kv', 'lastJob');
   app.job = ((POP || CPOP) && app.jobs.find(j => j.id === (POP || CPOP).job)) || app.jobs.find(j => last && j.id === last.v) || app.jobs[0] || null;
   app.orders = await readOrders();
-  await archPhotoInit(); try { if (localStorage.getItem('genie.classic') === '1') document.body.classList.add('classic'); } catch (e) {} try { const gl = await DB.get('kv', 'gridLines'); if (gl && gl.v) GRID_DEFAULT = gl.v; } catch (e) {}
+  await archPhotoInit(); try { if (localStorage.getItem('genie.classic') === '1') document.body.classList.add('classic'); } catch (e) {} try { if (localStorage.getItem('genie.sbs') !== '0') document.body.classList.add('sbs'); } catch (e) { document.body.classList.add('sbs'); } try { const gl = await DB.get('kv', 'gridLines'); if (gl && gl.v) GRID_DEFAULT = gl.v; } catch (e) {}
   const oq = new URLSearchParams(location.search).get('order');
   if (new URLSearchParams(location.search).get('embed')) document.body.classList.add('embed');
   if (POP) document.body.classList.add('popgrid');   // inside the Appraisal Assistant's Comp genie tab
@@ -856,6 +856,7 @@ document.addEventListener('change', async e => {
   if (t.dataset.qc) { const [who, k] = t.dataset.qc.split('|'); pkSave(app.job, who, k, t.value); return; }   // the Q / C drop-down
   if (t.dataset.gfine) { const G = G0(app.job); G.fine = G.fine || {}; const [who, k] = t.dataset.gfine.split('|'); G.fine[who] = G.fine[who] || {}; G.fine[who][k] = t.value; save(); renderKeepFocus(); return; }
   if (t.dataset.gok !== undefined) { const G = G0(app.job); G.ok = G.ok || {}; const v = t.value.trim(); if (v) G.ok[t.dataset.gok] = v; else delete G.ok[t.dataset.gok]; save(); renderKeepFocus(); return; }
+  if (t.dataset.sbs) { try { localStorage.setItem('genie.sbs', t.checked ? '1' : '0'); } catch (e) {} document.body.classList.toggle('sbs', t.checked); renderKeepFocus(); return; }
   if (t.dataset.classic) { try { localStorage.setItem('genie.classic', t.checked ? '1' : '0'); } catch (e) {} document.body.classList.toggle('classic', t.checked); return; }
   if (t.dataset.gline) { const G = G0(app.job); G.lines = G.lines || {}; G.lines[t.dataset.gline] = t.checked; save(); render(); return; }
   if (t.dataset.gfact) { const [cid, row] = t.dataset.gfact.split('|'); const c = app.job.comps.find(x => x.id === cid); if (!c) return;

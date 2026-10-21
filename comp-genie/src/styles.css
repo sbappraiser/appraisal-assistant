@@ -305,3 +305,9 @@ table.grid thead th .ghsale{display:block;font-size:12.5px;font-weight:600;color
 .mebody{display:flex;gap:14px;min-height:0;flex:1}.mecv{position:relative;flex:0 0 auto;height:calc(100vh - 200px)}.mecv canvas{height:100%;width:auto;border:1px solid var(--line);border-radius:6px;touch-action:none;cursor:grab}
 .mebusy{position:absolute;top:10px;left:10px;background:#fff;padding:4px 10px;border-radius:6px;border:1px solid var(--line);font-weight:600}
 .meside{flex:1;overflow:auto;min-width:220px}.meside textarea{width:100%;font:14px/1.35 Arial;resize:vertical}
+/* her ask (Oct 20 2026): like her 2.6 grid – each comp's $ adjustment in its own column beside the entry */
+body.sbs table.grid:not(.final) tbody td:not(.subj){min-width:280px;padding-right:0}
+body.sbs table.grid:not(.final) tbody td:not(.subj) > .gval{display:inline-block;width:calc(100% - 112px);vertical-align:top;margin:0;padding-right:8px;box-sizing:border-box}
+body.sbs table.grid:not(.final) tbody td:not(.subj) > input.adj{display:inline-block;width:100px;vertical-align:top;margin:0 0 0 4px;box-shadow:-9px 0 0 -8px #b8c2cc}
+body.sbs table.grid:not(.final) tbody td.hasadj > input.adj{background:#fff1de;font-weight:600;border-color:#e0a050}
+body.sbs table.grid:not(.final) tbody td.hasadj > input.adj::placeholder{color:#8a4a00;font-weight:700;font-style:normal;opacity:1}
