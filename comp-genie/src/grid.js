@@ -807,6 +807,23 @@ async function buildFullReport(J) {
   if (!blank(G.value) || G.note) { const sca = child(child(VR, 'APPROACH_TO_VALUE'), 'SALES_COMPARISON_APPROACH'); const det = child(sca, 'SALES_COMPARISON_APPROACH_DETAIL');
     if (G.note) leaf(det, 'SalesComparisonCommentDescription', G.note.slice(0, 10000)); if (!blank(G.value)) leaf(det, 'ValueIndicatedBySalesComparisonAmount', Math.round(num(G.value))); }
   writeReportXML(sub, NS, J, SUBJ, VA, SVC);   // assignment, legal, zoning, H&BU, market, contract, value (report.js)
+  /* the subject's data sources SFREP showed red (her Oct 21 import) – D-1 SF1 / A-1 0900.0032: Subject Listing Information, Subject Transfer History and the
+     unit's Area Data Source each name where the answer came from: the MLS for the listing, the CRS (public record) or MLS for the transfer history, and
+     her own measuring at the inspection for the areas */
+  { const DSx = child(VA, 'DATA_SOURCES'), RLx = child(SVC, 'RELATIONSHIPS'); const made = {};
+    const src = (key, type, name) => { const l = 'DATA_SOURCE_Subject' + key; if (made[l]) return l; made[l] = 1; const e = sub.createElementNS(NS, 'DATA_SOURCE'); e.setAttributeNS(XL, 'xlink:label', l); DSx.appendChild(e); leaf(e, 'DataSourceName', name); leaf(e, 'DataSourceType', type); return l; };
+    const link = (arc, from, to) => { const r = sub.createElementNS(NS, 'RELATIONSHIP'); r.setAttributeNS(XL, 'xlink:arcrole', 'urn:fdc:mismo.org:2009:residential/DATA_SOURCE_IsDataSourceFor_' + arc); r.setAttributeNS(XL, 'xlink:from', from); r.setAttributeNS(XL, 'xlink:to', to); RLx.appendChild(r); };
+    const lab = (el, l) => { let v = el.getAttributeNS(XL, 'label'); if (!v) { v = l; el.setAttributeNS(XL, 'xlink:label', v); } return v; };
+    const has = (arc, to) => [...RLx.children].some(r => (r.getAttributeNS(XL, 'arcrole') || '').endsWith(arc) && r.getAttributeNS(XL, 'to') === to);
+    const crsOn = !!(J.subject.crs && Object.keys(J.subject.crs).length);
+    const LS = [...SUBJ.children].find(k => k.localName === 'LISTING_INFORMATION_SUMMARY'); if (LS) { const t = lab(LS, 'LISTING_INFORMATION_SUMMARY_Subject'); if (!has('LISTING_INFORMATION_SUMMARY', t)) link('LISTING_INFORMATION_SUMMARY', src('MLS', 'MLS', DS_NAME.MLS), t); }
+    const PD = [...SUBJ.children].find(k => k.localName === 'PROPERTY_DETAIL'); const PI = PD && [...PD.children].find(k => k.localName === 'PriorSalesOrTransfersIndicator');
+    if (PI) { const th = crsOn ? src('AssessorRecord', 'AssessorRecord', DS_NAME.AssessorRecord) : src('MLS', 'MLS', DS_NAME.MLS);
+      const SHs = [...SUBJ.getElementsByTagNameNS(NS, 'SALES_HISTORY')];
+      if (PI.textContent.trim() === 'true' && SHs.length) SHs.forEach((h, k) => { const t = lab(h, 'SALES_HISTORY_Subject_PriorSales' + (k + 1)); if (!has('SALES_HISTORY', t)) link('SALES_HISTORY', th, t); });
+      else { const t = lab(PI, 'PriorSalesOrTransfersIndicator_SubjectPropertyNoPriorSales'); if (!has('PriorSalesOrTransfersIndicator', t)) link('PriorSalesOrTransfersIndicator', th, t); } }
+    [...SUBJ.getElementsByTagNameNS(NS, 'PROPERTY_UNIT_AREA')].forEach((A, k) => { const t = lab(A, 'PROPERTY_UNIT_AREA_Subject' + (k + 1)); if (!has('PROPERTY_UNIT_AREA', t)) link('PROPERTY_UNIT_AREA', src('Measured', 'PhysicalMeasurement', 'Measured at the inspection'), t); });
+    if (!DSx.children.length) DSx.remove(); }
   // market charts from the order's Market tab → subject exhibits (UAD image types Price Trend Graph, Absorption Rate Graph)
   const chartFiles = []; { const o = typeof orderOf === 'function' ? orderOf(J) : null; const CH = o && o.market && o.market.charts;
     if (CH && (CH.trend || CH.absorb)) { const IMS = child(child(child(SUBJ, 'INSPECTIONS'), 'INSPECTION'), 'IMAGES');
