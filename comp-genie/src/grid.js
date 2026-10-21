@@ -960,3 +960,17 @@ function finalGridHTML(J) {
     <div class="tablewrap"><table class="grid final"><thead><tr><th></th><th>Subject<br><span class="gaddr">${esc(J.subject.addr || '')}</span></th>${U.map(c => `<th>Comp ${c.use}<br><span class="gaddr">${esc(compTitle(c))}</span>${gridHeadSale(c, J)}</th>`).join('')}</tr></thead><tbody>${rows}
     ${tot('Net adjustment', t => `${t.net >= 0 ? '+' : '−'}${money(Math.abs(t.net))} (${t.netPct.toFixed(1)}%)`)}${tot('Gross adjustment', t => `${money(t.gross)} (${t.grossPct.toFixed(1)}%)`)}${tot('Adjusted price', t => `<b>${money(t.adj)}</b>`)}</tbody></table></div>`;
 }
+
+/* her SFREP import tests (Oct 21 2026, her report and Fannie Mae's own D-1 SF1 sample): SFREP's Import Forms drops every adjustment tied to
+   a part of the property – living unit lines (area, rooms, basement), Add Other lines, miscellaneous amenities, ADUs and outbuildings – and
+   keeps whole-property ones. This list is what she types in SFREP after the import, comp by comp. */
+const SFREP_DROPS = t => /^LivingUnit|^SalesComparableAdditional|^MiscellaneousAmenity$|^AccessoryDwellingUnit|^Outbuilding$|^NonContinuousFinishedArea$|^GrossBuildingFinishedArea$|^WholeHomeAmenity$/.test(t || '');
+function sfrepTypeHTML(J) { const used = usedComps(J); if (!used.length) return ''; const S = subjFacts(J);
+  const rows = adjRows(J).filter(r => r[3] && rowShown(r, J) && (r[3] === 'OTHER' ? true : SFREP_DROPS(isObSlot(r[0]) ? (/^aduU/.test(r[0]) ? 'AccessoryDwellingUnitLocation' : 'Outbuilding') : r[3])));
+  const lines = rows.map(r => { const cells = used.map(c => { const a = cellAmount(J, c, r).v; const C = compFacts(c, J); const d = r[3] === 'OTHER' ? otherDesc(r, C) : ''; return { a, d }; });
+    const sd = r[3] === 'OTHER' ? otherDesc(r, S) : ''; if (!sd && cells.every(x => !x.a && !x.d)) return '';
+    return `<tr><td><b>${esc(r[1])}</b>${r[3] === 'OTHER' ? `<br><small class="muted">your Add Other line – type the descriptions too</small>` : ''}</td>${r[3] === 'OTHER' ? `<td>${esc(sd)}</td>` : '<td></td>'}${cells.map(x => `<td class="r">${x.d ? esc(x.d) + '<br>' : ''}${x.a ? `<b>${x.a > 0 ? '+' : ''}${Math.round(x.a).toLocaleString()}</b>` : x.d ? '<span class="muted">0</span>' : ''}</td>`).join('')}</tr>`; }).filter(Boolean);
+  if (!lines.length) return '';
+  return `<details class="sfrepType" open><summary><b>Type these into SFREP after the import</b> <small>(${lines.length} line${lines.length > 1 ? 's' : ''}) – SFREP's import skips them, even in Fannie Mae's own sample</small></summary>
+    <div class="tablewrap"><table class="tbl"><thead><tr><th>Line</th><th>Subject</th>${used.map(c => `<th class="r">Comp ${c.use}<br><small>${esc(compTitle(c))}</small></th>`).join('')}</tr></thead><tbody>${lines.join('')}</tbody></table></div>
+    <p class="help">Everything else on your grid (sale data, site, view, location, quality, condition, cooling, water features, outdoor living, vehicle storage …) comes in with the import. Check each comp's net adjustment in SFREP against your grid when you are done.</p></details>`; }
