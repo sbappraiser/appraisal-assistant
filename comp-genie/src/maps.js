@@ -117,22 +117,39 @@ async function makeLocationMap(J, kind) {
 }
 
 /* ---- aerial view of the subject (USGS imagery, public domain) ---- */
-async function makeAerial(J) {
+/* ---- aerial view of the subject, close up (her ask Oct 20 2026): USGS NAIP Plus orthoimagery (USGS / USDA, The National Map –
+   1-foot imagery in most urban areas) drawn for a set ground width; red outline + arrow at the subject. Falls back to the
+   USGS imagery tiles (to about 1:9,000) when NAIP Plus will not load. ---- */
+const NAIP = 'https://imagery.nationalmap.gov/arcgis/rest/services/USGSNAIPPlus/ImageServer/exportImage';
+const merc = p => [p.lon * 20037508.34 / 180, Math.log(Math.tan((90 + p.lat) * Math.PI / 360)) / (Math.PI / 180) * 20037508.34 / 180];
+async function makeAerial(J, widthM) {
   const S = J.subject; const sp = { lat: num(S.lat), lon: num(S.lon) }; if (!sp.lat) { toast('The subject has no latitude / longitude yet'); return; }
+  const M0 = await mapsGet(J); widthM = widthM || (M0.aerial && M0.aerial.width) || 220;
   MAPS.busy = 'Drawing the aerial view…'; mapsRender();
   const W = 1600, H = 1200; const cv = document.createElement('canvas'); cv.width = W; cv.height = H; const ctx = cv.getContext('2d');
-  // one point: drawBase picks the highest zoom the imagery has; scale the tiles up 2× for a closer lot view
-  const z = MAP_SRC.aerial.max; const half = { x: W / 4, y: H / 4 }; const cx = lon2x(sp.lon, z), cy = lat2y(sp.lat, z); const ox = cx - half.x, oy = cy - half.y;
-  const off = document.createElement('canvas'); off.width = W / 2; off.height = H / 2; const oc = off.getContext('2d'); oc.fillStyle = '#ccc'; oc.fillRect(0, 0, off.width, off.height); let bad = 0, tot = 0; const jobs = [];
-  for (let tx = Math.floor(ox / TILE); tx <= Math.floor((ox + off.width) / TILE); tx++) for (let ty = Math.floor(oy / TILE); ty <= Math.floor((oy + off.height) / TILE); ty++) { tot++; jobs.push(imgLoad(MAP_SRC.aerial.url(z, tx, ty)).then(im => { if (im) oc.drawImage(im, tx * TILE - ox, ty * TILE - oy); else bad++; })); }
-  await Promise.all(jobs); MAPS.busy = '';
-  if (bad === tot) { toast('The aerial imagery would not load – use the aerial picture from the CRS Property Report instead (Use my own picture)', 8000); mapsRender(); return; }
-  ctx.imageSmoothingQuality = 'high'; ctx.drawImage(off, 0, 0, W, H);
-  ctx.beginPath(); ctx.arc(W / 2, H / 2, 16, 0, 2 * Math.PI); ctx.lineWidth = 5; ctx.strokeStyle = '#ff2a2a'; ctx.stroke();
-  ctx.font = 'bold 26px Arial'; const lab = 'Subject – ' + (S.addr || ''); const w = ctx.measureText(lab).width + 24; ctx.fillStyle = 'rgba(255,255,255,.9)'; ctx.fillRect(W / 2 - w / 2, H / 2 - 74, w, 40); ctx.fillStyle = '#c00000'; ctx.textAlign = 'center'; ctx.fillText(lab, W / 2, H / 2 - 45); ctx.textAlign = 'left';
-  credit(ctx, W, H, MAP_SRC.aerial.credit + ' · approximate location, not a survey');
+  const k = 1 / Math.cos(sp.lat * Math.PI / 180); const [mx, my] = merc(sp); const hw = widthM * k / 2, hh = hw * H / W;
+  const url = `${NAIP}?bbox=${mx - hw},${my - hh},${mx + hw},${my + hh}&bboxSR=3857&imageSR=3857&size=${W},${H}&format=jpg&f=image`;
+  let im = await imgLoad(url), src = 'USGS / USDA NAIP Plus';
+  if (im) ctx.drawImage(im, 0, 0, W, H);
+  else {   // the older USGS imagery tiles, scaled up
+    src = 'USGS'; const z = MAP_SRC.aerial.max; const half = { x: W / 4, y: H / 4 }; const cx = lon2x(sp.lon, z), cy = lat2y(sp.lat, z); const ox = cx - half.x, oy = cy - half.y;
+    const off = document.createElement('canvas'); off.width = W / 2; off.height = H / 2; const oc = off.getContext('2d'); oc.fillStyle = '#ccc'; oc.fillRect(0, 0, off.width, off.height); let bad = 0, tot = 0; const jobs = [];
+    for (let tx = Math.floor(ox / TILE); tx <= Math.floor((ox + off.width) / TILE); tx++) for (let ty = Math.floor(oy / TILE); ty <= Math.floor((oy + off.height) / TILE); ty++) { tot++; jobs.push(imgLoad(MAP_SRC.aerial.url(z, tx, ty)).then(i2 => { if (i2) oc.drawImage(i2, tx * TILE - ox, ty * TILE - oy); else bad++; })); }
+    await Promise.all(jobs); if (bad === tot) { MAPS.busy = ''; toast('The aerial imagery would not load – use the aerial picture from the CRS Property Report instead (Use my own picture)', 8000); mapsRender(); return; }
+    ctx.imageSmoothingQuality = 'high'; ctx.drawImage(off, 0, 0, W, H); widthM = null; }
+  MAPS.busy = '';
+  // red outline round the site (about a lot's size at this scale) and an arrow from the label to it
+  const pxPerM = widthM ? W / widthM : 3; const r = Math.max(46, Math.min(220, 18 * pxPerM)); const X = W / 2, Y = H / 2;
+  ctx.lineWidth = 7; ctx.strokeStyle = '#ff1f1f'; ctx.shadowColor = 'rgba(0,0,0,.55)'; ctx.shadowBlur = 6; ctx.beginPath(); ctx.arc(X, Y, r, 0, 2 * Math.PI); ctx.stroke();
+  const lab = 'Subject – ' + (S.addr || ''); ctx.font = 'bold 40px Arial'; const lw = ctx.measureText(lab).width + 40, lh = 64; const bx = Math.max(24, X - r - lw - 40), by = Math.max(24, Y - r - lh - 110);
+  const ax0 = bx + lw * 0.75, ay0 = by + lh, ang = Math.atan2(Y - ay0, X - ax0), tipX = X - Math.cos(ang) * (r + 8), tipY = Y - Math.sin(ang) * (r + 8);
+  ctx.beginPath(); ctx.moveTo(ax0, ay0); ctx.lineTo(tipX - Math.cos(ang) * 30, tipY - Math.sin(ang) * 30); ctx.lineWidth = 12; ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(tipX, tipY); ctx.lineTo(tipX - Math.cos(ang - 0.45) * 56, tipY - Math.sin(ang - 0.45) * 56); ctx.lineTo(tipX - Math.cos(ang + 0.45) * 56, tipY - Math.sin(ang + 0.45) * 56); ctx.closePath(); ctx.fillStyle = '#ff1f1f'; ctx.fill();
+  ctx.shadowBlur = 0; ctx.fillStyle = '#fff'; ctx.fillRect(bx, by, lw, lh); ctx.lineWidth = 5; ctx.strokeStyle = '#c00000'; ctx.strokeRect(bx, by, lw, lh); ctx.fillStyle = '#c00000'; ctx.textAlign = 'left'; ctx.fillText(lab, bx + 20, by + 45);
+  if (widthM) { const bar = Math.round(widthM / 8 / 10) * 10 || 10, bp = bar * pxPerM; ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.fillRect(20, H - 70, bp + 30, 44); ctx.fillStyle = '#111'; ctx.fillRect(35, H - 44, bp, 8); ctx.font = '600 18px Arial'; ctx.fillText(`${bar} m (${Math.round(bar * 3.281)} ft)`, 35, H - 52); }
+  credit(ctx, W, H, (src === 'USGS' ? MAP_SRC.aerial.credit : 'Imagery: USGS, USDA, The National Map') + ' · approximate location, not a survey');
   let blob; try { blob = await toJpeg(cv); } catch (e) { toast('Chrome would not save the aerial picture – use your own picture from CRS', 7000); mapsRender(); return; }
-  const M = await mapsGet(J); M.aerial = { blob, at: Date.now(), src: 'USGS', use: true }; await mapsPut(J, M); toast('Aerial view made'); mapsRender();
+  const M = await mapsGet(J); M.aerial = { blob, at: Date.now(), src, use: true, width: widthM }; await mapsPut(J, M); toast('Aerial view made' + (widthM ? ` – about ${Math.round(widthM * 3.281)} ft across` : ' (closer imagery would not load)')); mapsRender();
 }
 
 /* ---- flood map: FEMA flood hazard zones over the street map, with the zone at the subject ---- */
@@ -194,7 +211,7 @@ async function mapsRender() {
     const own = `<label class="btn sm">Use my own picture<input type="file" accept="image/*" data-mapown="${k}" hidden></label>`;
     return `<div class="mapbox"><b>${MAP_LABEL[k]}</b>${m ? `<a href="${MAP_URL[k]}" target="_blank" title="Open full size"><img src="${MAP_URL[k]}" alt="${MAP_LABEL[k]}"></a><small class="muted">${esc(m.src || (m.n ? 'subject + ' + m.n : ''))} · ${new Date(m.at).toLocaleString()}</small>
       <label class="check"><input type="checkbox" data-mapuse="${k}" ${m.use !== false ? 'checked' : ''}> Put it in the SFREP report</label>` : '<div class="mapempty">not made yet</div>'}
-      <div class="row">${btn}${k === 'aerial' || k === 'flood' ? own : ''}${m && m.layout ? `<button class="btn sm" data-mapedit="${k}">Edit map</button>` : ''}${m ? `<a class="btn sm" href="${MAP_URL[k]}" download="${MAP_IMG[k][2]}">Save picture</a><button class="btn sm" data-mapdel="${k}">✕</button>` : ''}</div>
+      <div class="row">${btn}${k === 'aerial' || k === 'flood' ? own : ''}${m && m.layout ? `<button class="btn sm" data-mapedit="${k}">Edit map</button>` : ''}${k === 'aerial' && m && m.width ? `<button class="btn sm" data-aerialw="${Math.max(60, Math.round(m.width / 1.6))}">Closer</button><button class="btn sm" data-aerialw="${Math.min(2000, Math.round(m.width * 1.6))}">Farther</button>` : ''}${m ? `<a class="btn sm" href="${MAP_URL[k]}" download="${MAP_IMG[k][2]}">Save picture</a><button class="btn sm" data-mapdel="${k}">✕</button>` : ''}</div>
       ${k === 'flood' && m && m.zone ? `<small>FEMA zone <b>${esc(m.zone.zone)}</b>${m.panel ? ` · panel ${esc(m.panel.panel)}${m.panel.date ? ' · effective ' + esc(showDate(m.panel.date)) : ''}` : ''}</small>` : ''}</div>`; };
   box.innerHTML = `<h2>Maps and exhibits <small>location map, aerial view, flood map – they go into the SFREP report</small></h2>
     ${MAPS.busy ? `<p class="help"><b>${esc(MAPS.busy)}</b></p>` : ''}
@@ -271,4 +288,4 @@ async function mapEdit(J, key) {
         if (it.moved && it.cid) { const c = J.comps.find(x => x.id === it.cid); if (c) { c.edit = c.edit || {}; c.edit.lat = +it.p.lat.toFixed(6); c.edit.lon = +it.p.lon.toFixed(6); c.geo = { lat: it.p.lat, lon: it.p.lon, src: 'moved on the map' }; } } delete it.moved; delete it.px; delete it.box; });
       const M2 = await mapsGet(J); M2[key] = { ...(M2[key] || {}), blob, at: Date.now(), layout: L, use: M2[key] ? M2[key].use : true }; await mapsPut(J, M2); save(); close(); render(); mapsRender(); toast('Map saved'); } });
 }
-document.addEventListener('click', e => { const b = e.target.closest('[data-mapedit]'); if (b && app.job) mapEdit(app.job, b.dataset.mapedit); });
+document.addEventListener('click', e => { const b = e.target.closest('[data-mapedit]'); if (b && app.job) mapEdit(app.job, b.dataset.mapedit); const a = e.target.closest('[data-aerialw]'); if (a && app.job && !MAPS.busy) makeAerial(app.job, +a.dataset.aerialw); });
