@@ -9,6 +9,7 @@
 const ASSIGN = [['Purchase', 'Purchase'], ['Refinance', 'Refinance'], ['HomeEquity', 'Home equity'], ['Construction', 'Construction'], ['LoanModification', 'Loan modification'], ['REO', 'REO'], ['ShortSale', 'Short sale'], ['DeedInLieu', 'Deed in lieu'], ['Preforeclosure', 'Pre-foreclosure'], ['PortfolioEvaluation', 'Portfolio evaluation'], ['Other', 'Other']];
 const VMETHOD = [['TraditionalAppraisal', 'Traditional appraisal'], ['HybridAppraisal', 'Hybrid appraisal'], ['DesktopAppraisal', 'Desktop appraisal']];
 const VCOND = [['AsIs', 'As is'], ['SubjectToRepair', 'Subject to repair'], ['SubjectToInspection', 'Subject to inspection'], ['SubjectToCompletionPerPlans', 'Subject to completion per plans']];
+const EXCL_REASONS = [['NotNecessaryForCredibleResults', 'Not necessary for credible results'], ['InsufficientData', 'Insufficient data'], ['LackOfLandSales', 'Lack of land sales'], ['DifficultyEstimatingDepreciation', 'Difficulty estimating depreciation'], ['Other', 'Other']];
 const HBU_TESTS = [['legal', 'Legally permissible'], ['phys', 'Physically possible'], ['fin', 'Financially feasible'], ['max', 'Maximally productive']];
 const ORDER_ASSIGN = { uadPurchase: 'Purchase', uadRefi: 'Refinance', uadHeloc: 'HomeEquity', uadConstruction: 'Construction', construction: 'Construction' };
 
@@ -98,8 +99,8 @@ function reportHTML(J) {
       <label class="fld"><span>Rent schedule (1007) included?</span>${yn('sowRent', F.sowRent)}</label>
       <label class="fld"><span>Government agency appraisal (FHA, VA, USDA)?</span>${yn('sowGov', false)}${R.sowGov === 'true' ? ` ${sel('govType', [['FHA', 'FHA'], ['VA', 'VA'], ['USDA', 'USDA']], '')}` : ''}</label>
       <label class="fld"><span>Intended users besides the client?</span>${yn('sowAddlUser', F.sowAddlUser)}</label>
-      <label class="fld"><span>Additional scope of work (beyond the standard)?</span>${yn('sowAddlScope', false)}</label>
-      <label class="fld"><span>Scope of work comment <small class="muted">(2,500 characters)</small></span><textarea class="txt" rows="2" maxlength="2500" data-rpt="sowNote">${esc(R.sowNote || '')}</textarea></label></section>
+      <label class="fld"><span>Additional scope of work?</span>${yn('sowAddlScope', !blank(R.sowNote) ? true : false)}</label>
+      <label class="fld"><span>Additional scope of work – text <small class="muted">(2,500 characters · Certifications › Scope of Work in the report)</small></span><textarea class="txt" rows="5" maxlength="2500" data-rpt="sowNote" placeholder="Extraordinary assumptions, hypothetical conditions, and anything you did beyond the standard scope (e.g. data relied on, areas not inspected). Must not repeat or contradict the printed scope of work. A value subject to repairs or completion is set in Market value condition below.">${esc(R.sowNote || '')}</textarea></label></section>
     <section><h3>Prior services and certifications</h3>
       <label class="fld"><span>Prior services: have you performed any services on this property in the three years before accepting the assignment?</span>${yn('priorSvc')}</label>
       ${F.priorHits.length ? `<p class="help warnTxt">Your records show: ${F.priorHits.map(esc).join(' · ')}</p>` : '<p class="help">Nothing in your archive or your orders for this address in the three years before the effective date.</p>'}
@@ -114,6 +115,8 @@ function reportHTML(J) {
       ${expHelpHTML(J)}
       <label class="fld"><span>Additional client-requested conditions?</span>${yn('addlCond', false)}</label>
       ${R.addlCond === 'true' ? `<label class="fld"><span>Describe them <small class="muted">(2,500 characters)</small></span><textarea class="txt" rows="2" maxlength="2500" data-rpt="addlCondText">${esc(R.addlCondText || '')}</textarea></label>` : ''}
+      ${['Income', 'Cost'].map(A => { const off = R['sow' + A] === 'false' || (blank(R['sow' + A]) && F['sow' + A] === false); if (!off) return ''; const k = 'excl' + A;
+        return `<label class="fld"><span>${A} approach not developed – reason</span>${sel(k, EXCL_REASONS.filter(x => A === 'Cost' || !/Depreciation|Land/.test(x[0])), 'NotNecessaryForCredibleResults', 'usual')}${R[k] === 'Other' ? ` <input class="txt" data-rpt="${k}Other" maxlength="225" value="${esc(R[k + 'Other'] || '')}" placeholder="Describe (225 characters)">` : ''}</label>`; }).join('')}
       <label class="fld"><span>Reconciliation comment ${cmtBtn('textarea[data-rpt="reconNote"]')}</span><textarea class="txt" rows="3" data-rpt="reconNote">${esc(R.reconNote || '')}</textarea></label></section>
     <section><h3>Market <small>from the hub's Market tab</small></h3>
       ${M ? `<table class="mini"><tr><th>Look back</th><td>${esc(M.L)} months</td></tr><tr><th>Actives</th><td>${esc(M.activeN)}${M.activeN ? ` · ${money(M.activeLow)} / ${money(M.activeMed)} / ${money(M.activeHigh)} · median DOM ${esc(Math.round(M.activeDom))}` : ''}</td></tr>
@@ -135,7 +138,7 @@ document.addEventListener('change', e => {
   const t = e.target; if (!app.job) return; const R = R0(app.job);
   if (t.dataset.rpt) { const k = t.dataset.rpt, v = t.value.trim(); if (v === '') delete R[k]; else R[k] = k === 'zone' ? v.toUpperCase() : t.tagName === 'TEXTAREA' ? t.value : v;
     if (k === 'zoneDesc' && v) { const code = rv(app.job, 'zone').toUpperCase(); if (code) { zoneTable()[code] = v; DB.put('kv', { id: 'zoneDesc', v: app.zoneDesc }); } }
-    save(); if (['assign', 'zone', 'allRights', 'rightsType', 'sowGov', 'addlCond'].includes(k)) { const c = $('#reportCard'); if (c) c.innerHTML = reportHTML(app.job); }
+    save(); if (['assign', 'zone', 'allRights', 'rightsType', 'sowGov', 'addlCond', 'sowIncome', 'sowCost', 'exclIncome', 'exclCost'].includes(k)) { const c = $('#reportCard'); if (c) c.innerHTML = reportHTML(app.job); }
     else { const b = document.querySelector('#reportCard .rptneed'); if (b) { const d = document.createElement('div'); d.innerHTML = reportHTML(app.job); const nb = d.querySelector('.rptneed'); if (nb) b.replaceWith(nb); } }   /* the 'still needed' list follows her answers */
     return; }
   if (t.dataset.hbu) { R.hbu[t.dataset.hbu] = t.checked; save(); }
@@ -187,7 +190,7 @@ function writeReportXML(doc, NS, J, SUBJ, VA, SVC) {
   { const fb = (k, def) => tf(k, def === true ? 'true' : def === false ? 'false' : undefined);   // the order's answer when she has not chosen
     set(sow, 'CostApproachIndicator', fb('sowCost', F.sowCost)); set(sow, 'IncomeApproachIndicator', fb('sowIncome', F.sowIncome)); set(sow, 'RentScheduleIndicator', fb('sowRent', F.sowRent));
     set(sow, 'GovernmentAgencyAppraisalIndicator', fb('sowGov', false)); if (R.sowGov === 'true' && R.govType) set(sow, 'GovernmentAgencyAppraisalType', R.govType);
-    set(sow, 'ValuationAdditionalIntendedUserIndicator', fb('sowAddlUser', F.sowAddlUser)); set(sow, 'ValuationAdditionalScopeOfWorkIndicator', fb('sowAddlScope', false));
+    set(sow, 'ValuationAdditionalIntendedUserIndicator', fb('sowAddlUser', F.sowAddlUser)); set(sow, 'ValuationAdditionalScopeOfWorkIndicator', R.sowAddlScope === 'false' && blank(R.sowNote) ? 'false' : !blank(R.sowNote) || R.sowAddlScope === 'true' ? 'true' : 'false');   /* her text turns it on (A-1 2200.0062 / .0003; her Oct 21 SFREP: the box was there but the indicator No) */
     if (R.sowNote) set(sow, 'ValuationScopeOfWorkDescription', R.sowNote.slice(0, 2500));
     set(rd, 'AppraiserAdditionalCertificationIndicator', fb('addlCert', false)); set(rd, 'ReconsiderationOfValueIndicator', fb('reconsider', false));
     set(rd, 'AppraiserPriorServicesPerformedIndicator', tf('priorSvc')); if (R.priorSvc === 'true' && R.priorSvcText) set(rd, 'AppraiserPriorServicesPerformedDescription', R.priorSvcText.slice(0, 1250));
@@ -203,6 +206,10 @@ function writeReportXML(doc, NS, J, SUBJ, VA, SVC) {
   const eff = isoDate(rv(J, 'eff')) || rv(J, 'eff'); set(rsd, 'AppraisalReportEffectiveDate', eff);
   if (!blank(R.expLow) || !blank(R.expHigh)) { set(rsd, 'MarketingOrExposureHighRangeDaysCount', num(R.expHigh)); set(rsd, 'MarketingOrExposureLowRangeDaysCount', num(R.expLow)); set(rsd, 'MarketingOrExposureTimeType', 'ReasonableExposureTime'); }
   const op = num(String(R.opinion || '').replace(/[$,\s]/g, '')); set(rsd, 'OpinionOfValueAmount', op === null ? null : Math.round(op));
+  /* A-1 1300.0002 / .0004: the reason an approach was not developed (SFREP showed Reason for Exclusion red) */
+  [['Income', 'INCOME_APPROACH'], ['Cost', 'COST_APPROACH']].forEach(([A, tag]) => { const off = R['sow' + A] === 'false' || (blank(R['sow' + A]) && F['sow' + A] === false); if (!off) return;   // only when the approach is answered No
+    const why = R['excl' + A] || 'NotNecessaryForCredibleResults'; const e = path(VR, 'APPROACH_TO_VALUE', tag, 'VALUATION_APPROACH_EXCLUSION_REASONS', 'VALUATION_APPROACH_EXCLUSION_REASON');
+    set(e, 'ValuationApproachExclusionReasonType', why); if (why === 'Other') set(e, 'ValuationApproachExclusionReasonTypeOtherDescription', String(R['excl' + A + 'Other'] || 'Other').slice(0, 225)); });
   if (R.reconNote) set(path(VR, 'VALUATION_RECONCILIATION', 'VALUATION_RECONCILIATION_DETAIL'), 'ValuationReconciliationSummaryCommentDescription', R.reconNote.slice(0, 5000));
   // subject: legal, parcels, zoning, rights, H&BU
   const legal = rv(J, 'legal'); if (legal) set(path(SUBJ, 'PARCEL_SUMMARY', 'PARCEL_SUMMARY_DETAIL'), 'ParcelsLegalDescription', legal.slice(0, 15000));
