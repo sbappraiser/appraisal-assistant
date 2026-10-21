@@ -88,6 +88,7 @@ function wbFactSet(J, c, id, text) {
   if (id === 'contract' || id === 'cdom') { if (/^\s*u(nk(nown)?)?\s*$/i.test(t)) { unkSet(J, c, id, 'unknown'); return; } if (t !== '') delete E[id === 'contract' ? 'contractUnknown' : 'cdomUnknown']; }   // her shortcut: U = Unknown
   if (id === 'conc') { if (/^\s*(no|none|n|0)\s*$/i.test(t)) { concSet(J, c, 'no'); return; } if (/unknown|^\s*y(es)?\s*$/i.test(t)) { concSet(J, c, 'unknown'); return; }
     if (t !== '' && n(t) !== null) { put('concessions', n(t)); put('concessionsYN', n(t) > 0 ? 'Yes' : 'No'); return; } }   // typed: No / 0, an amount, or Yes (amount unknown)
+  if (id === 'stl') { const v = num(t.replace(/[^0-9.]/g, '')); put('grid_stl', t === '' || v === null ? null : +v.toFixed(1) + '%'); return; }   // a listing's anticipated ratio, e.g. 98%
   const k = WB_EDIT[id]; if (!k) { put('grid_' + id, t || null); return; }   // a line with no source field (Cooling, Functional utility, her own lines …): her entry
   const f = FIELD[k] || {}; put(k, t === '' ? null : ['int', 'num', 'money'].includes(f.t) || ['siteSf', 'yearBuilt', 'gla', 'bsmtFin', 'garage', 'salePrice', 'concessions', 'dom', 'cdom', 'listPrice', 'origList', 'hoa', 'redDays'].includes(k) ? n(t) : ['listDate', 'lastRed'].includes(k) ? (isoDate(t) || t) : t);
 }

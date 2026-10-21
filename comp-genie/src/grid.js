@@ -290,6 +290,7 @@ let GRID_DEFAULT = null;   // her saved default (kv 'gridLines'): { on: {id: tru
 function customRows(J) { const G = G0(J); return (G.custom || []).map(x => [x.id, x.name, x.section || 'Your own lines', 'OTHER', null, x.name]); }
 function adjRows(J) { return J ? ADJ_ROWS.concat(customRows(J)) : ADJ_ROWS; }
 function lineOn(id, J) { const G = G0(J); if (GRID_KEEP.has(id)) return true; if (G.lines && id in G.lines) return !!G.lines[id];
+  if (id === 'stl') return usedComps(J).some(c => compFacts(c, J).listing);   // F-1 22.01.35: on the grid when a comp is a listing
   if (GRID_DEFAULT && GRID_DEFAULT.on && id in GRID_DEFAULT.on) return !!GRID_DEFAULT.on[id];
   if (/^cx_/.test(id)) return true;
   if (id === 'hazard') return [subjFacts(J), ...usedComps(J).map(c => compFacts(c, J))].some(F => F.hazard && !/^none$/i.test(String(F.hazard).trim()));   // F-1: shows when the subject or any comp is in a hazard zone
@@ -353,7 +354,9 @@ function compFacts0(c, J) {
     heat: String(g('heating') || '').trim() || (String(g('heatCool') || '').includes(' / ') ? String(g('heatCool')).split(' / ')[0].trim() : (/cool/i.test(g('heatCool') || '') ? '' : String(g('heatCool') || '').trim())), cool: coolText(g('cooling') || g('heatCool')) || (/no cooling listed/i.test(g('heatCool') || '') ? 'None listed' : '') };
   { const hc = val(c, 'heatCool'); if (hc.v && (hc.src === 'arch' || hc.src === 'edit') && !/ \/ /.test(String(hc.v))) { const A = archHC(hc.v); if (A.heat) F0.heat = A.heat; else if (!F0.heat) F0.heat = String(hc.v); if (A.cool) F0.cool = A.cool; } }   // her 2.6 Heating/Cooling line (FWA C/Air …) split into the 3.6 heating and cooling fields
   { const lr = val(c, 'locRating'); const E = c.edit || {}; if (lr.src === 'arch' && blank(E.locRating) && blank(E.locFactors)) { const A = archLoc36(g('locRating'), g('locFactors')); if (A.loc) F0.loc = A.loc; Object.entries(A.lines).forEach(([k, v]) => { if (blank(F0[k])) F0[k] = v; }); } }   // her 2.6 archive location in 3.6 terms
-  { const lp = F0.listPrice || F0.origList; if (F0.price && lp) { F0.stl = (F0.price / lp * 100).toFixed(1) + '%'; F0.over = F0.price - lp; F0.overList = F0.over > 0 ? '+' + money(F0.over) + ' (' + F0.stl + ')' : 'No'; } }   // her ask Oct 20 2026: sold over the list price
+  F0.listing = isListingStatus(F0.status);
+  { const own = String((c.edit || {}).grid_stl || '').replace(/[^0-9.]/g, ''); if (F0.listing && own) F0.stl = (+own).toFixed(1) + '%'; }   // a listing: her anticipated sale-to-list ratio (F-1 22.01.35)
+  if (!F0.listing || !(c.edit || {}).grid_stl) { const lp = F0.listPrice || F0.origList; if (F0.price && lp) { F0.stl = (F0.price / lp * 100).toFixed(1) + '%'; F0.over = F0.price - lp; F0.overList = F0.over > 0 ? '+' + money(F0.over) + ' (' + F0.stl + ')' : 'No'; } }   // her ask Oct 20 2026: sold over the list price
   { if (offMlsSale(c) && blank(g('dom'))) { F0.dom = 0; F0.offMls = true; } if (offMlsSale(c) && blank(F0.status)) F0.status = 'Settled sale'; }   // F-1 22.01.07: 0 days on market when the sale was not listed on the open market (her Oct 20 2026 case: 719 Camino Cascada)
   { if (blank(F0.hazard)) F0.hazard = hazardOf(c); }
   { const fu = archFU(c); if (fu.func && blank(F0.func)) F0.func = fu.func; if (fu.tandem) F0.tandem = fu.tandem; }   // her 2.6 Functional utility line: floor plan / tandem bedrooms → Functional utility, tandem garage → vehicle storage   // her note Oct 20 2026: FldZne / FldZn / FldWy / Fldway in her archive, or the CRS FEMA zone (X = none)
@@ -891,13 +894,19 @@ function confirmStripHTML(J) {
     <div class="cstrip">${U.map(c => { const f = compFlags(c, J).filter(x => !flagChecked(c, x)).length; return `<button class="cchip${c.confirmed ? ' ok' : ''}${app.sel === c.id ? ' on' : ''}" data-act="openwb" data-id="${c.id}"><b>${c.use}</b> ${esc(compTitle(c))}${linesBadge(c, J)}${f ? ` <span class="badge flagred">⚑ ${f}</span>` : ''}</button>`; }).join('')}</div>`;
 }
 /* ③ the final grid – read-only, laid out like the 3.6 grid */
+/* a listing (Active / Pending / Off market), not a settled sale */
+const isListingStatus = st => { const t = String(st || '').trim(); return !!t && !/settled|closed|sold/i.test(t); };
+/* F-1: these lines are required only for a settled sale; a listing needs its sale-to-list ratio instead */
+const SETTLED_ONLY = new Set(['price', 'terms', 'conc', 'sale', 'xferTerms']);
+function lineReq(id, C) { if (C && C.listing && SETTLED_ONLY.has(id)) return false; if (id === 'stl') return !!(C && C.listing); return GRID_KEEP.has(id); }
+function listingNote(id, C) { if (!C || !C.listing || !SETTLED_ONLY.has(id)) return ''; if (id === 'price') return /pending/i.test(C.status || '') ? 'Contract price unknown' : '— listing'; return '— listing'; }
 function finalGridHTML(J) {
   const U = usedComps(J); if (!U.length) return '<h2>Final grid</h2><p class="help">Nothing in the workbook yet.</p>';
   const S = subjFacts(J); let sec = '';
-  const rows = adjRows(J).filter(r => rowShown(r, J) && !GRID_INFO[r[0]]).map(r => { const [id, label, section, type] = r; const head = section !== sec ? `<tr class="grp"><th colspan="${2 + U.length}">${esc(section)}</th></tr>` : ''; sec = section;
+  const rows = adjRows(J).filter(r => rowShown(r, J) && !/^not in UAD/.test(GRID_INFO[r[0]] || '')).map(r => { const [id, label, section, type] = r; const head = section !== sec ? `<tr class="grp"><th colspan="${2 + U.length}">${esc(section)}</th></tr>` : ''; sec = section;
     const sv = id === 'baths' ? ([S.full, S.half].every(blank) ? '' : `${S.full ?? '–'} / ${S.half ?? 0}`) : showFact(id, S[id]);
     return head + `<tr><th>${GRID_KEEP.has(id) ? REQ_STAR : ''}${esc(label)}</th><td class="subj">${esc(sv || '')}</td>${U.map(c => { const C = compFacts(c, J); const v = id === 'baths' ? ([C.full, C.half].every(blank) ? '' : `${C.full ?? '–'} / ${C.half ?? 0}`) : id === 'garage' && (c.edit || {}).grid_vsText ? c.edit.grid_vsText : showFact(id, C[id]);
-      const a = type ? cellAmount(J, c, r).v : null; return `<td>${blank(v) || v === '' ? (GRID_KEEP.has(id) ? '<span class="bad">missing</span>' : '') : (id === 'src' ? esc(v).replace(/\n/g, '<br>') : esc(v))}${a ? `<div class="famt">${a > 0 ? '+' : '−'}${money(Math.abs(a))}</div>` : ''}</td>`; }).join('')}</tr>`; }).join('');
+      const a = type ? cellAmount(J, c, r).v : null; return `<td>${blank(v) || v === '' ? (listingNote(id, C) ? `<span class="na">${listingNote(id, C)}</span>` : lineReq(id, C) ? '<span class="bad">missing</span>' : '') : (id === 'src' ? esc(v).replace(/\n/g, '<br>') : esc(v))}${a ? `<div class="famt">${a > 0 ? '+' : '−'}${money(Math.abs(a))}</div>` : ''}</td>`; }).join('')}</tr>`; }).join('');
   const T = U.map(c => compTotals(J, c));
   const tot = (l, f) => `<tr class="tot"><th>${l}</th><td></td>${T.map(f).map(x => `<td>${x}</td>`).join('')}</tr>`;
   return `<h2>Final grid <small>what goes to SFREP – read only; change things in ② Workbook</small></h2>
