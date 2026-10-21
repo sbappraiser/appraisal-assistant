@@ -111,18 +111,18 @@ async function pullMicro(o, quiet) {
     if (isCrsExport(text)) { parseCrsExport(text).forEach(r => crsRows.push(r)); continue; }   // a CRS Data neighborhood sales list
     parseMlsCsv(text).forEach(r => by.set(r.mls || (r.addr + '|' + by.size), r)); }
   if (!by.size && !crsRows.length) { if (!quiet) toast('The search file was not found in the Appraisal Assistant'); return ''; }
-  const all = [...by.values()]; const rows = all.filter(r => !M.exclude[r.mls]);
+  const all = [...by.values()].filter(r => !isOutArea(app.job, r)); const rows = all.filter(r => !M.exclude[r.mls]);   // sales she removed as outside her boundaries stay out
   // her note (Oct 20 2026): a CRS sale that is not in the micro search is often in the macro (Market Area Boundary) MLS search – take its MLS data from there
   const macroRows = []; { const ma = o && o.market; const names = ma && ma.file ? String(ma.file).split(' + ').map(x => x.trim()).filter(Boolean) : [];
     for (const n of names) { const d = (o.docs || []).find(x => x.name === n); if (!d || M.docs.some(x => x.id === d.id)) continue; const rec = await readOrderDoc(d.id); if (!rec || !rec.blob) continue;
-      const tx = await readText(new File([rec.blob], d.name)); if (isCrsExport(tx)) continue; parseMlsCsv(tx).forEach(r => { if (!by.has(r.mls)) macroRows.push(r); }); } }
+      const tx = await readText(new File([rec.blob], d.name)); if (isCrsExport(tx)) continue; parseMlsCsv(tx).forEach(r => { if (!by.has(r.mls) && !isOutArea(app.job, r)) macroRows.push(r); }); } }
   const macroUsed = new Map();
   const note = rows.length ? ingestMls(rows, M.file) : '';
   // CRS list: a sale that is also in the MLS search joins that comp (its unticked listings stay out); the rest come in as CRS-only comps
   const same = (a, b) => (apnKey(a.apn) && apnKey(a.apn) === apnKey(b.apn)) || (a.addr && b.addr && addrKey(a.addr) === addrKey(b.addr));
   const crsIn = []; let crsNew = 0;
   if (crsRows.length) { const fid = uid();
-    crsRows.forEach(r => { const id = 'CRS:' + (apnKey(r.apn) || addrKey(r.addr)); if (M.exclude[id]) return; const twin = [...all, ...macroRows.filter(x => x.saleDate && (!r.saleDate || Math.abs(new Date(x.saleDate) - new Date(r.saleDate)) <= 90 * 864e5))].filter(x => same(x, r)).sort((x, y) => { const sc = z => z.saleDate ? (r.saleDate ? Math.abs(new Date(z.saleDate) - new Date(r.saleDate)) / 864e5 : 500) : /Pend|Contract/i.test(z.status || '') ? 2e5 : 3e5; return sc(x) - sc(y); })[0];   // a house with several listings: the closed one nearest the recorded sale if (twin && M.exclude[twin.mls]) return;
+    crsRows.forEach(r => { const id = 'CRS:' + (apnKey(r.apn) || addrKey(r.addr)); if (M.exclude[id] || isOutArea(app.job, r)) return; const twin = [...all, ...macroRows.filter(x => x.saleDate && (!r.saleDate || Math.abs(new Date(x.saleDate) - new Date(r.saleDate)) <= 90 * 864e5))].filter(x => same(x, r)).sort((x, y) => { const sc = z => z.saleDate ? (r.saleDate ? Math.abs(new Date(z.saleDate) - new Date(r.saleDate)) / 864e5 : 500) : /Pend|Contract/i.test(z.status || '') ? 2e5 : 3e5; return sc(x) - sc(y); })[0];   // a house with several listings: the closed one nearest the recorded sale if (twin && M.exclude[twin.mls]) return;
       if (twin && !all.includes(twin)) macroUsed.set(twin.mls, twin);
       const seed = { mls: twin ? twin.mls : '', apn: r.apn, key: r.addr ? addrKey(r.addr) : '', label: r.addr }; const was = findComp(seed);
       if (was && was.src.crs && !was.src.crs.fromList) { crsIn.push({ ...r, mls: seed.mls }); return; }   // her CRS report is already on it
@@ -504,7 +504,7 @@ function compsTable(J) {
       <td>${esc([V(c, 'quality'), V(c, 'condition')].filter(Boolean).join(' / '))}</td><td><small>${esc((() => { const F = compFacts(c, J); return String(F.loc || '').slice(0, 40); })())}</small></td><td><small>${esc([V(c, 'viewRating'), V(c, 'viewTypes')].filter(Boolean).join(': ')).slice(0, 40)}</small></td><td class="r">${(() => { const u = compFacts(c, J).usable; return blank(u) ? '' : (+u).toFixed(2) + ' ac'; })()}</td>
       <td class="r">${px ? px.mi.toFixed(2) + '<br><small>' + px.dir.replace(/([a-z])([A-Z])/, '$1 $2') + '</small>' : ''}</td>
       <td>${sourcesOf(c).map(s => `<span class="src">${esc(s)}</span>`).join(' ')}</td>
-      <td>${app.confirm === 'rm:' + c.id ? `<span class="rmask">Keep it as analyzed – not used? <button class="btn sm primary" data-rmnu="${c.id}">Keep as not used</button><button class="btn sm primary" data-rmnu="${c.id}" data-nudb="1" title="Listed under Analyzed – not used, and saved to your comp database">Keep as not used + save to my comp database</button><button class="btn sm" data-rmdb="${c.id}">Save to my comp database, then remove</button><button class="btn danger solid sm" data-rmyes="${c.id}">Remove</button><button class="btn sm" data-act="cancel">Cancel</button></span>` : `<button class="btn sm" data-rm="${c.id}" title="Remove from this list">✕</button>`}</td></tr>`; }).join('')}
+      <td>${app.confirm === 'rm:' + c.id ? `<span class="rmask">Keep it as analyzed – not used? <button class="btn sm primary" data-rmnu="${c.id}">Keep as not used</button><button class="btn sm primary" data-rmnu="${c.id}" data-nudb="1" title="Listed under Analyzed – not used, and saved to your comp database">Keep as not used + save to my comp database</button><button class="btn sm" data-rmdb="${c.id}">Save to my comp database, then remove</button><button class="btn danger solid sm" data-rmyes="${c.id}">Remove</button><button class="btn danger sm" data-rmout="${c.id}" title="Saved to your comp database, then taken out of Comps considered and unticked on the Market tab (macro and micro searches) – it will not come back when the search is read again">Outside my boundaries – remove everywhere</button><button class="btn sm" data-act="cancel">Cancel</button></span>` : `<button class="btn sm" data-rm="${c.id}" title="Remove from this list">✕</button>`}</td></tr>`; }).join('')}
   </tbody></table></div>`;
 }
 const DETAIL_ALWAYS = ['quality', 'condition', 'beds', 'full', 'half', 'garage', 'carport'];   // her lines, always there to fill in
@@ -683,6 +683,7 @@ document.addEventListener('click', async e => {
   if (sp) { const G = G0(app.job); const k = sp.dataset.supuse, v = +sp.dataset.v; const T = app.job.support || {}; G.rates[k] = v; G.rateFrom = G.rateFrom || {}; G.rateFrom[k] = 'grouped sales: ' + (T.seg || '') + ', ' + (T.n || 0) + ' sales'; save(); renderKeepFocus(); toast((RATES[k] ? RATES[k][0] : k) + ': ' + (/Pct$/.test(k) ? v + '%' : money(v)) + ' – every comp is recalculated'); return; }
   const tu = e.target.closest('[data-tsuse]');
   if (tu) { const G = G0(app.job); G.rates.timePct = +tu.dataset.tsuse; G.rateFrom = G.rateFrom || {}; G.rateFrom.timePct = 'market conditions support: ' + tu.dataset.tslabel; save(); renderKeepFocus(); toast('Sale date line: ' + tu.dataset.tsuse + '% per month – every comp is recalculated'); return; }
+  { const ro = e.target.closest('[data-rmout]'); if (ro && app.job) { app.confirm = null; await outOfArea(app.job, ro.dataset.rmout); return; } }
   const nb = e.target.closest('[data-rmnu],[data-rmdb],[data-savedb],[data-nuback]');
   if (nb) { const id = nb.dataset.rmnu || nb.dataset.rmdb || nb.dataset.savedb || nb.dataset.nuback; const c = app.job.comps.find(x => x.id === id); if (!c) return;
     if (nb.dataset.rmnu) { const ord = c.use && gridInDateOrder(app.job); markNotUsed(c); if (ord) gridDateOrder(app.job); app.nuAsk = c.id; app.confirm = null; let n = 0; if (nb.dataset.nudb) n = await saveToMyDb(c); save(); render(); toast('Kept as analyzed – not used' + (nb.dataset.nudb ? ` and saved to your comp database (${n} saved)` : '') + '. Pick the reason below the grid.', 6000); return; }
@@ -979,3 +980,40 @@ function hbarSync() {
 window.addEventListener('scroll', () => hbarSync(), { passive: true });
 window.addEventListener('resize', () => { wbFit(); hbarSync(); });
 document.addEventListener('scroll', e => { if (e.target !== document && e.target !== HB && e.target.classList && !e.target.classList.contains('tablewrap')) hbarSync(); }, { capture: true, passive: true });
+
+/* ---- her ask (Oct 20 2026): a sale outside her neighborhood boundaries comes out of the grid, Comps considered and the Market tab's
+   macro and micro searches. It is saved to her comp database first. The genie leaves a note for the Appraisal Assistant (aa-orders kv
+   'genieExcl:<order>'); the hub unticks the sale on both searches the next time the order's Market tab is shown. ---- */
+const outKey = r => ({ mls: String(r.mls || '').trim(), apn: apnKey(r.apn || '') || '', addr: r.addr ? addrKey(r.addr) : '' });
+function isOutArea(J, r) { const L = (J && J.outArea) || []; if (!L.length) return false; const k = outKey(r);
+  return L.some(x => (k.mls && x.mls && k.mls === x.mls) || (k.apn && x.apn && k.apn === x.apn) || (k.addr && x.addr && k.addr === x.addr)); }
+function writeOrderKv(id, v) { return new Promise(res => { let r; try { r = indexedDB.open('aa-orders'); } catch (e) { res(false); return; }
+  r.onupgradeneeded = () => { try { r.transaction.abort(); } catch (e) {} }; r.onerror = () => res(false); r.onblocked = () => res(false);
+  r.onsuccess = () => { const d = r.result; if (!d.objectStoreNames.contains('kv')) { d.close(); res(false); return; }
+    const t = d.transaction('kv', 'readwrite'); t.objectStore('kv').put({ id, v }); t.oncomplete = () => { d.close(); res(true); }; t.onerror = () => { d.close(); res(false); }; }; }); }
+async function outOfArea(J, cid) {
+  const c = J.comps.find(x => x.id === cid); if (!c) return;
+  try { await saveToMyDb(c); } catch (e) {}
+  const mlsList = [V(c, 'mls'), c.src.mls && c.src.mls.mls, ...((c.mlsOther || []).map(o => o.mls))].filter(Boolean);
+  const base = { apn: apnKey(c.apn || V(c, 'apn') || '') || '', addr: addrKey(V(c, 'addr') || c.label || ''), label: compTitle(c), at: todayISO() };
+  const items = (mlsList.length ? mlsList : ['']).map(m => ({ ...base, mls: String(m) }));
+  J.outArea = [...(J.outArea || []), ...items];
+  const was = c.use; J.comps = J.comps.filter(x => x.id !== cid); if (was) J.comps.forEach(x => { if (x.use && x.use > was) x.use--; });
+  if (app.sel === cid) app.sel = null; WB.cur = null;
+  let noted = false; if (J.orderId) { const old = (await readOrderKv('genieExcl:' + J.orderId)) || {}; const list = [...((old.v && old.v.items) || old.items || []), ...items]; noted = await writeOrderKv('genieExcl:' + J.orderId, { items: list, at: new Date().toISOString() }); }
+  save(); render();
+  toast(`${base.label}: saved to your comp database and removed – outside your boundaries.` + (noted ? ' The Market tab unticks it in the macro and micro searches.' : J.orderId ? '' : ' (This assignment has no order in the Appraisal Assistant, so there is no Market tab to change.)'), 8000);
+}
+/* Ctrl+Z on the grid (outside a box) asks first */
+function wbRemoveAsk(J, cid) {
+  const c = J.comps.find(x => x.id === cid); if (!c || !c.use) return;
+  const bg = document.createElement('div'); bg.className = 'sheet-bg';
+  bg.innerHTML = `<div class="sheet"><h2>Take Comp ${c.use} off the grid?</h2><p><b>${esc(compTitle(c))}</b> – it is saved to your comp database either way.</p>
+    <div class="row" style="flex-wrap:wrap;gap:8px"><button class="btn primary" data-wa="off">Off the grid – keep it in Comps considered</button>
+    <button class="btn danger" data-wa="out">Outside my boundaries – remove from macro, micro and Comps considered</button>
+    <button class="btn" data-wa="no">Cancel</button></div></div>`;
+  const close = () => { document.removeEventListener('keydown', key); bg.remove(); }; const key = e => { if (e.key === 'Escape') close(); };
+  bg.addEventListener('click', async e => { const b = e.target.closest('[data-wa]'); if (!b && e.target !== bg) return; close(); if (!b) return;
+    if (b.dataset.wa === 'off') await wbRemove(J, cid); else if (b.dataset.wa === 'out') await outOfArea(J, cid); });
+  document.addEventListener('keydown', key); document.body.appendChild(bg); bg.querySelector('[data-wa="off"]').focus();
+}

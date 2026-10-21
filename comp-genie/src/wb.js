@@ -140,7 +140,7 @@ function wbBar(J, all) {
     <span class="grow"></span><span class="pops">Pop out <button class="btn sm primary" data-wbpop="1|99" title="All the comps side by side in their own window – the side-to-side scroll bar stays at the bottom of the window; scroll up and down with the mouse wheel">all comps</button> ${pops.map(([a, b]) => `<button class="btn sm" data-wbpop="${a}|${b}" title="Opens the grid for comps ${a}–${b} in its own window – drag it to another monitor">${a}–${b}</button>`).join('')}</span>
     <button class="btn sm" data-act="wb-arrange">${app.wbArrange ? 'Close arrange' : 'Arrange'}</button></div>
     ${app.wbArrange ? `<div class="wbarr">${all.map((c, i) => `<div><b>#${c.use}</b> ${esc(compTitle(c))} <button class="btn sm" data-wbmv="${c.id}|${c.use - 1}" ${i ? '' : 'disabled'}>▲</button><button class="btn sm" data-wbmv="${c.id}|${c.use + 1}" ${i < all.length - 1 ? '' : 'disabled'}>▼</button> move to # <input class="txt xs" data-wbto="${c.id}" inputmode="numeric" placeholder="${c.use}"></div>`).join('')}</div>` : ''}
-    ${on ? `<p class="help keys">Keys: <b>Tab</b> same line, next comp · <b>Enter</b> next line · <b>=</b> same as the subject (at once) · <b>=2</b> same as comp 2 · <b>Ctrl+Z</b> (in a box) empty the box · <b>Ctrl+Shift+2</b> swap this comp with comp 2 · <b>Ctrl+Z</b> (outside a box) take this comp off the grid.</p>` : ''}`;
+    ${on ? `<p class="help keys">Keys: <b>Tab</b> same line, next comp · <b>Enter</b> next line · <b>=</b> same as the subject (at once) · <b>=2</b> same as comp 2 · <b>Ctrl+Z</b> (in a box) empty the box · <b>Ctrl+Shift+2</b> swap this comp with comp 2 · <b>Ctrl+Z</b> (outside a box) take this comp off the grid (asks first).</p>` : ''}`;
 }
 function popHTML(J) {
   const all = usedComps(J); const L = all.slice(POP.from - 1, POP.to);
@@ -185,7 +185,7 @@ document.addEventListener('keydown', async e => {
     if (el && (el === t || !inBox)) { e.preventDefault(); el.value = '=' + e.key; WB_EQ = null; el.dispatchEvent(new Event('change', { bubbles: true })); return; } }
   if (cell && e.key.length === 1) WB_EQ = null;
   if (e.ctrlKey && e.shiftKey && /^Digit[1-9]$/.test(e.code) && WB.cur) { e.preventDefault(); const n = +e.code.slice(5); if (wbSwap(app.job, WB.cur, n)) { save(); renderKeepFocus(); toast(`Swapped with comp ${n}`); } return; }
-  if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === 'z' && !inBox && WB.on && WB.cur && document.querySelector('#gridCard')) { e.preventDefault(); await wbRemove(app.job, WB.cur); return; }
+  if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === 'z' && !inBox && WB.on && WB.cur && document.querySelector('#gridCard')) { e.preventDefault(); wbRemoveAsk(app.job, WB.cur); return; }
 });
 
 /* undo a Ctrl+Z empty: forget that line's emptied keys (found by a dry run on a blank copy) so the sources show again */

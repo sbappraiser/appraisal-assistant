@@ -416,8 +416,21 @@ function parseZillowText(t) {   // Zillow "Housing Market Overview" wording
   { const z = t.match(/\b(\d{5})\s*,?\s*(?:CA\s+)?Housing Market/i) || t.match(/home-values\/\d+\/(\d{5})\//); const c = t.match(/([A-Z][A-Za-z .'-]{2,40}),\s*CA Housing Market/); out._place = z ? 'zip:' + z[1] : c ? c[1].trim().replace(/^.*\b(?:Trends|Zillow|PM|AM)\s+/, '') : ''; }
   return out;
 }
+/* sales she removed in the comp genie as outside her boundaries (kv 'genieExcl:<order>', written by the genie): unticked in both searches */
+let MK_GX = '';
+/* the same keys the comp genie uses (its util.js apnKey / addrKey) */
+const mkApnK = s => { const g = String(s || '').match(/\d+/g) || []; if (g.length === 3 && g.every(x => x.length <= 3)) return g.map(x => x.padStart(3, '0')).join(''); const d = g.join(''); return d.length >= 8 ? d.slice(0, 9) : ''; };
+const MK_DIRS = new Set(['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw', 'north', 'south', 'east', 'west']), MK_SUF = new Set(['rd', 'road', 'dr', 'drive', 'ln', 'lane', 'st', 'street', 'ave', 'avenue', 'av', 'way', 'wy', 'ct', 'court', 'pl', 'place', 'cir', 'circle', 'blvd', 'boulevard', 'ter', 'terrace', 'trl', 'trail', 'pkwy', 'parkway', 'hwy', 'highway', 'loop']);
+const mkAddrK = a => { const m = String(a || '').split(',')[0].match(/^\s*(\d+)\S*\s+(.+)$/); if (!m) return ''; const w = m[2].toLowerCase().replace(/[.'’]/g, '').replace(/\s*(#|unit|apt|ste)\s*\S+$/, '').split(/[^a-z0-9]+/).filter(Boolean);
+  while (w.length > 1 && MK_DIRS.has(w[0])) w.shift(); while (w.length > 1 && (MK_SUF.has(w[w.length - 1]) || MK_DIRS.has(w[w.length - 1]))) w.pop(); return m[1] + '|' + w.join(' '); };
+async function mkGenieExcl() { if (!cur) return; const id = cur.id; const r = await ODB.get('kv', 'genieExcl:' + id).catch(() => null); const L = (r && r.v && r.v.items) || []; if (!L.length || !cur || cur.id !== id) return;
+  const sig = id + '|' + L.length; if (MK_GX === sig) return; MK_GX = sig;
+  const hit = row => { const k = { mls: String(row.mls || '').trim(), apn: mkApnK(row.apn) || '', addr: row.addr ? mkAddrK(row.addr) : '' };
+    return L.some(x => (k.mls && x.mls && k.mls === x.mls) || (k.apn && x.apn && k.apn === x.apn) || (k.addr && x.addr && k.addr.split('#')[0] === x.addr.split('#')[0])); };
+  let n = 0; [M(), MI()].forEach(q => { q.exclude = q.exclude || {}; (q.rows || []).forEach(row => { if (hit(row) && !q.exclude[row.mls]) { q.exclude[row.mls] = true; q.outArea = q.outArea || {}; q.outArea[row.mls] = true; n++; } }); });
+  if (n) { mkChanged(); toast(`${n} listing${n > 1 ? 's' : ''} unticked – removed in the comp genie as outside your boundaries`); mkRender(); } }
 function mkRender(redraft) {
-  const box = $('#mkBody'); if (!box || !cur) return; const m = M();
+  const box = $('#mkBody'); if (!box || !cur) return; const m = M(); mkGenieExcl();
   { const used = new Set([M(), MI()].flatMap(q => String(q.file || '').split(' + ').map(x => x.trim()).filter(Boolean)));   // files used on this tab: filed under the right kind
     let ch = false; (cur.docs || []).forEach(d => { if (!used.has(d.name)) return; const want = /prospect|crs/i.test(d.name) && !/customexport/i.test(d.name) ? 'crsList' : 'marketSearch'; if (d.type !== want && ['mls', 'other', ''].includes(d.type || '')) { d.type = want; ch = true; } });
     if (ch) { saveLetter(true); if (typeof renderDocs === 'function') renderDocs(); } }
