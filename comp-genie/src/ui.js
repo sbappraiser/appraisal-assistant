@@ -424,6 +424,7 @@ function renderPage() {
   <section class="card st st-final" id="exportCard"><h2>Export</h2>${exportHTML(J)}</section>
   <footer class="foot">Comp Genie · your data stays on this computer · build ${typeof BUILD !== 'undefined' ? BUILD : ''}</footer>`;
   fillImages(); mapsRender(); { const t = document.querySelector('.top'); if (t) document.documentElement.style.setProperty('--toph', t.offsetHeight + 'px'); }   // the comp's sticky header sits under the top bar
+  hbarSync();
 }
 /* Redraw after a field changes without losing your place: Tab moves on first, then the page is
    redrawn and the cursor is put back in the field you tabbed (or clicked) into. */
@@ -928,3 +929,33 @@ function stageBarHTML(J) { const st = J.stage || (J.comps.some(c => c.use) ? 'wo
   const step = (k, n, l, sub) => `<button class="stepb${st === k ? ' on' : ''}" data-act="stage" data-s="${k}"><b>${n}</b> ${l}<small>${sub}</small></button>`;
   return `<nav class="steps">${o ? `<a class="stepb" href="../appraisal-assistant/?order=${encodeURIComponent(o.id)}&tab=market" target="_top" title="Macro, then micro – the order's Market tab in the Appraisal Assistant"><b>⓪</b> Market<small>macro → micro</small></a>` : ''}
     ${step('micro', '①', 'Comps considered', `${J.comps.length} · screen, pick for the workbook`)}${step('workbook', '②', 'Workbook', U.length ? `${U.length} comps · ${conf} confirmed · adjust` : 'confirm each comp, adjust')}${step('final', '③', 'Final grid', 'review · export to SFREP')}</nav>`; }
+
+/* Side-to-side scroll bar pinned to the bottom of the window: shows when a wide table
+   (workbook, final grid, comps considered) is on screen but its own scroll bar is below the
+   window edge. Dragging it scrolls the table, and scrolling the table moves it. */
+let HB = null, HBW = null;
+function hbarEl() {
+  if (HB && document.body.contains(HB)) return HB;
+  HB = document.createElement('div'); HB.id = 'hbar'; HB.innerHTML = '<div></div>';
+  document.body.appendChild(HB);
+  HB.addEventListener('scroll', () => { if (HBW && Math.abs(HBW.scrollLeft - HB.scrollLeft) > 1) HBW.scrollLeft = HB.scrollLeft; });
+  return HB;
+}
+function hbarSync() {
+  const b = hbarEl(), vh = window.innerHeight;
+  let w = null;
+  for (const t of document.querySelectorAll('.tablewrap')) {
+    if (t.scrollWidth <= t.clientWidth + 2 || !t.offsetParent) continue;
+    const r = t.getBoundingClientRect();
+    if (r.top < vh - 40 && r.bottom > vh) { w = t; break; }   // visible, but its own bar is off the bottom
+  }
+  if (!w) { b.style.display = 'none'; HBW = null; return; }
+  if (HBW !== w) { HBW = w; if (!w.dataset.hb) { w.dataset.hb = 1; w.addEventListener('scroll', () => { if (HBW === w && HB) HB.scrollLeft = w.scrollLeft; }); } }
+  const r = w.getBoundingClientRect();
+  b.style.display = 'block'; b.style.left = Math.max(0, r.left) + 'px'; b.style.width = Math.min(r.width, window.innerWidth - Math.max(0, r.left)) + 'px';
+  b.firstChild.style.width = w.scrollWidth + 'px';
+  b.scrollLeft = w.scrollLeft;
+}
+window.addEventListener('scroll', () => hbarSync(), { passive: true });
+window.addEventListener('resize', () => hbarSync());
+document.addEventListener('scroll', e => { if (e.target !== document && e.target !== HB && e.target.classList && !e.target.classList.contains('tablewrap')) hbarSync(); }, { capture: true, passive: true });

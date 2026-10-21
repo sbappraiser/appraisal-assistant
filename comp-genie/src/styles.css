@@ -274,3 +274,6 @@ table.grid td.subj,table.grid thead th:nth-child(2),table.grid tr.tot td:nth-chi
 table.grid td.subj::before,table.grid td.subj::after,table.grid thead th:nth-child(2)::before,table.grid thead th:nth-child(2)::after,table.grid tr.tot td:nth-child(2)::before,table.grid tr.tot td:nth-child(2)::after{content:'';position:absolute;top:0;bottom:0;width:2px;border-left:2px solid #4a5866;border-right:2px solid #4a5866;pointer-events:none}
 table.grid td.subj::before,table.grid thead th:nth-child(2)::before,table.grid tr.tot td:nth-child(2)::before{left:0}table.grid td.subj::after,table.grid thead th:nth-child(2)::after,table.grid tr.tot td:nth-child(2)::after{right:0}
 table.cmplines td.subj,table.cmplines tr:first-child th:nth-child(2){border-left:4px double #4a5866;border-right:4px double #4a5866}
+
+#hbar{position:fixed;bottom:0;height:20px;scrollbar-width:auto;scrollbar-color:#7a8794 #e3e8ed;overflow-x:scroll;overflow-y:hidden;z-index:25;background:#eef1f4;border-top:1px solid #c5ccd3;display:none}#hbar>div{height:1px}
+#hbar::-webkit-scrollbar{height:18px}#hbar::-webkit-scrollbar-track{background:#e3e8ed}#hbar::-webkit-scrollbar-thumb{background:#7a8794;border-radius:9px;border:3px solid #e3e8ed}#hbar::-webkit-scrollbar-thumb:hover{background:#4a5866}
