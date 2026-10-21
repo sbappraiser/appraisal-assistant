@@ -95,6 +95,7 @@ const ADJ_ROWS = [
 (function herOrder() {
   const by = id => ADJ_ROWS.find(r => r[0] === id), take = id => { const i = ADJ_ROWS.findIndex(r => r[0] === id); return i < 0 ? null : ADJ_ROWS.splice(i, 1)[0]; };
   const u = take('usable'); if (u) ADJ_ROWS.splice(ADJ_ROWS.findIndex(r => r[0] === 'site') + 1, 0, u);
+  const lr = take('lastRed'); if (lr) ADJ_ROWS.splice(ADJ_ROWS.findIndex(r => r[0] === 'dom') + 1, 0, lr);   // her ask: Last price reduction right under Days on market
   const DW = ['style', 'attach', 'levels', 'q', 'c', 'beds', 'baths', 'gla', 'bsmt', 'agUnf', 'bsmtUnf', 'nonCont', 'nsAbove', 'nsBelow', 'func', 'garage', 'carport', 'wholeHome'];
   const at = ADJ_ROWS.findIndex(r => r[2] === 'Dwelling'); const head = DW.map(take).filter(Boolean); head.forEach(r => { r[2] = 'Dwelling'; });
   ADJ_ROWS.splice(at, 0, ...head); void by;
