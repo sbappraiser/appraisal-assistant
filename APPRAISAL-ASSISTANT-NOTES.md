@@ -673,3 +673,4 @@ Decisions (her, Oct 19–20): "Exterior of dwelling" instead of left/right/side 
 - g2-1021-0103: comp page column 'Your value' renamed 'New value'.
 - g2-1021-0104: subject cells of the sales / listing lines (and Ownership transfer terms, sale-to-list) show a grey — with a note: nothing to enter for the subject (F-1: comparables only; subject sale/listing come from the Sales Contract / Subject Listing sections). No N/A or dash in the data.
 - g2-1021-0105: comp page – empty lines the grid needs (GRID_NEED from shown grid lines → field keys) always show and are yellow for workbook comps; other empty lines (Show empty fields too) stay white.
+- g2-1021-0108: subject column set off with double lines on both sides (line names | subject | comp 1) on the grid, workbook and the comp page's grid-lines table (::before/::after on td.subj, header and totals cells).
