@@ -100,7 +100,7 @@ const pkBtn = (who, id) => (PICK[id] || id === 'view') ? ` <button type="button"
 function pkSave(J, who, id, txt) { const c = who === 'subj' ? null : J.comps.find(x => x.id === who); const G = G0(J);
   if (c) { wbFactSet(J, c, id, txt); c.edit = c.edit || {}; if (txt) c.edit['pk_' + id] = txt; else delete c.edit['pk_' + id];
     if (id === 'sfSource') { if (txt) c.edit.sfSource = txt; else delete c.edit.sfSource; }
-    if (id === 'xferTerms') { const P = txt ? pkParse(PICK.xferTerms, txt) : null; if (P && P.vals[0]) c.edit.saleType = P.vals[0] === 'Other' ? 'Other: ' + (P.other || 'Other') : P.vals[0]; else delete c.edit.saleType; } /* the comp's Sale type line shows the same answer */ } else { if (txt) { G.subj[id] = txt; G.subj['pk_' + id] = txt; } else { delete G.subj[id]; delete G.subj['pk_' + id]; } } save(); render(); toast((PICK[id] ? PICK[id].title : 'View') + ': ' + (txt || 'cleared')); }
+    if (id === 'xferTerms') { const P = txt ? pkParse(PICK.xferTerms, txt) : null; if (P && P.vals[0]) c.edit.saleType = P.vals[0] === 'Other' ? 'Other: ' + (P.other || 'Other') : P.vals[0]; else delete c.edit.saleType; } /* the comp's Sale type line shows the same answer */ } else { if (txt) { G.subj[id] = txt; G.subj['pk_' + id] = txt; } else { delete G.subj[id]; delete G.subj['pk_' + id]; } } save(); render(); toast((PICK[id] ? PICK[id].title : id === 'adu' ? 'Outbuildings' : 'View') + ': ' + (txt || 'cleared')); }
 function uadPick(who, id) {
   const J = app.job; const c = who === 'subj' ? null : J.comps.find(x => x.id === who); const F = c ? compFacts(c, J) : subjFacts(J); const name = c ? 'Comp ' + (c.use || '') + ' ' + compTitle(c) : 'Subject';
   const bg = document.createElement('div'); bg.className = 'sheetbg';

@@ -83,7 +83,8 @@ function wbFactSet(J, c, id, text) {
     case 'view': case 'loc': { const [a, ...b] = t.split(/:|\s–\s/); put(id === 'view' ? 'viewRating' : 'locRating', a ? a.trim() : null); put(id === 'view' ? 'viewTypes' : 'locFactors', b.join(':').trim() || null); if (id === 'view') put('viewRange', null); return; }
     case 'pool': put('pool', t === '' ? null : /pool/i.test(t) ? 'Yes' : 'No'); put('spa', t === '' ? null : /spa|hot ?tub|jacuzzi/i.test(t) ? 'Yes' : 'No'); return;
     case 'courts': put('tennis', t === '' ? null : /tennis/i.test(t) ? 'Yes' : 'No'); put('sport', t === '' ? null : /sport|pickleball|basketball/i.test(t) ? 'Yes' : 'No'); return;
-    case 'adu': { put('adu', t || null); const sf = t.match(/(\d[\d,]*)\s*(sf|sq)/i), ba = t.match(/(\d+(\.\d)?)\s*bath/i); put('aduSf', t === '' ? null : sf ? n(sf[1]) : (/^(no|none)$/i.test(t) ? 0 : null)); put('aduBaths', t === '' ? null : ba ? +ba[1] : 0); return; }
+    case 'adu': { const o = typeof obLiving === 'function' && obParse(t).items.length ? obLiving(t) : null; if (o) { put('adu', t); put('aduSf', o.sf); put('aduBaths', o.baths); return; }
+      put('adu', t || null); const sf = t.match(/(\d[\d,]*)\s*(sf|sq)/i), ba = t.match(/(\d+(\.\d)?)\s*bath/i); put('aduSf', t === '' ? null : sf ? n(sf[1]) : (/^(no|none)$/i.test(t) ? 0 : null)); put('aduBaths', t === '' ? null : ba ? +ba[1] : 0); return; }
   }
   if (id === 'contract' || id === 'cdom') { if (/^\s*u(nk(nown)?)?\s*$/i.test(t)) { unkSet(J, c, id, 'unknown'); return; } if (t !== '') delete E[id === 'contract' ? 'contractUnknown' : 'cdomUnknown']; }   // her shortcut: U = Unknown
   if (id === 'conc') { if (/^\s*(no|none|n|0)\s*$/i.test(t)) { concSet(J, c, 'no'); return; } if (/unknown|^\s*y(es)?\s*$/i.test(t)) { concSet(J, c, 'unknown'); return; }
