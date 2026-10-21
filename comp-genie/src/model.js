@@ -335,7 +335,9 @@ function remodelAfter(c, priorDate) {
 function offMlsSale(c) { const s = currentSale(c); if (!s || !/crs|cort/.test(s.from || '')) return false; return ![c.src.mls, c.src.pdf].some(o => o && (o.saleDate || o.contractDate || /Pending|Active/i.test(o.status || ''))); }
 
 /* the recorded document number of THIS sale (her ask Oct 20 2026) – the CRS sale or the CORT line whose date matches the sale (±2 months); CRS first */
-function docNoOf(c) { const cs = currentSale(c); if (!cs || !cs.date) return null; const near = d => d && Math.abs(monthsBetween(d, cs.date)) <= 2;
+function docNoOf(c) {
+  { const m = String((c.edit || {}).verification || '').match(/(?:doc\.?\s*(?:no\.?|#)?|#)\s?(\d{3,12})(?:\s+(\d{1,2}\/\d{1,2}\/\d{2,4}))?/i); if (m) return { doc: m[1], from: 'you', date: m[2] ? isoDate(m[2]) : '' }; }   // she typed it in Your verification notes: hers wins
+  const cs = currentSale(c); if (!cs || !cs.date) return null; const near = d => d && Math.abs(monthsBetween(d, cs.date)) <= 2;
   const L = c.src.crs && c.src.crs.lastSale; if (L && L.doc && near(L.recorded || L.date)) return { doc: L.doc, from: 'crs', date: L.recorded || L.date };
   const t = (c.src.cort || []).find(x => x.doc && near(x.saleDate)); if (t) return { doc: t.doc, from: 'cort', date: t.saleDate };
   for (const a of (c.src.arch || [])) { const m = String((a.v || {}).verification || '').match(/#\s?(\d{3,7})\s+(\d{1,2}\/\d{1,2}\/\d{2,4})/); if (m && near(isoDate(m[2]))) return { doc: m[1], from: 'arch', date: isoDate(m[2]) }; }   // her 2.6 verification line: "Doc. #06575 03/04/26"

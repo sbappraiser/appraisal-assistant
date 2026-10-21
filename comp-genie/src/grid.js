@@ -90,6 +90,15 @@ const ADJ_ROWS = [
   ['garage', 'Vehicle storage – garage spaces', 'Amenities', 'VehicleStorage', 'space'],
   ['carport', 'Vehicle storage – carport spaces', 'Amenities', 'VehicleStorage', 'cpSpace'],
 ];
+/* her line order (Oct 20 2026): Usable Lot Area/Utility right under Site size; Dwelling in her order, with vehicle storage and
+   whole home amenities moved up into Dwelling; then the rest as before. Order on the grid only – SFREP places each 3.6 line by its type. */
+(function herOrder() {
+  const by = id => ADJ_ROWS.find(r => r[0] === id), take = id => { const i = ADJ_ROWS.findIndex(r => r[0] === id); return i < 0 ? null : ADJ_ROWS.splice(i, 1)[0]; };
+  const u = take('usable'); if (u) ADJ_ROWS.splice(ADJ_ROWS.findIndex(r => r[0] === 'site') + 1, 0, u);
+  const DW = ['style', 'attach', 'levels', 'q', 'c', 'beds', 'baths', 'gla', 'bsmt', 'agUnf', 'bsmtUnf', 'nonCont', 'nsAbove', 'nsBelow', 'func', 'garage', 'carport', 'wholeHome'];
+  const at = ADJ_ROWS.findIndex(r => r[2] === 'Dwelling'); const head = DW.map(take).filter(Boolean); head.forEach(r => { r[2] = 'Dwelling'; });
+  ADJ_ROWS.splice(at, 0, ...head); void by;
+})();
 const LOT_UTILITY = 'Usable Lot Area/Utility';      // her exact SFREP template "Add Other" row name (must match letter for letter)
 const RATES = { gla: ['$ per sq ft', 'subject − comp sq ft × rate'], agUnf: ['$ per sq ft', 'subject − comp unfinished above-grade sq ft × rate'], nsAbove: ['$ per sq ft', 'subject − comp non-standard above-grade sq ft × rate'], nsBelow: ['$ per sq ft', 'subject − comp non-standard below-grade sq ft × rate'], nonCont: ['$ per sq ft', 'subject − comp non-continuous sq ft × rate'], usableAc: ['$ per usable acre', 'subject − comp usable acres × rate'], bed: ['$ per bedroom', 'bedroom difference × rate'],
   bath: ['$ per full bath', 'full-bath difference × rate (half baths at half the rate)'], space: ['$ per garage space', 'space difference × rate'], timePct: ['% per month', 'months from sale to effective date × % × price'],
