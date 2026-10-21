@@ -942,8 +942,20 @@ function hbarEl() {
   HB.addEventListener('scroll', () => { if (HBW && Math.abs(HBW.scrollLeft - HB.scrollLeft) > 1) HBW.scrollLeft = HB.scrollLeft; });
   return HB;
 }
+/* a toolbar another program lays over the bottom of the page (her RoboForm bar): measure it so the scroll bar sits above it */
+function botOverlay() {
+  const vh = window.innerHeight; let h = 0;
+  for (const x of [20, window.innerWidth / 2, window.innerWidth - 40]) {
+    let el = document.elementFromPoint(x, vh - 4); if (!el) continue;
+    while (el.parentElement && el.parentElement !== document.body && el.parentElement !== document.documentElement) el = el.parentElement;
+    if (el === document.body || el === document.documentElement || el.id === 'app' || el.id === 'hbar' || el.classList.contains('sheet-bg') || el.classList.contains('toast')) continue;
+    const r = el.getBoundingClientRect(); if (r.top > vh / 2 && r.height < 120) h = Math.max(h, Math.ceil(vh - r.top));
+  }
+  const v = h ? h + 'px' : '0px'; if (document.documentElement.style.getPropertyValue('--botov') !== v) document.documentElement.style.setProperty('--botov', v);
+}
+setInterval(botOverlay, 2000);
 function hbarSync() {
-  const b = hbarEl(), vh = window.innerHeight;
+  const b = hbarEl(), vh = window.innerHeight - (parseInt(getComputedStyle(document.documentElement).getPropertyValue('--botov')) || 0);
   let w = null;
   for (const t of document.querySelectorAll('.tablewrap')) {
     if (t.scrollWidth <= t.clientWidth + 2 || !t.offsetParent) continue;
