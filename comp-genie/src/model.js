@@ -336,5 +336,10 @@ function offMlsSale(c) { const s = currentSale(c); if (!s || !/crs|cort/.test(s.
 
 /* the recorded document number of THIS sale (her ask Oct 20 2026) – the CRS sale or the CORT line whose date matches the sale (±2 months); CRS first */
 function docNoOf(c) { const cs = currentSale(c); if (!cs || !cs.date) return null; const near = d => d && Math.abs(monthsBetween(d, cs.date)) <= 2;
-  const L = c.src.crs && c.src.crs.lastSale; if (L && L.doc && near(L.recorded || L.date)) return { doc: L.doc, from: 'crs' };
-  const t = (c.src.cort || []).find(x => x.doc && near(x.saleDate)); if (t) return { doc: t.doc, from: 'cort' }; return null; }
+  const L = c.src.crs && c.src.crs.lastSale; if (L && L.doc && near(L.recorded || L.date)) return { doc: L.doc, from: 'crs', date: L.recorded || L.date };
+  const t = (c.src.cort || []).find(x => x.doc && near(x.saleDate)); if (t) return { doc: t.doc, from: 'cort', date: t.saleDate };
+  for (const a of (c.src.arch || [])) { const m = String((a.v || {}).verification || '').match(/#\s?(\d{3,7})\s+(\d{1,2}\/\d{1,2}\/\d{2,4})/); if (m && near(isoDate(m[2]))) return { doc: m[1], from: 'arch', date: isoDate(m[2]) }; }   // her 2.6 verification line: "Doc. #06575 03/04/26"
+  return null; }
+/* her format (Oct 20 2026): the last 5 digits of the recording number, then the closing (recording) date – "Doc #06575 03/04/2026" */
+const docShort = d => { const m = String(d || '').match(/(\d+)\D*$/); if (!m) return String(d || ''); const n = m[1]; return n.length > 5 ? n.slice(-5) : n; };
+function docText(c) { const D = docNoOf(c); if (!D) return ''; const cs = currentSale(c); const dt = D.date || (cs && cs.date) || ''; return 'Doc #' + docShort(D.doc) + (dt ? ' ' + showDate(dt) : ''); }
