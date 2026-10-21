@@ -342,3 +342,15 @@ Her words summarized: UAD 3.6 has a lot of data and steps; she finds it confusin
 **D. Safety** (data, program, computer): automatic versioned backups (already: Back up, autobackup) – add a scheduled reminder and an integrity check of each database on open; never change her originals (already a rule); a change log for her databases (who/what/when) with undo; nothing confidential leaves her computer except what she sends; repos hold no client data (rule); dependency-free pages (no outside scripts) to limit malware risk; guidance for her machine (updates, antivirus, encrypted disk, separate backup drive / cloud). Liability: USPAP-compliant disclosures, the workfile kept complete (what she relied on), report checks above – she remains the appraiser of record; the assistant never makes value decisions.
 
 Done Oct 21 2026 (g2-1021-1700): Report details reordered – Assignment, Highest and best use, Scope of work, Extraordinary assumptions and hypothetical conditions (own section), Subject and site, Prior services, Value. Her three boxes (added scope, EAs, HCs) go together into 3.6 Additional Scope of Work (2,500 characters, counter shown). Note: F-1 29.003 says the additional scope "cannot be contrary to, and should not repeat, the predefined scope of work text" – she may expand it.
+
+### Part B in her words (Oct 21 2026): one numbered path per assignment
+Order page top: file name, property address; then tabs:
+1. **Documents** – upload everything; sorted and labelled (exists). No engagement letter uploaded → ask "Do you need to write one?" → 2.
+2. **Engagement letter** – her details → letter written (exists: letter writer); she sends it for signature in Adobe (no Adobe connection here: download PDF/Word, upload to Adobe Sign herself), drops the signed contract back in Documents (exists: readMyLetter).
+3. **Scope of work** – assignment, highest and best use, scope of work, extraordinary assumptions / hypothetical conditions, approaches used (move from Comp genie › Report details to the order; the genie keeps reading them from the order). Note: H&BU is started here and confirmed after inspection and market analysis.
+Then, in order (each a numbered step with ✓ and a still-to-do list):
+4. Inspection – pull in iPad data, photos, sketch; subject details complete.
+5. Market conditions – macro, micro (hub Market tab).
+6. Comp selection → 7. comp data completion → 8. adjustments.
+9. Adjustment support – sensitivity analysis (exists), grouped sales (exists), depreciated cost check (cost new less depreciation per item), matched pairs (rare in her market – shown only when a real pair exists); using the grid comps, macro, micro and her databases.
+10. Sales comparison analysis and comment. 11. Cost approach. 12. Income approach (when needed). 13. Reconciliation. 14. Exhibits and photos. 15. Certification, pre-check / review genie, export to SFREP.
