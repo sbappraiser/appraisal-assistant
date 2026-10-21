@@ -380,6 +380,7 @@ function renderPage() {
   const J = app.job; const root = $('#app');
   if (J && !J.gridManual && J.comps.some(c => c.use) && !gridInDateOrder(J)) { gridDateOrder(J); save(); }   // her rule: the grid is in closing-date order unless she numbered it herself
   if (CPOP) { const c = J && J.comps.find(x => x.id === CPOP.id); root.innerHTML = c ? `<header class="top pop"><h1>Comp Genie</h1><span class="pill">${esc(J.name)}</span><span class="grow"></span><small>stays in step with your other windows</small></header>` + detailHTML(c) : '<p class="help">That comp is no longer in this assignment.</p>'; document.title = (c ? compTitle(c) : 'Comp') + ' · ' + (J ? J.name : ''); fillImages(); return; }
+  if (typeof DBV !== 'undefined' && DBV) { root.innerHTML = dbViewHTML(); document.title = 'My databases'; return; }
   if (POP) { root.innerHTML = popHTML(J); document.title = `Comps ${POP.from}–${POP.to} · ${J.name}`; wbUndoBar(); return; }
   if (app.home || !J) { root.innerHTML = homeHTML(); document.title = 'Comp Genie'; return; }
   document.title = 'Comp Genie · ' + J.name;
@@ -394,6 +395,7 @@ function renderPage() {
       <label class="btn sm">Land sales (MLS / CRS CSV or PDF)<input type="file" multiple accept=".csv,.pdf" data-act="files" hidden></label>
       <label class="btn sm">Construction cost database (Excel .xlsx)<input type="file" multiple accept=".xlsx" data-act="files" hidden></label>
       <label class="btn sm">Comp archive (Comp Archive.json.gz)<input type="file" multiple accept=".gz,.json" data-act="files" hidden></label>
+      <a class="btn sm" href="?view=db" target="genie-dbs">All my databases – what each holds ↗</a>
       <span class="help">Each file is recognized by what is in it and filed in the right database on this computer. You can also drop files anywhere on this page.</span></div></details>
     <span class="grow"></span>
     <label class="jobsel">Assignment <select data-act="pickjob" id="jobpick"><option value="">All assignments (start page)</option>${app.jobs.map(j => `<option value="${j.id}" ${j.id === J.id ? 'selected' : ''}>${esc(jobLabel(j))}</option>`).join('')}</select></label>

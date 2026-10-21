@@ -209,6 +209,23 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
 .vtag{font-size:11px;padding:2px 7px;border-radius:10px;background:#eef1f4;color:#4b5866}.vtag.v26{background:#fff1d6;color:#8a5a00}.vtag.v36{background:#e1f2e6;color:#226b3a}.vtag.vboth{background:#e6eefb;color:#2c4f8a}
 mark.blank{background:#fff3a8;padding:0 2px;border-radius:3px}.cmt textarea{width:100%;font:inherit;font-size:14px}.linkbtn{background:none;border:0;color:#2c5f9e;cursor:pointer;padding:2px 0;font-size:13px}
 .cmtLen{font-size:12px;color:#667}.cmtLen.over{color:#b3261e;font-weight:600}.cmtNote{font-size:12px;color:#8a5a00;background:#fff8e6;border-radius:6px;padding:3px 8px;margin-top:5px}.cmtSecH small{font-weight:400;text-transform:none;letter-spacing:0;color:#6a7a8a}
+/* the order's numbered tabs (her ask Oct 21 2026) */
+.otop { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; margin: 4px 0 14px; }
+.otitle { font: 700 22px/1.2 var(--display); margin-right: auto; }
+.otabs { display: flex; flex-wrap: wrap; gap: 6px; }
+.otabs button { font: 700 15.5px var(--ui); padding: 9px 16px; border-radius: 10px; border: 2px solid #1f3f66; background: #fff; color: #0b0f14; cursor: pointer; }
+.otabs button[aria-selected="true"] { background: #1f3f66; color: #fff; box-shadow: inset 0 -3px 0 #f4c400; }
+.otabs .ock:not(:empty) { display: inline-grid; place-items: center; width: 1.25em; height: 1.25em; margin-left: 6px; border-radius: 50%; background: #0b8a3d; color: #fff; font-size: .8em; }
+.otabs .onext { border-style: dashed; }
+.oask { border: 2px solid #c40000; background: #fff4f4; border-radius: 12px; padding: 12px 16px; margin: 0 0 14px; font-size: 16px; }
+.oask .toolrow { margin-top: 8px; }
+.scopeTab { display: none; gap: 14px; max-width: 980px; }
+#panel-letter[data-otab="scope"] .scopeTab { display: grid; }
+#panel-letter[data-otab="scope"] .leftCol, #panel-letter[data-otab="scope"] #docsSet, #panel-letter[data-otab="scope"] #reqSet, #panel-letter[data-otab="scope"] #notesSet { display: none !important; }
+#panel-letter[data-otab="docs"] .leftCol { display: none !important; }
+#panel-letter[data-otab="letter"] #docsSet, #panel-letter[data-otab="letter"] #reqSet, #panel-letter[data-otab="letter"] #notesSet { display: none !important; }
+#panel-letter[data-otab="docs"] .desk, #panel-letter[data-otab="scope"] .desk, #panel-letter[data-otab="letter"] .desk { grid-template-columns: minmax(0, 1fr); }
+#panel-letter[data-otab] .previewCol { order: -1; position: static; }
 /* ===== One look for every page (her requests Oct 21 2026) – shared by the Appraisal Assistant hub, the Comp genie and the iPad app.
    Her legend:  red * = required · green box = required · blue box = optional, goes into the report as more information ·
    grey box = not for you to fill in · purple writing = directions for you · red writing = a warning ·
@@ -290,6 +307,7 @@ nav.tabs button[aria-selected="true"] { background: var(--look-navy) !important;
   <nav class="tabs" aria-label="Sections">
     <button type="button" data-tab="home" aria-selected="true">Home</button>
     <button type="button" data-tab="saved" aria-selected="false">All files</button>
+    <button type="button" data-tab="dbs" aria-selected="false">My databases</button>
     <button type="button" data-tab="letter" aria-selected="false">Order</button>
     <button type="button" data-tab="market" aria-selected="false">Market</button>
     <button type="button" data-tab="genie" aria-selected="false">Comp genie</button>
@@ -305,6 +323,9 @@ nav.tabs button[aria-selected="true"] { background: var(--look-navy) !important;
 <section class="panel" id="panel-home" hidden><div id="homeBody"></div></section>
 <section class="panel" id="panel-new" hidden><div class="listHead"><div><h2>New order</h2></div></div><div id="newBody"></div></section>
 <section class="panel" id="panel-letter" hidden>
+ <div class="otop"><div class="otitle" id="oTitle"></div>
+  <nav class="otabs" aria-label="This order"><button type="button" data-otab="docs">① Documents<span class="ock"></span></button><button type="button" data-otab="letter">② Engagement letter<span class="ock"></span></button><button type="button" data-otab="scope">③ Scope of work<span class="ock"></span></button><button type="button" class="onext" id="oNext" title="Next: your iPad inspection and the comps, in the Comp genie">④ Inspection and comps → Comp genie</button></nav></div>
+ <div id="oAsk" class="oask" hidden></div>
  <div class="desk">
   <div class="leftCol">
     <p class="missing" id="missing"></p>
@@ -453,7 +474,7 @@ nav.tabs button[aria-selected="true"] { background: var(--look-navy) !important;
     <fieldset id="reqSet"><legend>Client requirements <span class="opt">from the client’s engagement letter</span></legend>
       <div id="reqBox" class="facts-box"></div>
     </fieldset>
-    <fieldset><legend>Notes and inspection to-dos</legend>
+    <fieldset id="notesSet"><legend>Notes and inspection to-dos</legend>
       <label>Notes <span class="opt">for you; not in the letter</span><textarea id="f_notes"></textarea></label>
       <label>To-dos at the inspection <span class="opt">yours, one per line · they show on the iPad (client requirements ticked iPad are added there too)</span><textarea id="f_todos"></textarea></label>
     </fieldset>
@@ -479,6 +500,17 @@ nav.tabs button[aria-selected="true"] { background: var(--look-navy) !important;
     </fieldset>
   </div>
  </div>
+ <div id="scopeTab" class="scopeTab">
+  <fieldset><legend>Approaches to value</legend><div id="scopeApproaches"></div><p class="help">These also go in your engagement letter and to the Comp genie (Report details › Scope of work).</p></fieldset>
+  <fieldset><legend>Highest and best use</legend>
+   <div class="checks"><label class="check"><input type="checkbox" id="f_hbuLegal">Legally permissible</label><label class="check"><input type="checkbox" id="f_hbuPhys">Physically possible</label><label class="check"><input type="checkbox" id="f_hbuFin">Financially feasible</label><label class="check"><input type="checkbox" id="f_hbuMax">Maximally productive</label></div>
+   <label>Is the highest and best use as improved the present use?<select id="f_hbuPresent"><option value="">—</option><option value="true">Yes</option><option value="false">No</option></select></label>
+   <div class="toolrow"><button type="button" class="btn small" id="hbuAll">All four tests met · present use</button></div>
+   <label>Highest and best use comment <span class="opt">confirm it after the inspection and the market analysis</span><textarea id="f_hbuNote" rows="4"></textarea></label></fieldset>
+  <fieldset><legend>Scope of work</legend>
+   <label>What you will do beyond the standard scope <span class="opt">goes to SFREP in Additional Scope of Work with the assumptions and conditions below (2,500 characters in all)</span><textarea id="f_sowNote" rows="3" placeholder="e.g. Exterior photos of the comps were taken from the street; the subject's permits were reviewed at the County."></textarea></label></fieldset>
+  <fieldset id="scopeEaHc"><legend>Extraordinary assumptions and hypothetical conditions</legend><p class="help">Also printed in your engagement letter. Add to them as you learn more – at the inspection or in your research.</p></fieldset>
+ </div>
 </section>
 <section class="panel" id="panel-saved" hidden>
   <div class="listHead"><div><h2>Orders</h2><p class="help" id="letterCount"></p></div>
@@ -489,6 +521,9 @@ nav.tabs button[aria-selected="true"] { background: var(--look-navy) !important;
 <section class="panel" id="panel-market" hidden>
   <div class="listHead"><div><h2 id="mkTitle">Market conditions</h2><p class="help">For the order that is open on the Order &amp; letter tab. Nothing here is sent anywhere.</p></div></div>
   <div id="mkBody"></div>
+</section>
+<section class="panel" id="panel-dbs" hidden>
+  <iframe id="dbsFrame" title="My databases" style="width:100%;height:calc(100vh - 170px);min-height:600px;border:1px solid var(--line);border-radius:14px;background:var(--panel)"></iframe>
 </section>
 <section class="panel" id="panel-genie" hidden>
   <div class="listHead"><div><h2 id="gnTitle">Comp genie</h2><p class="help" id="gnHelp">The Comp genie for the order that is open. It is the same Comp genie, inside the Appraisal Assistant: anything you do here is saved the same way.</p></div>
@@ -792,6 +827,8 @@ nav.tabs button[aria-selected="true"] { background: var(--look-navy) !important;
       <li>Your comments: click a 3.6 row to see what you wrote about that comp in that assignment (the sales comparison comment sentences that name it, the considered-not-used comment, your notes) with a <b>Copy</b> button. For ACI reports the comments are in the report itself – open the report named on the row.</li></ol></details>
     <details><summary>Adjustment grid and the full report for SFREP (Comp genie)</summary><ol>
       <li><b>Red boxes in SFREP after the import:</b> the genie now sends what Fannie Mae's own sample sends – a <b>0</b> in every adjustment box with no adjustment, the comps' unfinished basement (0), interior and exterior quality and condition, "homeowner keeps up the outside", the data source for each comp's transfer history, the subject's market area name, and named units for a comp with an ADU. The recorded document number now comes in as the identifier of the <b>Assessor Record</b> source (SFREP's list has no "Deed"). What only you can answer is in the <b>Pre-check</b>: each comp's <b>street surface</b>, <b>view range</b> (Full, Partial, Seasonal) and <b>energy efficient features</b> (pick None when it has none) – click the line to go to the box; type <b>=</b> to copy the subject's.</li>
+      <li><b>The order's steps:</b> at the top of each order – <b>① Documents</b> (drop every file for this order; if there is no engagement letter you are asked whether you need to write one), <b>② Engagement letter</b> (the order details and your letter, or the client's letter), <b>③ Scope of work</b> (approaches, highest and best use, added scope, extraordinary assumptions and hypothetical conditions – the Comp genie's Report details uses these), then <b>④ Inspection and comps</b> in the Comp genie. A green ✓ shows on each step that is complete.</li>
+      <li><b>My databases</b> (tab at the top): your comp archive, CORT closings, land sales and construction cost database – what each holds, how many records, where it is used, and a button to add files (CSV, PDF, Excel). Files for one assignment go in that order's Documents instead.</li>
       <li><b>The grid in its own box:</b> in the Workbook, <b>View › In its own box</b> – the grid alone scrolls up and down (mouse wheel) and side to side (the bar at the bottom of the box, or Shift + wheel), with the comp names and line names staying put; the page behind does not move. Esc or ✕ closes it. <b>View › Own window</b> opens the grid in a separate window you can move to another screen.</li>
       <li><b>Adding to your databases:</b> Comp genie › <b>📥 Add to my databases</b> (top) – CORT weekly closings, land sales, the construction cost database, the comp archive. Or drop the files anywhere on the page.</li>
       <li><b>Report details</b> (assignment, highest and best use, scope of work, extraordinary assumptions and hypothetical conditions, value): step <b>⑤ Report details</b> in the Comp genie – it is at the bottom of ③ Final grid.</li>
@@ -913,7 +950,7 @@ nav.tabs button[aria-selected="true"] { background: var(--look-navy) !important;
 </div>
 <div id="toast" role="status" hidden></div>
 <script>
-const BUILD='o1-1021-1738';
+const BUILD='o1-1021-1758';
 const G = (() => {
 /* ---------------- small helpers ---------------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -4782,7 +4819,7 @@ let aiText = store.get('aiText', null);
 let cur = null;           // the letter being edited
 let clientCount = 1;
 
-const NEW_FIELDS = { rightsNot: '', signDate: '', jurisdiction: '', street: '', city: '', state: 'CA', zip: '', zip4: '', stage: 'New', inspDate: '', inspTime: '', effDate: '', unit: '', apn: '', county: '', lat: '', lon: '', owner: '', legal: '', borrower: '',
+const NEW_FIELDS = { hbuLegal: false, hbuPhys: false, hbuFin: false, hbuMax: false, hbuPresent: '', hbuNote: '', sowNote: '', rightsNot: '', signDate: '', jurisdiction: '', street: '', city: '', state: 'CA', zip: '', zip4: '', stage: 'New', inspDate: '', inspTime: '', effDate: '', unit: '', apn: '', county: '', lat: '', lon: '', owner: '', legal: '', borrower: '',
   lenderDiff: false, govAgency: '', investorId: '', reportForm: '', lenderCo: '', lenderAddr1: '', lenderAddr2: '', loanNo: '', amcUsed: false, amcCo: '', amcAddr1: '', amcAddr2: '', amcLic: '', amcState: 'CA', amcExp: '', amcFee: '', amcRef: '', notes: '', todos: '', invNo: '', invDate: '', invAmt: '', paidDate: '', paidMethod: '', paidAmt: '', paidRef: '' };
 function blankLetter() {
   return { ...NEW_FIELDS, docs: [], crs: null, listings: [], permits: null, created: new Date().toISOString(), id: uid(), status: 'Client letter', reportForm: 'uad36', fileNo: '', orderDate: todayISO(), dueDate: '', aiUse: '', orderDoc: null, agreeDate: todayISO(), type: 'uadPurchase', clients: [{}], address: '', propType: 'sfr', propTypeOther: '',
@@ -4912,7 +4949,7 @@ function render() {
   $('#missing').className = missing.length ? 'missing warn' : 'missing ok';
   if (hasContent(f)) { clearTimeout(autoT); autoT = setTimeout(() => saveLetter(true, true), 700); }
   try { localStorage.setItem('aa.curOrder', f.id); } catch (e) {}
-  renderLinks();
+  renderLinks(); oRender(f);
 }
 let autoT = null;
 const hasContent = f => !!(f.fileNo || ((f.address || '').trim() && !/^[A-Z]{2}$/.test((f.address || '').trim())) || (f.docs || []).length || ((f.clients || [])[0] || {}).name || ((f.clients || [])[0] || {}).company || letters.some(x => x.id === f.id));
@@ -4968,7 +5005,7 @@ function renderClientView(f) {
       ${req.length ? `<table class="facts">${req.map(x => `<tr><th>${h(x.label)}</th><td>${h(x.value)}${x.page ? ' <small class="muted">p. ' + x.page + '</small>' : ''}</td></tr>`).join('')}</table>` : '<p class="help">Click <b>Read and list requirements</b> to note the report form, addenda, photo rules, due date, fee and inspection to-dos from it.</p>'}
       <label class="check"><input type="checkbox" id="clShowPages" ${clPagesOn() ? 'checked' : ''}> Also show the pages here</label>
       <div class="clpages" id="clPages"></div>`
-    : '<p class="help">Drop the client’s engagement letter or order into <b>Documents</b> on the right. It shows here instead of your letter.</p>'}
+    : '<p class="help">Drop the client’s engagement letter or order into <b>① Documents</b>. It shows here instead of your letter.</p>'}
     <div class="row"><button type="button" class="btn ghost small" id="clMine">Write my own letter instead</button></div>`;
   box.querySelectorAll('[data-clread]').forEach(b => b.onclick = () => { saveLetter(true, true); openReader(b.dataset.clread); });
   box.querySelectorAll('[data-clwin]').forEach(b => b.onclick = () => openDocWindow(b.dataset.clwin));
@@ -5144,6 +5181,7 @@ function showTab(t) { CUR_TAB = t;
   if (t === 'home') renderHome();
   if (t === 'letter') setTimeout(() => document.querySelectorAll('textarea[data-rqtext]').forEach(x => { x.style.height = 'auto'; x.style.height = (x.scrollHeight + 2) + 'px'; }), 0);
   syncGenieTop(); tabMarks();
+  if (t === 'dbs') { const fr = $('#dbsFrame'); if (!fr.dataset.loaded) { fr.dataset.loaded = '1'; fr.src = '../comp-genie/index.html?view=db&embed=1&v=' + Date.now(); } }   // My databases (her ask Oct 21 2026)
   if (t === 'genie') { const on = cur && hasContent(cur); if (on) saveLetter(true, true); const nm = on ? [cur.fileNo, street(cur)].filter(Boolean).join(' ') : '';
     $('#gnTitle').textContent = 'Comp genie' + (nm ? ' – ' + nm : ''); $('#gnOwn').href = on ? genieURL(cur) : '../comp-genie/';
     const fr = $('#genieFrame'); const want = on ? cur.id : '';
@@ -5339,6 +5377,32 @@ function armDelete(b, run) {
 
 /* Back to top: shows once the page is scrolled down */
 window.addEventListener('DOMContentLoaded', () => { const b = document.getElementById('toTop'); if (!b) return; const f = () => { b.hidden = window.scrollY < 700; }; window.addEventListener('scroll', f, { passive: true }); f(); b.onclick = () => window.scrollTo({ top: 0, behavior: 'smooth' }); });
+
+/* ===== the order's numbered tabs (her ask Oct 21 2026): ① Documents ② Engagement letter ③ Scope of work, then ④ inspection and comps in the Comp genie ===== */
+let OTAB = null;
+function oSetup() { if (oSetup.done) return; oSetup.done = true;
+  const pc = document.querySelector('#panel-letter .previewCol'), ds = $('#docsSet'); [$('#reqSet'), $('#notesSet')].forEach(fs => { if (fs && pc) pc.appendChild(fs); });   // with the documents
+  const ap = $('#f_apSales') && $('#f_apSales').closest('.checks'); if (ap && ap.parentElement) $('#scopeApproaches').appendChild(ap.parentElement);
+  ['#f_ea', '#f_hc'].forEach(id => { const el = $(id); const lab = el && el.closest('label'); if (lab) $('#scopeEaHc').appendChild(lab); });
+  document.querySelectorAll('#panel-letter [data-otab]').forEach(b => b.onclick = () => { OTAB = b.dataset.otab; if (cur) cur.otab = OTAB; oRender(cur); window.scrollTo({ top: 0 }); });
+  $('#oNext').onclick = () => { const t = document.querySelector('nav.tabs [data-tab="genie"]'); if (t) t.click(); };
+  $('#hbuAll').onclick = () => { ['Legal', 'Phys', 'Fin', 'Max'].forEach(k => { $('#f_hbu' + k).checked = true; }); $('#f_hbuPresent').value = 'true'; update(); };
+  ['#f_hbuLegal', '#f_hbuPhys', '#f_hbuFin', '#f_hbuMax', '#f_hbuPresent', '#f_hbuNote', '#f_sowNote'].forEach(id => { const el = $(id); if (el) { el.addEventListener('input', update); el.addEventListener('change', update); } }); }
+function oDone(f) { const D = f.docs || [], has = t => D.some(d => d.type === t);
+  return { docs: D.length > 0, letter: has('clientLetter') || has('myLetter') || !!f.letterMade || ['Sent', 'Signed'].includes(f.status),
+    scope: !!(f.apSales || f.apCost || f.apIncome) && ((f.hbuLegal && f.hbuPhys && f.hbuFin && f.hbuMax) || !!String(f.hbuNote || '').trim()) }; }
+function oRender(f) { oSetup(); if (!f) return; const P = $('#panel-letter'); const ok = oDone(f);
+  const tab = OTAB && f.otab === OTAB ? OTAB : (f.otab || (!ok.docs || !ok.letter ? 'docs' : !ok.scope ? 'scope' : 'docs')); OTAB = tab; P.dataset.otab = tab;
+  P.querySelectorAll('.otabs [data-otab]').forEach(b => { b.setAttribute('aria-selected', b.dataset.otab === tab ? 'true' : 'false'); b.querySelector('.ock').textContent = ok[b.dataset.otab] ? '✓' : ''; });
+  $('#oTitle').textContent = [f.fileNo, (f.address || '').trim()].filter(Boolean).join(' · ') || 'New order';
+  /* no engagement letter among the documents: does she need to write one? */
+  const A = $('#oAsk'); const ask = tab === 'docs' && ok.docs && !ok.letter && !f.noLetterAsk && f.letterMode !== 'mine';
+  A.hidden = !ask; if (ask && !A.dataset.on) { A.dataset.on = '1'; A.innerHTML = `<b>No engagement letter in this order's documents yet.</b> Do you need to write one?
+    <div class="toolrow"><button type="button" class="btn primary" id="oaWrite">Yes – write my engagement letter</button><button type="button" class="btn" id="oaClient">No – the client's letter is coming</button><button type="button" class="btn ghost" id="oaNone">Not needed for this order</button></div>`;
+    $('#oaWrite').onclick = () => { $('#f_status').value = 'Drafted'; cur.letterMode = 'mine'; OTAB = 'letter'; cur.otab = 'letter'; A.dataset.on = ''; update(); };
+    $('#oaClient').onclick = () => { cur.noLetterAsk = true; A.dataset.on = ''; update(); toast('Drop the client’s letter in Documents when it comes'); };
+    $('#oaNone').onclick = () => { cur.noLetterAsk = true; A.dataset.on = ''; update(); }; }
+  if (!ask) A.dataset.on = ''; }
 
 /* =====================================================================
    ✍ Help me write (Oct 20 2026, her ask): under each comment box. She types what she wants to say; Claude

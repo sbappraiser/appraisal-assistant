@@ -45,9 +45,14 @@ function reportFrom(J) {
     amc: o.amcUsed ? (o.amcCo || '') : '', amcAddr1: o.amcUsed ? o.amcAddr1 || '' : '', amcAddr2: o.amcUsed ? o.amcAddr2 || '' : '',
     insp: I.inspType || 'InteriorAndExterior', market: (o.market && o.market.uad) || null, contract: o.uad || null, hasOrder: !!o.id,
     sowCost: o.id ? !!o.apCost : undefined, sowIncome: o.id ? !!o.apIncome : undefined, sowRent: o.id ? !!o.rent : undefined, sowAddlUser: o.id ? !!String(o.otherUsers || '').trim() : undefined,
+    /* her Order › Scope of work tab (Oct 21 2026): highest and best use, added scope, extraordinary assumptions, hypothetical conditions */
+    hbu: { legal: !!o.hbuLegal, phys: !!o.hbuPhys, fin: !!o.hbuFin, max: !!o.hbuMax }, hbuPresent: o.hbuPresent || '', hbuNote: o.hbuNote || '', sowNote: o.sowNote || '', eaNote: o.ea || '', hcNote: o.hc || '',
     listedYear: o.listing === 'listed' || o.listing === 'contract' ? true : undefined, priorHits: priorHits(J, o.effDate || o.inspDate || o.dod || J.subject.eff || '') };
 }
 const rv = (J, k) => { const R = R0(J), F = reportFrom(J); return blank(R[k]) ? F[k] : R[k]; };
+/* her answers here, or the order's Scope of work tab where she left one blank (read-only copy for checking and export) */
+function RE(J) { const R = R0(J), F = reportFrom(J); const o = { ...R }; ['hbuNote', 'hbuPresent', 'sowNote', 'eaNote', 'hcNote'].forEach(k => { if (blank(R[k]) && !blank(F[k])) o[k] = F[k]; });
+  o.hbu = Object.values(R.hbu || {}).some(Boolean) ? R.hbu : (Object.values(F.hbu || {}).some(Boolean) ? F.hbu : (R.hbu || {})); return o; }
 
 /* her exposure-time rule (Oct 19 2026): count only the days a comp was on the market at a reasonable price – from its last price
    reduction to the pending / contingent date; a comp that was never reduced counts its days on market */
@@ -72,7 +77,7 @@ function priorHits(J, eff0) {
   return out;
 }
 function reportHTML(J) {
-  const R = R0(J), F = reportFrom(J), G = G0(J), H = R.hbu;
+  const R = R0(J), F = reportFrom(J), G = G0(J), H = RE(J).hbu, RX = RE(J);
   const inp = (k, ph, w) => `<input class="txt" data-rpt="${k}" value="${esc(R[k] ?? '')}" placeholder="${esc(F[k] || ph || '')}"${w ? ` style="width:${w}"` : ''}>`;
   const sel = (k, list, def, note = 'from the order') => `<select data-rpt="${k}"><option value="">${def ? esc((list.find(x => x[0] === def) || [, ''])[1]) + ' (' + note + ')' : '—'}</option>${list.map(([v, l]) => `<option value="${v}"${R[k] === v ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select>`;
   const yn = (k, def) => `<select data-rpt="${k}"><option value="">${def === true ? 'Yes' : def === false ? 'No' : '—'}${def !== undefined ? ' (usual)' : ''}</option><option value="true"${R[k] === 'true' ? ' selected' : ''}>Yes</option><option value="false"${R[k] === 'false' ? ' selected' : ''}>No</option></select>`;
@@ -98,21 +103,21 @@ function reportHTML(J) {
       <label class="fld"><span>AMC</span>${inp('amc')}</label></section>
     <section><h3>Highest and best use</h3>
       ${HBU_TESTS.map(([k, l]) => `<label class="check"><input type="checkbox" data-hbu="${k}" ${H[k] ? 'checked' : ''}>${l}</label>`).join('')}
-      <label class="fld"><span>Is the highest and best use as improved the present use?</span>${yn('hbuPresent')}</label>
+      <label class="fld"><span>Is the highest and best use as improved the present use?</span>${yn('hbuPresent', F.hbuPresent === 'true' ? true : F.hbuPresent === 'false' ? false : undefined)}</label>
       <div class="row"><button class="btn small" data-act="hbu-all">All four tests met · present use</button><button class="btn ghost small" data-act="hbu-draft">Draft the comment</button></div>
-      <label class="fld"><span>Highest and best use comment ${cmtBtn('textarea[data-rpt="hbuNote"]')}</span><textarea class="txt" rows="4" data-rpt="hbuNote" placeholder="Your comment">${esc(R.hbuNote || '')}</textarea></label></section>
+      <label class="fld"><span>Highest and best use comment ${cmtBtn('textarea[data-rpt="hbuNote"]')}</span><textarea class="txt" rows="4" data-rpt="hbuNote" placeholder="${esc(F.hbuNote ? 'From the order’s Scope of work: ' + F.hbuNote : 'Your comment')}">${esc(R.hbuNote || '')}</textarea></label></section>
     <section><h3>Scope of work <small>UAD 3.6 – every answer is required</small></h3>
       <label class="fld"><span>Cost approach developed?</span>${yn('sowCost', F.sowCost)}</label>
       <label class="fld"><span>Income approach developed?</span>${yn('sowIncome', F.sowIncome)}</label>
       <label class="fld"><span>Rent schedule (1007) included?</span>${yn('sowRent', F.sowRent)}</label>
       <label class="fld"><span>Government agency appraisal (FHA, VA, USDA)?</span>${yn('sowGov', false)}${R.sowGov === 'true' ? ` ${sel('govType', [['FHA', 'FHA'], ['VA', 'VA'], ['USDA', 'USDA']], '')}` : ''}</label>
       <label class="fld"><span>Intended users besides the client?</span>${yn('sowAddlUser', F.sowAddlUser)}</label>
-      <label class="fld"><span>Additional scope of work?</span>${yn('sowAddlScope', sowAny(R) ? true : false)}</label>
-      <label class="fld"><span>Scope of work – what you did beyond the standard <small class="muted">(shares 2,500 characters with the two boxes below)</small></span><textarea class="txt" rows="3" maxlength="2500" data-rpt="sowNote" placeholder="e.g. Exterior photos of the comps were taken from the street; the subject's permits were reviewed at the County.">${esc(R.sowNote || '')}</textarea></label></section>
+      <label class="fld"><span>Additional scope of work?</span>${yn('sowAddlScope', sowAny(RX) ? true : false)}</label>
+      <label class="fld"><span>Scope of work – what you did beyond the standard <small class="muted">(shares 2,500 characters with the two boxes below)</small></span><textarea class="txt" rows="3" maxlength="2500" data-rpt="sowNote" placeholder="${esc(F.sowNote ? 'From the order’s Scope of work: ' + F.sowNote : 'e.g. Exterior photos of the comps were taken from the street; the subject\'s permits were reviewed at the County.')}">${esc(R.sowNote || '')}</textarea></label></section>
     <section><h3>Extraordinary assumptions and hypothetical conditions <small>go to SFREP in Additional Scope of Work</small></h3>
-      <label class="fld"><span>Extraordinary assumptions</span><textarea class="txt" rows="3" maxlength="2500" data-rpt="eaNote" placeholder="e.g. The owner-reported permits for the 2010 remodel are assumed accurate; if not, the value could change.">${esc(R.eaNote || '')}</textarea></label>
-      <label class="fld"><span>Hypothetical conditions</span><textarea class="txt" rows="3" maxlength="2500" data-rpt="hcNote" placeholder="e.g. As if the repairs listed in the Unit Interior section were completed as of the effective date.">${esc(R.hcNote || '')}</textarea></label>
-      <p class="help">${sowLen(R).toLocaleString()} of 2,500 characters used (all three boxes together). A value <i>subject to</i> repairs or completion: choose it in Market value condition under Value and reconciliation.</p></section>
+      <label class="fld"><span>Extraordinary assumptions</span><textarea class="txt" rows="3" maxlength="2500" data-rpt="eaNote" placeholder="${esc(F.eaNote ? 'From the order’s Scope of work: ' + F.eaNote : 'e.g. The owner-reported permits for the 2010 remodel are assumed accurate; if not, the value could change.')}">${esc(R.eaNote || '')}</textarea></label>
+      <label class="fld"><span>Hypothetical conditions</span><textarea class="txt" rows="3" maxlength="2500" data-rpt="hcNote" placeholder="${esc(F.hcNote ? 'From the order’s Scope of work: ' + F.hcNote : 'e.g. As if the repairs listed in the Unit Interior section were completed as of the effective date.')}">${esc(R.hcNote || '')}</textarea></label>
+      <p class="help">${sowLen(RX).toLocaleString()} of 2,500 characters used (all three boxes together). A value <i>subject to</i> repairs or completion: choose it in Market value condition under Value and reconciliation.</p></section>
     <section><h3>Subject and site</h3>
       <label class="fld"><span>Legal description</span><textarea class="txt" rows="2" data-rpt="legal" placeholder="${esc(F.legal || 'From the CRS report or the preliminary title report')}">${esc(R.legal || '')}</textarea></label>
       <label class="fld"><span>Number of parcels</span>${inp('parcels', '1', '5em')}</label>
@@ -184,7 +189,7 @@ const rightsGuess = t => /oil|gas|mineral|hydrocarbon/i.test(t || '') ? 'Mineral
 
 /* ---------------- into the full report (DOM of the merged file) ---------------- */
 function writeReportXML(doc, NS, J, SUBJ, VA, SVC) {
-  const R = R0(J), F = reportFrom(J), H = R.hbu, G = G0(J);
+  const R = RE(J), F = reportFrom(J), H = R.hbu, G = G0(J);   // RE: her answers, else the order's Scope of work tab
   const pos = (parent, tag) => { const seq = D1_ORDER[parent.localName] || []; const r = seq.indexOf(tag); const kids = [...parent.children];
     if (r >= 0) return kids.find(k => { const i = seq.indexOf(k.localName); return i > r; }) || null;
     return kids.find(k => seq.indexOf(k.localName) < 0 && k.localName > tag) || null; };

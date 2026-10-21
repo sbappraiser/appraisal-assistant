@@ -14,7 +14,7 @@ let aiText = store.get('aiText', null);
 let cur = null;           // the letter being edited
 let clientCount = 1;
 
-const NEW_FIELDS = { rightsNot: '', signDate: '', jurisdiction: '', street: '', city: '', state: 'CA', zip: '', zip4: '', stage: 'New', inspDate: '', inspTime: '', effDate: '', unit: '', apn: '', county: '', lat: '', lon: '', owner: '', legal: '', borrower: '',
+const NEW_FIELDS = { hbuLegal: false, hbuPhys: false, hbuFin: false, hbuMax: false, hbuPresent: '', hbuNote: '', sowNote: '', rightsNot: '', signDate: '', jurisdiction: '', street: '', city: '', state: 'CA', zip: '', zip4: '', stage: 'New', inspDate: '', inspTime: '', effDate: '', unit: '', apn: '', county: '', lat: '', lon: '', owner: '', legal: '', borrower: '',
   lenderDiff: false, govAgency: '', investorId: '', reportForm: '', lenderCo: '', lenderAddr1: '', lenderAddr2: '', loanNo: '', amcUsed: false, amcCo: '', amcAddr1: '', amcAddr2: '', amcLic: '', amcState: 'CA', amcExp: '', amcFee: '', amcRef: '', notes: '', todos: '', invNo: '', invDate: '', invAmt: '', paidDate: '', paidMethod: '', paidAmt: '', paidRef: '' };
 function blankLetter() {
   return { ...NEW_FIELDS, docs: [], crs: null, listings: [], permits: null, created: new Date().toISOString(), id: uid(), status: 'Client letter', reportForm: 'uad36', fileNo: '', orderDate: todayISO(), dueDate: '', aiUse: '', orderDoc: null, agreeDate: todayISO(), type: 'uadPurchase', clients: [{}], address: '', propType: 'sfr', propTypeOther: '',
@@ -144,7 +144,7 @@ function render() {
   $('#missing').className = missing.length ? 'missing warn' : 'missing ok';
   if (hasContent(f)) { clearTimeout(autoT); autoT = setTimeout(() => saveLetter(true, true), 700); }
   try { localStorage.setItem('aa.curOrder', f.id); } catch (e) {}
-  renderLinks();
+  renderLinks(); oRender(f);
 }
 let autoT = null;
 const hasContent = f => !!(f.fileNo || ((f.address || '').trim() && !/^[A-Z]{2}$/.test((f.address || '').trim())) || (f.docs || []).length || ((f.clients || [])[0] || {}).name || ((f.clients || [])[0] || {}).company || letters.some(x => x.id === f.id));
@@ -200,7 +200,7 @@ function renderClientView(f) {
       ${req.length ? `<table class="facts">${req.map(x => `<tr><th>${h(x.label)}</th><td>${h(x.value)}${x.page ? ' <small class="muted">p. ' + x.page + '</small>' : ''}</td></tr>`).join('')}</table>` : '<p class="help">Click <b>Read and list requirements</b> to note the report form, addenda, photo rules, due date, fee and inspection to-dos from it.</p>'}
       <label class="check"><input type="checkbox" id="clShowPages" ${clPagesOn() ? 'checked' : ''}> Also show the pages here</label>
       <div class="clpages" id="clPages"></div>`
-    : '<p class="help">Drop the client’s engagement letter or order into <b>Documents</b> on the right. It shows here instead of your letter.</p>'}
+    : '<p class="help">Drop the client’s engagement letter or order into <b>① Documents</b>. It shows here instead of your letter.</p>'}
     <div class="row"><button type="button" class="btn ghost small" id="clMine">Write my own letter instead</button></div>`;
   box.querySelectorAll('[data-clread]').forEach(b => b.onclick = () => { saveLetter(true, true); openReader(b.dataset.clread); });
   box.querySelectorAll('[data-clwin]').forEach(b => b.onclick = () => openDocWindow(b.dataset.clwin));
@@ -376,6 +376,7 @@ function showTab(t) { CUR_TAB = t;
   if (t === 'home') renderHome();
   if (t === 'letter') setTimeout(() => document.querySelectorAll('textarea[data-rqtext]').forEach(x => { x.style.height = 'auto'; x.style.height = (x.scrollHeight + 2) + 'px'; }), 0);
   syncGenieTop(); tabMarks();
+  if (t === 'dbs') { const fr = $('#dbsFrame'); if (!fr.dataset.loaded) { fr.dataset.loaded = '1'; fr.src = '../comp-genie/index.html?view=db&embed=1&v=' + Date.now(); } }   // My databases (her ask Oct 21 2026)
   if (t === 'genie') { const on = cur && hasContent(cur); if (on) saveLetter(true, true); const nm = on ? [cur.fileNo, street(cur)].filter(Boolean).join(' ') : '';
     $('#gnTitle').textContent = 'Comp genie' + (nm ? ' – ' + nm : ''); $('#gnOwn').href = on ? genieURL(cur) : '../comp-genie/';
     const fr = $('#genieFrame'); const want = on ? cur.id : '';
@@ -571,3 +572,29 @@ function armDelete(b, run) {
 
 /* Back to top: shows once the page is scrolled down */
 window.addEventListener('DOMContentLoaded', () => { const b = document.getElementById('toTop'); if (!b) return; const f = () => { b.hidden = window.scrollY < 700; }; window.addEventListener('scroll', f, { passive: true }); f(); b.onclick = () => window.scrollTo({ top: 0, behavior: 'smooth' }); });
+
+/* ===== the order's numbered tabs (her ask Oct 21 2026): ① Documents ② Engagement letter ③ Scope of work, then ④ inspection and comps in the Comp genie ===== */
+let OTAB = null;
+function oSetup() { if (oSetup.done) return; oSetup.done = true;
+  const pc = document.querySelector('#panel-letter .previewCol'), ds = $('#docsSet'); [$('#reqSet'), $('#notesSet')].forEach(fs => { if (fs && pc) pc.appendChild(fs); });   // with the documents
+  const ap = $('#f_apSales') && $('#f_apSales').closest('.checks'); if (ap && ap.parentElement) $('#scopeApproaches').appendChild(ap.parentElement);
+  ['#f_ea', '#f_hc'].forEach(id => { const el = $(id); const lab = el && el.closest('label'); if (lab) $('#scopeEaHc').appendChild(lab); });
+  document.querySelectorAll('#panel-letter [data-otab]').forEach(b => b.onclick = () => { OTAB = b.dataset.otab; if (cur) cur.otab = OTAB; oRender(cur); window.scrollTo({ top: 0 }); });
+  $('#oNext').onclick = () => { const t = document.querySelector('nav.tabs [data-tab="genie"]'); if (t) t.click(); };
+  $('#hbuAll').onclick = () => { ['Legal', 'Phys', 'Fin', 'Max'].forEach(k => { $('#f_hbu' + k).checked = true; }); $('#f_hbuPresent').value = 'true'; update(); };
+  ['#f_hbuLegal', '#f_hbuPhys', '#f_hbuFin', '#f_hbuMax', '#f_hbuPresent', '#f_hbuNote', '#f_sowNote'].forEach(id => { const el = $(id); if (el) { el.addEventListener('input', update); el.addEventListener('change', update); } }); }
+function oDone(f) { const D = f.docs || [], has = t => D.some(d => d.type === t);
+  return { docs: D.length > 0, letter: has('clientLetter') || has('myLetter') || !!f.letterMade || ['Sent', 'Signed'].includes(f.status),
+    scope: !!(f.apSales || f.apCost || f.apIncome) && ((f.hbuLegal && f.hbuPhys && f.hbuFin && f.hbuMax) || !!String(f.hbuNote || '').trim()) }; }
+function oRender(f) { oSetup(); if (!f) return; const P = $('#panel-letter'); const ok = oDone(f);
+  const tab = OTAB && f.otab === OTAB ? OTAB : (f.otab || (!ok.docs || !ok.letter ? 'docs' : !ok.scope ? 'scope' : 'docs')); OTAB = tab; P.dataset.otab = tab;
+  P.querySelectorAll('.otabs [data-otab]').forEach(b => { b.setAttribute('aria-selected', b.dataset.otab === tab ? 'true' : 'false'); b.querySelector('.ock').textContent = ok[b.dataset.otab] ? '✓' : ''; });
+  $('#oTitle').textContent = [f.fileNo, (f.address || '').trim()].filter(Boolean).join(' · ') || 'New order';
+  /* no engagement letter among the documents: does she need to write one? */
+  const A = $('#oAsk'); const ask = tab === 'docs' && ok.docs && !ok.letter && !f.noLetterAsk && f.letterMode !== 'mine';
+  A.hidden = !ask; if (ask && !A.dataset.on) { A.dataset.on = '1'; A.innerHTML = `<b>No engagement letter in this order's documents yet.</b> Do you need to write one?
+    <div class="toolrow"><button type="button" class="btn primary" id="oaWrite">Yes – write my engagement letter</button><button type="button" class="btn" id="oaClient">No – the client's letter is coming</button><button type="button" class="btn ghost" id="oaNone">Not needed for this order</button></div>`;
+    $('#oaWrite').onclick = () => { $('#f_status').value = 'Drafted'; cur.letterMode = 'mine'; OTAB = 'letter'; cur.otab = 'letter'; A.dataset.on = ''; update(); };
+    $('#oaClient').onclick = () => { cur.noLetterAsk = true; A.dataset.on = ''; update(); toast('Drop the client’s letter in Documents when it comes'); };
+    $('#oaNone').onclick = () => { cur.noLetterAsk = true; A.dataset.on = ''; update(); }; }
+  if (!ask) A.dataset.on = ''; }
