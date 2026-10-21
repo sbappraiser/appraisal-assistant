@@ -322,3 +322,23 @@ Open questions for her: construction cost source (Marshall & Swift / CoreLogic? 
 - Drafting: rule-based from her own phrases and comment library first (works on No-AI orders); Claude only when the order's AI setting allows it.
 - Her rule (Oct 19 2026): the Comp genie AND the cost approach both use the cost database and the land sale database – one shared copy in the browser (same site, like the archive and CORT), read by both. Genie: depreciated cost as support for adjustments (ADU, garage, pool, additions) and land sales for site/usable-area adjustments; cost approach: land value + cost new + depreciation.
 - Cost data (her words, Oct 19 2026): her own collection of local contractor budgets is THE cost source – Construction_Cost_Database.xlsx (built with Claude Oct 13: 32 projects, 2,457 line items by trade and cost layer, Summary by layer, CCCI index table to bring budgets to the effective date, 189 review flags still undecided). She stopped using Marshall & Swift (needed too many add-ons to reach South Coast costs; building-cost.com similar). She occasionally checks against the California State Board of Equalization Assessors' Handbook (residential building costs, current year) – a secondary check, not the main source.
+
+## One look, one checklist, one safety net (her requests Oct 21 2026 – to build in this order)
+Her words summarized: UAD 3.6 has a lot of data and steps; she finds it confusing which section, database or process she is in. Make it organized and user friendly; simplify; integrate into SFREP as much as possible; remove redundant steps and data. She is the appraiser – the assistant does clerical work, analysis, builds and refines her databases, keeps the system up to date.
+
+**A. One look everywhere (Home, Files, Order, Market, Comp genie, Bookkeeping, Clients, My comments / standard writing, iPad).** One shared style sheet; same fonts, colors, page layout.
+- Bigger type throughout (nothing under ~15px); more black-on-white contrast; warnings in red.
+- Her color legend (shown via an ⓘ "What the colors mean", not always on screen): red * = required; green box = required; blue box = optional but goes into the report as additional information; grey box = not to be filled in; colored small writing (one color only) = directions for her; current field / current column = pale yellow (replace bright orange highlights); light pink instead of peach.
+- Use the ⓘ icon for explanations; remove descriptions that repeat the heading.
+- File name (assignment address / file no.) at the top right of every page; upper left stays as it is.
+- Bolder, more distinctive tabs. Green check marks when something is complete.
+- Drop-downs / pick lists scroll with the mouse wheel.
+- Grid: horizontal and vertical scroll bars, property addresses stay fixed at the top.
+
+**B. Numbered steps with a checklist and a "Still to do" list** for each assignment (order → inspection → comps → grid → cost → report details → pre-check → export → SFREP), each step showing which database / process it uses and ✓ when complete.
+
+**C. Review genie** (before export, beyond the pre-check): math (adjusted prices, net/gross, cost approach sums, $/sf), consistency (same fact the same everywhere: subject vs grid vs comments), USPAP (scope, EA/HC disclosed, prior services, certifications, workfile), engagement letter / client requirements, GSE requirements, UAD 3.6 (A-1) requirements. Plain-words report with links to each spot.
+
+**D. Safety** (data, program, computer): automatic versioned backups (already: Back up, autobackup) – add a scheduled reminder and an integrity check of each database on open; never change her originals (already a rule); a change log for her databases (who/what/when) with undo; nothing confidential leaves her computer except what she sends; repos hold no client data (rule); dependency-free pages (no outside scripts) to limit malware risk; guidance for her machine (updates, antivirus, encrypted disk, separate backup drive / cloud). Liability: USPAP-compliant disclosures, the workfile kept complete (what she relied on), report checks above – she remains the appraiser of record; the assistant never makes value decisions.
+
+Done Oct 21 2026 (g2-1021-1700): Report details reordered – Assignment, Highest and best use, Scope of work, Extraordinary assumptions and hypothetical conditions (own section), Subject and site, Prior services, Value. Her three boxes (added scope, EAs, HCs) go together into 3.6 Additional Scope of Work (2,500 characters, counter shown). Note: F-1 29.003 says the additional scope "cannot be contrary to, and should not repeat, the predefined scope of work text" – she may expand it.

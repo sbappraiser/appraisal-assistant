@@ -9,6 +9,9 @@
 const ASSIGN = [['Purchase', 'Purchase'], ['Refinance', 'Refinance'], ['HomeEquity', 'Home equity'], ['Construction', 'Construction'], ['LoanModification', 'Loan modification'], ['REO', 'REO'], ['ShortSale', 'Short sale'], ['DeedInLieu', 'Deed in lieu'], ['Preforeclosure', 'Pre-foreclosure'], ['PortfolioEvaluation', 'Portfolio evaluation'], ['Other', 'Other']];
 const VMETHOD = [['TraditionalAppraisal', 'Traditional appraisal'], ['HybridAppraisal', 'Hybrid appraisal'], ['DesktopAppraisal', 'Desktop appraisal']];
 const VCOND = [['AsIs', 'As is'], ['SubjectToRepair', 'Subject to repair'], ['SubjectToInspection', 'Subject to inspection'], ['SubjectToCompletionPerPlans', 'Subject to completion per plans']];
+/* her three boxes → UAD 3.6 Additional Scope of Work (one 2,500-character field) */
+const sowText = R => [String(R.sowNote || '').trim(), String(R.eaNote || '').trim() ? 'Extraordinary assumptions: ' + String(R.eaNote).trim() : '', String(R.hcNote || '').trim() ? 'Hypothetical conditions: ' + String(R.hcNote).trim() : ''].filter(Boolean).join('\n\n');
+const sowAny = R => !!sowText(R); const sowLen = R => sowText(R).length;
 const EXCL_REASONS = [['NotNecessaryForCredibleResults', 'Not necessary for credible results'], ['InsufficientData', 'Insufficient data'], ['LackOfLandSales', 'Lack of land sales'], ['DifficultyEstimatingDepreciation', 'Difficulty estimating depreciation'], ['Other', 'Other']];
 const HBU_TESTS = [['legal', 'Legally permissible'], ['phys', 'Physically possible'], ['fin', 'Financially feasible'], ['max', 'Maximally productive']];
 const ORDER_ASSIGN = { uadPurchase: 'Purchase', uadRefi: 'Refinance', uadHeloc: 'HomeEquity', uadConstruction: 'Construction', construction: 'Construction' };
@@ -80,14 +83,6 @@ function reportHTML(J) {
       <label class="fld"><span>Client address</span>${inp('clientAddr1', 'Street')} ${inp('clientAddr2', 'City, ST ZIP')}</label>
       <label class="fld"><span>Lender (if not the client)</span>${inp('lender')}</label>
       <label class="fld"><span>AMC</span>${inp('amc')}</label></section>
-    <section><h3>Subject and site</h3>
-      <label class="fld"><span>Legal description</span><textarea class="txt" rows="2" data-rpt="legal" placeholder="${esc(F.legal || 'From the CRS report or the preliminary title report')}">${esc(R.legal || '')}</textarea></label>
-      <label class="fld"><span>Number of parcels</span>${inp('parcels', '1', '5em')}</label>
-      <label class="fld"><span>All rights included in the appraisal?</span>${yn('allRights', true)}</label>
-      <label class="fld"><span>Rights not included <small class="muted">(only sent when the answer above is No; 540 characters)</small></span><textarea class="txt" rows="2" maxlength="540" data-rpt="rightsNot" placeholder="${esc(F.rightsNot || 'e.g. Oil, gas and mineral rights below 500 feet, reserved in a prior deed')}">${esc(R.rightsNot || '')}</textarea>${F.rightsNot && R.allRights !== 'false' ? '<small class="muted">The order has a reservation from the deed. If those rights are not part of what you appraised, answer No above.</small>' : ''}</label>
-      ${R.allRights === 'false' ? `<label class="fld"><span>Kind of rights not included</span>${sel('rightsType', RIGHTS_TYPES, rightsGuess(rv(J, 'rightsNot')), 'from the description')}</label>${R.rightsType === 'Other' ? `<label class="fld"><span>Describe (33 characters)</span>${inp('rightsOther', 'e.g. Geothermal rights')}</label>` : ''}` : ''}
-      <label class="fld"><span>Zoning code</span>${inp('zone', 'e.g. E-3', '8em')}</label>
-      <label class="fld"><span>Zoning description</span>${inp('zoneDesc', 'e.g. One-family residential, 7,000 sq. ft. minimum lot')}<small class="muted">Kept for this code, so you type it once.</small></label></section>
     <section><h3>Highest and best use</h3>
       ${HBU_TESTS.map(([k, l]) => `<label class="check"><input type="checkbox" data-hbu="${k}" ${H[k] ? 'checked' : ''}>${l}</label>`).join('')}
       <label class="fld"><span>Is the highest and best use as improved the present use?</span>${yn('hbuPresent')}</label>
@@ -99,8 +94,20 @@ function reportHTML(J) {
       <label class="fld"><span>Rent schedule (1007) included?</span>${yn('sowRent', F.sowRent)}</label>
       <label class="fld"><span>Government agency appraisal (FHA, VA, USDA)?</span>${yn('sowGov', false)}${R.sowGov === 'true' ? ` ${sel('govType', [['FHA', 'FHA'], ['VA', 'VA'], ['USDA', 'USDA']], '')}` : ''}</label>
       <label class="fld"><span>Intended users besides the client?</span>${yn('sowAddlUser', F.sowAddlUser)}</label>
-      <label class="fld"><span>Additional scope of work?</span>${yn('sowAddlScope', !blank(R.sowNote) ? true : false)}</label>
-      <label class="fld"><span>Additional scope of work – text <small class="muted">(2,500 characters · Certifications › Scope of Work in the report)</small></span><textarea class="txt" rows="5" maxlength="2500" data-rpt="sowNote" placeholder="Extraordinary assumptions, hypothetical conditions, and anything you did beyond the standard scope (e.g. data relied on, areas not inspected). Must not repeat or contradict the printed scope of work. A value subject to repairs or completion is set in Market value condition below.">${esc(R.sowNote || '')}</textarea></label></section>
+      <label class="fld"><span>Additional scope of work?</span>${yn('sowAddlScope', sowAny(R) ? true : false)}</label>
+      <label class="fld"><span>Scope of work – what you did beyond the standard <small class="muted">(shares 2,500 characters with the two boxes below)</small></span><textarea class="txt" rows="3" maxlength="2500" data-rpt="sowNote" placeholder="e.g. Exterior photos of the comps were taken from the street; the subject's permits were reviewed at the County.">${esc(R.sowNote || '')}</textarea></label></section>
+    <section><h3>Extraordinary assumptions and hypothetical conditions <small>go to SFREP in Additional Scope of Work</small></h3>
+      <label class="fld"><span>Extraordinary assumptions</span><textarea class="txt" rows="3" maxlength="2500" data-rpt="eaNote" placeholder="e.g. The owner-reported permits for the 2010 remodel are assumed accurate; if not, the value could change.">${esc(R.eaNote || '')}</textarea></label>
+      <label class="fld"><span>Hypothetical conditions</span><textarea class="txt" rows="3" maxlength="2500" data-rpt="hcNote" placeholder="e.g. As if the repairs listed in the Unit Interior section were completed as of the effective date.">${esc(R.hcNote || '')}</textarea></label>
+      <p class="help">${sowLen(R).toLocaleString()} of 2,500 characters used (all three boxes together). A value <i>subject to</i> repairs or completion: choose it in Market value condition under Value and reconciliation.</p></section>
+    <section><h3>Subject and site</h3>
+      <label class="fld"><span>Legal description</span><textarea class="txt" rows="2" data-rpt="legal" placeholder="${esc(F.legal || 'From the CRS report or the preliminary title report')}">${esc(R.legal || '')}</textarea></label>
+      <label class="fld"><span>Number of parcels</span>${inp('parcels', '1', '5em')}</label>
+      <label class="fld"><span>All rights included in the appraisal?</span>${yn('allRights', true)}</label>
+      <label class="fld"><span>Rights not included <small class="muted">(only sent when the answer above is No; 540 characters)</small></span><textarea class="txt" rows="2" maxlength="540" data-rpt="rightsNot" placeholder="${esc(F.rightsNot || 'e.g. Oil, gas and mineral rights below 500 feet, reserved in a prior deed')}">${esc(R.rightsNot || '')}</textarea>${F.rightsNot && R.allRights !== 'false' ? '<small class="muted">The order has a reservation from the deed. If those rights are not part of what you appraised, answer No above.</small>' : ''}</label>
+      ${R.allRights === 'false' ? `<label class="fld"><span>Kind of rights not included</span>${sel('rightsType', RIGHTS_TYPES, rightsGuess(rv(J, 'rightsNot')), 'from the description')}</label>${R.rightsType === 'Other' ? `<label class="fld"><span>Describe (33 characters)</span>${inp('rightsOther', 'e.g. Geothermal rights')}</label>` : ''}` : ''}
+      <label class="fld"><span>Zoning code</span>${inp('zone', 'e.g. E-3', '8em')}</label>
+      <label class="fld"><span>Zoning description</span>${inp('zoneDesc', 'e.g. One-family residential, 7,000 sq. ft. minimum lot')}<small class="muted">Kept for this code, so you type it once.</small></label></section>
     <section><h3>Prior services and certifications</h3>
       <label class="fld"><span>Prior services: have you performed any services on this property in the three years before accepting the assignment?</span>${yn('priorSvc')}</label>
       ${F.priorHits.length ? `<p class="help warnTxt">Your records show: ${F.priorHits.map(esc).join(' · ')}</p>` : '<p class="help">Nothing in your archive or your orders for this address in the three years before the effective date.</p>'}
@@ -138,7 +145,7 @@ document.addEventListener('change', e => {
   const t = e.target; if (!app.job) return; const R = R0(app.job);
   if (t.dataset.rpt) { const k = t.dataset.rpt, v = t.value.trim(); if (v === '') delete R[k]; else R[k] = k === 'zone' ? v.toUpperCase() : t.tagName === 'TEXTAREA' ? t.value : v;
     if (k === 'zoneDesc' && v) { const code = rv(app.job, 'zone').toUpperCase(); if (code) { zoneTable()[code] = v; DB.put('kv', { id: 'zoneDesc', v: app.zoneDesc }); } }
-    save(); if (['assign', 'zone', 'allRights', 'rightsType', 'sowGov', 'addlCond', 'sowIncome', 'sowCost', 'exclIncome', 'exclCost'].includes(k)) { const c = $('#reportCard'); if (c) c.innerHTML = reportHTML(app.job); }
+    save(); if (['assign', 'zone', 'allRights', 'rightsType', 'sowGov', 'addlCond', 'sowIncome', 'sowCost', 'exclIncome', 'exclCost', 'sowNote', 'eaNote', 'hcNote'].includes(k)) { const c = $('#reportCard'); if (c) c.innerHTML = reportHTML(app.job); }
     else { const b = document.querySelector('#reportCard .rptneed'); if (b) { const d = document.createElement('div'); d.innerHTML = reportHTML(app.job); const nb = d.querySelector('.rptneed'); if (nb) b.replaceWith(nb); } }   /* the 'still needed' list follows her answers */
     return; }
   if (t.dataset.hbu) { R.hbu[t.dataset.hbu] = t.checked; save(); }
@@ -190,8 +197,8 @@ function writeReportXML(doc, NS, J, SUBJ, VA, SVC) {
   { const fb = (k, def) => tf(k, def === true ? 'true' : def === false ? 'false' : undefined);   // the order's answer when she has not chosen
     set(sow, 'CostApproachIndicator', fb('sowCost', F.sowCost)); set(sow, 'IncomeApproachIndicator', fb('sowIncome', F.sowIncome)); set(sow, 'RentScheduleIndicator', fb('sowRent', F.sowRent));
     set(sow, 'GovernmentAgencyAppraisalIndicator', fb('sowGov', false)); if (R.sowGov === 'true' && R.govType) set(sow, 'GovernmentAgencyAppraisalType', R.govType);
-    set(sow, 'ValuationAdditionalIntendedUserIndicator', fb('sowAddlUser', F.sowAddlUser)); set(sow, 'ValuationAdditionalScopeOfWorkIndicator', R.sowAddlScope === 'false' && blank(R.sowNote) ? 'false' : !blank(R.sowNote) || R.sowAddlScope === 'true' ? 'true' : 'false');   /* her text turns it on (A-1 2200.0062 / .0003; her Oct 21 SFREP: the box was there but the indicator No) */
-    if (R.sowNote) set(sow, 'ValuationScopeOfWorkDescription', R.sowNote.slice(0, 2500));
+    set(sow, 'ValuationAdditionalIntendedUserIndicator', fb('sowAddlUser', F.sowAddlUser)); set(sow, 'ValuationAdditionalScopeOfWorkIndicator', R.sowAddlScope === 'false' && !sowAny(R) ? 'false' : sowAny(R) || R.sowAddlScope === 'true' ? 'true' : 'false');   /* her text turns it on (A-1 2200.0062 / .0003; her Oct 21 SFREP: the box was there but the indicator No) */
+    if (sowAny(R)) set(sow, 'ValuationScopeOfWorkDescription', sowText(R).slice(0, 2500));   // her added scope, extraordinary assumptions and hypothetical conditions in the one 3.6 field (F-1 29.003)
     set(rd, 'AppraiserAdditionalCertificationIndicator', fb('addlCert', false)); set(rd, 'ReconsiderationOfValueIndicator', fb('reconsider', false));
     set(rd, 'AppraiserPriorServicesPerformedIndicator', tf('priorSvc')); if (R.priorSvc === 'true' && R.priorSvcText) set(rd, 'AppraiserPriorServicesPerformedDescription', R.priorSvcText.slice(0, 1250));
     set(child(SUBJ, 'LISTING_INFORMATION_SUMMARY'), 'ListedWithinPreviousYearIndicator', fb('listedYear', F.listedYear));
