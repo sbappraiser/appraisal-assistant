@@ -4,13 +4,25 @@
    Enter or Tab takes the highlighted answer, ↑ ↓ move, Esc closes. Works for the ▾ pick lines, View, Location,
    Landscaping, Contract date / Cumulative DOM (Unknown) and street surface (after "|"). */
 const AC_IMP = ['Adverse', 'Beneficial', 'Neutral'];
+const AC_YN = { list: ['Yes', 'No'] };
+const AC_EXTRA = { landCommon: AC_YN, backToBack: AC_YN, native: { list: ['No', 'Yes – Tribal trust land', 'Yes – Alaska Native Corporation land', 'Yes – Hawaiian Home Lands'] },
+  unitPos: { list: ['Interior', 'Corner', 'End'] }, rowLoc: { list: ['None above or below', 'Above', 'Below', 'Above and below'] },
+  pool: { multi: true, list: ['None', 'Pool', 'Spa', 'Outdoor shower', 'Sauna'] }, courts: { multi: true, list: ['None', 'Tennis court', 'Sport court', 'Outdoor kitchen', 'Outdoor fireplace', 'Fence', 'Irrigation system'] },
+  porch: { multi: true, list: ['None', 'Patio', 'Porch', 'Deck', 'Balcony', 'Gazebo', 'Portico'] },
+  wholeHome: { multi: true, list: ['None', 'EV station', 'Elevator', 'Fire suppression system', 'Indoor fireplace', 'Multiple zone HVAC', 'Smart home system', 'Whole house ventilation', 'Wood stove'] },
+  other: { multi: true, list: ['None', 'Club membership', 'Shared laundry facilities', 'Airstrip'] }, adu: { list: ['None'] }, hoaAmen: { list: ['None'] },
+  disaster: { multi: true, list: ['None', 'Enclosed soffits', 'Fire resistant decking', 'Fire resistant exterior walls', 'Flood vents', 'Fortified roof', 'Framing anchoring or bracing', 'Impact resistant glass', 'Impact resistant shingles', 'Noncombustible perimeter', 'Storm shelter', 'Storm shutters', 'Water heater strapping'] },
+  envCond: { multi: true, list: ['None', 'Hazardous above ground storage tank', 'Hazardous substances', 'Landfill', 'Radon', 'Slush pit', 'Soil contamination', 'Superfund site', 'Underground storage tank', 'Water contamination'] },
+  drain: { multi: true, list: ['None', 'Evidence of erosion', 'Improper grading', 'Standing water'] } };
 function acSpec(id) {
   const lab = l => String(l).replace(/ \(.*\)$/, '');
   if (id === 'view') return { kind: 'imp', types: [...VIEW_TYPES.filter(t => t !== 'Other').map(t => ({ label: camelWords(t) })), { label: 'City skyline', insert: 'Skyline' }, { label: 'Other' }] };
   if (id === 'loc') return { kind: 'imp', types: SI_TYPES.map(t => ({ label: t === 'Other' ? 'Other' : siLabel(t) })) };
   if (id === 'land') return { kind: 'one', list: ['None', ...LAND_NAMES].map(l => ({ label: l })) };
   if (id === 'contract' || id === 'cdom') return { kind: 'one', list: [{ label: 'Unknown' }] };
-  const S = typeof PICK !== 'undefined' && PICK[id]; if (!S) return null;
+  const S = typeof PICK !== 'undefined' && PICK[id];
+  /* her shortcuts (Oct 20 2026): Y = Yes, N = No on yes / no lines; N = None on lines where None is an answer */
+  if (!S) { const L = AC_EXTRA[id]; return L ? { kind: L.multi ? 'multi' : 'one', list: L.list.map(l => ({ label: l })) } : null; }
   return { kind: S.multi ? 'multi' : 'one', list: S.opts.map(o => ({ label: lab(o[1]) })).filter(x => x.label), surface: S.surface ? S.surface.map(l => ({ label: l })) : null };
 }
 const acKey = el => el && el.dataset ? (el.dataset.gfact ? el.dataset.gfact.split('|')[1] : el.dataset.gsubj || '') : '';
