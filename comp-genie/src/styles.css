@@ -315,5 +315,5 @@ body.sbs table.grid td.dsc input.txt.fact:focus{background:#ff8a00!important}
 body.sbs table.grid td.adjc{width:108px;min-width:108px;background:#fff;border-left:2px solid #8995a1!important;padding:4px 5px;vertical-align:top}
 body.sbs table.grid td.adjc.none{background:#f1f3f5}
 body.sbs table.grid td.adjc input.adj{width:100%;box-sizing:border-box}
-body.sbs table.grid td.adjc.hasadj{background:#fff1de}body.sbs table.grid td.adjc.hasadj input.adj{font-weight:700;border-color:#e0a050}body.sbs table.grid td.adjc.hasadj input.adj::placeholder{color:#8a4a00;font-weight:700;font-style:normal;opacity:1}
+body.sbs table.grid td.adjc.hasadj input.adj::placeholder{color:#000;font-style:normal;opacity:1}   /* her ask: no colour on lines with adjustments */
 table.grid thead th .ghsub{display:flex;margin-top:6px;font-size:11px;font-weight:700;text-transform:uppercase;color:#3a4552;letter-spacing:.02em}table.grid thead th .ghsub span:first-child{flex:1}table.grid thead th .ghsub span:last-child{width:104px;text-align:center;border-left:2px solid #8995a1}

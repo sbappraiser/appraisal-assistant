@@ -343,6 +343,13 @@ function splitText(v) { let o = v; if (typeof v === 'string') { try { o = JSON.p
 /* the split back in her 2.6 form: {"r":0.62,"o":2.15} → "0.62r/2.15o" */
 function splitRaw(v) { let o = v; if (typeof v === 'string') { try { o = JSON.parse(v); } catch (e) { return ''; } } if (!o || typeof o !== 'object') return '';
   const k = Object.keys(o).filter(x => +o[x] > 0); if (k.length < 2) return ''; return k.map(x => (+o[x] >= 100 ? +(+o[x] / 43560).toFixed(2) : +o[x]) + x).join('/'); }
+/* her ask (Oct 20 2026): hide the optional lines that are empty for the subject and every comp – screen only; nothing is deleted
+   and the export is unchanged ("0", "None", "No" count as empty here) */
+const emptyVal = v => { const t = String(v ?? '').trim(); return !t || /^(0|none|no|n\/a|—|–|-)$/i.test(t); };
+function emptyLines(J) { const S = subjFacts(J), G = G0(J), U = usedComps(J);
+  return adjRows(J).filter(r => rowShown(r, J) && !GRID_KEEP.has(r[0]) && !(G.hide || {})[r[0]] && !['ppsf', 'src', 'prox'].includes(r[0])).filter(r => { const id = r[0];
+    if (!emptyVal(id === 'baths' ? S.full : S[id]) || !emptyVal(G.subj[id])) return false;
+    return U.every(c => { const C = compFacts(c, J); if (!emptyVal(id === 'baths' ? C.full : wbFactText(id, C))) return false; if (r[3]) { const a = cellAmount(J, c, r).v; if (a) return false; } return true; }); }).map(r => r[0]); }
 /* lines she emptied with Ctrl+Y (c.zap = {lineId: true}) stay empty even when a source has a value – until she types one */
 function zapFacts(c, F) { if (!c.zap) return F; for (const id in c.zap) { if (id === 'baths') { F.full = null; F.half = null; } F[id] = id === 'beds' ? null : ''; } return F; }
 function compFacts0(c, J) {
@@ -435,7 +442,7 @@ function gridHTML(J) {
   const G = G0(J), S = subjFacts(J); const tot = used.map(c => compTotals(J, c)); const totAll = usedAll.map(c => compTotals(J, c));
   const inspNote = J.subject.insp ? `Subject from your inspection (${esc(J.subject.insp.file || 'workfile')}).` : 'Subject: drop your iPad <b>Workfile package</b> (.zip) on this page to fill the subject column from your inspection, or type the subject values in the grid.';
   let sec = '';
-  const rows = adjRows(J).filter(WB_ROWS).filter(r => rowShown(r, J)).map(row => {
+  const HID = G0(J).hide || {}; const rows = adjRows(J).filter(WB_ROWS).filter(r => rowShown(r, J) && !HID[r[0]]).map(row => {   // her hidden empty lines: off the screen only – saved and exported as before
     const [id, label, section, type] = row; const head = section !== sec ? `<tr class="grp"><th colspan="${2 + used.length * (SBS ? 2 : 1)}">${esc(section)}</th></tr>` : ''; sec = section;
     const sv = id === 'baths' ? [S.full, S.half].every(blank) ? '' : `${S.full ?? '–'} / ${S.half ?? 0}` : showFact(id, S[id]);
     const subjCell = ['price', 'ppsf', 'src', 'prox', 'dom', 'terms', 'conc', 'contract', 'sale', 'status', 'listPrice', 'origList', 'listDate', 'lastRed', 'redDays', 'cdom', 'overList', 'xferTerms', 'stl'].includes(id) ? `<td class="subj">${blank(sv) || sv === '' ? '<span class="na" title="Nothing to enter for the subject here – on the 3.6 grid this line is for the comparables (the subject’s own sale or listing, if any, comes from the Sales Contract and Subject Listing sections). Leave it blank; no N/A or dash.">—</span>' : esc(sv)}</td>`
@@ -920,7 +927,7 @@ function listingNote(id, C) { if (!C || !C.listing || !SETTLED_ONLY.has(id)) ret
 function finalGridHTML(J) {
   const U = usedComps(J); if (!U.length) return '<h2>Final grid</h2><p class="help">Nothing in the workbook yet.</p>';
   const S = subjFacts(J); let sec = '';
-  const rows = adjRows(J).filter(r => rowShown(r, J) && !/^not in UAD/.test(GRID_INFO[r[0]] || '')).map(r => { const [id, label, section, type] = r; const head = section !== sec ? `<tr class="grp"><th colspan="${2 + U.length}">${esc(section)}</th></tr>` : ''; sec = section;
+  const rows = adjRows(J).filter(r => rowShown(r, J) && !(G0(J).hide || {})[r[0]] && !/^not in UAD/.test(GRID_INFO[r[0]] || '')).map(r => { const [id, label, section, type] = r; const head = section !== sec ? `<tr class="grp"><th colspan="${2 + U.length}">${esc(section)}</th></tr>` : ''; sec = section;
     const sv = id === 'baths' ? ([S.full, S.half].every(blank) ? '' : `${S.full ?? '–'} / ${S.half ?? 0}`) : showFact(id, S[id]);
     return head + `<tr><th>${GRID_KEEP.has(id) ? REQ_STAR : ''}${esc(label)}</th><td class="subj">${esc(sv || '')}</td>${U.map(c => { const C = compFacts(c, J); const v = id === 'baths' ? ([C.full, C.half].every(blank) ? '' : `${C.full ?? '–'} / ${C.half ?? 0}`) : id === 'garage' && (c.edit || {}).grid_vsText ? c.edit.grid_vsText : showFact(id, C[id]);
       const a = type ? cellAmount(J, c, r).v : null; return `<td>${blank(v) || v === '' ? (listingNote(id, C) ? `<span class="na">${listingNote(id, C)}</span>` : lineReq(id, C) ? '<span class="bad">missing</span>' : '') : (id === 'src' ? esc(v).replace(/\n/g, '<br>') : esc(v))}${a ? `<div class="famt">${a > 0 ? '+' : '−'}${money(Math.abs(a))}</div>` : ''}</td>`; }).join('')}</tr>`; }).join('');

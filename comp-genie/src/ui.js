@@ -750,6 +750,8 @@ document.addEventListener('click', async e => {
     case 'backup': backupJob(); break;
     case 'nuok': app.nuAsk = null; render(); break;
     case 'nufill': nuFill(app.job); break;
+    case 'hide-empty': { const G = G0(app.job); const L = emptyLines(app.job); G.hide = G.hide || {}; L.forEach(id => { G.hide[id] = true; }); save(); renderKeepFocus(); toast(`${L.length} empty line${L.length === 1 ? '' : 's'} hidden – still saved; “Show hidden” brings them back`, 6000); break; }
+    case 'show-hidden': { const G = G0(app.job); const n = Object.keys(G.hide || {}).length; delete G.hide; save(); renderKeepFocus(); toast(`${n} hidden line${n === 1 ? '' : 's'} shown again`); break; }
     case 'sens-run': { app.sens = { job: app.job.id, res: { ...sensRun(app.job), at: Date.now() } }; renderKeepFocus(); toast('Sensitivity run again with your current rates'); break; }
     case 'sup-run': { toast('Measuring your lines from your groups…'); await new Promise(r => setTimeout(r, 30)); app.job.support = supRun(app.job); save(); renderKeepFocus(); break; }
     case 'ts-run': { toast('Measuring time from your groups…'); await new Promise(r => setTimeout(r, 30)); app.job.timeSupport = await tsRun(app.job); save(); renderKeepFocus(); break; }
