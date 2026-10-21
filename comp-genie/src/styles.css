@@ -394,3 +394,5 @@ nav.steps.path .stepb.done{border-color:#0b8a3d}
 .pn{display:inline-grid;place-items:center;min-width:1.55em;height:1.55em;padding:0 .2em;border-radius:999px;border:2px solid currentColor;font-size:.85em;font-weight:800;margin-right:5px;box-sizing:border-box}
 .pn.sm{font-size:.8em;border-width:1.5px}
 nav.steps.path .stepb{padding:5px 9px}nav.steps.path .stepb b{font-size:15px}
+.revcat{margin:10px 0 4px}.revcat h3{font-size:17px;margin:12px 0 6px;display:flex;align-items:center;gap:6px}.revcat h3 small{font-weight:600;color:#c40000}
+.revcat h3 small.rvok{color:#0b8a3d}

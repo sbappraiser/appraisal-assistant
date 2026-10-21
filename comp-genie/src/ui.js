@@ -432,6 +432,7 @@ function renderPage() {
   <section class="card st st-workbook st-final" id="nuCard">${ON('workbook', 'final') ? notUsedHTML(J) : ''}</section>
   <section class="card st st-workbook" id="timeCard">${ON('workbook') ? timeHTML(J) : ''}</section>
   <section class="card st st-workbook" id="supCard">${ON('workbook') ? supHTML(J) : ''}</section>
+  <section class="card st st-final" id="reviewCard">${ON('final') ? reviewHTML(J) : ''}</section>
   <section class="card st st-final" id="preCard">${ON('final') ? precheckHTML(J) : ''}</section>
   <section class="card st st-final" id="reportCard">${ON('final') ? reportHTML(J) : ''}</section>
   <section class="card st st-final" id="exportCard"><h2>Export</h2>${ON('final') ? exportHTML(J) : ''}</section>
@@ -973,7 +974,7 @@ function pathSteps(J) { const U = usedComps(J), G = G0(J), R = R0(J), o = (app.o
     { n: '12', k: 'inc', l: 'Income approach', sub: incOn ? 'rent · GRM' : 'not developed', st: 'workbook', sel: '#incomeCard', done: T(() => !incOn || !!(incomeCalc(J) || {}).value), todo: 'finish the income approach' },
     { n: '13', k: 'rec', l: 'Reconciliation', sub: 'value · report details', st: 'final', sel: '#reportCard', done: !blank(num(String(R.opinion || '').replace(/[$,\s]/g, ''))) && !!String(R.reconNote || '').trim(), todo: 'opinion of value and the reconciliation comment' },
     { n: '14', k: 'exh', l: 'Exhibits and photos', sub: 'maps · photos', st: 'final', sel: '#mapCard', done: T(() => U.length > 0 && U.every(c => c.front)), todo: 'a front photo for each comp' },
-    { n: '15', k: 'out', l: 'Pre-check and export', sub: 'certification · SFREP', st: 'final', sel: '#preCard', done: !!J.exportedAt, todo: 'run the pre-check and export to SFREP' }]; }
+    { n: '15', k: 'out', l: 'Review and export', sub: 'review genie · pre-check · SFREP', st: 'final', sel: '#reviewCard', done: !!J.exportedAt, todo: 'run the pre-check and export to SFREP' }]; }
 function stageBarHTML(J) { const st = J.stage || (J.comps.some(c => c.use) ? 'workbook' : 'micro'); const P = pathSteps(J); const cur = app.pathAt && P.find(x => x.k === app.pathAt && x.st === st) ? app.pathAt : (P.find(x => x.st === st) || {}).k;
   const left = P.filter(x => !x.done);
   return `<nav class="steps path">${P.map(x => x.href ? `<a class="stepb${x.done ? ' done' : ''}" href="${x.href}" target="_top" title="${esc(x.sub)} – in the Appraisal Assistant"><b><span class="pn">${x.n}</span>${x.l}${x.done ? '<i class="pck">✓</i>' : ''}</b><small>${esc(x.sub)}</small></a>`
