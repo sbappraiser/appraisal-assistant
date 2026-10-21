@@ -258,3 +258,6 @@ nav.steps{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 12px}
 table.cmplines th{text-align:left;font-weight:700}table.cmplines tr.linereq th,table.cmplines tr.linereq td{background:#fff36b}table.cmplines tr.lineopt td:nth-child(3){background:#f3f8ff}table.cmplines td.subj{background:#f4f6f8}
 table.grid.final td{font-size:14px}.famt{font-weight:700;color:#0b4fc4;font-size:13px}span.bad,b.bad{color:#d40000;font-weight:700}
 #wbStrip .cchip.nextflag{background:#ffe1a8}
+/* her ask Oct 20 2026: a green check for "send to the workbook" */
+button.wbtick{width:30px;height:30px;border:2px solid #8a96a3;border-radius:6px;background:#fff;color:#fff;font:800 20px/1 system-ui,sans-serif;cursor:pointer;vertical-align:middle;margin-right:6px;padding:0}
+button.wbtick:hover{border-color:#1e7a3c;background:#eef8f1}button.wbtick.on{background:#1e9e4a;border-color:#1e7a3c;color:#fff}
