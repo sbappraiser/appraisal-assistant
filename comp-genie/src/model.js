@@ -223,6 +223,7 @@ function val(c, k) { return rcMemo('val', c.id + '|' + k, () => val0(c, k)); }
 function val0(c, k) { // → { v, src, auto }
   const f = FIELD[k] || { k, t: 'text', kind: 'id' };
   if (c.edit && k in c.edit && !blank(c.edit[k])) return { v: c.edit[k], src: 'edit' };
+  if (c.zapK && c.zapK[k]) return { v: '', src: 'zap' };   // emptied with Ctrl+Z
   const S = srcVals(c);
   if (c.pick && c.pick[k] && S[c.pick[k]] && !blank(S[c.pick[k]][k])) return { v: S[c.pick[k]][k], src: c.pick[k] };
   let codeOnly = null;

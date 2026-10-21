@@ -313,7 +313,9 @@ function subjFacts0(J) {
   f._own = landOwned(J, f); if (blank(f.landCommon)) f.landCommon = f._own ? 'No' : 'Yes';
   return f;
 }
-function compFacts(c, J) { return rcMemo('compFacts', c.id, () => compFacts0(c, J)); }
+function compFacts(c, J) { return rcMemo('compFacts', c.id, () => zapFacts(c, compFacts0(c, J))); }
+/* lines she emptied with Ctrl+Z (c.zap = {lineId: true}) stay empty even when a source has a value – until she types one */
+function zapFacts(c, F) { if (!c.zap) return F; for (const id in c.zap) { if (id === 'baths') { F.full = null; F.half = null; } F[id] = id === 'beds' ? null : ''; } return F; }
 function compFacts0(c, J) {
   const g = k => V(c, k); const px = proximity(c, J);
   const DN = docNoOf(c); const F0 = { price: num(g('salePrice')), src: [g('mls') ? 'MLS ' + g('mls') : '', DN ? docText(c) : '', !g('mls') && !DN ? (c.src.crs ? 'CRS Data' : c.src.cort.length ? 'CORT' : c.src.arch.length ? 'Your archive' : '') : ''].filter(Boolean).join(' · '), prox: px ? px.mi.toFixed(2) + ' mi ' + px.dir.replace(/([a-z])([A-Z])/, '$1 $2') : '',

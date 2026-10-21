@@ -71,7 +71,8 @@ const WB_EDIT = { price: 'salePrice', sale: 'saleDate', contract: 'contractDate'
 /* write a typed (or copied) entry into the comp – her own values, kept apart from the sources like any edit */
 function wbFactSet(J, c, id, text) {
   const E = c.edit = c.edit || {}; const t = String(text || '').trim(); const n = s => num(String(s).replace(/[$,\s]/g, ''));
-  const put = (k, v) => { if (blank(v) || v === '') delete E[k]; else E[k] = v; };
+  const put = (k, v) => { if (blank(v) || v === '') { delete E[k]; if (WB_ZAP) { c.zapK = c.zapK || {}; c.zapK[k] = true; } } else { E[k] = v; if (c.zapK) { delete c.zapK[k]; if (!Object.keys(c.zapK).length) delete c.zapK; } } };
+  if (!WB_ZAP && t !== '' && c.zap) { delete c.zap[id]; if (!Object.keys(c.zap).length) delete c.zap; }
   switch (id) {
     case 'usable': put('usableSf', t === '' ? null : Math.round((n(t.replace(/ac(res?)?$/i, '')) || 0) * 43560)); return;
     case 'beds': put('beds', t === '' ? null : n(t)); put('bgBeds', t === '' ? null : 0); return;
@@ -147,7 +148,7 @@ function popHTML(J) {
 /* where the cursor is: the comp of the focused cell, or the last one she was in */
 const wbCellComp = el => { const d = el && el.closest && el.closest('[data-gadj],[data-gfact],[data-gfine]'); if (!d) return null; const v = d.dataset.gadj || d.dataset.gfact || d.dataset.gfine; return v.split('|')[0]; };
 document.addEventListener('focusin', e => { const c = wbCellComp(e.target); if (c && c !== 'subj') WB.cur = c; });
-let WB_EQ = null;
+let WB_EQ = null, WB_ZAP = false;
 document.addEventListener('keydown', async e => {
   const t = e.target; const inBox = t && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable);
   const cell = t && t.dataset && (t.dataset.gadj || t.dataset.gfact);
@@ -166,7 +167,13 @@ document.addEventListener('keydown', async e => {
   }
   /* her keys inside a grid box (Oct 20 2026): Ctrl+Z empties the box (type the new entry; leave it empty and the source value comes back);
      "=" copies the subject at once – a number typed right after it (=2) copies that comp instead */
-  if (cell && (e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === 'z') { e.preventDefault(); t.value = ''; WB_EQ = null; return; }
+  if (cell && (e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === 'z') { e.preventDefault(); WB_EQ = null;
+    if (t.dataset.gfact) { const [cid, row] = t.dataset.gfact.split('|'); const c = app.job.comps.find(x => x.id === cid); if (!c) return;
+      if (c.zap && c.zap[row] && t.value === '') { wbUnzap(c, row); toast('Back to your sources'); }   // Ctrl+Z again on an emptied box: the sources come back
+      else { WB_ZAP = true; try { wbFactSet(app.job, c, row, ''); } finally { WB_ZAP = false; } c.zap = c.zap || {}; c.zap[row] = true; if (c.edit) delete c.edit['pk_' + row];
+        toast('Emptied – type the new entry (Ctrl+Z again brings back your sources)'); }
+      t.value = ''; t.defaultValue = ''; save(); renderKeepFocus(); return; }
+    t.value = ''; t.dispatchEvent(new Event('change', { bubbles: true })); return; }
   if (cell && !e.ctrlKey && !e.metaKey && !e.altKey && e.key === '=') {   // anywhere in the box, even with text in it
 
     e.preventDefault(); t.value = '='; WB_EQ = { cell, at: Date.now() }; t.dispatchEvent(new Event('change', { bubbles: true })); return; }
@@ -177,3 +184,8 @@ document.addEventListener('keydown', async e => {
   if (e.ctrlKey && e.shiftKey && /^Digit[1-9]$/.test(e.code) && WB.cur) { e.preventDefault(); const n = +e.code.slice(5); if (wbSwap(app.job, WB.cur, n)) { save(); renderKeepFocus(); toast(`Swapped with comp ${n}`); } return; }
   if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === 'z' && !inBox && WB.on && WB.cur && document.querySelector('#gridCard')) { e.preventDefault(); await wbRemove(app.job, WB.cur); return; }
 });
+
+/* undo a Ctrl+Z empty: forget that line's emptied keys (found by a dry run on a blank copy) so the sources show again */
+function wbUnzap(c, row) { if (c.zap) { delete c.zap[row]; if (!Object.keys(c.zap).length) delete c.zap; }
+  const probe = { id: c.id, edit: {} }; WB_ZAP = true; try { wbFactSet(app.job, probe, row, ''); } finally { WB_ZAP = false; }
+  for (const k in (probe.zapK || {})) if (c.zapK) delete c.zapK[k]; if (c.zapK && !Object.keys(c.zapK).length) delete c.zapK; }

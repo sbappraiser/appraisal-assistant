@@ -820,6 +820,7 @@ document.addEventListener('change', async e => {
   if (t.dataset.cortpick) { const c = app.job.comps.find(x => x.id === t.dataset.cortpick); c.cortPick = +t.value; save(); render(); return; }
   if (t.dataset.edit && 'echo' in t.dataset && String(t.value).trim() === String(t.dataset.echo).trim()) return;   // unchanged copy of the value in use – not her own
   if (t.dataset.edit) { const c = app.job.comps.find(x => x.id === app.sel); let f = FIELD[t.dataset.edit];
+    if (c && String(t.value).trim()) { const k = t.dataset.edit; if (c.zapK) { delete c.zapK[k]; if (!Object.keys(c.zapK).length) delete c.zapK; } if (c.zap) { for (const r in c.zap) if (r === k || WB_EDIT[r] === k) delete c.zap[r]; if (!Object.keys(c.zap).length) delete c.zap; } }   // typed on the comp page: no longer emptied
     if (f.k === 'mlsCondition' && /^\s*(?:(?:low|mid|high)\s+)?c\s*[1-6]\s*[+-]?\s*$/i.test(t.value)) { f = FIELD.condition; toast('A C rating goes in the Condition line (the one the grid uses) – moved it there', 6000); }   // she typed C3- in the MLS words line
     { const m = String(t.value || '').trim().toUpperCase().match(/^(?:(LOW|MID|HIGH)\s+)?([QC])\s*([1-6])\s*([+-])?$/); if (m && ['quality', 'condition'].includes(f.k) && (m[1] || m[4])) {   // "C3-" / "High Q3": UAD takes the whole rating; the tier goes to the grid
       const tier = m[1] ? m[1].toLowerCase() : m[4] === '-' ? 'low' : 'high'; const G = G0(app.job); G.fine = G.fine || {}; G.fine[c.id] = G.fine[c.id] || {}; G.fine[c.id][m[2].toLowerCase()] = tier; t.value = m[2] + m[3];
