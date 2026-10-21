@@ -277,3 +277,8 @@ table.cmplines td.subj,table.cmplines tr:first-child th:nth-child(2){border-left
 
 #hbar{position:fixed;bottom:0;height:20px;scrollbar-width:auto;scrollbar-color:#7a8794 #e3e8ed;overflow-x:scroll;overflow-y:hidden;z-index:25;background:#eef1f4;border-top:1px solid #c5ccd3;display:none}#hbar>div{height:1px}
 #hbar::-webkit-scrollbar{height:18px}#hbar::-webkit-scrollbar-track{background:#e3e8ed}#hbar::-webkit-scrollbar-thumb{background:#7a8794;border-radius:9px;border:3px solid #e3e8ed}#hbar::-webkit-scrollbar-thumb:hover{background:#4a5866}
+table.grid th small,table.grid th .grate label{overflow-wrap:anywhere;word-break:break-word}
+table.grid tbody th{overflow-wrap:anywhere}
+.ginfo{display:inline-flex;align-items:center;justify-content:center;width:17px;height:17px;margin-left:5px;border-radius:50%;border:1.5px solid #2a64c5;background:#fff;color:#2a64c5;font:italic 700 11px Georgia,serif;cursor:pointer;vertical-align:1px;padding:0}
+.ginfo:hover{background:#2a64c5;color:#fff}
+.sheet.guide h3{font-size:15px;margin:12px 0 4px}.sheet.guide ul.gopts{columns:2;column-gap:22px;margin:4px 0 8px;padding-left:18px}.sheet.guide ul.gopts li{break-inside:avoid;margin:2px 0;font-size:14px}.sheet.guide code{font-size:12px}

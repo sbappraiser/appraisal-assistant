@@ -646,6 +646,7 @@ async function backupJob() {
 /* ---------------- events ---------------- */
 function openComp(id) { app.sel = id; render(); const d = $('#detail'); if (d) d.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
 document.addEventListener('click', async e => {
+  { const gi = e.target.closest('[data-ginfo]'); if (gi) { e.preventDefault(); e.stopPropagation(); showGuide(gi.dataset.ginfo); return; } }
   { const lp = e.target.closest('[data-locpick]'); if (lp) { e.stopPropagation(); locPick(lp.dataset.locpick); return; } }
   { const gl = e.target.closest('[data-glinedel]'); if (gl) { e.preventDefault(); const G = G0(app.job); G.custom = (G.custom || []).filter(x => x.id !== gl.dataset.glinedel); save(); render(); return; } }
   { const pp = e.target.closest('[data-pickphoto]'); if (pp) { e.stopPropagation(); const c = app.job && app.job.comps.find(x => x.id === pp.dataset.pickphoto); if (!c) return;
