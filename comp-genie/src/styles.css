@@ -317,3 +317,7 @@ body.sbs table.grid td.adjc.none{background:#f1f3f5}
 body.sbs table.grid td.adjc input.adj{width:100%;box-sizing:border-box}
 body.sbs table.grid td.adjc.hasadj input.adj::placeholder{color:#000;font-style:normal;opacity:1}   /* her ask: no colour on lines with adjustments */
 table.grid thead th .ghsub{display:flex;margin-top:6px;font-size:11px;font-weight:700;text-transform:uppercase;color:#3a4552;letter-spacing:.02em}table.grid thead th .ghsub span:first-child{flex:1}table.grid thead th .ghsub span:last-child{width:104px;text-align:center;border-left:2px solid #8995a1}
+/* her ask (Oct 20 2026): adjustments in black, no peach – amounts from a rate look the same as typed ones */
+table.grid input.adj.auto::placeholder,body.sbs table.grid td.adjc input.adj::placeholder{color:#000!important;font-style:normal!important;opacity:1}
+table.grid input.adj,table.grid input.adj.own,table.grid input.adj.auto{color:#000;background:#fff;border-color:var(--line);font-weight:400}
+table.grid td.adjc,table.grid td.adjc.hasadj,table.grid td.hasadj{background:#fff}
