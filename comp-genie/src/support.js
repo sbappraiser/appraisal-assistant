@@ -72,7 +72,8 @@ function supRun(J) {
   });
   return res;
 }
-function supHTML(J) {
+function supHTML(J) { return supHTML0(J) + costCheckHTML(J) + pairsHTML(J); }   // step 9: grouped sales, then the depreciated cost check and any matched pairs (adjsup.js)
+function supHTML0(J) {
   const T = J.support; const G = G0(J);
   const head = `<h2>Grouped-sales support <small>for the other lines</small></h2>
     <p class="help">Your groups again (usable lot band, view tier, before / after 1945, quality, finished area band), with every sale brought to today by the segment's own time trend. For each line I leave that feature out of the group and measure it only from differences <i>inside</i> a group, with the other features held level at the same time (living area, usable lot, view, quality, condition, baths, pool, spa, courts, garage) – so a pool is measured against similar houses without one, and is not credited with the extra size that pool houses tend to have. Uses your archive plus the closed sales from this job's MLS search. You pick the rate; bedrooms stay your call.</p>
