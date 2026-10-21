@@ -166,13 +166,14 @@ document.addEventListener('keydown', async e => {
     if (e.key === 'Enter') { for (let i = rows.indexOf(row) + 1; i < rows.length && !target; i++) target = find(cid, rows[i], kind); }
     else { const dir = e.shiftKey ? -1 : 1; let ci = cols.indexOf(cid) + dir, ri = rows.indexOf(row);
       while (ri >= 0 && ri < rows.length && !target) { if (ci < 0 || ci >= cols.length) { ri += dir; ci = dir > 0 ? 0 : cols.length - 1; continue; } target = find(cols[ci], rows[ri], kind); ci += dir; } }
-    if (target) { e.preventDefault(); target.focus(); try { target.select(); } catch (x) {} }   // leaving the cell saves it; the redraw keeps the new cell in focus
+    if (target) { e.preventDefault(); target.focus({ preventScroll: true }); wbReveal(target); try { target.select(); } catch (x) {} }   // leaving the cell saves it; the redraw keeps the new cell in focus
     return;
   }
   /* her keys inside a grid box (Oct 20 2026): Ctrl+Y empties the box (type the new entry; leave it empty and the source value comes back);
      "=" copies the subject at once – a number typed right after it (=2) copies that comp instead */
   /* her keys (Oct 20 2026, corrected): Ctrl+Y in a box empties the cell; Ctrl+Z takes the comp off (asks first) – in a box or not */
   if (cell && (e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === 'z') { e.preventDefault(); WB_EQ = null; const cid = cell.split('|')[0]; if (cid !== 'subj' && app.job.comps.some(x => x.id === cid && x.use)) wbRemoveAsk(app.job, cid); return; }
+  if (!cell && t && t.dataset && t.dataset.gsubj && (e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === 'y') { e.preventDefault(); t.value = ''; t.dispatchEvent(new Event('change', { bubbles: true })); return; }   // the subject's box: empty it
   if (cell && (e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === 'y') { e.preventDefault(); WB_EQ = null;
     if (t.dataset.gfact) { const [cid, row] = t.dataset.gfact.split('|'); const c = app.job.comps.find(x => x.id === cid); if (!c) return;
       if (c.zap && c.zap[row] && t.value === '') { wbUnzap(c, row); toast('Back to your sources'); }   // Ctrl+Y again on an emptied box: the sources come back
@@ -195,3 +196,9 @@ document.addEventListener('keydown', async e => {
 function wbUnzap(c, row) { if (c.zap) { delete c.zap[row]; if (!Object.keys(c.zap).length) delete c.zap; }
   const probe = { id: c.id, edit: {} }; WB_ZAP = true; try { wbFactSet(app.job, probe, row, ''); } finally { WB_ZAP = false; }
   for (const k in (probe.zapK || {})) if (c.zapK) delete c.zapK[k]; if (c.zapK && !Object.keys(c.zapK).length) delete c.zapK; }
+
+/* bring a grid box fully into view inside the grid – clear of the line names and the Subject column that stay put on the left */
+function wbReveal(el) { const w = el.closest('.tablewrap'); if (!w) { el.scrollIntoView({ block: 'nearest', inline: 'nearest' }); return; } const td = el.closest('td') || el;
+  const W = w.getBoundingClientRect(), r = td.getBoundingClientRect(); const ths = w.querySelectorAll('thead th'); const fixed = (ths[0] ? ths[0].offsetWidth : 0) + (ths[1] ? ths[1].offsetWidth : 0); const head = w.querySelector('thead') ? w.querySelector('thead').offsetHeight : 0;
+  if (r.left < W.left + fixed) w.scrollLeft -= (W.left + fixed - r.left) + 6; else if (r.right > W.right - 14) w.scrollLeft += (r.right - W.right) + 20;
+  if (r.top < W.top + head) w.scrollTop -= (W.top + head - r.top) + 6; else if (r.bottom > W.bottom - 14) w.scrollTop += (r.bottom - W.bottom) + 20; }
