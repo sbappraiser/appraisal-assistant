@@ -33,3 +33,7 @@ function obPick(who) {
 }
 document.addEventListener('click', e => { const b = e.target.closest('[data-obpick]'); if (!b || !app.job) return; e.stopPropagation(); obPick(b.dataset.obpick); }, true);
 const obBtn = who => ` <button type="button" class="btn xs" data-obpick="${who}" title="Pick the 3.6 outbuilding types, with sq ft and baths">▾ pick</button>`;
+
+/* her ask (Oct 20 2026): each outbuilding on its own line under the box, so all of them can be read on the grid */
+function obList(text) { const P = obParse(text); if (P.items.length < 1 || (P.items.length === 1 && String(text).length < 28)) return '';
+  return '<ul class="oblist">' + P.items.map(i => `<li><b>${esc(i.t === 'Other' && i.other ? i.other : i.t)}</b>${i.sf ? ' · ' + Number(i.sf).toLocaleString() + ' sf' : ''}${i.full !== '' || i.half !== '' ? ' · ' + (+i.full || 0) + '/' + (+i.half || 0) + ' ba' : ''}</li>`).join('') + '</ul>'; }

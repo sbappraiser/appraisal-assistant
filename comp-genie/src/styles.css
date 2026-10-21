@@ -336,3 +336,5 @@ table.grid th .grates i.fromdot{color:#0b7a5a;font-style:normal;font-size:9px;ma
 table.grid th .grates:has(> .grate:only-child){grid-template-columns:1fr}
 table.grid th .grates .grate:only-child label{flex-direction:row;align-items:center;gap:6px;white-space:nowrap}
 table.grid th .grates .grate:only-child input{width:90px;flex:0 0 90px}
+
+ul.oblist{list-style:none;margin:4px 0 2px;padding:0;font-size:13px;line-height:1.35;color:#111}ul.oblist li{padding:1px 0;border-bottom:1px dotted #c9d1d9}ul.oblist li:last-child{border-bottom:0}
