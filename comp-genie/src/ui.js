@@ -1007,7 +1007,7 @@ async function outOfArea(J, cid) {
   save(); render();
   toast(`${base.label}: saved to your comp database and removed – outside your boundaries.` + (noted ? ' The Market tab unticks it in the macro and micro searches.' : J.orderId ? '' : ' (This assignment has no order in the Appraisal Assistant, so there is no Market tab to change.)'), 8000);
 }
-/* Ctrl+Z on the grid (outside a box) asks first */
+/* Ctrl+Z on the grid (in a box or not) asks first */
 function wbRemoveAsk(J, cid) {
   const c = J.comps.find(x => x.id === cid); if (!c || !c.use) return;
   const bg = document.createElement('div'); bg.className = 'sheet-bg';

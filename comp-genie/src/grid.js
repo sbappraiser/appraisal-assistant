@@ -330,7 +330,7 @@ function splitText(v) { let o = v; if (typeof v === 'string') { try { o = JSON.p
 /* the split back in her 2.6 form: {"r":0.62,"o":2.15} → "0.62r/2.15o" */
 function splitRaw(v) { let o = v; if (typeof v === 'string') { try { o = JSON.parse(v); } catch (e) { return ''; } } if (!o || typeof o !== 'object') return '';
   const k = Object.keys(o).filter(x => +o[x] > 0); if (k.length < 2) return ''; return k.map(x => (+o[x] >= 100 ? +(+o[x] / 43560).toFixed(2) : +o[x]) + x).join('/'); }
-/* lines she emptied with Ctrl+Z (c.zap = {lineId: true}) stay empty even when a source has a value – until she types one */
+/* lines she emptied with Ctrl+Y (c.zap = {lineId: true}) stay empty even when a source has a value – until she types one */
 function zapFacts(c, F) { if (!c.zap) return F; for (const id in c.zap) { if (id === 'baths') { F.full = null; F.half = null; } F[id] = id === 'beds' ? null : ''; } return F; }
 function compFacts0(c, J) {
   const g = k => V(c, k); const px = proximity(c, J);

@@ -141,7 +141,7 @@ function wbBar(J, all) {
     <span class="grow"></span><span class="pops">Pop out <button class="btn sm primary" data-wbpop="1|99" title="All the comps side by side in their own window – the side-to-side scroll bar stays at the bottom of the window; scroll up and down with the mouse wheel">all comps</button> ${pops.map(([a, b]) => `<button class="btn sm" data-wbpop="${a}|${b}" title="Opens the grid for comps ${a}–${b} in its own window – drag it to another monitor">${a}–${b}</button>`).join('')}</span>
     <button class="btn sm" data-act="wb-arrange">${app.wbArrange ? 'Close arrange' : 'Arrange'}</button></div>
     ${app.wbArrange ? `<div class="wbarr">${all.map((c, i) => `<div><b>#${c.use}</b> ${esc(compTitle(c))} <button class="btn sm" data-wbmv="${c.id}|${c.use - 1}" ${i ? '' : 'disabled'}>▲</button><button class="btn sm" data-wbmv="${c.id}|${c.use + 1}" ${i < all.length - 1 ? '' : 'disabled'}>▼</button> move to # <input class="txt xs" data-wbto="${c.id}" inputmode="numeric" placeholder="${c.use}"></div>`).join('')}</div>` : ''}
-    ${on ? `<p class="help keys">Keys: <b>Tab</b> same line, next comp · <b>Enter</b> next line · <b>=</b> same as the subject (at once) · <b>=2</b> same as comp 2 · <b>Ctrl+Z</b> (in a box) empty the box · <b>Ctrl+Shift+2</b> swap this comp with comp 2 · <b>Ctrl+Z</b> (outside a box) take this comp off the grid (asks first).</p>` : ''}`;
+    ${on ? `<p class="help keys">Keys: <b>Tab</b> same line, next comp · <b>Enter</b> next line · <b>=</b> same as the subject (at once) · <b>=2</b> same as comp 2 · <b>Ctrl+Y</b> (in a box) empty the box · <b>Ctrl+Shift+2</b> swap this comp with comp 2 · <b>Ctrl+Z</b> take this comp off the grid (asks first).</p>` : ''}`;
 }
 function popHTML(J) {
   const all = usedComps(J); const L = all.slice(POP.from - 1, POP.to);
@@ -169,13 +169,15 @@ document.addEventListener('keydown', async e => {
     if (target) { e.preventDefault(); target.focus(); try { target.select(); } catch (x) {} }   // leaving the cell saves it; the redraw keeps the new cell in focus
     return;
   }
-  /* her keys inside a grid box (Oct 20 2026): Ctrl+Z empties the box (type the new entry; leave it empty and the source value comes back);
+  /* her keys inside a grid box (Oct 20 2026): Ctrl+Y empties the box (type the new entry; leave it empty and the source value comes back);
      "=" copies the subject at once – a number typed right after it (=2) copies that comp instead */
-  if (cell && (e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === 'z') { e.preventDefault(); WB_EQ = null;
+  /* her keys (Oct 20 2026, corrected): Ctrl+Y in a box empties the cell; Ctrl+Z takes the comp off (asks first) – in a box or not */
+  if (cell && (e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === 'z') { e.preventDefault(); WB_EQ = null; const cid = cell.split('|')[0]; if (cid !== 'subj' && app.job.comps.some(x => x.id === cid && x.use)) wbRemoveAsk(app.job, cid); return; }
+  if (cell && (e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === 'y') { e.preventDefault(); WB_EQ = null;
     if (t.dataset.gfact) { const [cid, row] = t.dataset.gfact.split('|'); const c = app.job.comps.find(x => x.id === cid); if (!c) return;
-      if (c.zap && c.zap[row] && t.value === '') { wbUnzap(c, row); toast('Back to your sources'); }   // Ctrl+Z again on an emptied box: the sources come back
+      if (c.zap && c.zap[row] && t.value === '') { wbUnzap(c, row); toast('Back to your sources'); }   // Ctrl+Y again on an emptied box: the sources come back
       else { WB_ZAP = true; try { wbFactSet(app.job, c, row, ''); } finally { WB_ZAP = false; } c.zap = c.zap || {}; c.zap[row] = true; if (c.edit) delete c.edit['pk_' + row];
-        toast('Emptied – type the new entry (Ctrl+Z again brings back your sources)'); }
+        toast('Emptied – type the new entry (Ctrl+Y again brings back your sources)'); }
       t.value = ''; t.defaultValue = ''; save(); renderKeepFocus(); return; }
     t.value = ''; t.dispatchEvent(new Event('change', { bubbles: true })); return; }
   if (cell && !e.ctrlKey && !e.metaKey && !e.altKey && e.key === '=') {   // anywhere in the box, even with text in it
@@ -189,7 +191,7 @@ document.addEventListener('keydown', async e => {
   if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === 'z' && !inBox && WB.on && WB.cur && document.querySelector('#gridCard')) { e.preventDefault(); wbRemoveAsk(app.job, WB.cur); return; }
 });
 
-/* undo a Ctrl+Z empty: forget that line's emptied keys (found by a dry run on a blank copy) so the sources show again */
+/* undo a Ctrl+Y empty: forget that line's emptied keys (found by a dry run on a blank copy) so the sources show again */
 function wbUnzap(c, row) { if (c.zap) { delete c.zap[row]; if (!Object.keys(c.zap).length) delete c.zap; }
   const probe = { id: c.id, edit: {} }; WB_ZAP = true; try { wbFactSet(app.job, probe, row, ''); } finally { WB_ZAP = false; }
   for (const k in (probe.zapK || {})) if (c.zapK) delete c.zapK[k]; if (c.zapK && !Object.keys(c.zapK).length) delete c.zapK; }
