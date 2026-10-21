@@ -121,7 +121,7 @@ function landDraft(J, U) {
   t += LD.value ? ` The subject site value is estimated at ${money(LD.value)}.` : ' The subject site value is estimated at $___.';
   return t.length > 2500 ? t.slice(0, 2497) + '…' : t;
 }
-async function landRedraw() { const c = $('#refCard'); if (c && app.job) { const y = window.scrollY; c.innerHTML = refHTML(app.job); window.scrollTo(0, y); } try { await saveNow(); } catch (e) {} }
+async function landRedraw() { const c = $('#refCard'); if (c && app.job) { const y = window.scrollY; c.innerHTML = refHTML(app.job); if (typeof costRedraw === 'function') costRedraw(); window.scrollTo(0, y); } try { await saveNow(); } catch (e) {} }
 document.addEventListener('change', e => { const t = e.target; if (!t.dataset || !app.job) return; const LD = landJob(app.job);
   if (t.dataset.landuse !== undefined) { const id = t.dataset.landuse; LD.use = t.checked ? [...new Set([...LD.use, id])] : LD.use.filter(x => x !== id); if (LD.comment != null && LD.comment === LD.lastDraft) LD.comment = null; landRedraw(); }
   else if (t.dataset.landf !== undefined) { const k = t.dataset.landf; const v = k === 'years' ? +t.value : num(String(t.value).replace(/[^0-9.]/g, '')); LD.f[k] = v || (k === 'years' ? 0 : null); landRedraw(); }

@@ -57,7 +57,10 @@ function costHTML(J) {
       <span class="help">${M.n ? `Your budgets: median building direct ${money(M.bd)}/sf · existing-site basis ${money(M.ex)}/sf · garage ${money(M.gar)}/sf (${M.n} new-construction projects, CCCI-indexed) – the grey numbers.` : 'Drop your Construction_Cost_Database.xlsx to see your medians.'} BOE check: the Construction costs tab above.</span></div>
     <h3>Site value</h3><div class="row"><label>Site value $<input class="txt num" data-landv="1" value="${LD.value ? Math.round(LD.value).toLocaleString() : ''}" inputmode="numeric" style="width:10em"></label>
       <label>Method <select data-ck="siteMethod">${[['SalesComparison', 'Sales comparison'], ['Extraction', 'Extraction'], ['Allocation', 'Allocation'], ['Other', 'Other']].map(([v, n]) => `<option value="${v}" ${K.siteMethod === v ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
-      <span class="help">Same value and comment as the land sales card (tick the land sales there).</span></div>
+      <span class="help">${K.siteMethod === 'SalesComparison' ? 'Sales comparison: tick your land sales in the Land sales card above – same value and comment. With no competitive land sales, pick Extraction or Allocation here (3.6 asks for land comparables only with Sales comparison).' : 'Same site value as the Land sales card. No land sales need to be ticked for this method.'}</span></div>
+    ${K.siteMethod === 'Extraction' ? extrHTML(J, K) : ''}
+    ${K.siteMethod !== 'SalesComparison' || !landJob(J).use.length ? `<label class="fld"><span>Site value comment (3.6 Reconciliation of Site Value, 2,500 characters)</span><textarea class="txt" data-sitec="1" rows="5">${esc(landJob(J).comment != null ? landJob(J).comment : siteDraft(J))}</textarea></label>
+      <div class="row"><button class="btn sm ghost" data-siteredraft="1">Write it again from the ${K.siteMethod === 'Extraction' ? 'extraction sales' : 'method'}</button></div>` : ''}
     <h3>Cost new</h3><div class="tablewrap"><table class="tbl cost"><thead><tr><th>Item</th><th class="r">Sq ft</th><th class="r">$ / sq ft</th><th class="r">Cost new</th><th></th><th></th></tr></thead><tbody>${rows}
       <tr><td>Soft costs and fees (permits, design, engineering, utility and school fees)</td><td></td><td></td><td class="r"><input class="txt xs num" data-ck="soft" value="${nf(K.soft)}" inputmode="numeric" style="width:8em"></td><td></td><td></td></tr>
       <tr class="tot"><td><b>Total cost new</b> <small>dwelling ${money(X.dw)} · outbuildings / ADU ${money(X.ob)}</small></td><td></td><td></td><td class="r"><b>${money(X.dw + X.ob)}</b></td><td></td><td></td></tr></tbody></table></div>
@@ -73,6 +76,30 @@ function costHTML(J) {
     <div class="row"><button class="btn sm ghost" data-cost="redraft">Write it again from the figures</button></div>
     <p class="help">Goes into the Full report for SFREP: site value, method and comment, cost type and method, depreciated dwelling and outbuildings, site improvements, depreciation method and your value.</p>`;
 }
+/* her ask (Oct 21 2026): no competitive land sales – the site value by extraction. Each improved sale: price, less the depreciated
+   contributory value of the improvements (her figure), = the indicated site value. She picks the sales and the amounts; the page only subtracts. */
+function extrHTML(J, K) { K.ext = K.ext || []; const nf = v => v || v === 0 ? Math.round(v).toLocaleString() : '';
+  const rows = K.ext.map(x => { const land = num(x.price) !== null && num(x.impr) !== null ? num(x.price) - num(x.impr) : null; return `<tr><td><input class="txt sm" data-ce="${x.id}|addr" value="${esc(x.addr || '')}" placeholder="Address" style="width:13em"></td><td><input class="txt xs" data-ce="${x.id}|date" value="${esc(x.date || '')}" placeholder="mm/dd/yyyy" style="width:7em"></td>
+    <td class="r"><input class="txt xs num" data-ce="${x.id}|price" value="${nf(x.price)}" inputmode="numeric" style="width:8em"></td><td class="r"><input class="txt xs num" data-ce="${x.id}|impr" value="${nf(x.impr)}" inputmode="numeric" style="width:8em" title="Depreciated contributory value of the house, garage and site improvements at the sale"></td>
+    <td class="r"><b>${land !== null ? money(land) : ''}</b></td><td class="r"><input class="txt xs num" data-ce="${x.id}|site" value="${nf(x.site)}" inputmode="numeric" style="width:6em"></td><td class="r">${land !== null && num(x.site) ? money(land / num(x.site)) : ''}</td>
+    <td><input class="txt sm" data-ce="${x.id}|note" value="${esc(x.note || '')}" placeholder="e.g. fixer, bought to remodel; estate sale" style="width:16em"></td><td><button class="btn xs" data-cedel="${x.id}">✕</button></td></tr>`; }).join('');
+  const L = K.ext.map(x => num(x.price) !== null && num(x.impr) !== null ? num(x.price) - num(x.impr) : null).filter(v => v !== null);
+  return `<h4>Extraction – improved sales</h4><div class="tablewrap"><table class="tbl"><thead><tr><th>Sale</th><th>Sale date</th><th class="r">Price</th><th class="r">Less depreciated improvements</th><th class="r">Indicated site value</th><th class="r">Site sq ft</th><th class="r">$ / site sq ft</th><th>Notes</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
+    <div class="row"><button class="btn sm" data-ceadd="1">+ Add an improved sale</button><span class="help">${L.length ? 'Indicated ' + money(Math.min(...L)) + (L.length > 1 ? ' to ' + money(Math.max(...L)) : '') + '. ' : ''}Best: sales where the house added little (fixers, teardowns, bought to remodel). The improvement amount is yours – cost new less depreciation, or what buyers paid over land.</span></div>`; }
+function siteDraft(J) { const K = costJob(J), LD = landJob(J); const v = LD.value ? money(LD.value) : '$___'; const d = t => String(t || '').replace(/^(\d{4})-(\d{2})-(\d{2})$/, '$2/$3/$1');
+  if (K.siteMethod === 'SalesComparison') { const U = landAll().filter(x => LD.use.includes(x.id)); return U.length ? landDraft(J, U) : ''; }
+  if (K.siteMethod === 'Extraction') { const E = (K.ext || []).filter(x => num(x.price)); const one = x => { const land = num(x.impr) !== null ? num(x.price) - num(x.impr) : null; return `${x.addr || 'sale'} (${x.date ? d(x.date) + ', ' : ''}${money(num(x.price))}${num(x.impr) !== null ? ' less ' + money(num(x.impr)) + ' depreciated improvements = ' + money(land) : ''}${num(x.site) ? ', ' + int(num(x.site)) + ' sq ft site' : ''}${x.note ? '; ' + x.note : ''})`; };
+    const L = E.map(x => num(x.impr) !== null ? num(x.price) - num(x.impr) : null).filter(x => x !== null);
+    return (`There were no competitive vacant land sales in the subject's market area, so the site value was estimated by extraction: the depreciated contributory value of the improvements was deducted from the sale price of improved sales in which the improvements contributed little value. ${E.length ? E.map(one).join('; ') + '.' : '[sales]'}${L.length ? ` They indicate ${money(Math.min(...L))}${L.length > 1 ? ' to ' + money(Math.max(...L)) : ''}.` : ''} The subject site value is estimated at ${v}.`).slice(0, 2500); }
+  if (K.siteMethod === 'Allocation') return `There were no competitive vacant land sales in the subject's market area, so the site value was estimated by allocation: a typical ratio of site value to total value of [__]% for [area], supported by [extractions / market data], applied to the subject indicates a site value of ${v}.`;
+  return ''; }
+document.addEventListener('click', e => { const t = e.target.closest && e.target.closest('[data-ceadd],[data-cedel],[data-siteredraft]'); if (!t || !app.job) return; const J = app.job, K = costJob(J); K.ext = K.ext || [];
+  if (t.dataset.ceadd) K.ext.push({ id: uid() }); else if (t.dataset.cedel) K.ext = K.ext.filter(x => x.id !== t.dataset.cedel); else if (t.dataset.siteredraft) landJob(J).comment = null;
+  save(); costRedraw(); });
+document.addEventListener('change', e => { const t = e.target; if (!app.job || !(t.dataset.ce || t.dataset.sitec)) return; const J = app.job, K = costJob(J), LD = landJob(J);
+  if (t.dataset.sitec) { LD.comment = t.value; save(); return; }
+  const [id, k] = t.dataset.ce.split('|'); const x = (K.ext || []).find(o => o.id === id); if (!x) return; x[k] = ['price', 'impr', 'site'].includes(k) ? (t.value.trim() === '' ? null : num(String(t.value).replace(/[^0-9.]/g, ''))) : t.value.trim();
+  if (LD.comment != null && LD.comment === LD.lastSite) LD.comment = null; save(); costRedraw(); });
 function costRedraw() { const c = $('#costCard'); if (c && app.job) { const y = window.scrollY; c.innerHTML = costHTML(app.job); window.scrollTo(0, y); } }
 document.addEventListener('click', e => { const t = e.target.closest('[data-cost],[data-cladd],[data-cldel],[data-csadd],[data-csdel]'); if (!t || !app.job) return; const J = app.job; const K = costJob(J);
   if (t.dataset.cost === 'on') J.costOn = true; else if (t.dataset.cost === 'off') J.costOn = false; else if (t.dataset.cost === 'redraft') K.comment = null;
@@ -88,7 +115,7 @@ document.addEventListener('change', e => { const t = e.target; if (!app.job || !
 function costXML(J, VR, child, set, doc, NS, SVC) {
   if (!(J.costOn ?? false) && !J.cost) return; if (J.costOn === false) return; const K = costJob(J), X = costCalc(J); const LD = landJob(J);
   const CA = child(child(VR, 'APPROACH_TO_VALUE'), 'COST_APPROACH'); [...CA.children].filter(k => k.localName === 'VALUATION_APPROACH_EXCLUSION_REASONS').forEach(k => k.remove());
-  const d = child(CA, 'COST_APPROACH_DETAIL'); const cm = K.comment != null ? K.comment : costDraft(J); const site = LD.comment != null ? LD.comment : (LD.lastDraft || '');
+  const d = child(CA, 'COST_APPROACH_DETAIL'); const cm = K.comment != null ? K.comment : costDraft(J); const site = LD.comment != null ? LD.comment : siteDraft(J);   /* not an old land-sales draft once she unticks them all or picks another method */
   // A-1 order is alphabetical inside COST_APPROACH_DETAIL
   set(d, 'CostAnalysisCommentDescription', cm.slice(0, 5000)); set(d, 'CostAnalysisType', K.type); set(d, 'CostMethodType', K.method);
   if (X.dw) set(d, 'DepreciatedCostDwellingsTotalAmount', Math.round(X.depDw)); if (X.ob) set(d, 'DepreciatedCostOutbuildingsTotalAmount', Math.round(X.depOb));
