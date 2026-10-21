@@ -34,7 +34,8 @@ function precheckXML(xml) {
     if (el.localName === 'EXTENSION' || el.localName === 'EXTENSION_SECTION') return;   // software extensions are outside the spec
     if (kids.length) { if (!A1[el.localName + '/'] && !A1[key] && el.namespaceURI === PRE_NS) unknown.set(el.localName, (unknown.get(el.localName) || 0) + 1); kids.forEach(walk); return; }
     const s = A1[key]; const v = (el.textContent || '').trim();
-    if (!s) { if (el.namespaceURI === PRE_NS) unknown.set(key, (unknown.get(key) || 0) + 1); return; }
+    if (!s) { if (A1[el.localName + '/'] || /^IMAGE\/Image(Improvement|PropertyUnit)$/.test(key)) return;   /* RELATIONSHIP carries only xlink attributes (a container in A-1); the iPad's ImageImprovement / ImagePropertyUnit photo links imported fine in SFREP (Oct 15 2026) */
+      if (el.namespaceURI === PRE_NS) unknown.set(key, (unknown.get(key) || 0) + 1); return; }
     if (v === '') { out.push({ sev: 'Must fix', msg: `${where(el)}: ${el.localName} is empty`, hint: 'Leave the field out or fill it in.' }); return; }
     let bad = '';
     /* A-1 lists "Garage" as the only Other description for an OUTBUILDING's cost line; the dwelling's Other line is free-form (rows 2466 / 2495) */
