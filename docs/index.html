@@ -644,6 +644,7 @@ mark.blank{background:#fff3a8;padding:0 2px;border-radius:3px}.cmt textarea{widt
       <li><b>Examples under a line name:</b> lines like Site characteristics, Topography, Easement and Functional utility show a few examples of the allowed answers under the name (the 3.6 field name is in the tooltip and behind the ⓘ).</li>
       <li><b>Comp names stay on screen:</b> when you scroll down over the grid or workbook, the grid first moves up under the top bar, then scrolls inside – the Subject and Comp names (and the line names on the left) stay in view.</li>
       <li><b>Tab across the comps:</b> Tab moves to the same line of the next comp – past comp 6 the grid slides over to 7, 8, 9 by itself; after the last comp it goes to comp 1 on the next line. Shift+Tab goes back.</li>
+      <li><b>Last price reduction:</b> the days from the last price reduction to pending come from the MLS printout History (e.g. reduced 09/17, under contract 09/22 = 5 days), or from your 2.6 notes “lpr:32” in your archive. They show under the Last price reduction line and in the exposure-time help.</li>
       <li><b>A listing on the grid</b> (active or pending, e.g. your own listing): 3.6 does not ask for the sale price, financing, concessions, sale date or ownership transfer terms of a listing – the final grid shows “— listing” (a pending sale with no known price shows “Contract price unknown”) instead of “missing”. What a listing does need: Listing status, List price, Contract date (pending), Days on market and the <b>Sale-to-list price ratio</b> – type the ratio you expect it to sell at (e.g. 98) on that line; it turns on by itself when a comp is a listing, and you adjust on it.</li>
       <li><b>④ Cost approach:</b> the last step in the comp genie, after the Final grid – your Land sales and construction costs and the Cost approach are there, not in the Workbook.</li>
       <li><b>Comps across:</b> in Workbook view, pick how many comps fit across the screen (3, 4, 5, 6, 9 or all). Every comp stays in the same grid – slide to the others with the scroll bar at the bottom of the window or the ◀ ▶ buttons. The line names and the Subject column stay in place while the comps slide.</li>
@@ -811,7 +812,7 @@ mark.blank{background:#fff3a8;padding:0 2px;border-radius:3px}.cmt textarea{widt
 </div>
 <div id="toast" role="status" hidden></div>
 <script>
-const BUILD='o1-1021-0446';
+const BUILD='o1-1021-0450';
 const G = (() => {
 /* ---------------- small helpers ---------------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -1151,7 +1152,7 @@ function archCanon(a) {
     mls: a.mls_no || '', addr: [a.street_number, a.street_name].filter(Boolean).join(' '), unit: a.unit || '', city: a.city || '', zip: a.zip || '', apn: a.apn || '', nbhd: a.neighborhood || '',
     status: a.listing_status || (isListing ? 'Listing' : a.record_role === 'subject' ? '' : (a.price ? 'Closed' : '')),
     salePrice: isListing ? null : a.price, listPrice: isListing ? a.price : null, saleDate: isListing ? '' : (a.sale_month || ''), contractDate: a.contract_month || '', dom: a.dom, saleType: a.sale_type || '', financing: a.financing || '', concessions: a.concession_amt,
-    verification: a.verification || '', lprDays: a.lpr_days, sfSource: a.record_role === 'subject' || /\bfiles\b|inspection|pers\.?\s*insp/i.test(a.verification || '') ? 'Measured (my inspection)' : '',   // she measured it only when she inspected it: her subject, or "Files" / "Inspection" in her 2.6 verification
+    verification: a.verification || '', lprDays: a.lpr_days, redDays: a.lpr_days ?? null, sfSource: a.record_role === 'subject' || /\bfiles\b|inspection|pers\.?\s*insp/i.test(a.verification || '') ? 'Measured (my inspection)' : '',   // she measured it only when she inspected it: her subject, or "Files" / "Inspection" in her 2.6 verification
     siteSf: a.site_sf, usableSf: a.usable_sf, landSplit: a.land_split || '', topo: a.topography || '',
     locRating: a.location_rating || '', locFactors: String(a.location_factors || '').split(';').filter(Boolean).map(x => LOC_TEXT[x] || x).join('; '),
     viewRating: a.view_rating || '', viewTypes: String(a.view_types || '').split(';').filter(Boolean).join('; '), viewRange: a.view_panoramic ? 'Panoramic' : a.view_limited ? 'Limited' : '',

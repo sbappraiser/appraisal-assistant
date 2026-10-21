@@ -36,7 +36,7 @@ const rv = (J, k) => { const R = R0(J), F = reportFrom(J); return blank(R[k]) ? 
 /* her exposure-time rule (Oct 19 2026): count only the days a comp was on the market at a reasonable price – from its last price
    reduction to the pending / contingent date; a comp that was never reduced counts its days on market */
 function expRows(J) {
-  return usedComps(J).map(c => { const C = compFacts(c, J); const d = redDaysOf(C); const dom = num(C.dom);
+  return usedComps(J).map(c => { const C = compFacts(c, J); const d = redDaysOf(C) ?? C.redDays; const dom = num(C.dom);
     return { c, title: compTitle(c), use: c.use, lastRed: C.lastRed, days: d !== null ? d : dom, from: d !== null ? 'since the last price reduction' : 'days on market (no reduction)', dom }; }).filter(r => r.days !== null && r.days !== undefined && !isNaN(r.days));
 }
 function expHelpHTML(J) {

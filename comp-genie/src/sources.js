@@ -59,7 +59,7 @@ function archCanon(a) {
     mls: a.mls_no || '', addr: [a.street_number, a.street_name].filter(Boolean).join(' '), unit: a.unit || '', city: a.city || '', zip: a.zip || '', apn: a.apn || '', nbhd: a.neighborhood || '',
     status: a.listing_status || (isListing ? 'Listing' : a.record_role === 'subject' ? '' : (a.price ? 'Closed' : '')),
     salePrice: isListing ? null : a.price, listPrice: isListing ? a.price : null, saleDate: isListing ? '' : (a.sale_month || ''), contractDate: a.contract_month || '', dom: a.dom, saleType: a.sale_type || '', financing: a.financing || '', concessions: a.concession_amt,
-    verification: a.verification || '', lprDays: a.lpr_days, sfSource: a.record_role === 'subject' || /\bfiles\b|inspection|pers\.?\s*insp/i.test(a.verification || '') ? 'Measured (my inspection)' : '',   // she measured it only when she inspected it: her subject, or "Files" / "Inspection" in her 2.6 verification
+    verification: a.verification || '', lprDays: a.lpr_days, redDays: a.lpr_days ?? null, sfSource: a.record_role === 'subject' || /\bfiles\b|inspection|pers\.?\s*insp/i.test(a.verification || '') ? 'Measured (my inspection)' : '',   // she measured it only when she inspected it: her subject, or "Files" / "Inspection" in her 2.6 verification
     siteSf: a.site_sf, usableSf: a.usable_sf, landSplit: a.land_split || '', topo: a.topography || '',
     locRating: a.location_rating || '', locFactors: String(a.location_factors || '').split(';').filter(Boolean).map(x => LOC_TEXT[x] || x).join('; '),
     viewRating: a.view_rating || '', viewTypes: String(a.view_types || '').split(';').filter(Boolean).join('; '), viewRange: a.view_panoramic ? 'Panoramic' : a.view_limited ? 'Limited' : '',

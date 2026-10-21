@@ -29,6 +29,7 @@ const FIELDS = [
   { k: 'saleDate', l: 'Sale date', g: 'Sale and listing', kind: 'sale', t: 'date' },
   { k: 'dom', l: 'Days on market', g: 'Sale and listing', kind: 'listing', t: 'int' },
   { k: 'cdom', l: 'Cumulative days on market', g: 'Sale and listing', kind: 'listing', t: 'int' },
+  { k: 'redDays', l: 'Days from the last price reduction to pending', g: 'Sale and listing', kind: 'listing', t: 'int' },   // her 2.6 'lpr:32' (archive), or the MLS printout History
   { k: 'saleType', l: 'Sale type', g: 'Sale and listing', kind: 'sale', t: 'text' },
   { k: 'financing', l: 'Transfer terms (financing)', g: 'Sale and listing', kind: 'sale', t: 'text' },
   { k: 'concessions', l: 'Known sales concessions ($)', g: 'Sale and listing', kind: 'sale', t: 'money' },
