@@ -180,7 +180,7 @@ function buildCompXML(PROPS, RELS, DSS, c, n, job) {
   const ds = (type, id) => { const l = `DATA_SOURCE_${type}SalesComp${n}`; const e = X(DSS, 'DATA_SOURCE', { 'xlink:label': l }); XV(e, 'DataSourceName', DS_NAME[type] || type); XV(e, 'DataSourceIdentifier', id); XV(e, 'DataSourceType', type); X(RELS, 'RELATIONSHIP', { 'xlink:arcrole': 'urn:fdc:mismo.org:2009:residential/DATA_SOURCE_IsDataSourceFor_PROPERTY', 'xlink:from': l, 'xlink:to': lab }).selfClose = true; };
   if (g('mls') && (c.src.mls || c.src.pdf || /MLS/i.test(g('verification') || ''))) ds('MLS', g('mls'));
   if (c.src.crs) ds('AssessorRecord', null);
-  { const DN = docNoOf(c); if (DN) ds('Deed', '#' + docShort(DN.doc) + ' ' + (DN.date ? showDate(DN.date) : '')); else if (c.src.cort.length) ds('Deed', c.src.cort[c.cortPick || 0].doc || null); }   // the recorded document number of the sale (CRS or CORT)
+  { const DN = docNoOf(c); if (DN) ds('Deed', '#' + docShort(DN.doc));   /* her rule Oct 20 2026: the date is the Sale date line's, not part of the identifier */ else if (c.src.cort.length) ds('Deed', c.src.cort[c.cortPick || 0].doc || null); }   // the recorded document number of the sale (CRS or CORT)
   if (c.src.arch.length) ds('PreviousAppraisalFile', null);
 }
 /* A-1: DataSourceName is required (33 characters) */

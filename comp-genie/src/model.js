@@ -345,4 +345,4 @@ function docNoOf(c) {
   return null; }
 /* her format (Oct 20 2026): the last 5 digits of the recording number, then the closing (recording) date – "Doc #06575 03/04/2026" */
 const docShort = d => { const m = String(d || '').match(/(\d+)\D*$/); if (!m) return String(d || ''); const n = m[1]; return n.length > 5 ? n.slice(-5) : n; };
-function docText(c) { const D = docNoOf(c); if (!D) return ''; const cs = currentSale(c); const dt = D.date || (cs && cs.date) || ''; return 'Doc #' + docShort(D.doc) + (dt ? ' ' + showDate(dt) : ''); }
+function docText(c, noDate) { const D = docNoOf(c); if (!D) return ''; if (noDate) return 'Doc #' + docShort(D.doc); const cs = currentSale(c); const dt = D.date || (cs && cs.date) || ''; return 'Doc #' + docShort(D.doc) + (dt ? ' ' + showDate(dt) : ''); }
