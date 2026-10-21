@@ -670,7 +670,7 @@ document.addEventListener('click', async e => {
     if (gb.dataset.glimnote || gb.dataset.gokstd) { if (!(G.note || '').includes(LIMIT_TEXT.slice(0, 60))) G.note = [(G.note || '').trim(), LIMIT_TEXT].filter(Boolean).join(' '); }
     save(); renderKeepFocus(); toast('Added to the sales comparison comment – read it over'); return; }
   const su = e.target.closest('[data-sensuse]');
-  if (su) { const G = G0(app.job); const k = su.dataset.sensuse, v = +su.dataset.v; G.rates[k] = v; G.rateFrom = G.rateFrom || {}; G.rateFrom[k] = 'sensitivity (tightest adjusted range, ' + usedComps(app.job).length + ' comps)'; save(); app.sens = { job: app.job.id, res: sensRun(app.job) }; renderKeepFocus(); toast((SENS_LABEL[k] || k) + ': ' + sensFmt(k, v) + ' – every comp is recalculated'); return; }
+  if (su) { const G = G0(app.job); const k = su.dataset.sensuse, v = +su.dataset.v; G.rates[k] = v; G.rateFrom = G.rateFrom || {}; G.rateFrom[k] = 'sensitivity (tightest adjusted range, ' + usedComps(app.job).length + ' comps)'; save(); app.sensUsed = app.sensUsed || {}; app.sensUsed[k] = v; app.sens = { job: app.job.id, res: { ...sensRun(app.job), at: Date.now() } }; renderKeepFocus(); toast((SENS_LABEL[k] || k) + ': ' + sensFmt(k, v) + ' – every comp is recalculated'); return; }
   const wp = e.target.closest('[data-act]') && e.target.closest('[data-wbcol]') ? null : e.target.closest('[data-wbpop],[data-wbmv],[data-wbpage],[data-wbcol]');   // a button inside a column header (MLS link) is its own click
   if (wp) { const d = wp.dataset;
     if (d.wbpop) { const [a, b] = d.wbpop.split('|'); await saveNow(); window.open(`${location.pathname}?pop=grid&from=${a}&to=${b}&job=${encodeURIComponent(app.job.id)}`, 'genie-grid-' + a + (+b >= 99 ? 'all' : ''), +b >= 99 ? `width=${Math.min(screen.availWidth, 1900)},height=${screen.availHeight}` : 'width=1000,height=1100'); return; }
@@ -747,7 +747,7 @@ document.addEventListener('click', async e => {
     case 'close': if (CPOP) { window.close(); break; } app.sel = null; render(); break;
     case 'backup': backupJob(); break;
     case 'nuok': app.nuAsk = null; render(); break;
-    case 'sens-run': { app.sens = { job: app.job.id, res: sensRun(app.job) }; renderKeepFocus(); break; }
+    case 'sens-run': { app.sens = { job: app.job.id, res: { ...sensRun(app.job), at: Date.now() } }; renderKeepFocus(); toast('Sensitivity run again with your current rates'); break; }
     case 'sup-run': { toast('Measuring your lines from your groups…'); await new Promise(r => setTimeout(r, 30)); app.job.support = supRun(app.job); save(); renderKeepFocus(); break; }
     case 'ts-run': { toast('Measuring time from your groups…'); await new Promise(r => setTimeout(r, 30)); app.job.timeSupport = await tsRun(app.job); save(); renderKeepFocus(); break; }
     case 'savealldb': { const L = app.job.comps.filter(c => c.use || c.notUsed); let n = 0; for (const c of L) n = await saveToMyDb(c); toast(L.length ? `${L.length} comps saved to your comp database (${n} saved in all) – with your tiers` : 'No comps on the grid yet'); break; }

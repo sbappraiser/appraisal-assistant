@@ -76,7 +76,7 @@ function sensHTML(J) {
   const T = app.sens && app.sens.job === J.id ? app.sens.res : null;
   const head = `<div class="sens"><h3>Sensitivity <small>which rate lines the comps up best</small></h3>
     <p class="help">For one line at a time, I try a range of rates with every other line as it is now, and find where the adjusted sale prices sit closest together. Your own typed amounts never move. It is support, not proof: it works best with 5 or more comps that differ on that line. Nothing changes until you press Use.</p>
-    <div class="row"><button class="btn${T ? '' : ' primary'}" data-act="sens-run">${T ? 'Run it again (after changes)' : 'Run sensitivity'}</button>${T ? `<small>Adjusted range now: ${money(T.spread)} apart · typical difference from the middle ${money(Math.round(T.sd / 500) * 500)} (${T.n} comps)</small>` : ''}</div>`;
+    <div class="row"><button class="btn${T ? '' : ' primary'}" data-act="sens-run">${T ? 'Run it again (after changes)' : 'Run sensitivity'}</button>${T && T.at ? `<span class="sensok">✓ Run at ${new Date(T.at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', second: '2-digit' })}</span> ` : ''}${T ? `<small>Adjusted range now: ${money(T.spread)} apart · typical difference from the middle ${money(Math.round(T.sd / 500) * 500)} (${T.n} comps)</small>` : ''}</div>`;
   if (!T) return head + '</div>';
   if (T.err) return head + `<p class="help">${esc(T.err)}</p></div>`;
   if (!T.lines.length) return head + '<p class="help">No line has at least 2 comps that differ from the subject, so there is nothing to test.</p></div>';
@@ -86,7 +86,7 @@ function sensHTML(J) {
     return `<tr><th>${esc(SENS_LABEL[L.k] || L.k)}<br><small>${esc(RATES[L.k] ? RATES[L.k][0] : '')} · ${L.moved} comps differ</small></th>
       <td>${sensFmt(L.k, L.cur)}</td><td><b>${sensFmt(L.k, L.best)}</b>${L.band[0] < L.band[1] ? `<br><small>about as tight from ${sensFmt(L.k, L.band[0])} to ${sensFmt(L.k, L.band[1])}</small>` : ''}</td>
       <td>${L.nowSpread !== null ? money(L.nowSpread) : '–'} → <b>${money(L.bestSpread)}</b><br><small>value middle ${money(L.bestMed)}</small></td><td>${sensSpark(L)}</td>
-      <td>${note ? `<small class="warn">${esc(note)}</small><br>` : ''}${same ? '<small>Your rate is already the tightest.</small>' : `<button class="btn sm" data-sensuse="${L.k}" data-v="${L.best}">Use ${sensFmt(L.k, L.best)}</button>`}</td></tr>`; }).join('');
+      <td>${note ? `<small class="warn">${esc(note)}</small><br>` : ''}${(app.sensUsed || {})[L.k] !== undefined && num(G0(J).rates[L.k]) === (app.sensUsed || {})[L.k] ? `<span class="sensok">✓ Using ${sensFmt(L.k, app.sensUsed[L.k])}</span>${same ? '' : `<br><button class="btn sm" data-sensuse="${L.k}" data-v="${L.best}">Use ${sensFmt(L.k, L.best)}</button>`}` : same ? '<small>Your rate is already the tightest.</small>' : `<button class="btn sm" data-sensuse="${L.k}" data-v="${L.best}">Use ${sensFmt(L.k, L.best)}</button>`}</td></tr>`; }).join('');
   return head + `<div class="tablewrap"><table class="senst"><thead><tr><th>Line</th><th>Your rate</th><th>Tightest at</th><th>Range apart: now → at that rate</th><th>Spread by rate <small>(green = tightest, orange = yours)</small></th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
     <p class="help">Lines are tested one at a time, so after you change one rate, run it again – the others can shift. A line that only lines up at an extreme rate usually means a comp is not comparable or another line is off.</p></div>`;
 }
