@@ -108,7 +108,7 @@ function buildCompXML(PROPS, RELS, DSS, c, n, job) {
   const mode = gridMode(job), CF = compFacts(c, job);   /* condo / PUD facts from her grid */
   { const fx = funcIssues(CF.func); if (fx.length) { const FI = X(P, 'FUNCTIONAL_ISSUES'); fx.forEach(f => { const e = X(FI, 'FUNCTIONAL_ISSUE'); XV(e, 'FunctionalIssueType', f.t); if (f.other) XV(e, 'FunctionalIssueTypeOtherDescription', f.other); }); } }   // her Functional utility line
   if (mode !== 'house' && num(CF.hoa)) { const d = X(X(X(X(P, 'HOMEOWNERS_ASSOCIATIONS'), 'HOMEOWNERS_ASSOCIATION'), 'ASSOCIATION_CHARGES'), 'ASSOCIATION_CHARGE'); const dd = X(d, 'ASSOCIATION_CHARGE_DETAIL'); XV(dd, 'AssociationChargeAmount', Math.round(num(CF.hoa))); XV(dd, 'AssociationChargeType', 'AssociationDues'); }
-  const imp = X(X(P, 'IMPROVEMENTS'), 'IMPROVEMENT'); const idt = X(imp, 'IMPROVEMENT_DETAIL'); const CFx = compFacts(c, job); const cool = CFx.cool && typeof PICK !== 'undefined' && pkParse(PICK.cool, CFx.cool).ok ? (/^none/i.test(CFx.cool) ? { exists: false } : { exists: true, type: pkParse(PICK.cool, CFx.cool).vals[0] }) : uadCool(g('heatCool'));   // her ▾ pick first
+  const IMPS = X(P, 'IMPROVEMENTS'); const imp = X(IMPS, 'IMPROVEMENT'); const idt = X(imp, 'IMPROVEMENT_DETAIL'); const CFx = compFacts(c, job); const cool = CFx.cool && typeof PICK !== 'undefined' && pkParse(PICK.cool, CFx.cool).ok ? (/^none/i.test(CFx.cool) ? { exists: false } : { exists: true, type: pkParse(PICK.cool, CFx.cool).vals[0] }) : uadCool(g('heatCool'));   // her ▾ pick first
   if (cool) XV(idt, 'CoolingSystemExistsIndicator', cool.exists ? 'true' : 'false');
   XV(idt, 'ImprovementType', 'Dwelling'); if (num(g('yearBuilt')) >= 1700) { XV(idt, 'PropertyStructureBuiltYear', g('yearBuilt')); XV(idt, 'PropertyStructureBuiltYearEstimatedIndicator', 'false'); }   // a 0 from the MLS is no year (schema minimum 0001)
   const pu = X(X(imp, 'PROPERTY_UNITS'), 'PROPERTY_UNIT');
@@ -124,6 +124,17 @@ function buildCompXML(PROPS, RELS, DSS, c, n, job) {
   const heats = CFx.heat && typeof PICK !== 'undefined' && pkParse(PICK.heat, CFx.heat).ok ? pkParse(PICK.heat, CFx.heat).vals.filter(v => v !== 'None') : uadHeat(g('heatCool')); if (heats.length || cool) { const sy = X(imp, 'SYSTEM');
     if (cool && cool.exists) { const ce = X(X(sy, 'COOLING_SYSTEMS'), 'COOLING_SYSTEM'); XV(ce, 'CoolingSystemType', cool.type); if (cool.type === 'Other') XV(ce, 'CoolingSystemTypeOtherDescription', ((typeof PICK !== 'undefined' && pkParse(PICK.cool, CFx.cool).other) || 'Other').slice(0, 19)); }
     if (heats.length) { const hs = X(sy, 'HEATING_SYSTEMS'); heats.forEach(h => { const e = X(hs, 'HEATING_SYSTEM'); XV(e, 'HeatingFuelType', uadFuel(g('heatCool')) || null); XV(e, 'HeatingSystemType', h); if (h === 'Other') XV(e, 'HeatingSystemTypeOtherDescription', ((CFx.heat && typeof PICK !== 'undefined' && pkParse(PICK.heat, CFx.heat).other) || 'Wall heater').slice(0, 19)); }); } }
+  /* her ADUs and outbuildings (Oct 20 2026; A-1 1800.07xx, F-1 22.07 / 22.14): one IMPROVEMENT per building – Outbuilding, real property, its 3.6 type;
+     an ADU (Standalone ADU, ADU/Garage) also carries its own PROPERTY_UNIT (ADU indicator, finished sq ft, baths, Q / C, "ADU 1" like the iPad's subject);
+     other living buildings their finished sq ft and bath counts */
+  if (typeof obParse === 'function') { let na = 0; obParse(CF.adu).items.forEach((o, k) => { const im = X(IMPS, 'IMPROVEMENT', { 'xlink:label': `IMPROVEMENT_OUTBUILDING_SalesComp${n}_${k + 1}` }); const dt = X(im, 'IMPROVEMENT_DETAIL');
+    const isAdu = OB_ADU.includes(o.t); XV(dt, 'ImprovementType', 'Outbuilding'); XV(dt, 'OutbuildingRealPropertyIndicator', 'true');
+    const T = OB_UAD[o.t]; XV(dt, 'OutbuildingType', T || 'Other'); if (!T) XV(dt, 'OutbuildingTypeOtherDescription', (o.t === 'ADU/Garage' ? 'ADUGarage' : (o.other || o.t)).slice(0, 21));
+    if (isAdu) { na++; const pu = X(X(im, 'PROPERTY_UNITS'), 'PROPERTY_UNIT'); if (+o.sf) XV(X(pu, 'PROPERTY_UNIT_AREA'), 'UnitStandardAboveGradeFinishedAreaMeasure', +o.sf, SQFT);
+      const d = X(pu, 'PROPERTY_UNIT_DETAIL'); XV(d, 'AccessoryDwellingUnitIndicator', 'true'); if (o.full !== '') XV(d, 'FullBathroomCount', +o.full || 0); if (o.full !== '' || o.half !== '') XV(d, 'HalfBathroomCount', +o.half || 0);
+      if (o.c) XV(d, 'InteriorConditionRatingCode', o.c); if (o.q) XV(d, 'InteriorQualityRatingCode', o.q); XV(d, 'UnitIdentifier', 'ADU ' + na); }
+    else { if (+o.full || +o.half) { const R = X(X(im, 'INTERIOR'), 'INTERIOR_ROOM_SUMMARIES'); [['FullBathroom', +o.full], ['HalfBathroom', +o.half]].forEach(([t, v]) => { if (!v) return; const e = X(R, 'INTERIOR_ROOM_SUMMARY'); XV(e, 'RoomType', t); XV(e, 'TotalRoomCount', v); }); } }
+    const sd = X(X(im, 'STRUCTURE'), 'STRUCTURE_DETAIL'); XV(sd, 'LivingUnitCount', isAdu ? 1 : 0); if (!isAdu && +o.sf) XV(sd, 'StructureExcludingVehicleStorageAndADUFinishedAreaMeasure', +o.sf, SQFT); }); }
   // INSPECTIONS (front photo)
   if (c.front) { const im = X(X(X(X(P, 'INSPECTIONS'), 'INSPECTION'), 'IMAGES'), 'IMAGE'); XV(im, 'ImageCategoryType', 'PropertyPhoto'); XV(im, 'ImageFileLocationIdentifier', '\\\\Images\\' + photoName(c)); XV(im, 'MIMETypeIdentifier', 'image/jpeg'); }
   // LISTING_INFORMATIONS

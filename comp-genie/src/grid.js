@@ -705,14 +705,20 @@ async function ingestInspection(files, name) {
 
 /* ---------------- adjustments into the SFREP file ---------------- */
 function gridAdjustXML(CMP, c, job) {
-  const G = job.grid; if (!G) return null; const box = X(CMP, 'COMPARABLE_ADJUSTMENTS'); const C = compFacts(c, job); let any = false;
+  const G = job.grid; if (!G) return null; const box = X(CMP, 'COMPARABLE_ADJUSTMENTS'); const C = compFacts(c, job); let any = false; const obAdj = [];
   // order as on the 3.6 grid (D-1 sample): Add Other rows first, then site, dwelling, units, quality/condition, amenities
   adjRows(job).filter(r => r[3] && rowShown(r, job)).sort((x, y) => (y[3] === 'OTHER') - (x[3] === 'OTHER')).forEach(r => { const a = cellAmount(job, c, r).v;
     if (r[3] === 'OTHER') { const desc = otherDesc(r, C); if (!desc && !a) return; const e = X(box, 'COMPARABLE_ADJUSTMENT'); XV(e, 'AdditionalComparisonLineItemDescription', desc || null); XV(e, 'AdditionalComparisonLineItemIdentifier', r[5]); XV(e, 'ComparableAdjustmentAmount', a || 0); XV(e, 'ComparableAdjustmentType', 'SalesComparableAdditionalAdjustableComparisonItem'); any = true; return; }
-    if (a === null || a === undefined) return; const ty = r[0] === 'unitPos' && /town|row/i.test(String(C.structure || '') + String(subjFacts(job).structure || '')) ? 'RowhouseTownhouseEndUnit' : r[3];
+    if (a === null || a === undefined) return;
+    /* her ADU / outbuilding lines: one COMPARABLE_ADJUSTMENT each, in grid order – an ADU's on its Location of ADU line (F-1 22.07.02, adjustable), an outbuilding's on Outbuilding (22.14.01) */
+    if (isObSlot(r[0])) { obAdj.push([r[0], a]); return; }
+    const ty = r[0] === 'unitPos' && /town|row/i.test(String(C.structure || '') + String(subjFacts(job).structure || '')) ? 'RowhouseTownhouseEndUnit' : r[3];
     const was = box.kids.find(k => k.tag === 'COMPARABLE_ADJUSTMENT' && k.kids.some(x => x.tag === 'ComparableAdjustmentType' && x.text === ty));   // one UAD line per type: garage + carport = Vehicle Storage
     if (was) { const amt = was.kids.find(x => x.tag === 'ComparableAdjustmentAmount'); if (amt) amt.text = String(Math.round(num(amt.text) + a)); return; }
     const e = X(box, 'COMPARABLE_ADJUSTMENT'); XV(e, 'ComparableAdjustmentAmount', Math.round(a)); XV(e, 'ComparableAdjustmentType', ty); any = true; });
+  /* in the order of the comp's own buildings (its IMPROVEMENTs), then any amount on a line where the comp has none (the subject's building) */
+  const ko = Object.keys(C._ob || {}); obAdj.sort((x, y) => (ko.includes(x[0]) ? ko.indexOf(x[0]) : 99) - (ko.includes(y[0]) ? ko.indexOf(y[0]) : 99));
+  obAdj.filter(([id, a]) => ko.includes(id) || a).forEach(([id, a]) => { const e = X(box, 'COMPARABLE_ADJUSTMENT'); XV(e, 'ComparableAdjustmentAmount', Math.round(a)); XV(e, 'ComparableAdjustmentType', /^aduU/.test(id) ? 'AccessoryDwellingUnitLocation' : 'Outbuilding'); any = true; });
   if (!any) CMP.kids = CMP.kids.filter(k => k !== box);
   return compTotals(job, c);
 }
