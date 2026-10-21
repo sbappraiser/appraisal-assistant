@@ -428,7 +428,8 @@ function renderPage() {
   <section class="card st st-final" id="exportCard"><h2>Export</h2>${exportHTML(J)}</section>
   <footer class="foot">Comp Genie · your data stays on this computer · build ${typeof BUILD !== 'undefined' ? BUILD : ''}</footer>`;
   fillImages(); mapsRender(); { const t = document.querySelector('.top'); if (t) document.documentElement.style.setProperty('--toph', t.offsetHeight + 'px'); }   // the comp's sticky header sits under the top bar
-  wbFit(); hbarSync(); if (typeof wbColTint === 'function') wbColTint();
+  wbFit(); document.querySelectorAll('table.grid').forEach(t => { const h = t.querySelector('thead th'); if (h) t.style.setProperty('--labw', h.offsetWidth + 'px'); });   // every grid (workbook, final): the Subject column sticks right after the line names
+  hbarSync(); if (typeof wbColTint === 'function') wbColTint();
 }
 /* Redraw after a field changes without losing your place: Tab moves on first, then the page is
    redrawn and the cursor is put back in the field you tabbed (or clicked) into. */
