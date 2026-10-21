@@ -6,7 +6,7 @@
    Her rules: Birnam Wood – always stay in the community (many amenities no other development has).
    Ennisbrook – stay in it; go outside only for lack of data. */
 const SA_WORDS = [[/\b(golden|gldn|goldn|gold)\s*(quadrangle|qdrngle?|qdrng|quad)\b/g, 'golden quadrangle'], [/\bsb\s*prphry\b|\bsbprphry\b/g, 'santa barbara periphery'], [/\bprphry|periph(ery)?\b/g, 'periphery'], [/\bmntcto|mntc|mont\b/g, 'montecito'],
-  [/\brvra\b/g, 'riviera'], [/\blwr\b/g, 'lower'], [/\bcyn\b/g, 'canyon'], [/\bfthll?s?\b/g, 'foothills'], [/\bcnt|cent\b/g, 'central'], [/\bsb\b/g, 'santa barbara'], [/eucalypts/g, 'eucalyptus'], [/\bcarp\b/g, 'carpinteria']];
+  [/\brvra\b/g, 'riviera'], [/\blwr\b/g, 'lower'], [/\bcyn\b/g, 'canyon'], [/\bfthll?s?\b/g, 'foothills'], [/\bcnt|cent\b/g, 'central'], [/\bsb\b/g, 'santa barbara'], [/eucalypts/g, 'eucalyptus'], [/\bbch\b/g, 'beach'], [/\bpnt\b|\bpt\b/g, 'point'], [/\bpdro\b/g, 'padaro'], [/\bblff\b/g, 'bluff'], [/\bknl\b/g, 'knoll'], [/\bbeachfront\b|\bbeach frnt\b/g, 'beach front'], [/\bcarp\b/g, 'carpinteria']];
 const SA_DIR = { e: 'East', east: 'East', eastern: 'East', w: 'West', west: 'West', western: 'West', s: 'South', south: 'South', n: 'North', north: 'North', ne: 'NE', nw: 'NW', central: 'Central' };
 function saNorm(name) {
   if (!String(name || '').trim()) return ''; let t;
@@ -26,12 +26,16 @@ const SA_SEED = {
   'Eucalyptus Hill': { 'Golden Quadrangle West': 'use', 'Pepper Hill': 'use', 'Riviera East': 'use', 'SB Periphery East': 'use' },
 };
 const SA_ONLY = { 'Birnam Wood': 'always', 'Ennisbrook': 'prefer' };
+/* waterfront (her note Oct 20 2026): Montecito waterfront is not comparable to the rest of Montecito; Padaro is Carpinteria's */
+const SA_WATER = { 'Miramar Beach': 'Montecito waterfront', 'Butterfly Beach': 'Montecito waterfront', 'Fernald Point': 'Montecito waterfront', 'Beach Front': 'Montecito waterfront', 'Montecito Beach': 'Montecito waterfront', 'Montecito Beach Front': 'Montecito waterfront',
+  'Padaro Beach': 'Padaro (Carpinteria waterfront)', 'Padaro Bluff': 'Padaro (Carpinteria waterfront)', 'Padaro Knoll': 'Padaro (Carpinteria waterfront)', 'Padaro': 'Padaro (Carpinteria waterfront)', 'Padaro Lane': 'Padaro (Carpinteria waterfront)' };
 let MYSA = {}; DB.get('kv', 'subAreas').then(r => { MYSA = (r && r.v) || {}; }).catch(() => {});
 const SA_LABEL = { similar: 'Similar', superior: 'Superior', inferior: 'Inferior', use: 'May use' };
 function saRel(J, C) { const s = saNorm(subjFacts(J).nbhd), k = saNorm(C.nbhd); if (!s || !k) return null; if (s === k) return { rel: 'same', s, k };
   const mine = (MYSA[s] || {})[k]; if (mine) return { rel: mine, s, k, src: 'yours' }; const seed = (SA_SEED[s] || {})[k]; if (seed) return { rel: seed, s, k, src: 'seed' }; return { rel: '', s, k }; }
 function saSel(J, c, C) { const R = saRel(J, C); if (!R) return ''; if (R.rel === 'same') return `<small class="muted rdays">${esc(R.k)} – same sub-area</small>`;
+  const ws = SA_WATER[R.s], wk = SA_WATER[R.k]; const water = (ws || wk) && ws !== wk ? `<small class="overcall">${ws && !wk ? esc(R.k) + ' is not waterfront – not comparable to ' + esc(ws) : !ws && wk ? esc(R.k) + ' is ' + esc(wk) + ' – not comparable to the subject’s area' : esc(R.k) + ' (' + esc(wk) + ') vs ' + esc(ws)}</small>` : '';
   const out = SA_ONLY[R.s] ? `<small class="${SA_ONLY[R.s] === 'always' ? 'overcall' : 'muted rdays'}">${SA_ONLY[R.s] === 'always' ? 'Outside ' + esc(R.s) + ' – you stay in the community' : 'Outside ' + esc(R.s) + ' – explain the lack of data'}</small>` : '';
-  return `<small class="muted rdays">${esc(R.k)} vs ${esc(R.s)}:</small><select class="fine${R.src === 'yours' ? '' : ' arch'}" data-gsa="${c.id}" title="How this comp's sub-area compares with the subject's – remembered for your next assignment">${[['', '—'], ['similar', 'Similar'], ['superior', 'Superior'], ['inferior', 'Inferior'], ['use', 'May use']].map(([v, l]) => `<option value="${v}" ${v === R.rel ? 'selected' : ''}>${l}${v === R.rel && R.src === 'seed' ? ' (your rule)' : ''}</option>`).join('')}</select>${out}`; }
+  return `<small class="muted rdays">${esc(R.k)} vs ${esc(R.s)}:</small><select class="fine${R.src === 'yours' ? '' : ' arch'}" data-gsa="${c.id}" title="How this comp's sub-area compares with the subject's – remembered for your next assignment">${[['', '—'], ['similar', 'Similar'], ['superior', 'Superior'], ['inferior', 'Inferior'], ['use', 'May use']].map(([v, l]) => `<option value="${v}" ${v === R.rel ? 'selected' : ''}>${l}${v === R.rel && R.src === 'seed' ? ' (your rule)' : ''}</option>`).join('')}</select>${out}${water}`; }
 function saSet(J, cid, v) { const c = J.comps.find(x => x.id === cid); if (!c) return; const R = saRel(J, compFacts(c, J)); if (!R || R.rel === 'same') return;
   MYSA[R.s] = MYSA[R.s] || {}; if (v) MYSA[R.s][R.k] = v; else delete MYSA[R.s][R.k]; DB.put('kv', { id: 'subAreas', v: MYSA }); }
