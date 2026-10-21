@@ -9,7 +9,12 @@ const COST_AREA = [['StandardFinishedAreaAboveGrade', 'Living area above grade']
   ['UnfinishedAreaAboveGrade', 'Unfinished above grade'], ['NonStandardFinishedAreaAboveGrade', 'Non-standard finished above grade'], ['NonStandardFinishedAreaBelowGrade', 'Non-standard finished below grade'],
   ['AttachedGarage', 'Attached garage'], ['BuiltInGarage', 'Built-in garage'], ['Carport', 'Carport'], ['Foundation', 'Foundation'], ['Other', 'Other (ADU, guest house, detached garage, outbuilding …)']];
 function costMedians() { const C = app.costDb; if (!C) return {}; const P = C.projects.filter(p => !isRemodel(p)); const v = k => median(P.map(p => num(p.s[k])));
-  return { bd: v('Building direct $/SF GLA – indexed'), ex: v('Existing-site basis $/SF GLA – indexed'), gar: median(C.projects.map(p => num(p.s['Garage – $/SF garage']))), pool: median(C.projects.map(p => num(p.s['Pool & spa']))), land: median(C.projects.map(p => num(p.s['Landscaping & irrigation']))), n: P.length }; }
+  return { bd: v('Building direct $/SF GLA – indexed'), ex: v('Existing-site basis $/SF GLA – indexed'), gar: median(C.projects.map(p => num(p.s['Garage – $/SF garage']))), pool: median(C.projects.map(p => num(p.s['Pool & spa']))), land: median(C.projects.map(p => num(p.s['Landscaping & irrigation']))), n: P.length, ...softMed(C) }; }
+/* her budgets (Oct 21 2026): most carry no soft costs (the owner pays design and permits outside the contractor's budget) – only the ones
+   that include them (5–20 % of hard cost) give the typical soft-cost percent */
+function softMed(C) { const key = (p, re) => { const k = Object.keys(p.s).find(x => re.test(x)); return k ? num(p.s[k]) || 0 : 0; };
+  const v = C.projects.map(p => { const h = key(p, /^Hard cost/); return h ? (key(p, /^Soft cost \(/) + key(p, /^Permits & fees/)) / h * 100 : null; }).filter(x => x !== null && x >= 5 && x <= 20);
+  return { softPct: v.length ? median(v) : null, softLo: v.length ? Math.min(...v) : null, softHi: v.length ? Math.max(...v) : null, softN: v.length }; }
 function costJob(J) {
   if (J.cost) return J.cost; const S = subjFacts(J), I = J.subject.insp || {}, K = I.sk || {}; const yr = num(S.year); const age = yr ? Math.max(0, new Date().getFullYear() - yr) : null;
   const L = [{ id: uid(), t: 'StandardFinishedAreaAboveGrade', label: 'Living area above grade', area: num(S.gla) || null, rate: null, dw: true }];
@@ -24,17 +29,18 @@ function costJob(J) {
 }
 function costCalc(J) {
   const K = costJob(J); const lineCost = l => !blank(l.cost) ? +l.cost : (num(l.area) && num(l.rate) ? num(l.area) * num(l.rate) : 0);
-  const dw = K.lines.filter(l => l.dw).reduce((t, l) => t + lineCost(l), 0) + (num(K.soft) || 0), ob = K.lines.filter(l => !l.dw).reduce((t, l) => t + lineCost(l), 0);
+  const hardDw = K.lines.filter(l => l.dw).reduce((t, l) => t + lineCost(l), 0); const softAmt = num(K.softPct) ? hardDw * num(K.softPct) / 100 : (num(K.soft) || 0); const dw = hardDw + softAmt, ob = K.lines.filter(l => !l.dw).reduce((t, l) => t + lineCost(l), 0);
   const phys = !blank(K.physPct) ? +K.physPct : (num(K.effAge) !== null && num(K.life) ? Math.min(100, num(K.effAge) / num(K.life) * 100) : 0); const obp = !blank(K.obPct) ? +K.obPct : phys;
   const physAmt = dw * phys / 100, depDw = Math.max(0, dw - physAmt - (num(K.funcAmt) || 0) - (num(K.extAmt) || 0)), depOb = ob * (1 - obp / 100);
   const siteImp = K.site.reduce((t, s) => t + (num(s.amt) || 0), 0); const land = num((J.land || {}).value) || 0;
-  const ind = land + depDw + depOb + siteImp; return { dw, ob, phys, obp, physAmt, depDw, depOb, siteImp, land, ind, lineCost, rounded: Math.round(ind / 1000) * 1000 };
+  const ind = land + depDw + depOb + siteImp; return { dw, hardDw, softAmt, ob, phys, obp, physAmt, depDw, depOb, siteImp, land, ind, lineCost, rounded: Math.round(ind / 1000) * 1000 };
 }
 function costDraft(J) {
   const K = costJob(J), X = costCalc(J), M = costMedians(); const pct = v => (Math.round(v * 10) / 10) + '%';
   let t = `The cost approach was developed using ${K.type === 'Reproduction' ? 'reproduction' : 'replacement'} cost new by the ${({ ComparativeUnit: 'comparative unit', UnitInPlace: 'unit-in-place', QuantitySurvey: 'quantity survey', Other: 'cost' })[K.method]} method.`;
   t += ` Cost new is based on local contractor budgets${M.n ? ` (${M.n} new-construction projects)` : ''} brought to the effective date with the California Construction Cost Index, and checked against the California State Board of Equalization Assessors' Handbook 531.`;
   const liv = K.lines.find(l => l.t === 'StandardFinishedAreaAboveGrade'); if (liv && num(liv.rate)) t += ` The living area is estimated at ${money(liv.rate)} per square foot.`;
+  if (X.softAmt) t += num(K.softPct) ? ` Soft costs (design, engineering, permits and fees) are included at ${K.softPct}% of the dwelling's cost new (${money(X.softAmt)}), in line with the local budgets that include them.` : ` Soft costs (design, engineering, permits and fees) of ${money(X.softAmt)} are included.`;
   if (X.dw) t += ` Physical depreciation was estimated by the age-life method${num(K.effAge) !== null && num(K.life) ? ` (effective age of ${K.effAge} years and a total economic life of ${K.life} years, ${pct(X.phys)})` : ` (${pct(X.phys)})`}.`;
   t += num(K.funcAmt) ? ` Functional obsolescence of ${money(K.funcAmt)} was deducted.` : ' No functional obsolescence was noted.'; t += num(K.extAmt) ? ` External obsolescence of ${money(K.extAmt)} was deducted.` : ' No external obsolescence was noted.';
   if (X.siteImp) t += ` Site improvements are included at their depreciated (as is) value of ${money(X.siteImp)}.`;
@@ -64,7 +70,7 @@ function costHTML(J) {
     ${K.siteMethod !== 'SalesComparison' || !landJob(J).use.length ? `<label class="fld"><span>Site value comment (3.6 Reconciliation of Site Value, 2,500 characters)</span><textarea class="txt" data-sitec="1" rows="5">${esc(landJob(J).comment != null ? landJob(J).comment : (landJob(J).lastSite = siteDraft(J)))}</textarea></label>
       <div class="row"><button class="btn sm ghost" data-siteredraft="1">Write it again from the ${K.siteMethod === 'Extraction' ? 'extraction sales' : 'method'}</button></div>` : ''}
     <h3>Cost new</h3><div class="tablewrap"><table class="tbl cost"><thead><tr><th>Item</th><th class="r">Sq ft</th><th class="r">$ / sq ft</th><th class="r">Cost new</th><th></th><th></th></tr></thead><tbody>${rows}
-      <tr><td>Soft costs and fees (permits, design, engineering, utility and school fees)</td><td></td><td></td><td class="r"><input class="txt xs num" data-ck="soft" value="${nf(K.soft)}" inputmode="numeric" style="width:8em" placeholder="total $"></td><td></td><td></td></tr>
+      <tr><td>Soft costs and fees (permits, design, engineering, utility and school fees)</td><td></td><td></td><td class="r" colspan="1"><input class="txt xs num" data-ck="softPct" value="${K.softPct ?? ''}" inputmode="decimal" style="width:4em" placeholder="%"> % of the dwelling's cost new${num(K.softPct) ? ` = <b>${money(X.softAmt)}</b>` : `<br>or a total $ <input class="txt xs num" data-ck="soft" value="${nf(K.soft)}" inputmode="numeric" style="width:8em" placeholder="total $">`}${M.softPct ? `<br><small class="muted">Your budgets that include soft costs: ${Math.round(M.softLo)}–${Math.round(M.softHi)} %, median ${(Math.round(M.softPct * 10) / 10)} % (${M.softN} of ${(app.costDb || { projects: [] }).projects.length}; most budgets leave them out)</small>${blank(K.softPct) && blank(K.soft) ? ` <button type="button" class="lnk sm" data-softuse="${Math.round(M.softPct * 10) / 10}">use ${(Math.round(M.softPct * 10) / 10)} %</button>` : ''}` : ''}</td><td></td><td></td></tr>
       <tr class="tot"><td><b>Total cost new</b> <small>dwelling ${money(X.dw)} · outbuildings / ADU ${money(X.ob)}</small></td><td></td><td></td><td class="r"><b>${money(X.dw + X.ob)}</b></td><td></td><td></td></tr></tbody></table></div>
     <div class="row"><button class="btn sm" data-cladd="1">+ Add a line</button><span class="help">Untick “dwelling” for an ADU, guest house or outbuilding (it is depreciated with its own percent below).</span></div>
     <h3>Depreciation</h3><div class="row"><label>Effective age <input class="txt xs num" data-ck="effAge" value="${K.effAge ?? ''}" style="width:4em"> years</label>${K.actualAge != null ? `<small class="muted">actual age ${K.actualAge}</small>` : ''}<label>Total economic life <input class="txt xs num" data-ck="life" value="${K.life ?? ''}" style="width:4em"> years</label>
@@ -109,8 +115,9 @@ document.addEventListener('change', e => { const t = e.target; if (!app.job || !
   const [id, k] = t.dataset.ce.split('|'); const x = (K.ext || []).find(o => o.id === id); if (!x) return; x[k] = ['price', 'impr', 'site'].includes(k) ? (t.value.trim() === '' ? null : num(String(t.value).replace(/[^0-9.]/g, ''))) : t.value.trim();
   if (LD.comment != null && LD.comment === LD.lastSite) LD.comment = null; save(); costRedraw(); });
 function costRedraw() { const c = $('#costCard'); if (c && app.job) { const y = window.scrollY; c.innerHTML = costHTML(app.job); window.scrollTo(0, y); } }
-document.addEventListener('click', e => { const t = e.target.closest('[data-cost],[data-cladd],[data-cldel],[data-csadd],[data-csdel],[data-clsug]'); if (!t || !app.job) return; const J = app.job; const K = costJob(J);
+document.addEventListener('click', e => { const t = e.target.closest('[data-cost],[data-cladd],[data-cldel],[data-csadd],[data-csdel],[data-clsug],[data-softuse]'); if (!t || !app.job) return; const J = app.job; const K = costJob(J);
   if (t.dataset.cost === 'on') J.costOn = true; else if (t.dataset.cost === 'off') J.costOn = false; else if (t.dataset.cost === 'redraft') K.comment = null;
+  else if (t.dataset.softuse) { K.softPct = +t.dataset.softuse; K.soft = null; }
   else if (t.dataset.clsug) { const [id, v] = t.dataset.clsug.split('|'); const l = K.lines.find(x => x.id === id); if (l) l.rate = +v; }
   else if (t.dataset.cladd) K.lines.push({ id: uid(), t: 'Other', label: '', area: null, rate: null, dw: true }); else if (t.dataset.cldel) K.lines = K.lines.filter(l => l.id !== t.dataset.cldel);
   else if (t.dataset.csadd) K.site.push({ id: uid(), desc: '', amt: null }); else if (t.dataset.csdel) K.site = K.site.filter(s => s.id !== t.dataset.csdel);
@@ -139,7 +146,7 @@ function costDetailXML(J, K, X, CA, doc, NS, SVC) {
   const XL = 'http://www.w3.org/1999/xlink'; const el = (p, tag, attrs) => { const e = doc.createElementNS(NS, tag); Object.entries(attrs || {}).forEach(([k, v]) => e.setAttributeNS(XL, k, v)); p.appendChild(e); return e; };
   const leaf = (p, tag, v, attrs) => { if (v === null || v === undefined || v === '' || (typeof v === 'number' && !isFinite(v))) return; const e = doc.createElementNS(NS, tag); e.textContent = String(v); Object.entries(attrs || {}).forEach(([k, a]) => e.setAttribute(k, a)); p.appendChild(e); };
   [...CA.children].filter(k => ['IMPROVEMENT_COST_AND_DEPRECIATED_VALUES', 'SITE_IMPROVEMENTS_AS_IS_COSTS'].includes(k.localName)).forEach(k => k.remove());
-  const groups = [{ key: 'DWELLING', to: 'IMPROVEMENT_SubjectDwelling', lines: K.lines.filter(l => l.dw), pct: X.phys, func: num(K.funcAmt) || 0, ext: num(K.extAmt) || 0, soft: num(K.soft) || 0 }];
+  const groups = [{ key: 'DWELLING', to: 'IMPROVEMENT_SubjectDwelling', lines: K.lines.filter(l => l.dw), pct: X.phys, func: num(K.funcAmt) || 0, ext: num(K.extAmt) || 0, soft: X.softAmt || 0 }];
   let na = 0, no = 0; K.lines.filter(l => !l.dw).forEach((l, i) => { const adu = /adu|guest|accessory|casita/i.test(l.label || ''); const to = adu ? 'IMPROVEMENT_ADU' + (++na) : /garage|carport/i.test(l.label || '') ? null : 'IMPROVEMENT_OUTBUILDING' + (++no);
     groups.push({ key: (adu ? 'ADU' : 'OUTBUILDING') + (i + 1), to, lines: [l], pct: X.obp, func: 0, ext: 0, soft: 0 }); });
   const BOX = el(CA, 'IMPROVEMENT_COST_AND_DEPRECIATED_VALUES'); const DET = CA.querySelector ? [...CA.children].find(k => k.localName === 'COST_APPROACH_DETAIL') : null; if (DET) CA.insertBefore(BOX, DET.nextSibling);
