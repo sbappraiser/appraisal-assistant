@@ -428,6 +428,7 @@ function renderPage() {
   <section class="card st st-final" id="exportCard"><h2>Export</h2>${exportHTML(J)}</section>
   <footer class="foot">Comp Genie · your data stays on this computer · build ${typeof BUILD !== 'undefined' ? BUILD : ''}</footer>`;
   fillImages(); mapsRender(); { const t = document.querySelector('.top'); if (t) document.documentElement.style.setProperty('--toph', t.offsetHeight + 'px'); }   // the comp's sticky header sits under the top bar
+  if (app.nuAsk && app.nuAskShown !== app.nuAsk && typeof nuAskBox === 'function') { app.nuAskShown = app.nuAsk; const id = app.nuAsk; setTimeout(() => nuAskBox(J, id), 0); }
   wbFit(); document.querySelectorAll('table.grid').forEach(t => { const h = t.querySelector('thead th'); if (h) t.style.setProperty('--labw', h.offsetWidth + 'px'); });   // every grid (workbook, final): the Subject column sticks right after the line names
   hbarSync(); if (typeof wbColTint === 'function') wbColTint();
 }
@@ -748,6 +749,7 @@ document.addEventListener('click', async e => {
     case 'close': if (CPOP) { window.close(); break; } app.sel = null; render(); break;
     case 'backup': backupJob(); break;
     case 'nuok': app.nuAsk = null; render(); break;
+    case 'nufill': nuFill(app.job); break;
     case 'sens-run': { app.sens = { job: app.job.id, res: { ...sensRun(app.job), at: Date.now() } }; renderKeepFocus(); toast('Sensitivity run again with your current rates'); break; }
     case 'sup-run': { toast('Measuring your lines from your groups…'); await new Promise(r => setTimeout(r, 30)); app.job.support = supRun(app.job); save(); renderKeepFocus(); break; }
     case 'ts-run': { toast('Measuring time from your groups…'); await new Promise(r => setTimeout(r, 30)); app.job.timeSupport = await tsRun(app.job); save(); renderKeepFocus(); break; }
@@ -833,6 +835,7 @@ document.addEventListener('change', async e => {
   if (t.dataset.jobname) { app.job.name = t.value.trim() || 'Assignment'; save(); renderParts(); return; }
   if (t.dataset.notes) { const c = app.job.comps.find(x => x.id === t.dataset.notes); c.notes = t.value; save(); return; }
   // adjustment grid
+  if (t.dataset.nurule) { const k = t.dataset.nurule; NU_RULES[k] = t.type === 'checkbox' ? t.checked : (t.value === '' ? null : +t.value); DB.put('kv', { id: 'nuRules', v: NU_RULES }); return; }
   if (t.dataset.nu || t.dataset.nur) { const [id, k] = (t.dataset.nu || t.dataset.nur).split('|'); const c = app.job.comps.find(x => x.id === id); if (!c) return; markNotUsed(c); const N = c.notUsed;
     if (t.dataset.nur) { N.reasons = N.reasons.filter(x => x !== k); if (t.checked) N.reasons.push(k); } else if (k === 'report' || k === 'client') N[k] = t.checked; else N[k] = t.value;
     save(); if (t.dataset.nur && k === 'Other') render(); return; }

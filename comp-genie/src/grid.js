@@ -505,6 +505,7 @@ const markNotUsed = c => { c.notUsed = c.notUsed || { reasons: [], text: '', rep
 function notUsedHTML(J) { const L = J.comps.filter(c => c.notUsed && !c.use); if (!L.length && !app.nuAsk) return '';
   const ask = app.nuAsk && J.comps.find(c => c.id === app.nuAsk);
   return `<h2>Analyzed – not used <small>${L.filter(c => c.notUsed.report).length} go in the report (UAD “Additional properties analyzed not used”)</small></h2>
+    ${nuRulesHTML()}
     ${ask ? `<div class="nuask"><b>${esc(compTitle(ask))}</b> is off the grid and kept here as analyzed – not used. Pick the reason(s) below. <button class="btn sm" data-savedb="${ask.id}">Save it to my comp database</button> <button class="btn sm" data-act="nuok">OK</button></div>` : ''}
     ${L.map(c => { const N = c.notUsed; const st = V(c, 'status') || ''; return `<div class="nu"><div class="nuh"><b>${esc(compTitle(c))}</b> <small>${esc([st, money(V(c, 'salePrice') || V(c, 'listPrice')), showDate(V(c, 'saleDate') || V(c, 'contractDate'))].filter(Boolean).join(' · '))}</small>
       <label class="inl"><input type="checkbox" data-nu="${c.id}|report" ${N.report ? 'checked' : ''}> show in the report</label> <label class="inl"><input type="checkbox" data-nu="${c.id}|client" ${N.client ? 'checked' : ''}> client asked me to consider it</label>

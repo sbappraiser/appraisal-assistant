@@ -122,7 +122,7 @@ async function wbRemove(J, cid) {
   const c = J.comps.find(x => x.id === cid); if (!c || !c.use) return;
   const snap = { job: J.id, cid, uses: J.comps.map(x => [x.id, x.use]), notUsed: c.notUsed ? JSON.parse(JSON.stringify(c.notUsed)) : null, label: `Comp ${c.use} (${compTitle(c)})` };
   try { await saveToMyDb(c); } catch (e) {}
-  const was = c.use; markNotUsed(c); J.comps.forEach(x => { if (x.use && x.use > was) x.use--; });
+  const was = c.use; markNotUsed(c); J.comps.forEach(x => { if (x.use && x.use > was) x.use--; }); app.nuAsk = c.id; app.nuAskShown = null;
   WB.undo = snap; WB.cur = null; save(); render(); wbUndoBar();
 }
 function wbUndo() { const s = WB.undo; const J = app.job; if (!s || !J || s.job !== J.id) return; const m = new Map(s.uses); J.comps.forEach(x => { if (m.has(x.id)) x.use = m.get(x.id); });
