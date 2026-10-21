@@ -32,7 +32,7 @@ function sensRange(k, J, P, ppsf) {
   if (cur !== null && !out.includes(cur)) out.push(cur);
   return out.sort((a, b) => a - b);
 }
-function sensRun(J) {
+function sensRun(J) { if (!RC) return rcRun(() => sensRun(J));
   const G = G0(J); const used = usedComps(J); if (used.length < 3) return { err: 'Sensitivity needs at least 3 comps on the grid.' };
   const S = subjFacts(J); const F = used.map(c => compFacts(c, J));
   const prices = F.map(C => C.price).filter(Boolean); if (prices.length < 3) return { err: 'Sensitivity needs at least 3 comps with a sale price.' };

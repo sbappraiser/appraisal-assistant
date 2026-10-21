@@ -384,6 +384,7 @@ function renderPage() {
   if (app.home || !J) { root.innerHTML = homeHTML(); document.title = 'Comp Genie'; return; }
   document.title = 'Comp Genie · ' + J.name;
   root.dataset.stage = J.stage || (J.comps.some(c => c.use) ? 'workbook' : 'micro');
+  const ON = (...st) => st.includes(root.dataset.stage);   /* her ask (Oct 21 2026, "slow to load"): only the step she is on is built – the others were built and hidden on every redraw */
   root.innerHTML = `
   <header class="top"><h1>Comp Genie</h1><span class="pill ver" title="The Comp genie version – after Ctrl+R it should match the one I tell you">Version ${typeof BUILD !== 'undefined' ? BUILD : ''}</span>
     <span class="pill ${ARCH.loaded ? 'ok' : 'warn'}">${ARCH.loaded ? `Archive: ${ARCH.rows.length.toLocaleString()} records` : 'Archive not loaded'}</span>${archPhotoPill()}
@@ -398,7 +399,7 @@ function renderPage() {
   ${ARCH.loaded ? '' : `<section class="card notice"><b>Load your comp archive${app.jobs.some(j => j.comps.length) ? ' in this browser' : ' once'}.</b> ${app.jobs.some(j => j.comps.length) ? 'Each browser (Chrome, Firefox, Edge) keeps its own copy, and this one has none yet. ' : ''}Drop <i>Comp Archive.json.gz</i> and <i>CORT Sales.csv</i> anywhere on this page (or <label class="link">choose it<input type="file" multiple data-act="files" hidden></label>). It is saved on this computer only; nothing is uploaded.</section>`}
   ${stageBarHTML(J)}
   <div class="busy" id="busy" ${app.busy ? '' : 'hidden'}>${esc(app.busy)}</div>
-  <section class="card st st-micro"><h2>Subject</h2>${subjectHTML(J)}</section>
+  <section class="card st st-micro"><h2>Subject</h2>${ON('micro') ? subjectHTML(J) : ''}</section>
   <section class="card st st-micro"><h2>Add comps</h2>
     <div class="addrow"><div class="sugwrap"><input id="addr" class="txt big" placeholder="Type a comp address, e.g. 1181 Glenview" autocomplete="off" data-act="sugg"><div class="sugg" id="sugg"></div></div>
       <button class="btn primary" data-act="add">Add comp</button></div>
@@ -411,21 +412,21 @@ function renderPage() {
       <b>Drop files here</b> or click to choose: MLS export (.csv) · MLS photos (.zip) · MLS printout (.pdf) · CRS reports (.pdf) · CORT table (.csv) · comp archive (.gz) · your land sales or cost database (.xlsx)</label>
     ${(J.files || []).length ? `<details class="files"${crsNeedHTML(J) || /^rf:/.test(app.confirm || '') ? ' open' : ''}><summary><b>Files in this assignment</b> <small>${J.files.length}${crsNeedHTML(J) ? '' : ' · <span class="ccdone">✓</span> nothing else needed'} · (✕ takes a file back out)</small></summary><ul>${J.files.map(f => `<li>${esc(f.name)} <small>${esc(f.kind)}${f.n ? ', ' + f.n : ''}</small> ${app.confirm === 'rf:' + f.id ? `<span class="confirm">Take it out? <button class="btn danger solid sm" data-rfyes="${esc(f.id)}">Remove file</button><button class="btn sm" data-act="cancel">Keep</button></span>` : `<button class="btn sm" data-rf="${esc(f.id)}" title="Remove this file and what it added">✕</button>`}</li>`).join('')}</ul></details>` : ''}
   </section>
-  <section class="card st st-micro" id="compsCard">${compsCardHTML(J)}</section>
-  <section class="card st st-workbook" id="wbStrip">${confirmStripHTML(J)}</section>
-  <div id="detail" class="st st-micro st-workbook">${app.sel ? detailHTML(J.comps.find(c => c.id === app.sel)) : ''}</div>
-  <section class="card st st-workbook" id="gridCard">${gridHTML(J)}</section>
-  <section class="card st st-final" id="finalCard">${finalGridHTML(J)}</section>
+  <section class="card st st-micro" id="compsCard">${ON('micro') ? compsCardHTML(J) : ''}</section>
+  <section class="card st st-workbook" id="wbStrip">${ON('workbook') ? confirmStripHTML(J) : ''}</section>
+  <div id="detail" class="st st-micro st-workbook">${app.sel && ON("micro", "workbook") ? detailHTML(J.comps.find(c => c.id === app.sel)) : ''}</div>
+  <section class="card st st-workbook" id="gridCard">${ON('workbook') ? gridHTML(J) : ''}</section>
+  <section class="card st st-final" id="finalCard">${ON('final') ? finalGridHTML(J) : ''}</section>
   <section class="card st st-final" id="mapCard"></section>
-  <section class="card st st-cost" id="refCard">${refHTML(J)}</section>
-  <section class="card st st-cost" id="costCard">${costHTML(J)}</section>
-  <section class="card st st-workbook" id="incomeCard">${incomeHTML(J)}</section>
-  <section class="card st st-workbook st-final" id="nuCard">${notUsedHTML(J)}</section>
-  <section class="card st st-workbook" id="timeCard">${timeHTML(J)}</section>
-  <section class="card st st-workbook" id="supCard">${supHTML(J)}</section>
-  <section class="card st st-final" id="preCard">${precheckHTML(J)}</section>
-  <section class="card st st-final" id="reportCard">${reportHTML(J)}</section>
-  <section class="card st st-final" id="exportCard"><h2>Export</h2>${exportHTML(J)}</section>
+  <section class="card st st-cost" id="refCard">${ON('cost') ? refHTML(J) : ''}</section>
+  <section class="card st st-cost" id="costCard">${ON('cost') ? costHTML(J) : ''}</section>
+  <section class="card st st-workbook" id="incomeCard">${ON('workbook') ? incomeHTML(J) : ''}</section>
+  <section class="card st st-workbook st-final" id="nuCard">${ON('workbook', 'final') ? notUsedHTML(J) : ''}</section>
+  <section class="card st st-workbook" id="timeCard">${ON('workbook') ? timeHTML(J) : ''}</section>
+  <section class="card st st-workbook" id="supCard">${ON('workbook') ? supHTML(J) : ''}</section>
+  <section class="card st st-final" id="preCard">${ON('final') ? precheckHTML(J) : ''}</section>
+  <section class="card st st-final" id="reportCard">${ON('final') ? reportHTML(J) : ''}</section>
+  <section class="card st st-final" id="exportCard"><h2>Export</h2>${ON('final') ? exportHTML(J) : ''}</section>
   <footer class="foot">Comp Genie · your data stays on this computer · build ${typeof BUILD !== 'undefined' ? BUILD : ''}</footer>`;
   fillImages(); mapsRender(); { const t = document.querySelector('.top'); if (t) document.documentElement.style.setProperty('--toph', t.offsetHeight + 'px'); }   // the comp's sticky header sits under the top bar
   if (app.nuAsk && app.nuAskShown !== app.nuAsk && typeof nuAskBox === 'function') { app.nuAskShown = app.nuAsk; const id = app.nuAsk; setTimeout(() => nuAskBox(J, id), 0); }
@@ -457,12 +458,12 @@ const compsCardHTML = J => J.ccDone ? `<div class="row"><h2 style="margin:0"><sp
 /* Redraw only what depends on a typed value, so the field you are in (and the next one you Tab to) is never replaced. */
 function renderParts(opts = {}) { return rcRun(() => renderParts0(opts)); }
 function renderParts0(opts = {}) {
-  const J = app.job;
+  const J = app.job; const STG = ($('#app') || {}).dataset ? $('#app').dataset.stage : ''; const ON = (...st) => !STG || st.includes(STG);   /* only the step on screen */
   const jp = $('#jobpick'); if (jp) jp.innerHTML = app.jobs.map(j => `<option value="${j.id}" ${j.id === J.id ? 'selected' : ''}>${esc(jobLabel(j))}</option>`).join('');
-  const cc = $('#compsCard'); if (cc) { cc.innerHTML = compsCardHTML(J); fillImages(cc); }
-  const ex = $('#exportCard'); if (ex) ex.innerHTML = '<h2>Export</h2>' + exportHTML(J);
-  if (opts.grid !== false) { const gc = $('#gridCard'); if (gc) gc.innerHTML = gridHTML(J); }
-  { const nc = $('#nuCard'); if (nc) nc.innerHTML = notUsedHTML(J); const tc = $('#timeCard'); if (tc) tc.innerHTML = timeHTML(J); const sc = $('#supCard'); if (sc) sc.innerHTML = supHTML(J); const pc = $('#preCard'); if (pc) pc.innerHTML = precheckHTML(J); }
+  const cc = $('#compsCard'); if (cc && ON('micro')) { cc.innerHTML = compsCardHTML(J); fillImages(cc); }
+  const ex = $('#exportCard'); if (ex && ON('final')) ex.innerHTML = '<h2>Export</h2>' + exportHTML(J);
+  if (opts.grid !== false) { const gc = $('#gridCard'); if (gc && ON('workbook')) gc.innerHTML = gridHTML(J); }
+  { const nc = $('#nuCard'); if (nc && ON('workbook', 'final')) nc.innerHTML = notUsedHTML(J); const tc = $('#timeCard'); if (tc && ON('workbook')) tc.innerHTML = timeHTML(J); const sc = $('#supCard'); if (sc && ON('workbook')) sc.innerHTML = supHTML(J); const pc = $('#preCard'); if (pc && ON('final')) pc.innerHTML = precheckHTML(J); }
   if (opts.field && app.sel) { // one row of the field-by-field table
     const c = J.comps.find(x => x.id === app.sel); const f = FIELD[opts.field]; const u = val(c, f.k);
     const inp = document.querySelector(`[data-edit="${f.k}"]`); const row = inp && inp.closest('tr');
@@ -485,11 +486,12 @@ function compOrder(a, b) {
   const d = c => String((ga === 0 ? V(c, 'saleDate') : ga === 1 ? V(c, 'contractDate') || V(c, 'listDate') : V(c, 'listDate')) || V(c, 'saleDate') || '');
   return d(b).localeCompare(d(a));
 }
+const useMax = J => { const u = J.comps.map(c => +c.use || 0); return Math.max(9, Math.max(...u, 0) + 3, u.filter(Boolean).length + 3); };
 function compsTable(J) {
   if (!J.comps.length) return '<p class="help">No comps yet. Type an address above, or drop your MLS export.</p>';
   const rows = [...J.comps].sort(compOrder);
   [...CSEL].forEach(id => { if (!J.comps.some(c => c.id === id)) CSEL.delete(id); });
-  const maxUse = Math.max(9, J.comps.length);
+  const maxUse = useMax(J);   /* her ask (Oct 21 2026, slow): was one number per comp considered (300 comps = 90,000 options) */
   return `<div class="tablewrap"><table class="comps"><thead><tr><th class="ck"><input type="checkbox" data-cselall title="Select all" ${J.comps.length && J.comps.every(c => CSEL.has(c.id)) ? 'checked' : ''}></th><th title="Green ✓ = sent to the workbook, with its comp number">Workbook</th><th></th><th>Address</th><th>Status</th><th class="r">Price</th><th>Date</th><th class="r">GLA</th><th title="From the MLS listing (Construction: Single Story, Two Story, Split Level, Tri-Level); blank when the agent did not tick one or the sale is not in the MLS">Stories</th><th class="r">Site</th><th>Q / C</th><th>Location</th><th>View</th><th class="r" title="Usable lot area / utility">Usable</th><th class="r">Miles</th><th>Sources</th><th></th></tr></thead><tbody>
   ${rows.map(c => { const fr = frontOf(c); const px = proximity(c, J); const flAll = compFlags(c, J); const fl = flAll.filter(x => !flagChecked(c, x)); const warn = fl.filter(x => x.sev === 'warn').length;
     const st = V(c, 'status') || ((currentSale(c) || {}).status || '');
@@ -570,7 +572,7 @@ function detailHTML(c) {
       <h2>${esc(compTitle(c))} <small>${esc([V(c, 'city'), V(c, 'zip')].filter(Boolean).join(' '))}</small></h2>
       <span class="big">${esc(statusText(V(c, 'status')))} · ${money(V(c, 'salePrice') || V(c, 'listPrice'))} · ${esc(showDate(V(c, 'saleDate') || V(c, 'contractDate')))}${px ? ` · ${px.mi.toFixed(2)} mi ${esc(px.dir)}` : ''}</span>
       <span class="grow"></span>
-      <label>Use as comp # <select data-use="${c.id}"><option value="">–</option>${Array.from({ length: Math.max(9, J.comps.length) }, (_, i) => `<option ${c.use === i + 1 ? 'selected' : ''}>${i + 1}</option>`).join('')}</select></label>
+      <label>Use as comp # <select data-use="${c.id}"><option value="">–</option>${Array.from({ length: useMax(J) }, (_, i) => `<option ${c.use === i + 1 ? 'selected' : ''}>${i + 1}</option>`).join('')}</select></label>
       <button class="btn sm" data-hist="${c.id}" title="Every version of this comp: your ACI reports (2.6 / GPAR) and your 3.6 assignments – pick one to work from (or right-click the comp anywhere)">History</button>${CPOP ? '' : `<button class="btn sm" data-act="cpop" data-id="${c.id}" title="Open this comp in a window of its own – drag it to another screen and make it bigger">Pop out ↗</button>`}<button class="btn sm" data-act="close">Close</button></div></div>
     <div class="dmore"><div class="dinfo">${V(c, 'mls') ? mlsLinkHTML(c) : ''}
       ${fl.length && !c.use ? `<details class="flagdone"><summary>${fl.length} note${fl.length === 1 ? '' : 's'} on this property (it is not on the grid)</summary><ul>${fl.map(x => `<li>${esc(x.t)}</li>`).join('')}</ul></details>` : fl.length ? `<div class="flagbox"><b>⚑ ${fl.length} flag${fl.length === 1 ? '' : 's'} – check ${fl.length === 1 ? 'this' : 'these'}</b>${fl.some(x => FLAG_KEY(x.t)) ? ' <small>(the lines they point to are marked ⚑ in red below)</small>' : ''} <small>Click <b>✓ Checked</b> when you have looked into one.</small><ul class="flags">${fl.map(x => `<li class="${x.sev}">${esc(x.t)} <button class="btn xs" data-flagok="${esc(c.id)}" data-ft="${esc(x.t)}" title="I checked this – clear the flag">✓ Checked</button></li>`).join('')}</ul></div>` : flAll.length ? '<p class="help"><b class="ok">✓</b> All flags checked.</p>' : '<p class="help">No flags.</p>'}

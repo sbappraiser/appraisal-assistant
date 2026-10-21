@@ -295,7 +295,7 @@ const REQ_STAR = '<span class="req" title="Required – the UAD 3.6 grid always 
 const GRID_KEEP = new Set(['price', 'src', 'prox', 'listPrice', 'status', 'terms', 'conc', 'contract', 'sale', 'dom', 'attach', 'loc', 'view', 'year', 'heat', 'beds', 'baths', 'gla', 'bsmt', 'bsmtUnf', 'q', 'c', 'garage']);   // F-1 (Summary of Rows in Comparable Grids v1.3): rows that always display on the 3.6 sales grid
 let GRID_DEFAULT = null;   // her saved default (kv 'gridLines'): { on: {id: true/false}, custom: [{id, name, section}] }
 function customRows(J) { const G = G0(J); return (G.custom || []).map(x => [x.id, x.name, x.section || 'Your own lines', 'OTHER', null, x.name]); }
-function adjRows(J) { if (!J) return ADJ_ROWS; const base = ADJ_ROWS.concat(customRows(J)); const SL = typeof obSlotRows === 'function' && gridMode(J) !== 'condo' ? obSlotRows(J) : [];
+function adjRows(J) { if (!J) return ADJ_ROWS; if (!RC) return rcRun(() => adjRows(J));   /* outside a render: work the comps out once for this call */ const base = ADJ_ROWS.concat(customRows(J)); const SL = typeof obSlotRows === 'function' && gridMode(J) !== 'condo' ? obSlotRows(J) : [];
   if (!SL.length) return base; const i = base.findIndex(r => r[0] === 'adu'); if (i < 0) return base.concat(SL);
   /* her ADU / outbuilding entry line becomes the pick line; the adjustments go on the lines below it (an amount she typed there before still counts) */
   const old = usedComps(J).some(c => !blank(((G0(J).cells || {})[c.id] || {}).adu)); const head = ['adu', 'ADUs and outbuildings', base[i][2], old ? base[i][3] : null, null, null, ['aduSf', 'aduBath', 'aduHalf']];   /* row[6]: rate boxes shown here once for all the lines below */
@@ -435,7 +435,7 @@ function cellAmount(J, c, row) {
   const v = ((G0(J).cells[c.id] || {})[row[0]]); if (!blank(v)) return { v: +v, own: true };
   const S = subjFacts(J), C = compFacts(c, J); const a = rateAmount(row, S, C, J); return { v: a, own: false };
 }
-function compTotals(J, c) {
+function compTotals(J, c) { if (!RC) return rcRun(() => compTotals(J, c));
   const C = compFacts(c, J); let net = 0, gross = 0, lines = 0;
   // order as on the 3.6 grid (D-1 sample): Add Other rows first, then site, dwelling, units, quality/condition, amenities
   adjRows(J).filter(r => r[3] && rowShown(r, J)).sort((x, y) => (y[3] === 'OTHER') - (x[3] === 'OTHER')).forEach(r => { const a = cellAmount(J, c, r).v; if (a) { net += a; gross += Math.abs(a); lines++; } });

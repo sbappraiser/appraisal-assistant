@@ -48,7 +48,7 @@ function precheckXML(xml) {
   unknown.forEach((n, k) => out.push({ sev: 'Check', msg: `${k} is not in the UAD 3.6 delivery spec (A-1)${n > 1 ? ` – ${n} times` : ''}`, hint: 'The import may ignore or reject it.' }));
   return out;
 }
-function precheckGrid(J) {
+function precheckGrid(J) { if (!RC) return rcRun(() => precheckGrid(J));
   const out = []; const G = G0(J); const used = usedComps(J); const S = subjFacts(J);
   if (used.length < 3) out.push({ sev: 'Check', msg: `Only ${used.length} comp${used.length === 1 ? '' : 's'} on the grid – most clients expect at least 3 closed sales.` });
   if (blank(G.value)) out.push({ sev: 'Must fix', msg: 'No indicated value from the sales comparison approach on the grid.' });

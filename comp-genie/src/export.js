@@ -196,7 +196,7 @@ function buildCompXML(PROPS, RELS, DSS, c, n, job) {
 }
 /* A-1: DataSourceName is required (33 characters) */
 const DS_NAME = { MLS: 'Santa Barbara MLS (Flexmls)', AssessorRecord: 'CRS Data', Deed: 'Recorded deed (county recorder)', PreviousAppraisalFile: 'Appraiser files' };
-function buildCompsMISMO(job, comps) {
+function buildCompsMISMO(job, comps) { if (!RC) return rcRun(() => buildCompsMISMO(job, comps));
   const root = X(null, 'MESSAGE', { 'xmlns:xlink': 'http://www.w3.org/1999/xlink', xmlns: 'http://www.mismo.org/residential/2009/schemas', 'xmlns:gse': 'http://www.datamodelextension.org', MISMOReferenceModelIdentifier: '3.6.0366' });
   const doc = X(X(X(X(root, 'DOCUMENT_SETS'), 'DOCUMENT_SET'), 'DOCUMENTS'), 'DOCUMENT');
   XV(X(X(doc, 'ABOUT_VERSIONS'), 'ABOUT_VERSION'), 'AboutVersionIdentifier', '1');
