@@ -327,7 +327,9 @@ function subjFacts0(J) {
 }
 function compFacts(c, J) { return rcMemo('compFacts', c.id, () => impNorm(zapFacts(c, compFacts0(c, J)), c.edit)); }
 /* view and location show each item with its impact ("Adverse: Busy roadway; Neutral: Residential") – her rule Oct 20 2026 */
-function impNorm(F, M) { M = M || {}; try { if (F.loc) { const L = siParse(F.loc, M.pk_loc === F.loc); if (L.length) F.loc = siText(L); } if (F.view) { const L = vwParse(F.view, M.pk_view === F.view); if (L.length) F.view = vwText(L); } } catch (e) {} return F; }
+function impNorm(F, M) { M = M || {}; try {
+  /* her rule (Oct 20 2026): landscaping goes on her own "Landscaping" Add Other line with its rating – not in Site characteristics too */
+  if (F.siteChar && /landscap/i.test(F.siteChar)) { const L = String(F.siteChar).split(/;\s*/).filter(x => x && !/^\s*landscap/i.test(x)); F.siteChar = L.length ? L.join('; ') : 'None'; } if (F.loc) { const L = siParse(F.loc, M.pk_loc === F.loc); if (L.length) F.loc = siText(L); } if (F.view) { const L = vwParse(F.view, M.pk_view === F.view); if (L.length) F.view = vwText(L); } } catch (e) {} return F; }
 /* her 2.6 land split {"r":0.62,"o":2.15} → "0.62 ac residential · 2.15 ac orchard" (r residential, o orchard; other letters as she typed them) */
 function splitText(v) { let o = v; if (typeof v === 'string') { try { o = JSON.parse(v); } catch (e) { return v; } } if (!o || typeof o !== 'object') return '';
   const L = { r: 'residential', o: 'orchard' }; const k = Object.keys(o).filter(x => +o[x] > 0); if (k.length < 2 && !k.some(x => x !== 'r')) return '';
