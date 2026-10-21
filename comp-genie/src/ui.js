@@ -417,8 +417,8 @@ function renderPage() {
   <section class="card st st-workbook" id="gridCard">${gridHTML(J)}</section>
   <section class="card st st-final" id="finalCard">${finalGridHTML(J)}</section>
   <section class="card st st-final" id="mapCard"></section>
-  <section class="card st st-workbook" id="refCard">${refHTML(J)}</section>
-  <section class="card st st-workbook" id="costCard">${costHTML(J)}</section>
+  <section class="card st st-cost" id="refCard">${refHTML(J)}</section>
+  <section class="card st st-cost" id="costCard">${costHTML(J)}</section>
   <section class="card st st-workbook" id="incomeCard">${incomeHTML(J)}</section>
   <section class="card st st-workbook st-final" id="nuCard">${notUsedHTML(J)}</section>
   <section class="card st st-workbook" id="timeCard">${timeHTML(J)}</section>
@@ -941,7 +941,7 @@ function stageBarHTML(J) { const st = J.stage || (J.comps.some(c => c.use) ? 'wo
   const o = (app.orders || []).find(x => x.id === J.orderId);
   const step = (k, n, l, sub) => `<button class="stepb${st === k ? ' on' : ''}" data-act="stage" data-s="${k}"><b>${n}</b> ${l}<small>${sub}</small></button>`;
   return `<nav class="steps">${o ? `<a class="stepb" href="../appraisal-assistant/?order=${encodeURIComponent(o.id)}&tab=market" target="_top" title="Macro, then micro – the order's Market tab in the Appraisal Assistant"><b>⓪</b> Market<small>macro → micro</small></a>` : ''}
-    ${step('micro', '①', 'Comps considered', `${J.comps.length} · screen, pick for the workbook`)}${step('workbook', '②', 'Workbook', U.length ? `${U.length} comps · ${conf} confirmed · adjust` : 'confirm each comp, adjust')}${step('final', '③', 'Final grid', 'review · export to SFREP')}</nav>`; }
+    ${step('micro', '①', 'Comps considered', `${J.comps.length} · screen, pick for the workbook`)}${step('workbook', '②', 'Workbook', U.length ? `${U.length} comps · ${conf} confirmed · adjust` : 'confirm each comp, adjust')}${step('final', '③', 'Final grid', 'review · export to SFREP')}${step('cost', '④', 'Cost approach', 'land sales · construction costs')}</nav>`; }
 
 /* Side-to-side scroll bar pinned to the bottom of the window: shows when a wide table
    (workbook, final grid, comps considered) is on screen but its own scroll bar is below the
