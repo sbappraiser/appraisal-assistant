@@ -371,7 +371,11 @@ function homeHTML() {
 }
 /* every redraw keeps her place on the page (her note, Oct 20 2026: saving a comp to her database jumped to the top);
    the few actions that should go to the top (open an assignment, the start page) scroll there themselves after render */
-function render() { const y = window.scrollY; rcRun(renderPage); if (Math.abs(window.scrollY - y) > 2) window.scrollTo(0, y); requestAnimationFrame(() => { if (Math.abs(window.scrollY - y) > 2 && !render.top) window.scrollTo(0, y); render.top = false; }); }
+/* the scroll boxes (grid, comps considered …) keep their place across a redraw – her ask Oct 20 2026: the grid stays where she typed */
+const wrapKey = (w, i) => { const sec = w.closest('section[id]'); return (sec ? sec.id : '') + ':' + i; };
+function wrapsSave() { const m = {}; document.querySelectorAll('.tablewrap').forEach((w, i) => { if (w.scrollTop || w.scrollLeft) m[wrapKey(w, i)] = [w.scrollTop, w.scrollLeft]; }); return m; }
+function wrapsRestore(m) { document.querySelectorAll('.tablewrap').forEach((w, i) => { const v = m[wrapKey(w, i)]; if (v) { w.scrollTop = v[0]; w.scrollLeft = v[1]; } }); }
+function render() { const y = window.scrollY; const W = wrapsSave(); rcRun(renderPage); wrapsRestore(W); if (Math.abs(window.scrollY - y) > 2) window.scrollTo(0, y); requestAnimationFrame(() => { if (Math.abs(window.scrollY - y) > 2 && !render.top) window.scrollTo(0, y); render.top = false; }); }
 function renderPage() {
   const J = app.job; const root = $('#app');
   if (J && !J.gridManual && J.comps.some(c => c.use) && !gridInDateOrder(J)) { gridDateOrder(J); save(); }   // her rule: the grid is in closing-date order unless she numbered it herself

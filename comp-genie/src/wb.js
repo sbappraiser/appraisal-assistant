@@ -91,7 +91,13 @@ function wbEquals(J, cid, rowId, v, isFact) {
   const c = J.comps.find(x => x.id === cid); if (!c) return false; const m = String(v).trim().match(/^=\s*(\d*)$/); if (!m) return false;
   const row = adjRows(J).find(r => r[0] === rowId); const G = G0(J);
   const src = m[1] ? usedComps(J).find(x => x.use === +m[1]) : null; if (m[1] && !src) { toast(`There is no comp ${m[1]} on the grid`); return true; }
-  if (isFact) { const F = src ? compFacts(src, J) : subjFacts(J); wbFactSet(J, c, rowId, wbFactText(rowId, F));
+  if (isFact) { const F = src ? compFacts(src, J) : subjFacts(J); let txt = wbFactText(rowId, F);
+    /* her rule (Oct 20 2026): "=" copies the entry with its impact – view and location in the picker's form ("Neutral: Residential") */
+    if (rowId === 'view' && txt) { const L = vwParse(txt); if (L.length) txt = vwText(L); }
+    if (rowId === 'loc' && txt) { const L = siParse(txt); if (L.length) txt = siText(L); }
+    wbFactSet(J, c, rowId, txt); c.edit = c.edit || {};
+    if ((PICK[rowId] || rowId === 'view' || rowId === 'loc') && txt) c.edit['pk_' + rowId] = txt; else delete c.edit['pk_' + rowId];
+    if (rowId === 'view') { const t = vtOf(J, src ? src.id : 'subj', src ? compFacts(src, J).view : F.view); if (t !== null && t !== undefined) { G.viewT = G.viewT || {}; G.viewT[c.id] = t; } }
     if (rowId === 'q' || rowId === 'c') { const fine = src ? fineOf(J, src.id, rowId) : fineOf(J, 'subj', rowId); G.fine = G.fine || {}; G.fine[c.id] = G.fine[c.id] || {}; G.fine[c.id][rowId] = fine; }
     toast(`Comp ${c.use} – ${row ? row[1] : rowId}: same as ${src ? 'comp ' + src.use : 'the subject'}`); return true; }
   G.cells[cid] = G.cells[cid] || {};
@@ -161,7 +167,8 @@ document.addEventListener('keydown', async e => {
   /* her keys inside a grid box (Oct 20 2026): Ctrl+Z empties the box (type the new entry; leave it empty and the source value comes back);
      "=" copies the subject at once – a number typed right after it (=2) copies that comp instead */
   if (cell && (e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === 'z') { e.preventDefault(); t.value = ''; WB_EQ = null; return; }
-  if (cell && !e.ctrlKey && !e.metaKey && !e.altKey && e.key === '=' && (t.value === '' || t.selectionStart === 0 && t.selectionEnd === t.value.length)) {
+  if (cell && !e.ctrlKey && !e.metaKey && !e.altKey && e.key === '=') {   // anywhere in the box, even with text in it
+
     e.preventDefault(); t.value = '='; WB_EQ = { cell, at: Date.now() }; t.dispatchEvent(new Event('change', { bubbles: true })); return; }
   if (WB_EQ && /^[1-9]$/.test(e.key) && !e.ctrlKey && !e.metaKey && Date.now() - WB_EQ.at < 2500) {
     const el = document.querySelector(`[data-gadj="${CSS.escape(WB_EQ.cell)}"],[data-gfact="${CSS.escape(WB_EQ.cell)}"]`);
