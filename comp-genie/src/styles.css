@@ -332,3 +332,7 @@ table.grid th .grates{display:grid;grid-template-columns:1fr 1fr;gap:4px 6px;mar
 table.grid th .grates .grate{margin:0}table.grid th .grates .grate label{display:flex;flex-direction:column;gap:1px;font-size:11px;line-height:1.15;color:#3d4a57;font-weight:500}
 table.grid th .grates .grate input{width:100%;min-width:0;box-sizing:border-box;font-size:13px;padding:2px 4px}
 table.grid th .grates i.fromdot{color:#0b7a5a;font-style:normal;font-size:9px;margin-left:3px;vertical-align:1px}
+/* her ask (Oct 20 2026): a single rate sits on one line – name, then the box beside it */
+table.grid th .grates:has(> .grate:only-child){grid-template-columns:1fr}
+table.grid th .grates .grate:only-child label{flex-direction:row;align-items:center;gap:6px;white-space:nowrap}
+table.grid th .grates .grate:only-child input{width:90px;flex:0 0 90px}
