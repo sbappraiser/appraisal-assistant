@@ -792,6 +792,11 @@ nav.tabs button[aria-selected="true"] { background: var(--look-navy) !important;
       <li>Your comments: click a 3.6 row to see what you wrote about that comp in that assignment (the sales comparison comment sentences that name it, the considered-not-used comment, your notes) with a <b>Copy</b> button. For ACI reports the comments are in the report itself – open the report named on the row.</li></ol></details>
     <details><summary>Adjustment grid and the full report for SFREP (Comp genie)</summary><ol>
       <li><b>Red boxes in SFREP after the import:</b> the genie now sends what Fannie Mae's own sample sends – a <b>0</b> in every adjustment box with no adjustment, the comps' unfinished basement (0), interior and exterior quality and condition, "homeowner keeps up the outside", the data source for each comp's transfer history, the subject's market area name, and named units for a comp with an ADU. The recorded document number now comes in as the identifier of the <b>Assessor Record</b> source (SFREP's list has no "Deed"). What only you can answer is in the <b>Pre-check</b>: each comp's <b>street surface</b>, <b>view range</b> (Full, Partial, Seasonal) and <b>energy efficient features</b> (pick None when it has none) – click the line to go to the box; type <b>=</b> to copy the subject's.</li>
+      <li><b>The grid in its own box:</b> in the Workbook, <b>View › In its own box</b> – the grid alone scrolls up and down (mouse wheel) and side to side (the bar at the bottom of the box, or Shift + wheel), with the comp names and line names staying put; the page behind does not move. Esc or ✕ closes it. <b>View › Own window</b> opens the grid in a separate window you can move to another screen.</li>
+      <li><b>Adding to your databases:</b> Comp genie › <b>📥 Add to my databases</b> (top) – CORT weekly closings, land sales, the construction cost database, the comp archive. Or drop the files anywhere on the page.</li>
+      <li><b>Report details</b> (assignment, highest and best use, scope of work, extraordinary assumptions and hypothetical conditions, value): step <b>⑤ Report details</b> in the Comp genie – it is at the bottom of ③ Final grid.</li>
+      <li><b>Drop-downs and the mouse wheel:</b> click a drop-down once, then the wheel moves up and down through it (it never changes while you only scroll the page past it).</li>
+      <li><b>The client's engagement letter</b> (Order page): <b>Open in its own window ↗</b> – move it to your other screen. Tick <i>Also show the pages here</i> if you want it on the page too.</li>
       <li><b>What the client's letter asks for:</b> when you drop the engagement letter or order in Documents, it is read for: cost approach required or <b>not required</b>, replacement cost new (RCN) of <b>each building</b>, ACN (actual cash value), a rent survey or 1007, an operating income statement (216), 1004MC, and documents to review or comment on (purchase contract, plans, leases, title …). They go in the order's Notes and the Client requirements list, and the Comp genie shows them at the top of Report details and the Cost approach; the pre-check reminds you of each one.</li>
       <li><b>Extraordinary assumptions and hypothetical conditions:</b> type them in Report details › <b>Extraordinary assumptions and hypothetical conditions</b> (their own boxes); what you did beyond the standard scope goes in Scope of work. All three go together into 3.6 Additional Scope of Work (2,500 characters in all – the count shows under the boxes) and answer it Yes; it prints under Certifications › Scope of Work. A value <i>subject to</i> repairs or completion is chosen in Market value condition. When the income or cost approach is answered No, pick its <b>reason</b> under Value and reconciliation.</li>
       <li><b>Subject data sources:</b> the listing check (MLS), the transfer history (CRS, or MLS) and the living-area source (measured at your inspection) are now sent, so those boxes are no longer red. The pre-check also asks for the <b>legal description</b> (Report details).</li>
@@ -908,7 +913,7 @@ nav.tabs button[aria-selected="true"] { background: var(--look-navy) !important;
 </div>
 <div id="toast" role="status" hidden></div>
 <script>
-const BUILD='o1-1021-1722';
+const BUILD='o1-1021-1738';
 const G = (() => {
 /* ---------------- small helpers ---------------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -4958,17 +4963,24 @@ function renderClientView(f) {
   const req = (f.facts || []).filter(x => L.some(d => d.id === x.docId));
   const V = { stop: 'AI not allowed by this letter.', look: 'AI only with confidential information removed – read the marked paragraphs below.', clear: 'No AI or confidentiality restriction found.' };
   box.innerHTML = `<h3>Client’s engagement letter</h3>
-    ${L.length ? `${L.map(d => `<div class="row"><b>${h(d.name)}</b><span class="grow"></span><button type="button" class="btn small" data-clread="${d.id}">Read and list requirements</button><button type="button" class="btn ghost small" data-clopen="${d.id}">Open</button></div>`).join('')}
+    ${L.length ? `${L.map(d => `<div class="row"><b>${h(d.name)}</b><span class="grow"></span><button type="button" class="btn small" data-clread="${d.id}">Read and list requirements</button><button type="button" class="btn small primary" data-clwin="${d.id}" title="Opens the letter in its own window – move it to your other screen">Open in its own window ↗</button></div>`).join('')}
       ${f.orderDoc && f.orderDoc.verdict ? `<p class="help"><b>AI check:</b> ${h(V[f.orderDoc.verdict] || '')}</p>` : ''}
       ${req.length ? `<table class="facts">${req.map(x => `<tr><th>${h(x.label)}</th><td>${h(x.value)}${x.page ? ' <small class="muted">p. ' + x.page + '</small>' : ''}</td></tr>`).join('')}</table>` : '<p class="help">Click <b>Read and list requirements</b> to note the report form, addenda, photo rules, due date, fee and inspection to-dos from it.</p>'}
+      <label class="check"><input type="checkbox" id="clShowPages" ${clPagesOn() ? 'checked' : ''}> Also show the pages here</label>
       <div class="clpages" id="clPages"></div>`
     : '<p class="help">Drop the client’s engagement letter or order into <b>Documents</b> on the right. It shows here instead of your letter.</p>'}
     <div class="row"><button type="button" class="btn ghost small" id="clMine">Write my own letter instead</button></div>`;
   box.querySelectorAll('[data-clread]').forEach(b => b.onclick = () => { saveLetter(true, true); openReader(b.dataset.clread); });
-  box.querySelectorAll('[data-clopen]').forEach(b => b.onclick = () => openDoc(b.dataset.clopen));
+  box.querySelectorAll('[data-clwin]').forEach(b => b.onclick = () => openDocWindow(b.dataset.clwin));
+  { const c = $('#clShowPages'); if (c) c.onchange = () => { try { localStorage.setItem('aa-clpages', c.checked ? '1' : ''); } catch (e) {} clShown = ''; update(); }; }
   $('#clMine').onclick = () => { $('#f_status').value = 'Drafted'; clShown = ''; update(); };
-  if (L.length) showClientPages(L[0].id);
+  if (L.length && clPagesOn()) showClientPages(L[0].id);
 }
+/* her ask (Oct 21 2026): the letter does not need to be on the page all the time – a window she can move to another screen */
+const clPagesOn = () => { try { return localStorage.getItem('aa-clpages') === '1'; } catch (e) { return false; } };
+async function openDocWindow(id) { const r = await ODB.get('docs', id); if (!r) { toast('That file is no longer stored'); return; }
+  const u = URL.createObjectURL(r.blob); const w = window.open(u, 'aa-letter-' + id, `width=${Math.min(screen.availWidth, 950)},height=${Math.min(screen.availHeight, 1100)},left=40,top=40`);
+  if (!w) toast('Chrome blocked the window – allow pop-ups for this page'); setTimeout(() => URL.revokeObjectURL(u), 120000); }
 async function showClientPages(id) {
   const out = $('#clPages'); if (!out) return; const rec = await ODB.get('docs', id); if (!rec) return;
   if (!/pdf/i.test(rec.mime || '') && !/\.pdf$/i.test(rec.name)) { const r = await docPages(id); out.innerHTML = `<pre style="white-space:pre-wrap">${h((r.pagesText || []).join('\n\n'))}</pre>`; return; }
@@ -5464,12 +5476,15 @@ if (typeof document !== 'undefined') {
     const want = (name ? `<span title="The file you are working in">📄 ${name.replace(/[<>&]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]))}</span>` : '') + '<button type="button" data-lookleg="1" title="What the colors mean">ⓘ Colors</button>';
     if (F.innerHTML !== want) F.innerHTML = want; }
   document.addEventListener('click', e => { if (e.target.closest && e.target.closest('[data-lookleg]')) legend(); });
-  /* the mouse wheel moves a drop-down up and down when the pointer is on it (her ask) – the page still scrolls everywhere else */
+  /* the mouse wheel moves a drop-down up and down once she has clicked on it (her ask) – the page still scrolls everywhere else */
   document.addEventListener('wheel', e => { const s = e.target.closest && e.target.closest('select'); if (!s || s.multiple || s.disabled || s.size > 1) return;
     if (document.activeElement !== s) return;   // only once she has clicked into it, so scrolling the page past a drop-down never changes an answer
     e.preventDefault(); const n = s.options.length; if (!n) return; let i = s.selectedIndex + (e.deltaY > 0 ? 1 : -1); i = Math.max(0, Math.min(n - 1, i));
     while (s.options[i] && s.options[i].disabled && i > 0 && i < n - 1) i += e.deltaY > 0 ? 1 : -1;
-    if (i !== s.selectedIndex) { s.selectedIndex = i; s.dispatchEvent(new Event('input', { bubbles: true })); s.dispatchEvent(new Event('change', { bubbles: true })); } }, { passive: false });
+    if (i !== s.selectedIndex) { const key = selKey(s); s.selectedIndex = i; s.dispatchEvent(new Event('input', { bubbles: true })); s.dispatchEvent(new Event('change', { bubbles: true }));
+      if (key) setTimeout(() => { if (document.activeElement && document.activeElement.matches && document.activeElement.matches(key)) return; const n = document.querySelector(key); if (n) n.focus({ preventScroll: true }); }, 60); } }, { passive: false });   // pages that redraw on a change: stay on the same drop-down so the wheel keeps working
+  /* a selector that finds the same drop-down after the page redraws: its id, or its data- attributes */
+  function selKey(el) { if (el.id) return '#' + CSS.escape(el.id); const a = [...el.attributes].filter(x => x.name.startsWith('data-')); return a.length ? 'select' + a.map(x => `[${x.name}="${CSS.escape(x.value)}"]`).join('') : null; }
   const start = () => { if (window.self !== window.top && document.body.classList.contains('embed')) return;   // inside the hub: the hub shows the file name
     corner(); setInterval(corner, 400); };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();

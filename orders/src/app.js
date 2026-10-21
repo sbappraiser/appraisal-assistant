@@ -195,17 +195,24 @@ function renderClientView(f) {
   const req = (f.facts || []).filter(x => L.some(d => d.id === x.docId));
   const V = { stop: 'AI not allowed by this letter.', look: 'AI only with confidential information removed – read the marked paragraphs below.', clear: 'No AI or confidentiality restriction found.' };
   box.innerHTML = `<h3>Client’s engagement letter</h3>
-    ${L.length ? `${L.map(d => `<div class="row"><b>${h(d.name)}</b><span class="grow"></span><button type="button" class="btn small" data-clread="${d.id}">Read and list requirements</button><button type="button" class="btn ghost small" data-clopen="${d.id}">Open</button></div>`).join('')}
+    ${L.length ? `${L.map(d => `<div class="row"><b>${h(d.name)}</b><span class="grow"></span><button type="button" class="btn small" data-clread="${d.id}">Read and list requirements</button><button type="button" class="btn small primary" data-clwin="${d.id}" title="Opens the letter in its own window – move it to your other screen">Open in its own window ↗</button></div>`).join('')}
       ${f.orderDoc && f.orderDoc.verdict ? `<p class="help"><b>AI check:</b> ${h(V[f.orderDoc.verdict] || '')}</p>` : ''}
       ${req.length ? `<table class="facts">${req.map(x => `<tr><th>${h(x.label)}</th><td>${h(x.value)}${x.page ? ' <small class="muted">p. ' + x.page + '</small>' : ''}</td></tr>`).join('')}</table>` : '<p class="help">Click <b>Read and list requirements</b> to note the report form, addenda, photo rules, due date, fee and inspection to-dos from it.</p>'}
+      <label class="check"><input type="checkbox" id="clShowPages" ${clPagesOn() ? 'checked' : ''}> Also show the pages here</label>
       <div class="clpages" id="clPages"></div>`
     : '<p class="help">Drop the client’s engagement letter or order into <b>Documents</b> on the right. It shows here instead of your letter.</p>'}
     <div class="row"><button type="button" class="btn ghost small" id="clMine">Write my own letter instead</button></div>`;
   box.querySelectorAll('[data-clread]').forEach(b => b.onclick = () => { saveLetter(true, true); openReader(b.dataset.clread); });
-  box.querySelectorAll('[data-clopen]').forEach(b => b.onclick = () => openDoc(b.dataset.clopen));
+  box.querySelectorAll('[data-clwin]').forEach(b => b.onclick = () => openDocWindow(b.dataset.clwin));
+  { const c = $('#clShowPages'); if (c) c.onchange = () => { try { localStorage.setItem('aa-clpages', c.checked ? '1' : ''); } catch (e) {} clShown = ''; update(); }; }
   $('#clMine').onclick = () => { $('#f_status').value = 'Drafted'; clShown = ''; update(); };
-  if (L.length) showClientPages(L[0].id);
+  if (L.length && clPagesOn()) showClientPages(L[0].id);
 }
+/* her ask (Oct 21 2026): the letter does not need to be on the page all the time – a window she can move to another screen */
+const clPagesOn = () => { try { return localStorage.getItem('aa-clpages') === '1'; } catch (e) { return false; } };
+async function openDocWindow(id) { const r = await ODB.get('docs', id); if (!r) { toast('That file is no longer stored'); return; }
+  const u = URL.createObjectURL(r.blob); const w = window.open(u, 'aa-letter-' + id, `width=${Math.min(screen.availWidth, 950)},height=${Math.min(screen.availHeight, 1100)},left=40,top=40`);
+  if (!w) toast('Chrome blocked the window – allow pop-ups for this page'); setTimeout(() => URL.revokeObjectURL(u), 120000); }
 async function showClientPages(id) {
   const out = $('#clPages'); if (!out) return; const rec = await ODB.get('docs', id); if (!rec) return;
   if (!/pdf/i.test(rec.mime || '') && !/\.pdf$/i.test(rec.name)) { const r = await docPages(id); out.innerHTML = `<pre style="white-space:pre-wrap">${h((r.pagesText || []).join('\n\n'))}</pre>`; return; }

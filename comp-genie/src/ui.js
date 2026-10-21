@@ -389,6 +389,12 @@ function renderPage() {
   <header class="top"><h1>Comp Genie</h1><span class="pill ver" title="The Comp genie version – after Ctrl+R it should match the one I tell you">Version ${typeof BUILD !== 'undefined' ? BUILD : ''}</span>
     <span class="pill ${ARCH.loaded ? 'ok' : 'warn'}">${ARCH.loaded ? `Archive: ${ARCH.rows.length.toLocaleString()} records` : 'Archive not loaded'}</span>${archPhotoPill()}
     <span class="pill">${app.cort.length ? `CORT: ${app.cort.length} sales` : 'No CORT table'}</span><span class="pill" title="Your land sale and construction cost databases (shared with the cost approach)">${(app.land || []).length ? `Land sales: ${app.land.length}` : 'No land sales'} · ${app.costDb ? `Costs: ${app.costDb.projects.length} projects` : 'No cost database'}</span>
+    <details class="adddb"><summary class="btn sm" title="Add files to your databases – or drop them anywhere on this page">📥 Add to my databases</summary><div class="adddbm">
+      <label class="btn sm">CORT weekly closings (PDF / CSV)<input type="file" multiple accept=".pdf,.csv" data-act="files" hidden></label>
+      <label class="btn sm">Land sales (MLS / CRS CSV or PDF)<input type="file" multiple accept=".csv,.pdf" data-act="files" hidden></label>
+      <label class="btn sm">Construction cost database (Excel .xlsx)<input type="file" multiple accept=".xlsx" data-act="files" hidden></label>
+      <label class="btn sm">Comp archive (Comp Archive.json.gz)<input type="file" multiple accept=".gz,.json" data-act="files" hidden></label>
+      <span class="help">Each file is recognized by what is in it and filed in the right database on this computer. You can also drop files anywhere on this page.</span></div></details>
     <span class="grow"></span>
     <label class="jobsel">Assignment <select data-act="pickjob" id="jobpick"><option value="">All assignments (start page)</option>${app.jobs.map(j => `<option value="${j.id}" ${j.id === J.id ? 'selected' : ''}>${esc(jobLabel(j))}</option>`).join('')}</select></label>
     <button class="btn" data-act="newjob">New assignment</button>
@@ -415,7 +421,7 @@ function renderPage() {
   <section class="card st st-micro" id="compsCard">${ON('micro') ? compsCardHTML(J) : ''}</section>
   <section class="card st st-workbook" id="wbStrip">${ON('workbook') ? confirmStripHTML(J) : ''}</section>
   <div id="detail" class="st st-micro st-workbook">${app.sel && ON("micro", "workbook") ? detailHTML(J.comps.find(c => c.id === app.sel)) : ''}</div>
-  <section class="card st st-workbook" id="gridCard">${ON('workbook') ? gridHTML(J) : ''}</section>
+  <section class="card st st-workbook" id="gridCard">${ON('workbook') ? `<div class="gboxbar"><b>The grid in its own box</b> <span class="help" style="margin:0">scroll inside it – up and down with the mouse wheel, side to side with the bar at the bottom (or Shift + wheel)</span><span class="grow"></span><button class="btn primary" data-act="gbox-close">✕ Close the box (Esc)</button></div>` + gridHTML(J) : ''}</section>
   <section class="card st st-final" id="finalCard">${ON('final') ? finalGridHTML(J) : ''}</section>
   <section class="card st st-final" id="mapCard"></section>
   <section class="card st st-cost" id="refCard">${ON('cost') ? refHTML(J) : ''}</section>
@@ -749,6 +755,7 @@ document.addEventListener('click', async e => {
     case 'cancel': app.confirm = null; render(); break;
     case 'rmall': app.confirm = 'rmall'; render(); break;
     case 'rmall-yes': app.job.comps = []; app.sel = null; app.confirm = null; await saveNow(); render(); toast('All comps removed – your files list is unchanged'); break;
+    case 'goreport': { app.job.stage = 'final'; save(); render.top = true; render(); setTimeout(() => { const c = document.getElementById('reportCard'); if (c) c.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 120); break; }
     case 'close': if (CPOP) { window.close(); break; } app.sel = null; render(); break;
     case 'backup': backupJob(); break;
     case 'nuok': app.nuAsk = null; render(); break;
@@ -951,7 +958,7 @@ function stageBarHTML(J) { const st = J.stage || (J.comps.some(c => c.use) ? 'wo
   const o = (app.orders || []).find(x => x.id === J.orderId);
   const step = (k, n, l, sub) => `<button class="stepb${st === k ? ' on' : ''}" data-act="stage" data-s="${k}"><b>${n}</b> ${l}<small>${sub}</small></button>`;
   return `<nav class="steps">${o ? `<a class="stepb" href="../appraisal-assistant/?order=${encodeURIComponent(o.id)}&tab=market" target="_top" title="Macro, then micro – the order's Market tab in the Appraisal Assistant"><b>⓪</b> Market<small>macro → micro</small></a>` : ''}
-    ${step('micro', '①', 'Comps considered', `${J.comps.length} · screen, pick for the workbook`)}${step('workbook', '②', 'Workbook', U.length ? `${U.length} comps · ${conf} confirmed · adjust` : 'confirm each comp, adjust')}${step('final', '③', 'Final grid', 'review · export to SFREP')}${step('cost', '④', 'Cost approach', 'land sales · construction costs')}</nav>`; }
+    ${step('micro', '①', 'Comps considered', `${J.comps.length} · screen, pick for the workbook`)}${step('workbook', '②', 'Workbook', U.length ? `${U.length} comps · ${conf} confirmed · adjust` : 'confirm each comp, adjust')}${step('final', '③', 'Final grid', 'review · export to SFREP')}${step('cost', '④', 'Cost approach', 'land sales · construction costs')}<button class="stepb" data-act="goreport" title="Report details (assignment, highest and best use, scope of work, extraordinary assumptions, value) – at the bottom of ③ Final grid"><b>⑤</b> Report details<small>scope · assumptions · value</small></button></nav>`; }
 
 /* Side-to-side scroll bar pinned to the bottom of the window: shows when a wide table
    (workbook, final grid, comps considered) is on screen but its own scroll bar is below the

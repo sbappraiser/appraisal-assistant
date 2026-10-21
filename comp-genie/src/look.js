@@ -21,12 +21,15 @@
     const want = (name ? `<span title="The file you are working in">📄 ${name.replace(/[<>&]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]))}</span>` : '') + '<button type="button" data-lookleg="1" title="What the colors mean">ⓘ Colors</button>';
     if (F.innerHTML !== want) F.innerHTML = want; }
   document.addEventListener('click', e => { if (e.target.closest && e.target.closest('[data-lookleg]')) legend(); });
-  /* the mouse wheel moves a drop-down up and down when the pointer is on it (her ask) – the page still scrolls everywhere else */
+  /* the mouse wheel moves a drop-down up and down once she has clicked on it (her ask) – the page still scrolls everywhere else */
   document.addEventListener('wheel', e => { const s = e.target.closest && e.target.closest('select'); if (!s || s.multiple || s.disabled || s.size > 1) return;
     if (document.activeElement !== s) return;   // only once she has clicked into it, so scrolling the page past a drop-down never changes an answer
     e.preventDefault(); const n = s.options.length; if (!n) return; let i = s.selectedIndex + (e.deltaY > 0 ? 1 : -1); i = Math.max(0, Math.min(n - 1, i));
     while (s.options[i] && s.options[i].disabled && i > 0 && i < n - 1) i += e.deltaY > 0 ? 1 : -1;
-    if (i !== s.selectedIndex) { s.selectedIndex = i; s.dispatchEvent(new Event('input', { bubbles: true })); s.dispatchEvent(new Event('change', { bubbles: true })); } }, { passive: false });
+    if (i !== s.selectedIndex) { const key = selKey(s); s.selectedIndex = i; s.dispatchEvent(new Event('input', { bubbles: true })); s.dispatchEvent(new Event('change', { bubbles: true }));
+      if (key) setTimeout(() => { if (document.activeElement && document.activeElement.matches && document.activeElement.matches(key)) return; const n = document.querySelector(key); if (n) n.focus({ preventScroll: true }); }, 60); } }, { passive: false });   // pages that redraw on a change: stay on the same drop-down so the wheel keeps working
+  /* a selector that finds the same drop-down after the page redraws: its id, or its data- attributes */
+  function selKey(el) { if (el.id) return '#' + CSS.escape(el.id); const a = [...el.attributes].filter(x => x.name.startsWith('data-')); return a.length ? 'select' + a.map(x => `[${x.name}="${CSS.escape(x.value)}"]`).join('') : null; }
   const start = () => { if (window.self !== window.top && document.body.classList.contains('embed')) return;   // inside the hub: the hub shows the file name
     corner(); setInterval(corner, 400); };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
