@@ -407,7 +407,7 @@ function renderPage() {
   ${ARCH.loaded ? '' : `<section class="card notice"><b>Load your comp archive${app.jobs.some(j => j.comps.length) ? ' in this browser' : ' once'}.</b> ${app.jobs.some(j => j.comps.length) ? 'Each browser (Chrome, Firefox, Edge) keeps its own copy, and this one has none yet. ' : ''}Drop <i>Comp Archive.json.gz</i> and <i>CORT Sales.csv</i> anywhere on this page (or <label class="link">choose it<input type="file" multiple data-act="files" hidden></label>). It is saved on this computer only; nothing is uploaded.</section>`}
   ${stageBarHTML(J)}
   <div class="busy" id="busy" ${app.busy ? '' : 'hidden'}>${esc(app.busy)}</div>
-  <section class="card st st-micro"><h2>Subject</h2>${ON('micro') ? subjectHTML(J) : ''}</section>
+  <section class="card st st-micro" id="subjCard"><h2>Subject</h2>${ON('micro') ? subjectHTML(J) : ''}</section>
   <section class="card st st-micro"><h2>Add comps</h2>
     <div class="addrow"><div class="sugwrap"><input id="addr" class="txt big" placeholder="Type a comp address, e.g. 1181 Glenview" autocomplete="off" data-act="sugg"><div class="sugg" id="sugg"></div></div>
       <button class="btn primary" data-act="add">Add comp</button></div>
@@ -752,11 +752,13 @@ document.addEventListener('click', async e => {
     case 'confirm': { const c = app.job.comps.find(x => x.id === t.dataset.id); if (c) { c.confirmed = Date.now(); save(); render(); toast('Comp ' + c.use + ' – data confirmed ✓'); } break; }
     case 'unconfirm': { const c = app.job.comps.find(x => x.id === t.dataset.id); if (c) { delete c.confirmed; save(); render(); } break; }
     case 'nextconfirm': { const U = usedComps(app.job); const i = U.findIndex(c => c.id === t.dataset.id); const n = [...U.slice(i + 1), ...U.slice(0, Math.max(0, i))].find(c => !c.confirmed && c.id !== t.dataset.id) || (i < 0 ? U.find(c => !c.confirmed) : null);
-      if (n) { if (app.job.stage !== 'workbook') app.job.stage = 'workbook'; openComp(n.id); } else toast('All comps in the workbook are confirmed ✓ – make your adjustments, then go to ③ Final grid', 6000); break; }
+      if (n) { if (app.job.stage !== 'workbook') app.job.stage = 'workbook'; openComp(n.id); } else toast('All comps in the workbook are confirmed ✓ – make your adjustments (step 8)', 6000); break; }
     case 'deljob-yes': { await snapTake(app.job, 'before delete'); const id = app.job.id; await DB.del('jobs', id); for (const p of await DB.byJob(id)) await DB.del('photos', p.id); app.jobs = app.jobs.filter(j => j.id !== id); app.job = app.jobs[0] || null; app.confirm = null; app.home = true; await loadPhotos(); render.top = true; render(); window.scrollTo(0, 0); toast('Assignment deleted'); break; }
     case 'cancel': app.confirm = null; render(); break;
     case 'rmall': app.confirm = 'rmall'; render(); break;
     case 'rmall-yes': app.job.comps = []; app.sel = null; app.confirm = null; await saveNow(); render(); toast('All comps removed – your files list is unchanged'); break;
+    case 'path': { if (typeof e !== 'undefined' && e.preventDefault) e.preventDefault(); const x = pathSteps(app.job).find(y => y.k === t.dataset.p); if (!x) break; if (x.href) { window.top.location.href = x.href; break; }
+      app.pathAt = x.k; app.job.stage = x.st; save(); render.top = true; render(); setTimeout(() => { const c = document.querySelector(x.sel); if (c) { const d = c.closest('details'); if (d) d.open = true; c.scrollIntoView({ behavior: 'smooth', block: 'start' }); } }, 120); break; }
     case 'goreport': { app.job.stage = 'final'; save(); render.top = true; render(); setTimeout(() => { const c = document.getElementById('reportCard'); if (c) c.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 120); break; }
     case 'close': if (CPOP) { window.close(); break; } app.sel = null; render(); break;
     case 'backup': backupJob(); break;
@@ -955,12 +957,28 @@ async function snapPick() { const L = (await snapIdx()).sort((a, b) => b.at - a.
   const jobs = []; for (const x of L.slice(0, 60)) { const r = await DB.get('kv', x.key); if (r && r.v) { const j = r.v; j.updated = x.at; j.name = j.name + (x.why ? ' (' + x.why + ')' : ''); jobs.push(j); } }
   const z = new Map([['comp-genie.json', new TextEncoder().encode(JSON.stringify({ app: 'comp-genie', saved: new Date().toISOString(), jobs }))]]); backupPick(z, 'earlier versions kept in this browser'); }
 
-/* her steps (Oct 20 2026) */
-function stageBarHTML(J) { const st = J.stage || (J.comps.some(c => c.use) ? 'workbook' : 'micro'); const U = usedComps(J); const conf = U.filter(c => c.confirmed).length;
-  const o = (app.orders || []).find(x => x.id === J.orderId);
-  const step = (k, n, l, sub) => `<button class="stepb${st === k ? ' on' : ''}" data-act="stage" data-s="${k}"><b>${n}</b> ${l}<small>${sub}</small></button>`;
-  return `<nav class="steps">${o ? `<a class="stepb" href="../appraisal-assistant/?order=${encodeURIComponent(o.id)}&tab=market" target="_top" title="Macro, then micro – the order's Market tab in the Appraisal Assistant"><b>⓪</b> Market<small>macro → micro</small></a>` : ''}
-    ${step('micro', '①', 'Comps considered', `${J.comps.length} · screen, pick for the workbook`)}${step('workbook', '②', 'Workbook', U.length ? `${U.length} comps · ${conf} confirmed · adjust` : 'confirm each comp, adjust')}${step('final', '③', 'Final grid', 'review · export to SFREP')}${step('cost', '④', 'Cost approach', 'land sales · construction costs')}<button class="stepb" data-act="goreport" title="Report details (assignment, highest and best use, scope of work, extraordinary assumptions, value) – at the bottom of ③ Final grid"><b>⑤</b> Report details<small>scope · assumptions · value</small></button></nav>`; }
+/* her numbered path (Oct 21 2026): the hub's ① Documents ② Engagement letter ③ Scope of work, then here ④–⑮ in the order she works,
+   each with a green ✓ when complete and a "still to do" line */
+function pathSteps(J) { const U = usedComps(J), G = G0(J), R = R0(J), o = (app.orders || []).find(x => x.id === J.orderId) || null; const T = f => { try { return f(); } catch (e) { return false; } };
+  const conf = U.filter(c => c.confirmed).length; const costOn = J.costOn ?? (R.sowCost === 'true' || (!R.sowCost && o && o.apCost)); const incOn = J.incomeOn ?? !!(o && (o.apIncome || o.rent));
+  return [
+    { n: '4', k: 'insp', l: 'Inspection', sub: 'iPad data, photos, sketch', st: 'micro', sel: '#subjCard', done: T(() => !!J.subject.insp), todo: 'drop your iPad Workfile package' },
+    { n: '5', k: 'market', l: 'Market', sub: 'macro → micro', href: o ? `../appraisal-assistant/?order=${encodeURIComponent(o.id)}&tab=market` : null, done: T(() => !!(o && o.market && (o.market.uad || o.market.charts || o.market.micro))), todo: 'the order’s Market tab' },
+    { n: '6', k: 'sel', l: 'Comp selection', sub: `${J.comps.length} considered · ${U.length} used`, st: 'micro', sel: '#compsCard', done: U.length >= 3, todo: 'pick at least 3 comps for the grid' },
+    { n: '7', k: 'data', l: 'Comp data', sub: `${conf} of ${U.length} confirmed`, st: 'workbook', sel: '#wbStrip', done: U.length > 0 && conf === U.length, todo: `confirm ${U.length - conf} comp${U.length - conf === 1 ? '' : 's'}` },
+    { n: '8', k: 'adj', l: 'Adjustments', sub: 'the grid', st: 'workbook', sel: '#gridCard', done: !blank(G.value), todo: 'adjust, then type your indicated value' },
+    { n: '9', k: 'sup', l: 'Adjustment support', sub: 'sensitivity · grouped sales · cost', st: 'workbook', sel: '#supCard', done: T(() => !!(app.sens && app.sens.job === J.id) || Object.keys(G.rateFrom || {}).length > 0), todo: 'run the sensitivity / grouped sales' },
+    { n: '10', k: 'sca', l: 'Sales comparison comment', sub: 'analysis and comment', st: 'workbook', sel: 'textarea[data-gnote]', done: String(G.note || '').trim().length > 40, todo: 'write the sales comparison comment' },
+    { n: '11', k: 'cost', l: 'Cost approach', sub: costOn ? 'land · cost new · depreciation' : 'not developed', st: 'cost', sel: '#costCard', done: T(() => !costOn || !!(costCalc(J) || {}).value), todo: 'finish the cost approach' },
+    { n: '12', k: 'inc', l: 'Income approach', sub: incOn ? 'rent · GRM' : 'not developed', st: 'workbook', sel: '#incomeCard', done: T(() => !incOn || !!(incomeCalc(J) || {}).value), todo: 'finish the income approach' },
+    { n: '13', k: 'rec', l: 'Reconciliation', sub: 'value · report details', st: 'final', sel: '#reportCard', done: !blank(num(String(R.opinion || '').replace(/[$,\s]/g, ''))) && !!String(R.reconNote || '').trim(), todo: 'opinion of value and the reconciliation comment' },
+    { n: '14', k: 'exh', l: 'Exhibits and photos', sub: 'maps · photos', st: 'final', sel: '#mapCard', done: T(() => U.length > 0 && U.every(c => c.front)), todo: 'a front photo for each comp' },
+    { n: '15', k: 'out', l: 'Pre-check and export', sub: 'certification · SFREP', st: 'final', sel: '#preCard', done: !!J.exportedAt, todo: 'run the pre-check and export to SFREP' }]; }
+function stageBarHTML(J) { const st = J.stage || (J.comps.some(c => c.use) ? 'workbook' : 'micro'); const P = pathSteps(J); const cur = app.pathAt && P.find(x => x.k === app.pathAt && x.st === st) ? app.pathAt : (P.find(x => x.st === st) || {}).k;
+  const left = P.filter(x => !x.done);
+  return `<nav class="steps path">${P.map(x => x.href ? `<a class="stepb${x.done ? ' done' : ''}" href="${x.href}" target="_top" title="${esc(x.sub)} – in the Appraisal Assistant"><b><span class="pn">${x.n}</span>${x.l}${x.done ? '<i class="pck">✓</i>' : ''}</b><small>${esc(x.sub)}</small></a>`
+      : x.href === null && x.k === 'market' ? '' : `<button class="stepb${x.k === cur ? ' on' : ''}${x.done ? ' done' : ''}" data-act="path" data-p="${x.k}"><b><span class="pn">${x.n}</span>${x.l}${x.done ? '<i class="pck">✓</i>' : ''}</b><small>${esc(x.sub)}</small></button>`).join('')}</nav>
+  ${left.length ? `<p class="stilltodo"><b>Still to do:</b> ${left.map(x => `<a href="#" data-act="path" data-p="${x.k}"><span class="pn sm">${x.n}</span> ${esc(x.todo)}</a>`).join(' · ')}</p>` : '<p class="stilltodo done"><b>✓ Every step is complete.</b></p>'}`; }
 
 /* Side-to-side scroll bar pinned to the bottom of the window: shows when a wide table
    (workbook, final grid, comps considered) is on screen but its own scroll bar is below the

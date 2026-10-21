@@ -383,3 +383,14 @@ body.gridbox #gridCard>*:not(.gboxbar):not(.tablewrap){display:none!important}  
 .dbcard p{margin:4px 0;font-size:15.5px}.dbuse{color:#27313b}
 .dbst{font:600 14px system-ui,sans-serif;padding:2px 10px;border-radius:999px;background:#e3e6ea;color:#27313b}
 .dbst.on{background:#dff3e6;color:#0b6b30}.dbst.off{background:#ffecec;color:#c40000}
+/* her numbered path ④–⑮ (Oct 21 2026) */
+nav.steps.path{gap:6px}
+nav.steps.path .stepb{min-width:0;flex:1 1 150px;max-width:220px;padding:6px 10px}
+nav.steps.path .stepb b{font-size:16px;display:flex;align-items:center;gap:4px}
+nav.steps.path .stepb small{font-size:12.5px!important}
+nav.steps.path .stepb.done{border-color:#0b8a3d}
+.pck{display:inline-grid;place-items:center;width:1.15em;height:1.15em;border-radius:50%;background:#0b8a3d;color:#fff;font-style:normal;font-size:.75em;font-weight:900}
+.stilltodo{margin:2px 0 12px;font-size:15px;color:#27313b}.stilltodo a{color:#c40000;font-weight:600;text-decoration:none}.stilltodo a:hover{text-decoration:underline}.stilltodo.done{color:#0b8a3d}
+.pn{display:inline-grid;place-items:center;min-width:1.55em;height:1.55em;padding:0 .2em;border-radius:999px;border:2px solid currentColor;font-size:.85em;font-weight:800;margin-right:5px;box-sizing:border-box}
+.pn.sm{font-size:.8em;border-width:1.5px}
+nav.steps.path .stepb{padding:5px 9px}nav.steps.path .stepb b{font-size:15px}

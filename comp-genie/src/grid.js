@@ -742,6 +742,7 @@ async function exportFullReport(anyway) {   // the pre-check runs first; "Export
     if (must || T.items.length) { renderKeepFocus(); const c = $('#preCard'); if (c) c.scrollIntoView({ behavior: 'smooth', block: 'start' }); toast(must ? `Pre-check: ${must} to fix before export` : `Pre-check: ${T.items.length} to look at – then press Export now`); return; } }
   const r = await buildFullReport(J); if (r.err) { toast(r.err); return; }
   const zip = await makeZip(r.entries); const mb = b => (b / 1048576).toFixed(1) + ' MB'; const zs = zip.size || zip.byteLength || 0;
+  J.exportedAt = new Date().toISOString(); save();   // ⑮ ✓ on her path
   download(zip, jobBase() + ' - Full report SFREP.zip'); if (r.fit && r.fit.shrunk) toast(`The photos made the report ${mb(r.fit.before)}; ${r.fit.shrunk} report photos were made smaller so it is ${mb(zs)} (UCDP allows 60 MB). Your workfile keeps the full-size photos.`, 10000);
   else if (zs > 60 * 1048576) toast(`The report file is ${mb(zs)} – over UCDP’s 60 MB. Untick some extra photos (Send to SFREP) on the iPad and export again.`, 12000);
   if (!(r.fit && r.fit.shrunk) && zs <= 60 * 1048576) toast('Saved to your Downloads folder (' + mb(zs) + ')' + (r.charts ? ` – with ${r.charts} market chart${r.charts > 1 ? 's' : ''}` : ' – no market charts (open the order’s Market tab once so they are kept)'), 6000);
@@ -973,10 +974,10 @@ function compLinesHTML(c, J) {
 }
 /* the workbook strip: the comps in the workbook, one by one */
 function confirmStripHTML(J) {
-  const U = usedComps(J); if (!U.length) return '<h2>Workbook</h2><p class="help">No comps in the workbook yet – in ① Comps considered click <b>→ Workbook</b> (or tick them and <b>Put in the workbook</b>).</p>';
+  const U = usedComps(J); if (!U.length) return '<h2>Workbook</h2><p class="help">No comps in the workbook yet – in step 6 Comp selection click <b>→ Workbook</b> (or tick them and <b>Put in the workbook</b>).</p>';
   const left = U.filter(c => !c.confirmed).length;
   return `<div class="row"><h2 style="margin:0">Workbook <small>${U.length} comps · ${left ? left + ' to confirm' : 'all confirmed ✓'}</small></h2><span class="grow"></span>${left ? `<button class="btn primary" data-act="nextconfirm">Confirm the next comp ▸</button>` : ''}</div>
-    <p class="help">Open each comp in turn (here or ↗ popped out): check the data against its sources, fill in its grid lines, notes and ratings, then click <b>✓ Data confirmed</b>. Then make your adjustments below, see the adjusted prices, and take comps out or add more. When it is ready, go to <b>③ Final grid</b>.</p>
+    <p class="help">Open each comp in turn (here or ↗ popped out): check the data against its sources, fill in its grid lines, notes and ratings, then click <b>✓ Data confirmed</b>. Then make your adjustments below, see the adjusted prices, and take comps out or add more. When it is ready, go on with steps 9–10 (adjustment support, your comment); the final grid is under step 15.</p>
     <div class="cstrip">${U.map(c => { const f = compFlags(c, J).filter(x => !flagChecked(c, x)).length; return `<button class="cchip${c.confirmed ? ' ok' : ''}${app.sel === c.id ? ' on' : ''}" data-act="openwb" data-id="${c.id}"><b>${c.use}</b> ${esc(compTitle(c))}${linesBadge(c, J)}${f ? ` <span class="badge flagred">⚑ ${f}</span>` : ''}</button>`; }).join('')}</div>`;
 }
 /* ③ the final grid – read-only, laid out like the 3.6 grid */
@@ -995,7 +996,7 @@ function finalGridHTML(J) {
       const a = type ? cellAmount(J, c, r).v : null; return `<td>${blank(v) || v === '' ? (listingNote(id, C) ? `<span class="na">${listingNote(id, C)}</span>` : lineReq(id, C) ? '<span class="bad">missing</span>' : '') : (id === 'src' ? esc(v).replace(/\n/g, '<br>') : esc(v))}${a ? `<div class="famt">${a > 0 ? '+' : '−'}${money(Math.abs(a))}</div>` : ''}</td>`; }).join('')}</tr>`; }).join('');
   const T = U.map(c => compTotals(J, c));
   const tot = (l, f) => `<tr class="tot"><th>${l}</th><td></td>${T.map(f).map(x => `<td>${x}</td>`).join('')}</tr>`;
-  return `<h2>Final grid <small>what goes to SFREP – read only; change things in ② Workbook</small></h2>
+  return `<h2>Final grid <small>what goes to SFREP – read only; change things in steps 7–8 (the workbook)</small></h2>
     <div class="tablewrap"><table class="grid final"><thead><tr><th></th><th>Subject<br><span class="gaddr">${esc(J.subject.addr || '')}</span></th>${U.map(c => `<th>Comp ${c.use}<br><span class="gaddr">${esc(compTitle(c))}</span>${gridHeadSale(c, J)}</th>`).join('')}</tr></thead><tbody>${rows}
     ${tot('Net adjustment', t => `${t.net >= 0 ? '+' : '−'}${money(Math.abs(t.net))} (${t.netPct.toFixed(1)}%)`)}${tot('Gross adjustment', t => `${money(t.gross)} (${t.grossPct.toFixed(1)}%)`)}${tot('Adjusted price', t => `<b>${money(t.adj)}</b>`)}</tbody></table></div>`;
 }
