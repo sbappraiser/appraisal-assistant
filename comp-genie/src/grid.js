@@ -576,6 +576,7 @@ function myDbAuto() { clearTimeout(MYDB_T); MYDB_T = setTimeout(async () => { co
 function otherDesc(r, F) {
   if (r[0] === 'usable') { if (F.landSplit && !F.usableOwn) { const t = splitRaw(F.landSplit); if (t) return t; }   // her rule (Oct 20 2026): the 2.6 utility as she wrote it ("0.62r/2.15o"), without the neighborhood
     return blank(F.usable) ? '' : (+F.usable).toFixed(2) + ' ac'; }
+  if (r[0] === 'land' && typeof landCanon === 'function') return String(landCanon(F.land) || '').trim();   /* the subject's typed "Average-Good" went to SFREP as typed */
   return String(F[r[0]] || '').trim();
 }
 
