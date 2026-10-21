@@ -844,6 +844,7 @@ document.addEventListener('change', async e => {
   if (t.dataset.gmode) { const G = G0(app.job); G.mode = t.value; if (t.value === 'condo' && !G.tier) G.tier = 'condo'; save(); renderKeepFocus(); return; }
   if (t.dataset.gsa) { saSet(app.job, t.dataset.gsa, t.value); renderKeepFocus(); return; }
   if (t.dataset.gvt) { const G = G0(app.job); G.viewT = G.viewT || {}; const w = t.dataset.gvt; if (t.value === '') { delete G.viewT[w]; } else { G.viewT[w] = +t.value; vtRemember(app.job, w, +t.value); } save(); renderKeepFocus(); return; }
+  if (t.dataset.gland) { const w = t.dataset.gland; const G = G0(app.job); if (w === 'subj') { if (t.value) G.subj.land = t.value; else delete G.subj.land; } else { const c = app.job.comps.find(x => x.id === w); if (c) wbFactSet(app.job, c, 'land', t.value); } save(); renderKeepFocus(); return; }
   if (t.dataset.gunk) { const [cid, id] = t.dataset.gunk.split('|'); const c = app.job.comps.find(x => x.id === cid); if (!c) return; unkSet(app.job, c, id, t.value); save(); renderKeepFocus();
     if (t.value === 'known') setTimeout(() => { const el = document.querySelector(`[data-gfact="${cid}|${id}"]`); if (el) { el.focus(); el.select(); } }, 50); return; }
   if (t.dataset.gconc) { const c = app.job.comps.find(x => x.id === t.dataset.gconc); if (!c) return; concSet(app.job, c, t.value); save(); renderKeepFocus();
