@@ -48,7 +48,7 @@ function costDraft(J) {
   let t = `The cost approach was developed using ${K.type === 'Reproduction' ? 'reproduction' : 'replacement'} cost new by the ${({ ComparativeUnit: 'comparative unit', UnitInPlace: 'unit-in-place', QuantitySurvey: 'quantity survey', Other: 'cost' })[K.method]} method.`;
   const F = costF(J); const sq = qNum((subjFacts(J) || {}).q);
   t += ` Cost new is based on local contractor budgets${M.n ? ` for ${M.n} new-construction project${M.n > 1 ? 's' : ''}${F.q !== 'all' && sq ? ` of similar quality (${F.q === 'same' ? 'Q' + sq : 'Q' + Math.max(1, sq - 1) + ' to Q' + Math.min(6, sq + 1)})` : ''}${F.noMont ? ' outside Montecito and Hope Ranch' : ''}, ${M.n > 1 ? `${money(M.bdLo)} to ${money(M.bdHi)}` : money(M.bdLo)} per square foot (building direct)` : ''}, brought to the effective date with the California Construction Cost Index${(app.boe || {}).cls ? ", and checked against the California State Board of Equalization Assessors' Handbook 531" : ''}.`;   /* only when she ran the BOE check (picked a class) */
-  const liv = K.lines.find(l => l.t === 'StandardFinishedAreaAboveGrade'); if (liv && num(liv.rate)) t += ` The living area is estimated at ${money(liv.rate)} per square foot.`;
+  const liv = K.lines.find(l => l.t === 'StandardFinishedAreaAboveGrade'); if (liv && num(liv.rate)) t += ` The living area is estimated at ${money(liv.rate)} per square foot${X.softAmt && X.hardDw ? ` (${money(num(liv.rate) * (X.hardDw + X.softAmt) / X.hardDw)} including soft costs, as shown in the cost table)` : ''}.`;
   if (X.softAmt) t += num(K.softPct) ? ` Soft costs (design, engineering, permits and fees) are included at ${K.softPct}% of the dwelling's cost new (${money(X.softAmt)}), in line with the local budgets that include them.` : ` Soft costs (design, engineering, permits and fees) of ${money(X.softAmt)} are included.`;
   if (X.dw) t += ` Physical depreciation was estimated by the age-life method${num(K.effAge) !== null && num(K.life) ? ` (effective age of ${K.effAge} years and a total economic life of ${K.life} years, ${pct(X.phys)})` : ` (${pct(X.phys)})`}.`;
   t += num(K.funcAmt) ? ` Functional obsolescence of ${money(K.funcAmt)} was deducted.` : ' No functional obsolescence was noted.'; t += num(K.extAmt) ? ` External obsolescence of ${money(K.extAmt)} was deducted.` : ' No external obsolescence was noted.';
@@ -148,7 +148,24 @@ function costXML(J, VR, child, set, doc, NS, SVC) {
   if (X.siteImp) set(d, 'SiteOtherImprovementsAsIsAmount', Math.round(X.siteImp)); set(d, 'SiteValuationMethodType', K.siteMethod || 'SalesComparison');
   const v = num(K.value) || X.rounded; if (v) set(d, 'ValueIndicatedByCostApproachAmount', Math.round(v));
   if (doc) costDetailXML(J, K, X, CA, doc, NS, SVC);
+  if (doc) costAgeXML(J, K, doc, NS, child, set, VR, SVC);
 }
+/* her first SFREP import (Oct 21 2026): Effective Age and Remaining Economic Life were blank, and Cost Data Source / Effective Date.
+   A-1: STRUCTURE_ANALYSIS_DETAIL EffectiveAgeYearsCount + EstimatedRemainingEconomicLifeYearsCount on the subject dwelling's IMPROVEMENT;
+   a DATA_SOURCE (BuilderOrDeveloper – her local contractor budgets) with DataSourceEffectiveDate (the CCCI index date), linked to COST_APPROACH. */
+function costAgeXML(J, K, doc, NS, child, set, VR, SVC) {
+  const XL = 'http://www.w3.org/1999/xlink'; const imp = [...doc.getElementsByTagNameNS(NS, 'IMPROVEMENT')].find(e => e.getAttributeNS(XL, 'label') === 'IMPROVEMENT_SubjectDwelling');
+  const ea = num(K.effAge), life = num(K.life);
+  if (imp && ea !== null) { const ST = child(imp, 'STRUCTURE'); [...ST.children].filter(k => k.localName === 'STRUCTURE_ANALYSES').forEach(k => k.remove());
+    const D = child(child(child(ST, 'STRUCTURE_ANALYSES'), 'STRUCTURE_ANALYSIS'), 'STRUCTURE_ANALYSIS_DETAIL'); set(D, 'EffectiveAgeYearsCount', Math.round(ea)); if (life) set(D, 'EstimatedRemainingEconomicLifeYearsCount', Math.max(0, Math.round(life - ea))); }
+  const C = app.costDb; if (!C) return; const VA = VR.parentElement; const CA = child(child(VR, 'APPROACH_TO_VALUE'), 'COST_APPROACH'); CA.setAttributeNS(XL, 'xlink:label', 'COST_APPROACH_Subject');
+  const mo = { jan: '01', feb: '02', mar: '03', apr: '04', may: '05', jun: '06', jul: '07', aug: '08', sep: '09', oct: '10', nov: '11', dec: '12' }; const m = String(C.indexNote || '').match(/([A-Za-z]{3})[a-z]*\.?\s+(\d{4})/);
+  const eff = m && mo[m[1].toLowerCase()] ? `${m[2]}-${mo[m[1].toLowerCase()]}-01` : (J.subject.eff ? isoDate(J.subject.eff) : null);
+  const DS = child(VA, 'DATA_SOURCES'); [...DS.children].filter(k => k.getAttributeNS(XL, 'label') === 'DATA_SOURCE_CostApproach').forEach(k => k.remove());
+  const e = doc.createElementNS(NS, 'DATA_SOURCE'); e.setAttributeNS(XL, 'xlink:label', 'DATA_SOURCE_CostApproach'); DS.appendChild(e);
+  const lf = (t, v) => { if (!v) return; const x = doc.createElementNS(NS, t); x.textContent = v; e.appendChild(x); };
+  lf('DataSourceEffectiveDate', eff); lf('DataSourceName', 'Local contractor budgets');   /* A-1: 33 characters */ lf('DataSourceType', 'BuilderOrDeveloper');
+  const RL = [...SVC.children].find(k => k.localName === 'RELATIONSHIPS'); if (RL) { const r = doc.createElementNS(NS, 'RELATIONSHIP'); r.setAttributeNS(XL, 'xlink:arcrole', 'urn:fdc:mismo.org:2009:residential/DATA_SOURCE_IsDataSourceFor_COST_APPROACH'); r.setAttributeNS(XL, 'xlink:from', 'DATA_SOURCE_CostApproach'); r.setAttributeNS(XL, 'xlink:to', 'COST_APPROACH_Subject'); RL.appendChild(r); } }
 /* line by line (UAD 3.6 schema, D-1 MH1 sample): COST_APPROACH / IMPROVEMENT_COST_AND_DEPRECIATED_VALUES – one per building (dwelling, each ADU / outbuilding),
    its REPLACEMENT_REPRODUCTION_COSTS, depreciation and depreciated value, linked to the iPad's IMPROVEMENT; then SITE_IMPROVEMENTS_AS_IS_COSTS. */
 function costDetailXML(J, K, X, CA, doc, NS, SVC) {
@@ -163,15 +180,19 @@ function costDetailXML(J, K, X, CA, doc, NS, SVC) {
   groups.forEach(gp => { const cost = gp.lines.reduce((t, l) => t + X.lineCost(l), 0) + gp.soft; if (!cost) return;
     const lab = 'IMPROVEMENT_COST_AND_DEPRECIATED_VALUE_SubjectProperty_' + gp.key; const V = el(BOX, 'IMPROVEMENT_COST_AND_DEPRECIATED_VALUE', { 'xlink:label': lab });
     const IC = el(V, 'IMPROVEMENT_COST'); const RR = el(IC, 'REPLACEMENT_REPRODUCTION_COSTS');
-    gp.lines.forEach(l => { const c = X.lineCost(l); if (!c) return; const R = el(RR, 'REPLACEMENT_REPRODUCTION_COST'); const area = num(l.area);
-      leaf(R, 'PricePerAreaAmount', area ? (Math.round(c / area * 100) / 100).toFixed(2) : null); leaf(R, 'ReplacementOrReproductionCostAmount', Math.round(c)); leaf(R, 'ReplacementOrReproductionCostAreaMeasure', area ? Math.round(area) : null, { AreaUnitOfMeasureType: 'SquareFeet' });
+    /* her first SFREP import (Oct 21 2026): A-1 wants every cost line = $/sq ft × sq ft, so the soft costs are carried in the lines'
+       $/sq ft (each line × (1 + soft ÷ hard)) – a separate "Soft costs" line had no area and SFREP dropped it */
+    const hard = gp.lines.reduce((t, l) => t + X.lineCost(l), 0); const f = hard && gp.soft ? (hard + gp.soft) / hard : 1; let costOut = 0;
+    gp.lines.forEach(l => { const c0 = X.lineCost(l); if (!c0) return; const R = el(RR, 'REPLACEMENT_REPRODUCTION_COST'); const area = num(l.area);
+      const ppa = area ? Math.round(c0 * f / area * 100) / 100 : null; const c = area ? Math.round(ppa * area) : Math.round(c0 * f); costOut += c;
+      leaf(R, 'PricePerAreaAmount', ppa !== null ? ppa.toFixed(2) : null); leaf(R, 'ReplacementOrReproductionCostAmount', c); leaf(R, 'ReplacementOrReproductionCostAreaMeasure', area ? Math.round(area) : null, { AreaUnitOfMeasureType: 'SquareFeet' });
       leaf(R, 'ReplacementOrReproductionCostAreaType', l.t); if (l.t === 'Other') leaf(R, 'ReplacementOrReproductionCostAreaTypeOtherDescription', String(l.label || 'Other').slice(0, 40)); });
-    if (gp.soft) { const R = el(RR, 'REPLACEMENT_REPRODUCTION_COST'); leaf(R, 'ReplacementOrReproductionCostAmount', Math.round(gp.soft)); leaf(R, 'ReplacementOrReproductionCostAreaType', 'Other'); leaf(R, 'ReplacementOrReproductionCostAreaTypeOtherDescription', 'Soft costs and fees'); }
-    const phys = cost * gp.pct / 100, tot = phys + gp.func + gp.ext;
-    leaf(el(V, 'IMPROVEMENT_DEPRECIATED_VALUE_SUMMARY'), 'ImprovementEstimatedTotalCostAmount', Math.round(Math.max(0, cost - tot)));
-    const D = el(V, 'IMPROVEMENT_DEPRECIATION'); if (gp.ext) { leaf(D, 'DepreciationExternalAmount', Math.round(gp.ext)); leaf(D, 'DepreciationExternalPercent', (gp.ext / cost * 100).toFixed(2)); }
-    if (gp.func) { leaf(D, 'DepreciationFunctionalAmount', Math.round(gp.func)); leaf(D, 'DepreciationFunctionalPercent', (gp.func / cost * 100).toFixed(2)); }
-    leaf(D, 'DepreciationPhysicalAmount', Math.round(phys)); leaf(D, 'DepreciationPhysicalPercent', (+gp.pct).toFixed(2)); leaf(D, 'DepreciationTotalAmount', Math.round(tot));
+    /* A-1: physical, functional and external (amount and percent, even when zero) – or a total, never both */
+    const phys = Math.round(costOut * gp.pct / 100), fn = Math.round(gp.func), ex = Math.round(gp.ext);
+    leaf(el(V, 'IMPROVEMENT_DEPRECIATED_VALUE_SUMMARY'), 'ImprovementEstimatedTotalCostAmount', Math.max(0, costOut - phys - fn - ex));
+    const D = el(V, 'IMPROVEMENT_DEPRECIATION'); const pc = a => costOut ? (a / costOut * 100).toFixed(2) : '0.00';
+    leaf(D, 'DepreciationExternalAmount', ex); leaf(D, 'DepreciationExternalPercent', pc(ex)); leaf(D, 'DepreciationFunctionalAmount', fn); leaf(D, 'DepreciationFunctionalPercent', pc(fn));
+    leaf(D, 'DepreciationPhysicalAmount', phys); leaf(D, 'DepreciationPhysicalPercent', (+gp.pct).toFixed(2));
     if (RL && gp.to) el(RL, 'RELATIONSHIP', { 'xlink:arcrole': 'urn:fdc:mismo.org:2009:residential/IMPROVEMENT_COST_AND_DEPRECIATED_VALUE_IsAssociatedWith_IMPROVEMENT', 'xlink:from': lab, 'xlink:to': gp.to }); });
   if (!BOX.children.length) BOX.remove();
   const S = K.site.filter(s => num(s.amt)); if (S.length) { const B = el(CA, 'SITE_IMPROVEMENTS_AS_IS_COSTS'); const ex = [...CA.children].find(k => k.localName === 'VALUATION_APPROACH_EXCLUSION_REASONS'); if (ex) CA.insertBefore(B, ex);
