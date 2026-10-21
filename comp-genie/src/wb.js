@@ -152,7 +152,16 @@ function popHTML(J) {
 }
 /* where the cursor is: the comp of the focused cell, or the last one she was in */
 const wbCellComp = el => { const d = el && el.closest && el.closest('[data-gadj],[data-gfact],[data-gfine]'); if (!d) return null; const v = d.dataset.gadj || d.dataset.gfact || d.dataset.gfine; return v.split('|')[0]; };
-document.addEventListener('focusin', e => { const c = wbCellComp(e.target); if (c && c !== 'subj') WB.cur = c; });
+document.addEventListener('focusin', e => { const c = wbCellComp(e.target); if (c && c !== 'subj') WB.cur = c; if (c) wbMark(e.target); wbColTint(); });
+/* her ask (Oct 20 2026): she keeps her place when she looks at the MLS on another monitor – the comp's whole column is tinted
+   and the last box she was in keeps a dashed tangerine outline, even after the window loses focus */
+let WB_LAST = null;
+function wbMark(el) { const k = FOCUS_KEYS.map(k => [k, el.getAttribute && el.getAttribute(k)]).find(x => x[1]); if (!k) return; WB_LAST = k;
+  document.querySelectorAll('.lastcell').forEach(x => x.classList.remove('lastcell')); el.classList.add('lastcell'); }
+function wbColTint() { let st = document.getElementById('curcolcss'); if (!st) { st = document.createElement('style'); st.id = 'curcolcss'; document.head.appendChild(st); }
+  const ths = [...document.querySelectorAll('#gridCard table.grid thead th')]; const i = WB.cur ? ths.findIndex(h => h.dataset.wbcol === WB.cur) : -1; ths.forEach(h => { if (h.dataset.wbcol) h.classList.toggle('cur', h.dataset.wbcol === WB.cur); });
+  st.textContent = i < 0 ? '' : `#gridCard table.grid tbody tr:not(.grp) > :nth-child(${i + 1}){background:#fff1de!important} #gridCard table.grid thead th:nth-child(${i + 1}){background:#ffd29a!important;box-shadow:inset 0 -3px 0 #ff8a00}`;
+  if (WB_LAST) { const el = document.querySelector(`[${WB_LAST[0]}="${CSS.escape(WB_LAST[1])}"]`); if (el && !el.classList.contains('lastcell')) { document.querySelectorAll('.lastcell').forEach(x => x.classList.remove('lastcell')); el.classList.add('lastcell'); } } }
 let WB_EQ = null, WB_ZAP = false;
 document.addEventListener('keydown', async e => {
   const t = e.target; const inBox = t && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable);

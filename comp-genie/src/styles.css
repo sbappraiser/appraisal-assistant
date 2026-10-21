@@ -295,3 +295,4 @@ body.classic table.grid thead th{background-image:linear-gradient(#4a5866,#4a586
 /* her ask (Oct 20 2026): the box she is in is filled bright tangerine, black text */
 input.txt:focus,input:not([type=checkbox]):not([type=radio]):not([type=file]):focus,select:focus,textarea:focus{background:#ff8a00!important;color:#000!important;border-color:#b35a00!important}
 input:focus::placeholder{color:#3a2a00!important;opacity:1}
+.lastcell:not(:focus){outline:2px dashed #ff8a00!important;outline-offset:1px}
