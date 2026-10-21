@@ -79,6 +79,10 @@ const ADJ_ROWS = [
   ['rowLoc', 'Rowhouse / townhouse location', 'Dwelling', 'RowhouseTownhouseLocation'],
   ['q', 'Overall quality', 'Dwelling', 'OverallQualityRating', ['qTier', 'qStep', 'qPct']],
   ['c', 'Overall condition', 'Dwelling', 'OverallConditionRating', ['cTier', 'cStep', 'cPct']],
+  ['extQ', 'Exterior quality', 'Dwelling', null],   /* A-1 1800.0186 / .0185 / .0158 / .0157 (F-1 22.08 / 22.09): blank = the overall rating is sent */
+  ['extC', 'Exterior condition', 'Dwelling', null],
+  ['intQ', 'Interior quality', 'Dwelling', null],
+  ['intC', 'Interior condition', 'Dwelling', null],
   ['func', 'Functional utility (functional issues)', 'Dwelling', 'FunctionalIssues'],
   ['porch', 'Porch / patio / deck', 'Amenities', 'OutdoorLivingAmenity'],
   ['pool', 'Water features (pool / spa / pond / lake)', 'Amenities', 'WaterFeaturesAmenity', ['pool', 'spa', 'pond', 'lake']],
@@ -192,7 +196,7 @@ RATES.cpSpace = ['$ per carport space', 'carport space difference × rate'];
 RATES.unitPos = ['$ corner / end unit over interior', 'a corner or end unit is one step above an interior unit'];
 /* ---- property type of the grid (her request, Oct 19 2026): condo and PUD lines; info lines she checks before UAD 3.6 is filled ---- */
 /* her ask (Oct 20 2026): short notes under the line names – the full wording is in the ⓘ guidance */
-const GRID_NOTE = { overList: 'your check only (not sent)', origList: 'your check only (not sent)', listDate: 'your check only (not sent)', cdom: 'your check only (not sent)',
+const GRID_NOTE = { extQ: 'blank = overall quality', extC: 'blank = overall condition', intQ: 'blank = overall quality', intC: 'blank = overall condition', overList: 'your check only (not sent)', origList: 'your check only (not sent)', listDate: 'your check only (not sent)', cdom: 'your check only (not sent)',
   lastRed: 'your check only (not sent) · from the MLS History', nbhd: 'same as the 2.6 neighborhood', loc: '▾ pick each influence and its impact' };
 const GRID_INFO = { overList: 'not in UAD 3.6 – for your check · amount and % over the final list price, with days on market', origList: 'not in UAD 3.6 – for your check', listDate: 'not in UAD 3.6 – for your check', lastRed: 'not in UAD 3.6 – for your exposure time · from the MLS printout History · days to pending below the date', cdom: 'not in UAD 3.6 – for your check', status: 'UAD 3.6', listPrice: 'UAD 3.6', dom: 'UAD 3.6', project: 'UAD 3.6', hoa: 'UAD 3.6 (monthly fee)', nbhd: 'UAD 3.6 Neighborhood Name – the same field as the 2.6 neighborhood', loc: 'UAD SiteInfluence – ▾ pick: busy roadway, school, park, commercial, water … each with its impact (flood zone, easement, private road have their own lines)' };
 const STRUCTURES = ['Low-rise', 'Mid-rise', 'High-rise', 'Townhouse / rowhouse', 'Semi-detached'];
@@ -459,7 +463,7 @@ function gridHTML(J) {
       let shown = id === 'beds' && C.bedsBg ? `${C.beds} (${C.bedsBg} below grade)` : id === 'baths' ? ([C.full, C.half].every(blank) ? '' : `${C.full ?? '–'} / ${C.half ?? 0}`) : id === 'ppsf' ? (C.price && C.gla ? money(C.price / C.gla) : '') : showFact(id, C[id]);
       if (isObSlot(id)) shown = C[id] ? `<span class="obslot">${esc(C[id])}</span>` : `<span class="na">${C._obKnown ? 'none' : '–'}</span>`;
       else if (!WB_NOEDIT.includes(id)) { /* she can change any comp fact right on the grid (Oct 19 2026), not only in Workbook view */ const raw = id === 'usable' ? (blank(C.usable) ? '' : C.usable + ' ac') : wbFactText(id, C);
-        shown = `<input class="txt sm fact${(PICK[id] || id === 'view') && !pkValid(id, raw, (c.edit || {})['pk_' + id]) ? ' bad' : ''}" data-gfact="${c.id}|${id}" value="${esc(raw)}" placeholder="${id === 'usable' ? 'Measure it (ac)' : id === 'contract' ? 'Unknown' : id === 'stl' && C.listing ? 'e.g. 98%' : ''}" title="Type the comp's entry · = copies the subject · =2 copies comp 2">`; }
+        shown = `<input class="txt sm fact${(PICK[id] || id === 'view') && !pkValid(id, raw, (c.edit || {})['pk_' + id]) ? ' bad' : ''}" data-gfact="${c.id}|${id}" value="${esc(raw)}" placeholder="${id === 'usable' ? 'Measure it (ac)' : id === 'contract' ? 'Unknown' : id === 'stl' && C.listing ? 'e.g. 98%' : QC_SUB[id] ? qcHint(C, id) : ''}" title="Type the comp's entry · = copies the subject · =2 copies comp 2">`; }
       else if (id === 'usable' && blank(C.usable)) shown = '<span class="measure">Measure it</span>'; else shown = id === 'src' ? esc(shown).replace(/\n/g, '<br>') : esc(shown);
       if (id === 'overList' && C.over > 0) { const dm = num(C.cdom) || num(C.dom); shown += dm === null ? '' : dm <= OVER_SHORT ? `<small class="muted rdays">${dm} days on market – likely multiple offers</small>` : dm >= OVER_LONG ? `<small class="overcall">${dm} days on market – call the agent</small>` : `<small class="muted rdays">${dm} days on market</small>`; }
       if (id === 'usable' && C.landSplit) { const t = splitText(C.landSplit); if (t) shown += `<small class="muted rdays" title="Your 2.6 land split. The usable figure counts the residential (r) part only – if the orchard or other part is usable for this comparison, type the total.">split: ${esc(t)}</small>`; }
@@ -705,21 +709,28 @@ async function ingestInspection(files, name) {
 }
 
 /* ---------------- adjustments into the SFREP file ---------------- */
-function gridAdjustXML(CMP, c, job) {
+/* lines the 3.6 grid shows for every comp (F-1 Summary of Rows; D-1 sends a 0 on each) – a 0 goes even when she hides the line in the genie */
+const ZERO_ALWAYS = new Set(['terms', 'xferTerms', 'conc', 'contract', 'sale', 'site', 'nbhd', 'loc', 'view', 'year', 'style', 'constr', 'energy', 'heat', 'cool', 'beds', 'baths', 'gla', 'bsmt', 'bsmtUnf', 'q', 'c', 'garage', 'streetAccess']);
+/* her separate exterior / interior ratings: blank shows the overall rating in grey – that is what goes to SFREP */
+const QC_SUB = { extQ: 'q', extC: 'c', intQ: 'q', intC: 'c' };
+const qcHint = (C, id) => { const m = String(C[QC_SUB[id]] || '').match(/[QC][1-6]/i); return m ? '= ' + m[0].toUpperCase() : ''; };
+function gridAdjustXML(CMP, c, job, n) {
   const G = job.grid; if (!G) return null; const box = X(CMP, 'COMPARABLE_ADJUSTMENTS'); const C = compFacts(c, job); let any = false; const obAdj = [];
+  const aduN = typeof obParse === 'function' ? obParse(C.adu).items.filter(o => OB_ADU.includes(o.t)).length : 0;   // A-1 1800.0308: with an ADU, each unit line says which unit
   // order as on the 3.6 grid (D-1 sample): Add Other rows first, then site, dwelling, units, quality/condition, amenities
-  adjRows(job).filter(r => r[3] && rowShown(r, job)).sort((x, y) => (y[3] === 'OTHER') - (x[3] === 'OTHER')).forEach(r => { const a = cellAmount(job, c, r).v;
+  adjRows(job).filter(r => r[3] && (rowShown(r, job) || (ZERO_ALWAYS.has(r[0]) && rowShownMode(r, job)))).sort((x, y) => (y[3] === 'OTHER') - (x[3] === 'OTHER')).forEach(r => { let a = rowShown(r, job) ? cellAmount(job, c, r).v : 0;   // a line she hid that the 3.6 grid always shows: 0
     if (r[3] === 'OTHER') { const desc = otherDesc(r, C); if (!desc && !a) return; const e = X(box, 'COMPARABLE_ADJUSTMENT'); XV(e, 'AdditionalComparisonLineItemDescription', desc || null); XV(e, 'AdditionalComparisonLineItemIdentifier', r[5]); XV(e, 'ComparableAdjustmentAmount', a || 0); XV(e, 'ComparableAdjustmentType', 'SalesComparableAdditionalAdjustableComparisonItem'); any = true; return; }
-    if (a === null || a === undefined) return;
+    if (isObSlot(r[0])) { obAdj.push([r[0], a || 0]); return; }   // each of the comp's own buildings gets its line, 0 when no adjustment (D-1 SF3)
+    if (a === null || a === undefined) { if (isObSlot(r[0]) || ['adu', 'aduLoc'].includes(r[0]) || (r[0] === 'stl' && !C.listing) || (r[0] === 'nbhd' && blank(C.nbhd))) return; a = 0; }   /* A-1 1800.0317 "deliver even when zero": a 0 on every adjustable line she shows (D-1 does; SFREP marks an empty box red) */
     /* her ADU / outbuilding lines: one COMPARABLE_ADJUSTMENT each, in grid order – an ADU's on its Location of ADU line (F-1 22.07.02, adjustable), an outbuilding's on Outbuilding (22.14.01) */
     if (isObSlot(r[0])) { obAdj.push([r[0], a]); return; }
     const ty = r[0] === 'unitPos' && /town|row/i.test(String(C.structure || '') + String(subjFacts(job).structure || '')) ? 'RowhouseTownhouseEndUnit' : r[3];
     const was = box.kids.find(k => k.tag === 'COMPARABLE_ADJUSTMENT' && k.kids.some(x => x.tag === 'ComparableAdjustmentType' && x.text === ty));   // one UAD line per type: garage + carport = Vehicle Storage
     if (was) { const amt = was.kids.find(x => x.tag === 'ComparableAdjustmentAmount'); if (amt) amt.text = String(Math.round(num(amt.text) + a)); return; }
-    const e = X(box, 'COMPARABLE_ADJUSTMENT'); XV(e, 'ComparableAdjustmentAmount', Math.round(a)); XV(e, 'ComparableAdjustmentType', ty); any = true; });
+    const e = X(box, 'COMPARABLE_ADJUSTMENT'); XV(e, 'ComparableAdjustmentAmount', Math.round(a)); XV(e, 'ComparableAdjustmentType', ty); if (aduN && /^LivingUnit/.test(ty)) XV(e, 'UnitIdentifier', `Comp${n} Primary`); any = true; });
   /* in the order of the comp's own buildings (its IMPROVEMENTs), then any amount on a line where the comp has none (the subject's building) */
   const ko = Object.keys(C._ob || {}); obAdj.sort((x, y) => (ko.includes(x[0]) ? ko.indexOf(x[0]) : 99) - (ko.includes(y[0]) ? ko.indexOf(y[0]) : 99));
-  obAdj.filter(([id, a]) => ko.includes(id) || a).forEach(([id, a]) => { const e = X(box, 'COMPARABLE_ADJUSTMENT'); XV(e, 'ComparableAdjustmentAmount', Math.round(a)); XV(e, 'ComparableAdjustmentType', /^aduU/.test(id) ? 'AccessoryDwellingUnitLocation' : 'Outbuilding'); any = true; });
+  let ak = 0; obAdj.filter(([id, a]) => ko.includes(id) || a).forEach(([id, a]) => { const e = X(box, 'COMPARABLE_ADJUSTMENT'); const adu = /^aduU/.test(id); XV(e, 'ComparableAdjustmentAmount', Math.round(a)); XV(e, 'ComparableAdjustmentType', adu ? 'AccessoryDwellingUnitLocation' : 'Outbuilding'); if (adu && aduN) XV(e, 'UnitIdentifier', aduUnitId(n, Math.min(++ak, aduN))); any = true; });   /* D-1 SF3: the ADU line names the comp's ADU unit */
   if (!any) CMP.kids = CMP.kids.filter(k => k !== box);
   return compTotals(job, c);
 }
@@ -772,9 +783,20 @@ async function buildFullReport(J) {
   const DS = child(VA, 'DATA_SOURCES'); [...(q1(cmp, 'DATA_SOURCES') || { children: [] }).children].forEach(d => DS.appendChild(sub.importNode(d, true)));
   if (!DS.children.length) DS.remove();
   const RL = child(SVC, 'RELATIONSHIPS'); [...(q1(cmp, 'RELATIONSHIPS') || { children: [] }).children].forEach(r => RL.appendChild(sub.importNode(r, true)));
+  /* a comp with an ADU names its units (D-1 SF3 / SF4): its primary unit is compared with the subject's, its ADU with the subject's ADU */
+  { const units = [...SUBJ.getElementsByTagNameNS(NS, 'PROPERTY_UNIT')]; const isAdu = u => [...u.getElementsByTagNameNS(NS, 'AccessoryDwellingUnitIndicator')].some(e => e.textContent.trim() === 'true');
+    const lbl = (u, l) => { if (!u) return null; let v = u.getAttributeNS(XL, 'label') || u.getAttribute('xlink:label'); if (!v) { v = l; u.setAttributeNS(XL, 'xlink:label', v); } return v; };
+    const sPrim = units.find(u => !isAdu(u)), sAdu = units.find(isAdu);
+    [...PROPS.getElementsByTagNameNS(NS, 'PROPERTY_UNIT')].forEach(u => { const l = u.getAttributeNS(XL, 'label') || ''; const m = l.match(/^PROPERTY_UNIT_SalesComp\d+_(Primary|ADU1)$/); if (!m) return;
+      const to = m[1] === 'Primary' ? lbl(sPrim, 'PROPERTY_UNIT_SubjectPrimary') : lbl(sAdu, 'PROPERTY_UNIT_SubjectADU'); if (!to) return;
+      const r = sub.createElementNS(NS, 'RELATIONSHIP'); r.setAttributeNS(XL, 'xlink:arcrole', 'urn:fdc:mismo.org:2009:residential/PROPERTY_UNIT_IsComparableFor_PROPERTY_UNIT'); r.setAttributeNS(XL, 'xlink:from', l); r.setAttributeNS(XL, 'xlink:to', to); RL.appendChild(r); }); }
   if (!RL.children.length) RL.remove();
   // subject's Usable Lot Area/Utility row
   const S = subjFacts(J);
+  /* the subject's market area name (A-1 0100.0017; her Oct 21 import showed it empty while the comps had theirs) */
+  { const nb = String(S.nbhd || '').trim(); if (nb && ![...SUBJ.getElementsByTagNameNS(NS, 'NeighborhoodName')].some(e => e.textContent.trim())) leaf(child(child(SUBJ, 'NEIGHBORHOOD'), 'NEIGHBORHOOD_DETAIL'), 'NeighborhoodName', nb.slice(0, 50)); }
+  /* landscaping is on her own "Landscaping" Add Other line – not again in the subject's Site characteristics (F-1 22: not the same information twice; her rule Oct 20 2026) */
+  if (adjRows(J).some(r => r[0] === 'land' && rowShown(r, J))) [...SUBJ.getElementsByTagNameNS(NS, 'SITE_FEATURE')].filter(f => [...f.getElementsByTagNameNS(NS, 'SiteFeatureType')].some(e => e.textContent.trim() === 'Landscaping')).forEach(f => { const P = f.parentNode; f.remove(); if (P && !P.children.length) P.remove(); });
   adjRows(J).filter(r => r[3] === 'OTHER' && rowShown(r, J)).forEach(r => { const desc = otherDesc(r, S); if (!desc) return; const CM = child(SUBJ, 'COMPARABLE'); const AS = child(CM, 'COMPARABLE_ADJUSTMENTS'); const a = sub.createElementNS(NS, 'COMPARABLE_ADJUSTMENT'); AS.appendChild(a);
     leaf(a, 'AdditionalComparisonLineItemDescription', desc); leaf(a, 'AdditionalComparisonLineItemIdentifier', r[5]); leaf(a, 'ComparableAdjustmentType', 'SalesComparableAdditionalAdjustableComparisonItem'); });
   // the subject's site influences when she changed them on the grid (▾ pick); otherwise the iPad's stay as they are
@@ -906,7 +928,7 @@ function qcSel(who, id, cur) { const L = id.toUpperCase(); const m = String(cur 
 /* ==== her steps (Oct 20 2026): ① Comps considered (micro) → ② Workbook (confirm each comp, adjust) → ③ Final grid (review, export) ==== */
 /* the 3.6 grid lines one comp needs, and how many are filled in */
 function compLines(c, J) {
-  const C = compFacts(c, J); const rows = adjRows(J).filter(r => rowShown(r, J) && !GRID_INFO[r[0]] && !['ppsf', 'src', 'prox'].includes(r[0]));
+  const C = compFacts(c, J); const rows = adjRows(J).filter(r => rowShown(r, J) && !GRID_INFO[r[0]] && !QC_SUB[r[0]] && !['ppsf', 'src', 'prox'].includes(r[0]));   // blank exterior / interior ratings are not missing – the overall goes
   const has = r => { const id = r[0]; if (id === 'baths') return !blank(C.full); if (id === 'garage') return !blank(C.garage) || ((c.edit || {}).vs || []).length > 0 || !!(c.edit || {}).vsNone; return !blank(C[id]) && C[id] !== ''; };
   const L = rows.map(r => ({ id: r[0], label: r[1], req: GRID_KEEP.has(r[0]), done: has(r) }));
   return { L, done: L.filter(x => x.done).length, n: L.length, reqLeft: L.filter(x => x.req && !x.done).length };
@@ -920,7 +942,7 @@ function compLinesHTML(c, J) {
   const rows = k.L.map(x => { const id = x.id; const raw = id === 'usable' ? (blank(C.usable) ? '' : C.usable + ' ac') : wbFactText(id, C);
     const sv = id === 'baths' ? ([S.full, S.half].every(blank) ? '' : `${S.full ?? '–'} / ${S.half ?? 0}`) : showFact(id, S[id]);
     const bad = (PICK[id] || id === 'view') && raw && !pkValid(id, raw, (c.edit || {})['pk_' + id]);
-    let ctl = WB_NOEDIT.includes(id) ? esc(showFact(id, C[id])) : `<input class="txt sm fact${bad ? ' bad' : ''}" data-gfact="${c.id}|${id}" value="${esc(raw)}" placeholder="${x.req ? 'required' : ''}">`;
+    let ctl = WB_NOEDIT.includes(id) ? esc(showFact(id, C[id])) : `<input class="txt sm fact${bad ? ' bad' : ''}" data-gfact="${c.id}|${id}" value="${esc(raw)}" placeholder="${x.req ? 'required' : QC_SUB[id] ? qcHint(C, id) : ''}">`;
     if (id === 'q' || id === 'c') ctl += qcSel(c.id, id, C[id]) + fineSel(c.id, id, J); else if (id === 'view') ctl += vtSel(c.id, J, C.view); else if (id === 'loc') ctl += locBtn(c.id);
     else if (id === 'garage') ctl += `${(c.edit || {}).grid_vsText ? `<small class="vsx">${esc(c.edit.grid_vsText)}</small>` : ''} <button type="button" class="btn xs" data-vspick="${c.id}">▾ vehicle storage</button>`; else ctl += pkBtn(c.id, id);
     const a = adjRows(J).find(r => r[0] === id); const amt = a && a[3] ? cellAmount(J, c, a).v : null;

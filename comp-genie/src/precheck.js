@@ -75,6 +75,11 @@ function precheckGrid(J) { if (!RC) return rcRun(() => precheckGrid(J));
     if (miss.length) out.push({ sev: 'Must fix', msg: `Comp ${c.use} (${compTitle(c)}): no ${miss.join(', ')}.` });
     ['q', 'c'].forEach(k => { if (C[k] && !/^[QC][1-6]$/i.test(String(C[k]).trim())) out.push({ sev: 'Must fix', msg: `Comp ${c.use}: ${k === 'q' ? 'quality' : 'condition'} "${C[k]}" is not a whole UAD rating – the low / mid / high tier stays on your grid, not in the UAD field.` }); });
     if (!/attach/i.test(String(C.attach || '')) || /detach/i.test(String(C.attach || ''))) { if (blank(C.constr)) out.push({ sev: 'Must fix', msg: `Comp ${c.use}: Construction method is blank – 3.6 requires it for a detached dwelling (Site built, Modular, Manufactured …). Type = in the box to copy the subject's.` }); }   /* her Oct 21 import showed "—" */
+    /* her Oct 21 SFREP import (red boxes) and A-1: what 3.6 requires for every comp that only she can answer */
+    { const A = C.streetAccess && typeof PICK !== 'undefined' ? pkParse(PICK.streetAccess, String(C.streetAccess)) : null; if (A && A.ok && A.vals.length && !A.surf) out.push({ sev: 'Must fix', msg: `Comp ${c.use}: Street surface is blank – 3.6 requires it with the street type (A-1 1800.0214). ▾ pick it on the Street access line, or type = to copy the subject's.` }); }
+    { const L = typeof vwParse === 'function' ? vwParse(C.view) : []; if (L.length && L.some(v => !v.range)) out.push({ sev: 'Must fix', msg: `Comp ${c.use}: View range is blank (Full, Partial or Seasonal) – 3.6 requires it for each view (A-1 1800.0242). ▾ pick it on the View line, or type = to copy the subject's.` }); }
+    { const E = String(C.energy || '').trim(); if (!E) out.push({ sev: 'Must fix', msg: `Comp ${c.use}: Energy efficient features is blank – 3.6 asks Yes / No for renewable energy, efficiency rating and green certification on every comp (A-1 1800.0106-0108). ▾ pick None, or what it has.` }); }
+    ['extQ', 'extC', 'intQ', 'intC'].forEach(k => { const v = String(C[k] || '').trim(); if (v && !(k.endsWith('Q') ? /^Q[1-6]$/i : /^C[1-6]$/i).test(v)) out.push({ sev: 'Must fix', msg: `Comp ${c.use}: ${{ extQ: 'exterior quality', extC: 'exterior condition', intQ: 'interior quality', intC: 'interior condition' }[k]} "${v}" is not a UAD rating (${k.endsWith('Q') ? 'Q1–Q6' : 'C1–C6'}) – or leave it blank to send the overall rating.` }); });
     if (blank(C.usable) && !blank(S.usable)) out.push({ sev: 'Check', msg: `Comp ${c.use}: usable lot area is blank – measure it.` });
     if (!G.weights[c.id]) out.push({ sev: 'Check', msg: `Comp ${c.use}: no weight chosen for reconciliation.` }); });
   ['q', 'c'].forEach(k => { if (S[k] && !/^[QC][1-6]$/i.test(String(S[k]).trim())) out.push({ sev: 'Must fix', msg: `Subject ${k === 'q' ? 'quality' : 'condition'} "${S[k]}" is not a whole UAD rating.` }); });
@@ -125,6 +130,7 @@ async function precheckRun(J, wantExport) {
 function preGo(J, x) { const m = String(x.msg || ''); const byUse = n => usedComps(J).find(c => +c.use === +n);
   let r;
   if ((r = m.match(/^Comp (\d+): Construction method/))) { const c = byUse(r[1]); if (c) return { stage: 'workbook', sel: `[data-gfact="${c.id}|constr"]`, label: 'comp ' + c.use + ' construction method' }; }
+  if ((r = m.match(/^Comp (\d+): (Street surface|View range|Energy efficient|exterior quality|exterior condition|interior quality|interior condition)/))) { const c = byUse(r[1]); const id = { 'Street surface': 'streetAccess', 'View range': 'view', 'Energy efficient': 'energy', 'exterior quality': 'extQ', 'exterior condition': 'extC', 'interior quality': 'intQ', 'interior condition': 'intC' }[r[2]]; if (c) return { stage: 'workbook', sel: `[data-gfact="${c.id}|${id}"]`, show: id, label: 'comp ' + c.use + ' ' + r[2].toLowerCase() }; }
   if ((r = m.match(/^Comp (\d+)\b/))) { const c = byUse(r[1]); if (!c) return null;
     if (/weight/i.test(m)) return { stage: 'workbook', sel: `[data-gweight="${c.id}"]`, label: 'weight, Workbook grid' };
     if (/usable lot/i.test(m)) return { stage: 'workbook', sel: `[data-gfact="${c.id}|usable"]`, label: 'comp ' + c.use + ' usable lot, Workbook grid' };
@@ -148,7 +154,7 @@ function preGo(J, x) { const m = String(x.msg || ''); const byUse = n => usedCom
   return null; }
 document.addEventListener('click', e => { const el = e.target.closest && e.target.closest('[data-prego]'); if (!el || !app.job || e.target.closest('input,label,button')) return;
   const J = app.job, x = ((app.pre || {}).items || [])[+el.dataset.prego]; const g = x && preGo(J, x); if (!g) return;
-  J.stage = g.stage; if (g.comp) WB.cur = g.comp; save(); render.top = true; render();
+  J.stage = g.stage; if (g.comp) WB.cur = g.comp; if (g.show && !lineOn(g.show, J)) { const G = G0(J); G.lines = G.lines || {}; G.lines[g.show] = true; }   /* the line it points to may be hidden – show it */ save(); render.top = true; render();
   setTimeout(() => { let t = null;
     if (g.comp) t = document.querySelector(`#gridCard thead th[data-wbcol="${g.comp}"]`);
     if (!t && g.sel) t = document.querySelector(g.sel); if (t && g.up && t.closest(g.up)) t = t.closest(g.up);

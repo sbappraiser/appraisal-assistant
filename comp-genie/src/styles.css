@@ -361,3 +361,5 @@ table.tbl.cost input::placeholder{color:#9aa4ae;font-style:italic}
 .rptneed ul{margin:6px 0 4px 20px;padding:0}.rptneed li{margin:2px 0}
 .rptkey{display:block;margin-top:6px;font-size:13px}.rptkey .k{display:inline-block;padding:2px 8px;border-radius:4px;border:1px solid #cfd6de;margin-right:6px}.rptkey .own{background:#fff;font-weight:600}.rptkey .sug{background:#fff8e1;border-color:#e6cf8a;color:#6b6250;font-style:italic}
 .rptneed .rptkey .k{display:inline-block!important;width:auto!important}
+/* her exterior / interior rating lines: the grey "= Q4" is the overall rating that goes when the box is blank */
+input.fact[data-gfact$="|extQ"]::placeholder, input.fact[data-gfact$="|extC"]::placeholder, input.fact[data-gfact$="|intQ"]::placeholder, input.fact[data-gfact$="|intC"]::placeholder { color: #9aa3ad !important; font-weight: 400 !important; font-style: italic; }
