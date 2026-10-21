@@ -640,6 +640,7 @@ mark.blank{background:#fff3a8;padding:0 2px;border-radius:3px}.cmt textarea{widt
       <li><b>Known sales concessions:</b> pick from the drop-down under the box – <b>No</b>, <b>Yes – amount known</b> (then type the amount in the box), or <b>Yes – amount unknown</b>. You can also just type No, an amount, or Yes in the box.</li>
       <li><b>Doc number:</b> it shows in the <b>Data source</b> line of the grid and workbook, on the line under the MLS number (“MLS 25-3050”, then “Doc #06575”). The sale date is not repeated there – it has its own Sale date line. It comes from what you type in the comp’s Your verification notes (e.g. “Doc #06575 03/04/26”), otherwise from the CRS report, CORT or your archive when its date matches the sale. It goes to SFREP as the deed data source.</li>
       <li><b>Line order:</b> Usable Lot Area/Utility sits under Site size; Dwelling runs design, attached/detached, levels, quality, condition, bedrooms, baths, living area, below grade, unfinished areas, non-continuous, functional utility, vehicle storage, whole home amenities, then the rest. The order is only for your screen – SFREP puts each line in its own place.</li>
+      <li><b>Quality and condition per tier:</b> type your amount in <b>$ per condition tier</b> (or $ per quality tier) on the left. Each tier apart counts once – low → mid → high, and high C3 → low C2 – so high C3 vs low C3 at $50,000 is +$100,000, and mid C3 vs mid C2 (3 tiers) is $150,000. When the tier box is filled, the step and % boxes on that line are not used.</li>
       <li><b>Solar:</b> the Energy efficient features line has a “$ solar (owned)” box on the left. Type your amount once – comps without owned solar (None, or leased / PPA solar) get it as a plus when the subject has owned solar (a minus the other way round); comps with owned solar get 0. A comp with nothing entered gets no amount until you fill it in.</li>
       <li><b>Landscaping:</b> pick the rating from the drop-down under each box (None, Minimal, Fair, Avg-Fair, Average, Avg-Good, Good, Very Good, Excellent) – or type it (Avg-Gd works). Each step apart is one “$ per landscaping step”. In SFREP it goes on your own Add Other line named “Landscaping” – 3.6 has no landscaping rating of its own. Landscaping is kept out of Site characteristics (also when your iPad inspection ticked it), so it is not counted twice.</li>
       <li><b>Examples under a line name:</b> lines like Site characteristics, Topography, Easement and Functional utility show a few examples of the allowed answers under the name (the 3.6 field name is in the tooltip and behind the ⓘ).</li>
@@ -818,7 +819,7 @@ mark.blank{background:#fff3a8;padding:0 2px;border-radius:3px}.cmt textarea{widt
 </div>
 <div id="toast" role="status" hidden></div>
 <script>
-const BUILD='o1-1021-0537';
+const BUILD='o1-1021-0542';
 const G = (() => {
 /* ---------------- small helpers ---------------- */
 const $ = (s, r = document) => r.querySelector(s);

@@ -77,8 +77,8 @@ const ADJ_ROWS = [
   ['mhWidth', 'Manufactured home width', 'Dwelling', 'ManufacturedHomeWidth'],
   ['backToBack', 'Rowhouse / townhouse back-to-back', 'Dwelling', 'RowhouseTownhouseBackToBack'],
   ['rowLoc', 'Rowhouse / townhouse location', 'Dwelling', 'RowhouseTownhouseLocation'],
-  ['q', 'Overall quality', 'Dwelling', 'OverallQualityRating', ['qStep', 'qPct']],
-  ['c', 'Overall condition', 'Dwelling', 'OverallConditionRating', ['cStep', 'cPct']],
+  ['q', 'Overall quality', 'Dwelling', 'OverallQualityRating', ['qTier', 'qStep', 'qPct']],
+  ['c', 'Overall condition', 'Dwelling', 'OverallConditionRating', ['cTier', 'cStep', 'cPct']],
   ['func', 'Functional utility (functional issues)', 'Dwelling', 'FunctionalIssues'],
   ['porch', 'Porch / patio / deck', 'Amenities', 'OutdoorLivingAmenity'],
   ['pool', 'Water features (pool / spa / pond / lake)', 'Amenities', 'WaterFeaturesAmenity', ['pool', 'spa', 'pond', 'lake']],
@@ -138,6 +138,8 @@ function vtSel(who, J, text) { const I = vtInfo(J, who, text); const lab = t => 
 const aduNums = F => { if (F.aduSf !== undefined && F.aduSf !== null && F.aduSf !== '') return { sf: +F.aduSf || 0, baths: +F.aduBaths || 0 };
   const t = String(F.adu || ''); if (!t.trim() || /^(no|none)$/i.test(t.trim())) return { sf: 0, baths: 0 };
   const sf = t.match(/([\d,]{2,})\s*(?:sf|sq|square)/i), ba = t.match(/(\d+(?:\.\d)?)\s*(?:full\s*)?ba/i); return { sf: sf ? +sf[1].replace(/,/g, '') : null, baths: ba ? +ba[1] : 0 }; };
+RATES.qTier = ['$ per quality tier', 'one tier = low → mid → high, high Q4 → low Q3 (3 tiers to a whole rating); when set, the step and % boxes are not used'];
+RATES.cTier = ['$ per condition tier', 'one tier = low → mid → high, high C3 → low C2 (3 tiers to a whole rating); when set, the step and % boxes are not used'];
 RATES.solar = ['$ solar (owned)', 'owned solar: has / has not – leased or PPA solar counts as none'];
 RATES.halfBath = ['$ per half bath', 'half-bath difference × rate (blank = half the full-bath rate)'];
 
@@ -385,6 +387,8 @@ function rateAmount(row, S, C, J) {
   const R = G0(J).rates; const key = row[4];
   if (Array.isArray(key)) { let tot = 0, any = false; key.forEach(k => { const r = num(R[k]); if (!r) return; let x = null;
       if (['pool', 'spa', 'pond', 'lake', 'tennis', 'sport'].includes(k)) { const a = hasFeat(S, k), b = hasFeat(C, k); if (a !== null && b !== null) x = (a - b) * r; }
+      else if (k === 'qTier' || k === 'cTier') { const f = k[0]; const a = ratingPos(S[f], fineOf(J, 'subj', f)), b = ratingPos(C[f], fineOf(J, C._id, f)); if (a !== null && b !== null) x = Math.round((a - b) * 3) * r; }   // her way (Oct 20 2026): $ per tier
+      else if ((k === 'qStep' || k === 'qPct' || k === 'cStep' || k === 'cPct') && num(R[k[0] + 'Tier'])) {}   // a tier rate is set for this line – it is used instead
       else if (k === 'qStep' || k === 'qPct' || k === 'cStep' || k === 'cPct') { const f = k[0]; const a = ratingPos(S[f], fineOf(J, 'subj', f)), b = ratingPos(C[f], fineOf(J, C._id, f)); if (a !== null && b !== null) x = (a - b) * (k.endsWith('Pct') ? r / 100 * (C.price || 0) : r); }
       else if (k === 'viewStep' || k === 'viewPct') { const a = vtOf(J, 'subj', S.view), b = vtOf(J, C._id, C.view); if (a !== null && b !== null) x = (a - b) * (k === 'viewPct' ? r / 100 * (C.price || 0) : r); }
       else if (k === 'landStep') { const a = goodness('land', S), b = goodness('land', C); if (a !== null && b !== null) x = (a - b) * r; }

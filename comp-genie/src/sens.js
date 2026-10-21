@@ -6,7 +6,7 @@
    never move.  It is a suggestion beside her rate – she decides.
    ===================================================================== */
 const SENS_LABEL = { gla: 'Living area', usableAc: 'Usable lot area', bed: 'Bedrooms', bath: 'Full baths', halfBath: 'Half baths', space: 'Garage spaces', timePct: 'Sale date (time)',
-  pool: 'Pool', spa: 'Spa', pond: 'Pond', lake: 'Lake', tennis: 'Tennis court', sport: 'Sport court', qStep: 'Quality', qPct: 'Quality', cStep: 'Condition', cPct: 'Condition',
+  pool: 'Pool', spa: 'Spa', pond: 'Pond', lake: 'Lake', tennis: 'Tennis court', sport: 'Sport court', qTier: 'Quality (per tier)', cTier: 'Condition (per tier)', qStep: 'Quality', qPct: 'Quality', cStep: 'Condition', cPct: 'Condition',
   viewStep: 'View', viewPct: 'View', landStep: 'Landscaping', aduSf: 'ADU / guest sq ft', aduBath: 'ADU / guest baths', solar: 'Solar (owned)' };
 const PCT_KEYS = ['timePct', 'qPct', 'cPct', 'viewPct'];
 const rowsWith = k => adjRows(app.job).filter(r => r[3] && rowShown(r, app.job) && (k === 'halfBath' ? r[4] === 'bath' : [].concat(r[4] || []).includes(k)));
@@ -17,14 +17,14 @@ const medOf = a => { const s = [...a].sort((x, y) => x - y); const n = s.length;
 function sensKeys(J) {   // which rate to test on each line: the one she uses, else the $ one
   const R = G0(J).rates; const set = k => !blank(R[k]);
   const pick = (a, b) => set(b) && !set(a) ? b : a;
-  const ks = ['timePct', pick('viewStep', 'viewPct'), 'usableAc', 'landStep', 'bed', 'bath', 'gla', pick('qStep', 'qPct'), pick('cStep', 'cPct'), 'pool', 'spa', 'pond', 'lake', 'tennis', 'sport', 'aduSf', 'aduBath', 'space', 'solar'];
+  const ks = ['timePct', pick('viewStep', 'viewPct'), 'usableAc', 'landStep', 'bed', 'bath', 'gla', (set('qTier') ? 'qTier' : pick('qStep', 'qPct')), (set('cTier') ? 'cTier' : pick('cStep', 'cPct')), 'pool', 'spa', 'pond', 'lake', 'tennis', 'sport', 'aduSf', 'aduBath', 'space', 'solar'];
   if (set('bath')) ks.splice(ks.indexOf('bath') + 1, 0, 'halfBath');
   return ks;
 }
 function sensRange(k, J, P, ppsf) {
   const cur = num(G0(J).rates[k]);
   let lo = 0, hi = { gla: Math.max(ppsf || 0, 500), usableAc: 4000000, bed: 500000, bath: 250000, halfBath: 125000, space: 150000, pool: 400000, spa: 150000, pond: 200000, lake: 400000,
-    tennis: 400000, sport: 200000, aduSf: 1000, aduBath: 100000, solar: 100000, qStep: 0.15 * P, cStep: 0.15 * P, viewStep: 0.15 * P, landStep: 0.05 * P, qPct: 15, cPct: 15, viewPct: 15, timePct: 2 }[k];
+    tennis: 400000, sport: 200000, aduSf: 1000, aduBath: 100000, solar: 100000, qTier: 0.05 * P, cTier: 0.05 * P, qStep: 0.15 * P, cStep: 0.15 * P, viewStep: 0.15 * P, landStep: 0.05 * P, qPct: 15, cPct: 15, viewPct: 15, timePct: 2 }[k];
   if (k === 'timePct') lo = -2;
   if (cur && Math.abs(cur) * 1.5 > hi) hi = Math.abs(cur) * 2;
   const step = PCT_KEYS.includes(k) ? (k === 'timePct' ? 0.05 : niceStep(hi / 40)) : Math.max(500, niceStep(hi / 40));
