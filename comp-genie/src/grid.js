@@ -210,14 +210,21 @@ const G0 = J => { if (!J.grid) { J.grid = { rates: {}, cells: {}, weights: {}, s
 const SI_TYPES = ['Residential', 'BusyRoadway', 'CommercialArea', 'IndustrialArea', 'HighDensityResidential', 'School', 'Park', 'GreenSpace', 'GolfCourse', 'BodyOfWater', 'Agricultural', 'Airport', 'RailLine', 'PublicTransportationHub',
   'OverheadElectricPowerTransmissionLine', 'LocalDistributionLine', 'HighPressureGasLine', 'OilOrGasWell', 'StormwaterRetention', 'HistoricDistrict', 'Other'];
 const siLabel = t => t === 'OverheadElectricPowerTransmissionLine' ? 'Overhead power transmission line' : t.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/ (\w)/g, (m, a) => ' ' + a.toLowerCase()).replace('Or gas', 'or gas');
-const SI_OLD = { res: 'Residential', residential: 'Residential', busyrd: 'BusyRoadway', busyroad: 'BusyRoadway', busyroadway: 'BusyRoadway', fwynse: 'BusyRoadway', comm: 'CommercialArea', commercial: 'CommercialArea', schl: 'School', school: 'School', adjschl: 'School',
+const SI_OLD = { freewaynoise: 'BusyRoadway', freeway: 'BusyRoadway', fwy: 'BusyRoadway', hwynse: 'BusyRoadway', busyrd: 'BusyRoadway', sometraffic: 'BusyRoadway', sometrfc: 'BusyRoadway', sometrffc: 'BusyRoadway', traffic: 'BusyRoadway', trfcnse: 'BusyRoadway', bckstrfc: 'BusyRoadway', bcksbsyrd: 'BusyRoadway', trainnse: 'RailLine', bckscmrcl: 'CommercialArea', schlinfl: 'School', bcksschl: 'School', acrsschl: 'School', adjschool: 'School', bckspark: 'Park', waterfront: 'BodyOfWater', nearwater: 'BodyOfWater', nrwtrfr: 'BodyOfWater', nrwtrfrnt: 'BodyOfWater', adjcreek: 'BodyOfWater', bckscrk: 'BodyOfWater', acrsswtrfr: 'BodyOfWater', adjacentpark: 'Park', golfcourse: 'GolfCourse', glfcse: 'GolfCourse', airport: 'Airport', pubtrn: 'PublicTransportationHub', adjpwr: 'OverheadElectricPowerTransmissionLine', powerlines: 'OverheadElectricPowerTransmissionLine', res: 'Residential', residential: 'Residential', busyrd: 'BusyRoadway', busyroad: 'BusyRoadway', busyroadway: 'BusyRoadway', fwynse: 'BusyRoadway', comm: 'CommercialArea', commercial: 'CommercialArea', schl: 'School', school: 'School', adjschl: 'School',
   adjprk: 'Park', park: 'Park', nearpark: 'Park', golf: 'GolfCourse', wtrfr: 'BodyOfWater', nrwtr: 'BodyOfWater', train: 'RailLine', rail: 'RailLine', ind: 'IndustrialArea', industrial: 'IndustrialArea', powerline: 'OverheadElectricPowerTransmissionLine', pwrln: 'OverheadElectricPowerTransmissionLine' };
-function siParse(text) { const out = []; let imp = '';
-  String(text || '').split(/;|,(?![^(]*\))/).map(x => x.trim()).filter(Boolean).forEach(tok => { let m = tok.match(/^(Adverse|Beneficial|Neutral)\b\s*[:–-]?\s*(.*)$/i); let rest = tok; if (m) { imp = m[1][0].toUpperCase() + m[1].slice(1).toLowerCase(); rest = m[2]; }
-    const tail = rest.match(/\s*[–-]\s*(Adverse|Beneficial|Neutral)\s*$/i); if (tail) { imp = tail[1][0].toUpperCase() + tail[1].slice(1).toLowerCase(); rest = rest.slice(0, tail.index); }
-    if (!rest) return; const pm = rest.match(/\((Bordering|Offsite|Onsite)\)/i); const prox = pm ? pm[1][0].toUpperCase() + pm[1].slice(1).toLowerCase() : ''; rest = rest.replace(/\((Bordering|Offsite|Onsite)\)/i, '').trim();
+/* each influence's impact (her rule, Oct 20 2026): Residential is always Neutral; busy road / freeway / traffic / train / noise / flood zone /
+   floodway / debris flow / shared drive / private lane or road / power lines / industrial / airport / landfill are always Adverse.
+   Otherwise the impact typed with it, then her 2.6 rating for the line (N / B / A), then Beneficial for water and golf, else Neutral.
+   Text where every influence carries its own impact (the ▾ pick form) is taken as it is. */
+const SI_FIXED = { Residential: 'Neutral', BusyRoadway: 'Adverse', RailLine: 'Adverse', IndustrialArea: 'Adverse', Airport: 'Adverse', OverheadElectricPowerTransmissionLine: 'Adverse', LocalDistributionLine: 'Adverse', HighPressureGasLine: 'Adverse', OilOrGasWell: 'Adverse' };
+const SI_ADV_OTHER = /fld|flood|noise|nse|debris|dbrs|^df|shared|shrd?dr|shdrv|private|prvt|pvt|landfill|lndfl|red ?zone|drv ?esm|driveway easement/i;
+const SI_LEAN = { CommercialArea: 'Adverse', BodyOfWater: 'Beneficial', GolfCourse: 'Beneficial' };   // when nothing else says
+function siParse(text, trust) { const out = []; const T = impTokens(text, trust);
+  T.items.forEach(x => { let rest = x.rest; const pm = rest.match(/\((Bordering|Offsite|Onsite)\)/i); const prox = pm ? pm[1][0].toUpperCase() + pm[1].slice(1).toLowerCase() : ''; rest = rest.replace(/\((Bordering|Offsite|Onsite)\)/i, '').trim(); if (!rest) return;
     const key = rest.toLowerCase().replace(/[^a-z]/g, ''); const ty = SI_TYPES.find(t => t.toLowerCase() === key || siLabel(t).toLowerCase().replace(/[^a-z]/g, '') === key) || SI_OLD[key] || 'Other';
-    out.push({ type: ty, impact: imp || 'Neutral', prox, other: ty === 'Other' ? rest : '' }); });
+    const label = ty === 'Other' ? (LOC_TEXT[rest] || ({ fldzne: 'Flood zone', fldzn: 'Flood zone', fldwy: 'Floodway', fldway: 'Floodway', prtlfldzne: 'Partly in flood zone', shrdrv: 'Shared drive', prvtln: 'Private lane', pvtln: 'Private lane', prvtrd: 'Private road', pvtrd: 'Private road', interlot: 'Interior lot', intlot: 'Interior lot', flaglot: 'Flag lot', nseexp: 'Noise exposure', dbrsflw: 'Debris flow', adjdbrsflw: 'Adjacent debris flow', gated: 'Gated', gateddvlp: 'Gated development', deadend: 'Dead end', rural: 'Rural' }[key]) || rest) : '';
+    const impact = T.pickForm ? x.own : (SI_FIXED[ty] || (ty === 'Other' && SI_ADV_OTHER.test(rest) ? 'Adverse' : '') || x.own || x.carried || SI_LEAN[ty] || 'Neutral');
+    out.push({ type: ty, impact, prox, other: ty === 'Other' ? label : '' }); });
   return out; }
 const siText = L => L.map(x => `${x.impact}: ${x.type === 'Other' ? (x.other || 'Other') : siLabel(x.type)}${x.prox ? ` (${x.prox})` : ''}`).join('; ');
 const locBtn = who => ` <button type="button" class="btn xs" data-locpick="${who}" title="Pick the site influences (UAD 3.6 list) with their impact">▾ pick</button>`;
@@ -238,7 +245,7 @@ function locPick(who) {
     if (t.dataset.siadd) { L.push({ type: 'BusyRoadway', impact: 'Adverse', prox: '', other: '' }); draw(); }
     else if (t.dataset.sidel) { L.splice(+t.dataset.sidel, 1); draw(); }
     else if (t.dataset.siclose || t === bg) bg.remove();
-    else if (t.dataset.sisave) { const txt = siText(L); if (c) wbFactSet(J, c, 'loc', txt); else { if (txt) G.subj.loc = txt; else delete G.subj.loc; } bg.remove(); save(); render(); toast('Location (site influence) set: ' + (txt || 'none')); } });
+    else if (t.dataset.sisave) { const txt = siText(L); if (c) { wbFactSet(J, c, 'loc', txt); c.edit = c.edit || {}; if (txt) c.edit.pk_loc = txt; else delete c.edit.pk_loc; } else { if (txt) { G.subj.loc = txt; G.subj.pk_loc = txt; } else { delete G.subj.loc; delete G.subj.pk_loc; } } bg.remove(); save(); render(); toast('Location (site influence) set: ' + (txt || 'none')); } });
 }
 /* ---- her 2.6 archive location (N/B/A + factors: Res, BsyRd, ShrDrv, PrvtLn, InterLot, FldZne …) → UAD 3.6 (Oct 20 2026) ----
    Site influences get their own impact (the 2.6 rating goes to the first factor; traffic/noise/power lines are adverse, water / gated beneficial,
@@ -301,7 +308,7 @@ const usedComps = J => J.comps.filter(c => c.use).sort((a, b) => a.use - b.use);
 const acOf = sf => sf ? Math.round(sf / 43560 * 100) / 100 : null;
 
 /* subject facts: what she typed in the grid, else her inspection (workfile), else the order / CRS */
-function subjFacts(J) { return rcMemo('subjFacts', 's', () => subjFacts0(J)); }
+function subjFacts(J) { return rcMemo('subjFacts', 's', () => impNorm(subjFacts0(J), G0(J).subj)); }
 function subjFacts0(J) {
   const I = J.subject.insp || {}, T = G0(J).subj, crs = J.subject.crs || {};
   const f = { price: '', ppsf: '', src: 'Inspection ' + (I.inspDate ? showDate(I.inspDate) : ''), prox: '', terms: '', conc: '', contract: '', sale: '', dom: '',
@@ -313,7 +320,9 @@ function subjFacts0(J) {
   f._own = landOwned(J, f); if (blank(f.landCommon)) f.landCommon = f._own ? 'No' : 'Yes';
   return f;
 }
-function compFacts(c, J) { return rcMemo('compFacts', c.id, () => zapFacts(c, compFacts0(c, J))); }
+function compFacts(c, J) { return rcMemo('compFacts', c.id, () => impNorm(zapFacts(c, compFacts0(c, J)), c.edit)); }
+/* view and location show each item with its impact ("Adverse: Busy roadway; Neutral: Residential") – her rule Oct 20 2026 */
+function impNorm(F, M) { M = M || {}; try { if (F.loc) { const L = siParse(F.loc, M.pk_loc === F.loc); if (L.length) F.loc = siText(L); } if (F.view) { const L = vwParse(F.view, M.pk_view === F.view); if (L.length) F.view = vwText(L); } } catch (e) {} return F; }
 /* lines she emptied with Ctrl+Z (c.zap = {lineId: true}) stay empty even when a source has a value – until she types one */
 function zapFacts(c, F) { if (!c.zap) return F; for (const id in c.zap) { if (id === 'baths') { F.full = null; F.half = null; } F[id] = id === 'beds' ? null : ''; } return F; }
 function compFacts0(c, J) {
@@ -401,10 +410,10 @@ function gridHTML(J) {
     const [id, label, section, type] = row; const head = section !== sec ? `<tr class="grp"><th colspan="${2 + used.length}">${esc(section)}</th></tr>` : ''; sec = section;
     const sv = id === 'baths' ? [S.full, S.half].every(blank) ? '' : `${S.full ?? '–'} / ${S.half ?? 0}` : showFact(id, S[id]);
     const subjCell = ['price', 'ppsf', 'src', 'prox', 'dom', 'terms', 'conc', 'contract', 'sale', 'status', 'listPrice', 'origList', 'listDate', 'lastRed', 'redDays', 'cdom', 'overList', 'xferTerms', 'stl'].includes(id) ? `<td class="subj">${blank(sv) || sv === '' ? '<span class="na" title="Nothing to enter for the subject here – on the 3.6 grid this line is for the comparables (the subject’s own sale or listing, if any, comes from the Sales Contract and Subject Listing sections). Leave it blank; no N/A or dash.">—</span>' : esc(sv)}</td>`
-      : `<td class="subj"><input class="txt sm${(PICK[id] || id === 'view') && !blank(G.subj[id]) && !pkValid(id, G.subj[id], G.subj['pk_' + id]) ? ' bad' : ''}" data-gsubj="${id}" value="${esc(blank(G.subj[id]) ? '' : G.subj[id])}" placeholder="${esc(sv || (id === 'usable' ? 'Measure it' : id === 'adu' ? 'e.g. Guest house 450 sf 1 bath' : ''))}">${id === 'garage' ? `${G.subj.vsText ? `<small class="vsx">${esc(G.subj.vsText)}</small>` : ''} <button type="button" class="btn xs" data-vspick="subj">▾ pick</button>` : id === 'q' || id === 'c' ? qcSel('subj', id, S[id]) + fineSel('subj', id, J) : id === 'loc' ? locBtn('subj') : id === 'view' ? vtSel('subj', J, S.view) + pkBtn('subj', 'view') : PICK[id] ? pkBtn('subj', id) : ''}</td>`;
+      : `<td class="subj"><input class="txt sm${(PICK[id] || id === 'view') && !blank(G.subj[id]) && !pkValid(id, G.subj[id], G.subj['pk_' + id]) ? ' bad' : ''}" data-gsubj="${id}" value="${esc(blank(G.subj[id]) ? '' : id === 'usable' && typeof G.subj[id] === 'number' ? G.subj[id] + ' ac' : G.subj[id])}" placeholder="${esc(sv || (id === 'usable' ? 'Measure it' : id === 'adu' ? 'e.g. Guest house 450 sf 1 bath' : ''))}">${id === 'garage' ? `${G.subj.vsText ? `<small class="vsx">${esc(G.subj.vsText)}</small>` : ''} <button type="button" class="btn xs" data-vspick="subj">▾ pick</button>` : id === 'q' || id === 'c' ? qcSel('subj', id, S[id]) + fineSel('subj', id, J) : id === 'loc' ? locBtn('subj') : id === 'view' ? vtSel('subj', J, S.view) + pkBtn('subj', 'view') : PICK[id] ? pkBtn('subj', id) : ''}</td>`;
     const cells = used.map(c => { const C = compFacts(c, J);
       let shown = id === 'beds' && C.bedsBg ? `${C.beds} (${C.bedsBg} below grade)` : id === 'baths' ? ([C.full, C.half].every(blank) ? '' : `${C.full ?? '–'} / ${C.half ?? 0}`) : id === 'ppsf' ? (C.price && C.gla ? money(C.price / C.gla) : '') : showFact(id, C[id]);
-      if (!WB_NOEDIT.includes(id)) { /* she can change any comp fact right on the grid (Oct 19 2026), not only in Workbook view */ const raw = id === 'usable' ? (blank(C.usable) ? '' : String(C.usable)) : wbFactText(id, C);
+      if (!WB_NOEDIT.includes(id)) { /* she can change any comp fact right on the grid (Oct 19 2026), not only in Workbook view */ const raw = id === 'usable' ? (blank(C.usable) ? '' : C.usable + ' ac') : wbFactText(id, C);
         shown = `<input class="txt sm fact${(PICK[id] || id === 'view') && !pkValid(id, raw, (c.edit || {})['pk_' + id]) ? ' bad' : ''}" data-gfact="${c.id}|${id}" value="${esc(raw)}" placeholder="${id === 'usable' ? 'Measure it (ac)' : ''}" title="Type the comp's entry · = copies the subject · =2 copies comp 2">`; }
       else if (id === 'usable' && blank(C.usable)) shown = '<span class="measure">Measure it</span>'; else shown = esc(shown);
       if (id === 'overList' && C.over > 0) { const dm = num(C.cdom) || num(C.dom); shown += dm === null ? '' : dm <= OVER_SHORT ? `<small class="muted rdays">${dm} days on market – likely multiple offers</small>` : dm >= OVER_LONG ? `<small class="overcall">${dm} days on market – call the agent</small>` : `<small class="muted rdays">${dm} days on market</small>`; }
@@ -808,7 +817,7 @@ function linesBadge(c, J) { if (!c.use) return ''; const k = compLines(c, J); co
 function compLinesHTML(c, J) {
   if (!c.use) return '';
   const S = subjFacts(J), C = compFacts(c, J); const k = compLines(c, J); const G = G0(J);
-  const rows = k.L.map(x => { const id = x.id; const raw = id === 'usable' ? (blank(C.usable) ? '' : String(C.usable)) : wbFactText(id, C);
+  const rows = k.L.map(x => { const id = x.id; const raw = id === 'usable' ? (blank(C.usable) ? '' : C.usable + ' ac') : wbFactText(id, C);
     const sv = id === 'baths' ? ([S.full, S.half].every(blank) ? '' : `${S.full ?? '–'} / ${S.half ?? 0}`) : showFact(id, S[id]);
     const bad = (PICK[id] || id === 'view') && raw && !pkValid(id, raw, (c.edit || {})['pk_' + id]);
     let ctl = WB_NOEDIT.includes(id) ? esc(showFact(id, C[id])) : `<input class="txt sm fact${bad ? ' bad' : ''}" data-gfact="${c.id}|${id}" value="${esc(raw)}" placeholder="${x.req ? 'required' : ''}">`;

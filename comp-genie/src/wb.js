@@ -64,6 +64,7 @@ const WB_NOEDIT = ['ppsf', 'src', 'prox', 'overList'];
 function wbFactText(id, F) {
   if (id === 'baths') return blank(F.full) ? '' : `${F.full}/${F.half || 0}`;
   if (id === 'beds') return blank(F.beds) ? '' : String(F.beds);
+  if (id === 'usable') return blank(F.usable) ? '' : F.usable + ' ac';   // her rule: acres always show "ac"
   const v = F[id]; return blank(v) ? '' : String(v);
 }
 const WB_EDIT = { price: 'salePrice', sale: 'saleDate', contract: 'contractDate', conc: 'concessions', terms: 'financing', dom: 'dom', site: 'siteSf', topo: 'topo', nbhd: 'nbhd',

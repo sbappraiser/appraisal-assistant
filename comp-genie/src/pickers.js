@@ -40,14 +40,33 @@ const PICK = {
 };
 /* view: like the site influence picker – each view with its impact and range */
 const VIEW_TYPES = ['Residential', 'Mountain', 'Ocean', 'Bay', 'Valley', 'Woods', 'Park', 'Pastoral', 'GolfCourse', 'Skyline', 'CityStreet', 'Lake', 'River', 'Creek', 'Pond', 'Reservoir', 'Canal', 'Cove', 'Gulf', 'Sound', 'Marsh', 'Commercial', 'Industrial', 'HighDensityResidential', 'Highway', 'ParkingLot', 'School', 'TrafficWallBarriers', 'Other'];
-function vwParse(text) { const out = []; let imp = '';
-  String(text || '').split(/;|,(?![^(]*\))/).map(x => x.trim()).filter(Boolean).forEach(tok => { let rest = tok; const m = tok.match(/^(Adverse|Beneficial|Neutral)\b\s*[:–-]?\s*(.*)$/i); if (m) { imp = m[1][0].toUpperCase() + m[1].slice(1).toLowerCase(); rest = m[2]; }
-    const tail = rest.match(/\s*[–-]\s*(Adverse|Beneficial|Neutral)\s*$/i); if (tail) { imp = tail[1][0].toUpperCase() + tail[1].slice(1).toLowerCase(); rest = rest.slice(0, tail.index); }
-    const rm = rest.match(/\((Full|Partial|Seasonal|Panoramic|Limited|Filtered)\)/i) || rest.match(/\b(panoramic|partial|limited|filtered|seasonal)\b/i); const range = rm ? ({ panoramic: 'Full', limited: 'Partial', filtered: 'Partial' }[rm[1].toLowerCase()] || rm[1][0].toUpperCase() + rm[1].slice(1).toLowerCase()) : '';
-    rest = rest.replace(/\((Full|Partial|Seasonal|Panoramic|Limited|Filtered)\)/i, '').replace(/\b(panoramic|partial|limited|filtered|seasonal)\b/ig, '').replace(/\s+/g, ' ').trim(); if (!rest) return;
+/* each view's impact (her rule, Oct 20 2026): Residential (incl. garden setting) is always Neutral; power lines, industrial, highway,
+   parking lot, traffic wall are Adverse. Otherwise the impact typed with it, then her 2.6 rating for the line (N / B / A), then Beneficial
+   for the scenic views, else Neutral. Text where every view carries its own impact (the ▾ pick form) is taken as it is. */
+const VW_FIXED = { Residential: 'Neutral', Industrial: 'Adverse', Highway: 'Adverse', ParkingLot: 'Adverse', TrafficWallBarriers: 'Adverse' };
+const VW_SCENIC = ['Mountain', 'Ocean', 'Bay', 'Valley', 'Woods', 'Park', 'Pastoral', 'GolfCourse', 'Skyline', 'Lake', 'River', 'Creek', 'Pond', 'Reservoir', 'Canal', 'Cove', 'Gulf', 'Sound', 'Marsh'];
+const IMP_WORD = w => { const x = String(w || '').toLowerCase(); return x === 'n' || x === 'neutral' ? 'Neutral' : x === 'b' || x === 'beneficial' ? 'Beneficial' : x === 'a' || x === 'adverse' ? 'Adverse' : ''; };
+/* split a view / location text into tokens, each with the impact written on it (own) */
+function impTokens(text, trust) {
+  const out = []; String(text || '').split(/;|,(?![^(]*\))/).map(x => x.trim()).filter(Boolean).forEach(tok => {
+    if (/^[NBA]$/i.test(tok)) { out.push({ rating: IMP_WORD(tok) }); return; }   // her 2.6 "N;" / "B;" / "A;" on its own
+    let rest = tok, own = ''; const m = tok.match(/^(Adverse|Beneficial|Neutral|[NBA](?=\s*:))\b\s*[:–-]?\s*(.*)$/i); if (m) { own = IMP_WORD(m[1]); rest = m[2]; }
+    const tail = rest.match(/\s*[–-]\s*(Adverse|Beneficial|Neutral)\s*$/i); if (tail) { own = IMP_WORD(tail[1]); rest = rest.slice(0, tail.index); }
+    out.push({ own, rest: rest.trim() }); });
+  const items = out.filter(x => !x.rating && x.rest); const pickForm = items.length > 0 && items.every(x => x.own) && (trust || items.length > 1);   // one item with an impact may be her 2.6 rating (B;Res;) – trusted only when it is her ▾ pick
+  let carried = ''; out.forEach(x => { if (x.rating) carried = x.rating; else { x.carried = carried; if (x.own) carried = x.own; } });
+  return { items, pickForm };
+}
+function vwParse(text, trust) { const out = []; const T = impTokens(text, trust);
+  T.items.forEach(x => { let rest = x.rest;
+    const rm = rest.match(/\((Full|Partial|Seasonal|Panoramic|Limited|Filtered)\)/i) || rest.match(/\b(panoramic|partial|limited|filtered|seasonal|ltd ?sght|ltd|unobstructed)\b/i); const range = rm ? ({ panoramic: 'Full', unobstructed: 'Full', limited: 'Partial', filtered: 'Partial', ltdsght: 'Partial', 'ltd sght': 'Partial', ltd: 'Partial' }[rm[1].toLowerCase()] || rm[1][0].toUpperCase() + rm[1].slice(1).toLowerCase()) : '';
+    rest = rest.replace(/\((Full|Partial|Seasonal|Panoramic|Limited|Filtered)\)/i, '').replace(/\b(panoramic|partial|limited|filtered|seasonal|ltd ?sght|ltd|unobstructed)\b/ig, '').replace(/\s+/g, ' ').trim();
+    if (!rest) { if (range && out.length && !out[out.length - 1].range) out[out.length - 1].range = range; return; }   // her 2.6 "LtdSght" on its own: the range of the view before it
     const key = rest.toLowerCase().replace(/[^a-z]/g, ''); let ty = VIEW_TYPES.find(t => t.toLowerCase() === key || camelWords(t).toLowerCase().replace(/[^a-z]/g, '') === key);
     if (!ty) { const m2 = VIEW_MAP.find(([re]) => re.test(rest)); ty = m2 ? m2[1] : 'Other'; }
-    out.push({ type: ty, impact: imp || 'Neutral', range, other: ty === 'Other' ? rest.slice(0, 33) : '' }); });
+    const fixedOther = ty === 'Other' && /power|wire|pwr/i.test(rest) ? 'Adverse' : '';
+    const impact = T.pickForm ? x.own : (VW_FIXED[ty] || fixedOther || x.own || x.carried || (VW_SCENIC.includes(ty) ? 'Beneficial' : 'Neutral'));
+    out.push({ type: ty, impact, range, other: ty === 'Other' ? rest.slice(0, 33) : '' }); });
   return out; }
 const vwText = L => L.map(x => `${x.impact}: ${x.type === 'Other' ? (x.other || 'Other') : camelWords(x.type)}${x.range ? ` (${x.range})` : ''}`).join('; ');
 /* the answer as text, and back: official labels joined by "; " (Other: her words) */
