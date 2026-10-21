@@ -1,0 +1,68 @@
+/* ===== One look for every page (her requests Oct 21 2026) – shared by the Appraisal Assistant hub, the Comp genie and the iPad app.
+   Her legend:  red * = required · green box = required · blue box = optional, goes into the report as more information ·
+   grey box = not for you to fill in · purple writing = directions for you · red writing = a warning ·
+   pale yellow = the box / column you are working in · light pink = section bands (was peach) · green ✓ = complete. ===== */
+:root {
+  --look-ink: #0b0f14; --look-text2: #27313b; --look-req: #d3f5d9; --look-req-b: #8fcf9b; --look-opt: #dcecff; --look-opt-b: #9fc3ea;
+  --look-na: #e3e6ea; --look-cur: #fff4b0; --look-cur-b: #d9b400; --look-pink: #fde2ec; --look-pink-b: #f0a8c2;
+  --look-dir: #4b2a8a; --look-warn: #c40000; --look-ok: #0b8a3d; --look-navy: #1f3f66; --look-navy-2: #2c5a91;
+}
+/* light theme: higher contrast, navy instead of bright orange, pink instead of peach */
+:root:not([data-theme="dark"]) {
+  --ink: var(--look-ink); --muted: var(--look-text2);
+  --accent: var(--look-navy); --accent-fill: var(--look-navy); --accent-ink: #ffffff; --accent-soft: var(--look-pink);
+  --warn: var(--look-warn);
+  --teal: var(--look-navy); --teal-d: var(--look-navy); --teal-l: var(--look-pink); --sel: var(--look-cur);
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --accent-fill: #2c5a91; --accent-ink: #fff; } }
+
+/* bigger type: nothing important under 14px */
+html body { font-size: 16px; }
+label { font-size: 14.5px; }
+.help, p.help { font-size: 14.5px !important; color: var(--look-dir) !important; }
+.opt { font-size: 13.5px !important; }
+small { font-size: max(13px, .85em); }
+.eyebrow, legend { font-size: 13.5px !important; }
+input, select, textarea { font-size: 15.5px; }
+.warnTxt, .warn-text { color: var(--look-warn) !important; font-weight: 600; }
+
+/* the box you are in: pale yellow, a dark outline */
+input:not([type="checkbox"]):not([type="radio"]):not([type="button"]):not([type="file"]):focus,
+select:focus, textarea:focus { background: var(--look-cur) !important; outline: 2px solid var(--look-cur-b) !important; outline-offset: 0 !important; }
+
+/* tabs: bolder, the open one dark with white writing */
+nav.tabs { border: 2px solid var(--look-navy) !important; padding: 5px !important; gap: 6px !important; }
+nav.tabs button { font: 700 15.5px var(--ui, system-ui) !important; color: var(--look-ink) !important; padding: 9px 16px !important; }
+nav.tabs button:hover { background: var(--look-pink) !important; }
+nav.tabs button[aria-selected="true"] { background: var(--look-navy) !important; color: #fff !important; box-shadow: inset 0 -3px 0 #f4c400; }
+.stepb { border-width: 2px; }
+.stepb b { font-size: 17px; }
+.stepb small { font-size: 13.5px !important; }
+.stepb.on { border-color: var(--look-navy) !important; background: var(--look-cur) !important; box-shadow: 0 0 0 2px var(--look-cur-b) !important; }
+
+/* green check marks when complete */
+.look-done::after, .tabck { background: var(--look-ok) !important; }
+.look-done::after { content: "✓"; display: inline-grid; place-items: center; width: 1.25em; height: 1.25em; margin-left: 6px; border-radius: 50%; color: #fff; font-weight: 900; font-size: .8em; vertical-align: .1em; }
+
+/* the file you are in – top right of every page */
+#lookFile { position: fixed; top: 6px; right: 12px; z-index: 60; max-width: 46vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  background: #fff; color: var(--look-ink); border: 2px solid var(--look-navy); border-radius: 8px; padding: 3px 10px; font: 700 14px/1.3 system-ui, sans-serif; box-shadow: 0 2px 6px rgba(0,0,0,.12); }
+#lookFile:empty { display: none; }
+#lookFile.inhead { position: static; order: 99; margin-left: auto; box-shadow: none; max-width: 40vw; }
+#lookFile button { margin-left: 8px; border: 0; background: none; color: var(--look-navy); font: 700 14px system-ui, sans-serif; cursor: pointer; padding: 0; }
+@media print { #lookFile, #lookLegend { display: none !important; } }
+
+/* "What the colors mean" */
+#lookLegend { position: fixed; top: 40px; right: 12px; z-index: 61; width: min(420px, calc(100vw - 24px)); background: #fff; color: var(--look-ink);
+  border: 2px solid var(--look-navy); border-radius: 12px; padding: 12px 16px; box-shadow: 0 10px 30px rgba(0,0,0,.2); font: 15px/1.45 system-ui, sans-serif; }
+#lookLegend h3 { margin: 0 0 8px; font-size: 17px; }
+#lookLegend ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+#lookLegend li { display: flex; gap: 10px; align-items: center; }
+#lookLegend .sw { flex: none; width: 34px; height: 20px; border-radius: 5px; border: 1.5px solid #888; display: inline-grid; place-items: center; font-weight: 800; }
+#lookLegend .x { position: absolute; top: 6px; right: 10px; border: 0; background: none; font-size: 20px; cursor: pointer; }
+/* warnings stay red even inside directions */
+.help.warnTxt, p.help.warnTxt, .help .warnTxt { color: var(--look-warn) !important; }
+/* the hub's main tile (New order): white writing on navy */
+.hmtile.primary { color: #fff !important; } .hmtile.primary small, .hmtile.primary b { color: #fff !important; }
+.hmtile.primary .hmicon { background: #fff !important; color: var(--look-navy) !important; }
+.btn.primary, button.primary { color: #fff !important; }

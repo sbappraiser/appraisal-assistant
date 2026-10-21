@@ -12,7 +12,9 @@ import subprocess, tempfile   # never publish a page whose script does not even 
 with tempfile.NamedTemporaryFile('w', suffix='.js', delete=False) as t: t.write(js)
 chk = subprocess.run(['node', '--check', t.name], capture_output=True, text=True)
 if chk.returncode: raise SystemExit('SCRIPT ERROR – not built:\n' + chk.stderr[:1500])
-html = (src / 'template.html').read_text().replace('/*JS*/', js)
+js += '\n' + (root / 'comp-genie/src/look.js').read_text() + "\nwindow.lookFileName = () => (typeof cur !== 'undefined' && cur && typeof hasContent === 'function' && hasContent(cur)) ? [cur.fileNo, street(cur)].filter(Boolean).join(' · ') : '';\n"   # one look (her Oct 21 2026 requests)
+tpl = (src / 'template.html').read_text(); assert '</style>\n</head>' in tpl
+html = tpl.replace('</style>\n</head>', (root / 'comp-genie/src/look.css').read_text() + '\n</style>\n</head>', 1).replace('/*JS*/', js)
 (out / 'index.html').write_text(html)
 for f in ['pdf.min.mjs', 'pdf.worker.min.mjs', 'pdfjs-LICENSE.txt']: shutil.copy(root / 'inspection-app' / f, out / f)
 for d in ['wasm', 'standard_fonts']: shutil.copytree(root / 'vendor' / 'pdfjs' / d, out / d, dirs_exist_ok=True)  # scanned PDFs (JBIG2/JPEG 2000) and non-embedded fonts

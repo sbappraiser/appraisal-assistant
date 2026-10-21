@@ -209,6 +209,75 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
 .vtag{font-size:11px;padding:2px 7px;border-radius:10px;background:#eef1f4;color:#4b5866}.vtag.v26{background:#fff1d6;color:#8a5a00}.vtag.v36{background:#e1f2e6;color:#226b3a}.vtag.vboth{background:#e6eefb;color:#2c4f8a}
 mark.blank{background:#fff3a8;padding:0 2px;border-radius:3px}.cmt textarea{width:100%;font:inherit;font-size:14px}.linkbtn{background:none;border:0;color:#2c5f9e;cursor:pointer;padding:2px 0;font-size:13px}
 .cmtLen{font-size:12px;color:#667}.cmtLen.over{color:#b3261e;font-weight:600}.cmtNote{font-size:12px;color:#8a5a00;background:#fff8e6;border-radius:6px;padding:3px 8px;margin-top:5px}.cmtSecH small{font-weight:400;text-transform:none;letter-spacing:0;color:#6a7a8a}
+/* ===== One look for every page (her requests Oct 21 2026) – shared by the Appraisal Assistant hub, the Comp genie and the iPad app.
+   Her legend:  red * = required · green box = required · blue box = optional, goes into the report as more information ·
+   grey box = not for you to fill in · purple writing = directions for you · red writing = a warning ·
+   pale yellow = the box / column you are working in · light pink = section bands (was peach) · green ✓ = complete. ===== */
+:root {
+  --look-ink: #0b0f14; --look-text2: #27313b; --look-req: #d3f5d9; --look-req-b: #8fcf9b; --look-opt: #dcecff; --look-opt-b: #9fc3ea;
+  --look-na: #e3e6ea; --look-cur: #fff4b0; --look-cur-b: #d9b400; --look-pink: #fde2ec; --look-pink-b: #f0a8c2;
+  --look-dir: #4b2a8a; --look-warn: #c40000; --look-ok: #0b8a3d; --look-navy: #1f3f66; --look-navy-2: #2c5a91;
+}
+/* light theme: higher contrast, navy instead of bright orange, pink instead of peach */
+:root:not([data-theme="dark"]) {
+  --ink: var(--look-ink); --muted: var(--look-text2);
+  --accent: var(--look-navy); --accent-fill: var(--look-navy); --accent-ink: #ffffff; --accent-soft: var(--look-pink);
+  --warn: var(--look-warn);
+  --teal: var(--look-navy); --teal-d: var(--look-navy); --teal-l: var(--look-pink); --sel: var(--look-cur);
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --accent-fill: #2c5a91; --accent-ink: #fff; } }
+
+/* bigger type: nothing important under 14px */
+html body { font-size: 16px; }
+label { font-size: 14.5px; }
+.help, p.help { font-size: 14.5px !important; color: var(--look-dir) !important; }
+.opt { font-size: 13.5px !important; }
+small { font-size: max(13px, .85em); }
+.eyebrow, legend { font-size: 13.5px !important; }
+input, select, textarea { font-size: 15.5px; }
+.warnTxt, .warn-text { color: var(--look-warn) !important; font-weight: 600; }
+
+/* the box you are in: pale yellow, a dark outline */
+input:not([type="checkbox"]):not([type="radio"]):not([type="button"]):not([type="file"]):focus,
+select:focus, textarea:focus { background: var(--look-cur) !important; outline: 2px solid var(--look-cur-b) !important; outline-offset: 0 !important; }
+
+/* tabs: bolder, the open one dark with white writing */
+nav.tabs { border: 2px solid var(--look-navy) !important; padding: 5px !important; gap: 6px !important; }
+nav.tabs button { font: 700 15.5px var(--ui, system-ui) !important; color: var(--look-ink) !important; padding: 9px 16px !important; }
+nav.tabs button:hover { background: var(--look-pink) !important; }
+nav.tabs button[aria-selected="true"] { background: var(--look-navy) !important; color: #fff !important; box-shadow: inset 0 -3px 0 #f4c400; }
+.stepb { border-width: 2px; }
+.stepb b { font-size: 17px; }
+.stepb small { font-size: 13.5px !important; }
+.stepb.on { border-color: var(--look-navy) !important; background: var(--look-cur) !important; box-shadow: 0 0 0 2px var(--look-cur-b) !important; }
+
+/* green check marks when complete */
+.look-done::after, .tabck { background: var(--look-ok) !important; }
+.look-done::after { content: "✓"; display: inline-grid; place-items: center; width: 1.25em; height: 1.25em; margin-left: 6px; border-radius: 50%; color: #fff; font-weight: 900; font-size: .8em; vertical-align: .1em; }
+
+/* the file you are in – top right of every page */
+#lookFile { position: fixed; top: 6px; right: 12px; z-index: 60; max-width: 46vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  background: #fff; color: var(--look-ink); border: 2px solid var(--look-navy); border-radius: 8px; padding: 3px 10px; font: 700 14px/1.3 system-ui, sans-serif; box-shadow: 0 2px 6px rgba(0,0,0,.12); }
+#lookFile:empty { display: none; }
+#lookFile.inhead { position: static; order: 99; margin-left: auto; box-shadow: none; max-width: 40vw; }
+#lookFile button { margin-left: 8px; border: 0; background: none; color: var(--look-navy); font: 700 14px system-ui, sans-serif; cursor: pointer; padding: 0; }
+@media print { #lookFile, #lookLegend { display: none !important; } }
+
+/* "What the colors mean" */
+#lookLegend { position: fixed; top: 40px; right: 12px; z-index: 61; width: min(420px, calc(100vw - 24px)); background: #fff; color: var(--look-ink);
+  border: 2px solid var(--look-navy); border-radius: 12px; padding: 12px 16px; box-shadow: 0 10px 30px rgba(0,0,0,.2); font: 15px/1.45 system-ui, sans-serif; }
+#lookLegend h3 { margin: 0 0 8px; font-size: 17px; }
+#lookLegend ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+#lookLegend li { display: flex; gap: 10px; align-items: center; }
+#lookLegend .sw { flex: none; width: 34px; height: 20px; border-radius: 5px; border: 1.5px solid #888; display: inline-grid; place-items: center; font-weight: 800; }
+#lookLegend .x { position: absolute; top: 6px; right: 10px; border: 0; background: none; font-size: 20px; cursor: pointer; }
+/* warnings stay red even inside directions */
+.help.warnTxt, p.help.warnTxt, .help .warnTxt { color: var(--look-warn) !important; }
+/* the hub's main tile (New order): white writing on navy */
+.hmtile.primary { color: #fff !important; } .hmtile.primary small, .hmtile.primary b { color: #fff !important; }
+.hmtile.primary .hmicon { background: #fff !important; color: var(--look-navy) !important; }
+.btn.primary, button.primary { color: #fff !important; }
+
 </style>
 </head>
 <body>
@@ -834,7 +903,7 @@ mark.blank{background:#fff3a8;padding:0 2px;border-radius:3px}.cmt textarea{widt
 </div>
 <div id="toast" role="status" hidden></div>
 <script>
-const BUILD='o1-1021-1700';
+const BUILD='o1-1021-1708';
 const G = (() => {
 /* ---------------- small helpers ---------------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -5354,6 +5423,42 @@ if (typeof document !== 'undefined') {
   const go = () => { hwAttach(document); new MutationObserver(() => hwAttach(document)).observe(document.body, { childList: true, subtree: true }); };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', go); else setTimeout(go, 0);
 }
+
+/* ===== One look for every page (her requests Oct 21 2026): file name top right, "What the colors mean", mouse wheel on drop-downs.
+   Each page sets window.lookFileName = () => 'Brkl5464 · 5464 Berkeley Rd' (or '' when no file is open). ===== */
+(() => {
+  const LEGEND = [['<span class="sw" style="background:#fff;color:#d00000;border-color:#ccc">*</span>', 'Red asterisk – a required line'],
+    ['<span class="sw" style="background:var(--look-req);border-color:var(--look-req-b)"></span>', 'Green box – required, fill it in'],
+    ['<span class="sw" style="background:var(--look-opt);border-color:var(--look-opt-b)"></span>', 'Blue box – optional; goes into the report as more information'],
+    ['<span class="sw" style="background:var(--look-na)"></span>', 'Grey box – not for you to fill in (worked out or from a source)'],
+    ['<span class="sw" style="background:var(--look-cur);border-color:var(--look-cur-b)"></span>', 'Pale yellow – the box or column you are working in'],
+    ['<span class="sw" style="background:var(--look-pink);border-color:var(--look-pink-b)"></span>', 'Light pink – a section band'],
+    ['<span class="sw" style="background:#fff;color:var(--look-dir)">Aa</span>', 'Purple writing – directions for you'],
+    ['<span class="sw" style="background:#fff;color:var(--look-warn)">!</span>', 'Red writing – a warning or something to fix'],
+    ['<span class="sw" style="background:var(--look-ok);color:#fff;border-color:var(--look-ok)">✓</span>', 'Green check – complete'],
+    ['<span class="sw" style="background:#fff;color:#1f5fa8">ⓘ</span>', 'Information – point at or click it for an explanation']];
+  function legend() { let L = document.getElementById('lookLegend'); if (L) { L.remove(); return; }
+    L = document.createElement('div'); L.id = 'lookLegend'; L.setAttribute('role', 'dialog');
+    L.innerHTML = `<button class="x" aria-label="Close">×</button><h3>What the colors mean</h3><ul>${LEGEND.map(([s, t]) => `<li>${s}<span>${t}</span></li>`).join('')}</ul>`;
+    L.querySelector('.x').onclick = () => L.remove(); document.body.appendChild(L); }
+  let F = null; function corner() { if (!F) { F = document.createElement('div'); F.id = 'lookFile'; } const H = document.querySelector('header.top, .top');   // in the page's own top bar, at its right end (pages that redraw their top bar get it back)
+    if (H) { if (F.parentNode !== H) { F.className = 'inhead'; H.appendChild(F); } } else if (F.parentNode !== document.body) { F.className = ''; document.body.appendChild(F); }
+    let name = ''; try { name = typeof window.lookFileName === 'function' ? String(window.lookFileName() || '') : ''; } catch (e) {}
+    const want = (name ? `<span title="The file you are working in">📄 ${name.replace(/[<>&]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]))}</span>` : '') + '<button type="button" data-lookleg="1" title="What the colors mean">ⓘ Colors</button>';
+    if (F.innerHTML !== want) F.innerHTML = want; }
+  document.addEventListener('click', e => { if (e.target.closest && e.target.closest('[data-lookleg]')) legend(); });
+  /* the mouse wheel moves a drop-down up and down when the pointer is on it (her ask) – the page still scrolls everywhere else */
+  document.addEventListener('wheel', e => { const s = e.target.closest && e.target.closest('select'); if (!s || s.multiple || s.disabled || s.size > 1) return;
+    if (document.activeElement !== s) return;   // only once she has clicked into it, so scrolling the page past a drop-down never changes an answer
+    e.preventDefault(); const n = s.options.length; if (!n) return; let i = s.selectedIndex + (e.deltaY > 0 ? 1 : -1); i = Math.max(0, Math.min(n - 1, i));
+    while (s.options[i] && s.options[i].disabled && i > 0 && i < n - 1) i += e.deltaY > 0 ? 1 : -1;
+    if (i !== s.selectedIndex) { s.selectedIndex = i; s.dispatchEvent(new Event('input', { bubbles: true })); s.dispatchEvent(new Event('change', { bubbles: true })); } }, { passive: false });
+  const start = () => { if (window.self !== window.top && document.body.classList.contains('embed')) return;   // inside the hub: the hub shows the file name
+    corner(); setInterval(corner, 400); };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
+})();
+
+window.lookFileName = () => (typeof cur !== 'undefined' && cur && typeof hasContent === 'function' && hasContent(cur)) ? [cur.fileNo, street(cur)].filter(Boolean).join(' · ') : '';
 
 </script>
 <button type="button" id="toTop" class="toTop" hidden aria-label="Back to top">↑ Back to top</button>

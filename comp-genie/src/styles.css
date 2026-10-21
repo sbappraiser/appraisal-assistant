@@ -1,4 +1,4 @@
-:root{--ink:#000;--muted:#1a1a1a;--line:#d6dce3;--bg:#eef1f4;--card:#fff;--teal:#ff8a00;--teal-d:#b35a00;--teal-l:#ffdcb5;--warn:#b35400;--warn-l:#fff2e5;--bad:#b3261e;--ok:#1e7a3c;--ok-l:#e6f4ea;--sel:#fff8d6}
+:root{--ink:#000;--muted:#1a1a1a;--line:#d6dce3;--bg:#eef1f4;--card:#fff;--teal:var(--look-navy);--teal-d:#b35a00;--teal-l:#ffdcb5;--warn:#c40000;--warn-l:#ffecec;--bad:#b3261e;--ok:#1e7a3c;--ok-l:#e6f4ea;--sel:#fff8d6}
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 "Public Sans",system-ui,-apple-system,"Segoe UI",Arial,sans-serif}
 #app{max-width:1500px;margin:0 auto;padding:0 16px 40px}
@@ -9,7 +9,7 @@ h1{margin:0;font-size:24px;color:var(--teal-d)}h2{margin:0 0 10px;font-size:19px
 .notice{border-color:#f0c48a;background:var(--warn-l)}
 .pill{border:1px solid var(--line);border-radius:999px;padding:3px 10px;font-size:13px;background:#fff}.pill.ok{background:var(--ok-l);border-color:#b8dfc4}.pill.warn{background:var(--warn-l);border-color:#f0c48a}
 .btn{font:inherit;font-size:14px;border:1px solid #c9d1da;background:#fff;color:var(--teal-d);border-radius:8px;padding:7px 12px;cursor:pointer;white-space:nowrap}
-.btn:hover{background:var(--teal-l)}.btn.primary{background:var(--teal);border-color:#000;color:#000;font-weight:600}.btn.primary:hover{background:var(--teal-d)}
+.btn:hover{background:var(--teal-l)}.btn.primary{background:var(--teal);border-color:#000;color:#fff;font-weight:700}.btn.primary:hover{background:var(--teal-d)}
 .btn:disabled{opacity:.45;cursor:not-allowed}.btn.sm{padding:3px 8px;font-size:13px}.btn.danger{color:var(--bad);border-color:#e3b2ae}.btn.danger.solid{background:var(--bad);color:#fff}
 .lnk{border:0;background:none;color:var(--teal-d);cursor:pointer;font-size:15px;padding:0 2px}
 .link{color:var(--teal-d);text-decoration:underline;cursor:pointer}
@@ -116,7 +116,7 @@ table.comps td.usecell{white-space:nowrap}table.comps td.usecell .btn{margin-rig
 
 /* the Appraisal Assistant's look (her request, Oct 19 2026): same colors and type as the hub */
 h1,h2{font-family:"Newsreader",Georgia,"Times New Roman",serif;font-weight:600;color:var(--ink)}h1{font-size:28px}h2{font-size:22px}h3{color:var(--teal-d)}
-.btn{color:var(--ink);border-color:#c9d1da}.btn:hover{background:#fff3e6}.btn.primary:hover{background:#ffa033}
+.btn{color:var(--ink);border-color:#c9d1da}.btn:hover{background:#fff3e6}.btn.primary:hover{background:var(--look-navy-2)}
 .card{border-radius:14px;box-shadow:0 1px 2px rgba(20,32,45,.08),0 8px 24px rgba(20,32,45,.06)}
 a{color:var(--teal-d)}
 body.embed .top h1{display:none}body.embed #app{padding-top:0}body.embed .top{padding:8px 0}
@@ -168,7 +168,7 @@ tr.landon td { background: #eefbf3; }
 
 .pill.ver{font-weight:700;color:#b00000;border-color:#e3b3b3;background:#fff}
 
-button.nothumb{border:1px dashed #b8c2cc;cursor:pointer;padding:0}button.nothumb:hover{background:#fff3e0;opacity:1}
+button.nothumb{border:1px dashed #b8c2cc;cursor:pointer;padding:0}button.nothumb:hover{background:var(--look-pink);opacity:1}
 
 /* grid line picker */
 .glines{border:1px solid var(--line);border-radius:12px;padding:8px 14px;margin:8px 0 12px;background:#fbfcfd}.glines summary{font-weight:700;cursor:pointer}
@@ -205,7 +205,7 @@ small.vsx{display:block;color:#000;font-size:11px}
 .req{color:#d40000;font-weight:800;font-size:1.2em;margin-right:3px;cursor:help}
 
 /* her ask Oct 20 2026: the field you are in turns orange */
-input.txt:focus,input:not([type=checkbox]):not([type=radio]):not([type=file]):focus,select:focus,textarea:focus{background:#ffd29a!important;border-color:#ff8a00!important;outline:2px solid #ff8a00!important;outline-offset:0;color:#000!important}
+input.txt:focus,input:not([type=checkbox]):not([type=radio]):not([type=file]):focus,select:focus,textarea:focus{background:var(--look-cur)!important;border-color:var(--look-cur-b)!important;outline:2px solid var(--look-cur-b)!important;outline-offset:0;color:#000!important}
 input::placeholder,textarea::placeholder{color:#1a1a1a}
 .ccdone{color:var(--ok);font-weight:800}
 .files summary{cursor:pointer}
@@ -215,7 +215,7 @@ table.comps th.ck,table.comps td.ck{width:26px;text-align:center;padding-left:4p
 /* her ask Oct 20 2026: vertical lines between Using, Your value and each source column */
 table.cmp td,table.cmp thead th{border-left:1px solid #b9c3cd}table.cmp tr>th:first-child{border-left:0}table.cmp td.mine{border-left:2px solid #6f7d8a;border-right:2px solid #6f7d8a}
 table.cmp td.mine input.txt.echo{color:#000;background:#fbfcfd}table.cmp td.mine input.txt.own{background:#fff4c2;font-weight:700}
-table.cmp td.srccell[data-pick]{cursor:pointer}table.cmp td.srccell[data-pick]:hover{outline:2px solid #ff8a00;outline-offset:-2px}
+table.cmp td.srccell[data-pick]{cursor:pointer}table.cmp td.srccell[data-pick]:hover{outline:2px solid var(--look-navy);outline-offset:-2px}
 /* her ask Oct 20 2026 – SFREP-style field colors on the grid (default look; Classic keeps the ACI look):
    required / formatted = mint green, optional = baby blue, photo = lavender, warned = red, the field you are in = orange */
 body:not(.classic) table.grid tbody th:first-child{background:#e9edf2;font-size:15px;font-weight:700;color:#000}
@@ -252,9 +252,9 @@ table.cmp tr.disrow td.using{background:#fff36b}table.cmp tr.flagrow td.using,ta
 /* her steps (Oct 20 2026) */
 nav.steps{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 12px}
 .stepb{font:inherit;display:flex;flex-direction:column;align-items:flex-start;gap:1px;text-align:left;border:2px solid var(--line);background:#fff;color:#000;border-radius:10px;padding:8px 14px;cursor:pointer;text-decoration:none;min-width:190px}
-.stepb b{font-size:16px}.stepb small{color:#1a1a1a;font-size:12px}.stepb.on{border-color:#ff8a00;background:#fff3e0;box-shadow:0 0 0 2px #ffcf99}
+.stepb b{font-size:16px}.stepb small{color:#1a1a1a;font-size:12px}.stepb.on{border-color:var(--look-navy);background:#fff3e0;box-shadow:0 0 0 2px #ffcf99}
 #app[data-stage="micro"] .st:not(.st-micro),#app[data-stage="workbook"] .st:not(.st-workbook),#app[data-stage="final"] .st:not(.st-final),#app[data-stage="cost"] .st:not(.st-cost){display:none!important}
-.cstrip{display:flex;flex-wrap:wrap;gap:6px}.cchip{font:inherit;font-size:14px;border:1px solid var(--line);background:#fff;border-radius:8px;padding:6px 10px;cursor:pointer;color:#000}.cchip.ok{border-color:#8fcca0;background:var(--ok-l)}.cchip.on{outline:2px solid #ff8a00}
+.cstrip{display:flex;flex-wrap:wrap;gap:6px}.cchip{font:inherit;font-size:14px;border:1px solid var(--line);background:#fff;border-radius:8px;padding:6px 10px;cursor:pointer;color:#000}.cchip.ok{border-color:#8fcca0;background:var(--ok-l)}.cchip.on{outline:2px solid var(--look-navy)}
 table.cmplines th{text-align:left;font-weight:700}table.cmplines tr.linereq th,table.cmplines tr.linereq td{background:#fff36b}table.cmplines tr.lineopt td:nth-child(3){background:#f3f8ff}table.cmplines td.subj{background:#f4f6f8}
 table.grid.final td{font-size:14px}.famt{font-weight:700;color:#0b4fc4;font-size:13px}span.bad,b.bad{color:#d40000;font-weight:700}
 #wbStrip .cchip.nextflag{background:#ffe1a8}
@@ -290,12 +290,12 @@ table.grid thead th:nth-child(2){z-index:4}table.grid tr.tot td:nth-child(2){bac
 table.grid thead th,table.grid thead th:nth-child(n){background-image:linear-gradient(#4a5866,#4a5866),linear-gradient(#4a5866,#4a5866);background-size:100% 2px,100% 2px;background-position:left 0 bottom 0,left 0 bottom 4px;background-repeat:no-repeat;padding-bottom:10px}
 body.classic table.grid thead th{background-image:linear-gradient(#4a5866,#4a5866),linear-gradient(#4a5866,#4a5866)}
 /* her ask (Oct 20 2026): the comp names stay on screen while she scrolls down – the grid box itself sticks under the top bar */
-#acbox{position:fixed;z-index:60;background:#fff;border:1.5px solid #ff8a00;border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,.18);display:none;padding:3px 0;font-size:14px;max-width:340px}
-#acbox .aci{padding:4px 10px;cursor:pointer;white-space:nowrap}#acbox .aci.on,#acbox .aci:hover{background:#ffdcb5}#acbox .aci small{color:#6b7785}#acbox .acmore,#acbox .achint{padding:2px 10px;font-size:11.5px;color:#6b7785}#acbox .achint{border-top:1px solid #eef1f4;margin-top:2px}
+#acbox{position:fixed;z-index:60;background:#fff;border:1.5px solid var(--look-navy);border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,.18);display:none;padding:3px 0;font-size:14px;max-width:340px}
+#acbox .aci{padding:4px 10px;cursor:pointer;white-space:nowrap}#acbox .aci.on,#acbox .aci:hover{background:var(--look-cur)}#acbox .aci small{color:#6b7785}#acbox .acmore,#acbox .achint{padding:2px 10px;font-size:11.5px;color:#6b7785}#acbox .achint{border-top:1px solid #eef1f4;margin-top:2px}
 /* her ask (Oct 20 2026): the box she is in is filled bright tangerine, black text */
-input.txt:focus,input:not([type=checkbox]):not([type=radio]):not([type=file]):focus,select:focus,textarea:focus{background:#ff8a00!important;color:#000!important;border-color:#b35a00!important}
+input.txt:focus,input:not([type=checkbox]):not([type=radio]):not([type=file]):focus,select:focus,textarea:focus{background:var(--look-cur)!important;color:#000!important;border-color:var(--look-cur-b)!important}
 input:focus::placeholder{color:#3a2a00!important;opacity:1}
-.lastcell:not(:focus){outline:2px dashed #ff8a00!important;outline-offset:1px}
+.lastcell:not(:focus){outline:2px dashed var(--look-navy)!important;outline-offset:1px}
 /* her own typed amount: black and upright like a normal entry (the rate's amounts are orange italic) – no orange border, not bold */
 table.grid input.adj.own,body:not(.classic) table.grid input.adj.own{font-weight:400;border-color:var(--line);color:#000}
 table.grid thead th .ghsale{display:block;font-size:12.5px;font-weight:600;color:#000;margin-top:2px;white-space:nowrap}
@@ -311,7 +311,7 @@ body.sbs table.grid td.dsc{min-width:190px;padding:4px 6px;vertical-align:top}
 body.sbs table.grid td.dsc{background:#fff}
 body.sbs table.grid td.dsc input.txt.fact{width:100%;box-sizing:border-box;border-radius:4px;font-size:14px;padding:4px 6px}   /* her answer box keeps its colour (mint required / blue optional), full width; the rest of the cell is white */
 body.sbs table.grid td.dsc input.txt.fact.bad{background:#ffe1df!important;border-color:#d33!important}
-body.sbs table.grid td.dsc input.txt.fact:focus{background:#ff8a00!important}
+body.sbs table.grid td.dsc input.txt.fact:focus{background:var(--look-cur)!important}
 body.sbs table.grid td.adjc{width:108px;min-width:108px;background:#fff;border-left:2px solid #8995a1!important;padding:4px 5px;vertical-align:top}
 body.sbs table.grid td.adjc.none{background:#f1f3f5}
 body.sbs table.grid td.adjc input.adj{width:100%;box-sizing:border-box}
@@ -346,18 +346,18 @@ table.grid thead th[data-wbcol]{padding-top:4px;padding-bottom:3px;line-height:1
 table.grid thead th .ghsub{padding-bottom:2px}
 .sheet .legrid{display:grid;grid-template-columns:1fr 1fr;gap:6px 14px}.sheet .legrid .fld textarea{min-height:2.6em}
 table.tbl.cost input::placeholder{color:#9aa4ae;font-style:italic}
-.rv.rvgo{cursor:pointer}.rv.rvgo:hover{background:#fff6e8}.rvlink{color:#b35a00;font-weight:600;white-space:nowrap}
-.goflash{outline:3px solid #ff8a00!important;outline-offset:3px;border-radius:4px;transition:outline-color .4s}
+.rv.rvgo{cursor:pointer}.rv.rvgo:hover{background:#fff6e8}.rvlink{color:var(--look-navy);font-weight:600;white-space:nowrap}
+.goflash{outline:3px solid var(--look-navy)!important;outline-offset:3px;border-radius:4px;transition:outline-color .4s}
 
 /* her ask (Oct 21 2026): Report details – bigger type; her own entries black on white, suggestions (from the order, CRS, inspection) grey italic on cream */
-#reportCard{font-size:15.5px}#reportCard h2{font-size:22px}#reportCard h3{font-size:18px;color:#b35a00}
+#reportCard{font-size:15.5px}#reportCard h2{font-size:22px}#reportCard h3{font-size:18px;color:var(--look-navy)}
 #reportCard .rptgrid .fld>span{font-size:14px;color:#1a1a1a;font-weight:600;margin-bottom:2px}
 #reportCard .rptgrid input.txt,#reportCard .rptgrid textarea,#reportCard .rptgrid select{font-size:15.5px;padding:6px 8px;color:#000}
 #reportCard .rptgrid input.txt:placeholder-shown,#reportCard .rptgrid textarea:placeholder-shown{background:#fff8e1;border-color:#e6cf8a}
 #reportCard .rptgrid input::placeholder,#reportCard .rptgrid textarea::placeholder{color:#6b6250!important;font-style:italic}
 #reportCard .rptgrid input.txt:not(:placeholder-shown),#reportCard .rptgrid textarea:not(:placeholder-shown){font-weight:600;background:#fff}
 #reportCard .rptgrid label.check{font-size:15px}
-.rptneed{border-radius:10px;padding:10px 14px;margin:6px 0 12px;font-size:15.5px}.rptneed.warn{background:#ffe9d1;border:2px solid #ff8a00}.rptneed.done{background:#e6f4ea;border:1px solid #9ccfaa}
+.rptneed{border-radius:10px;padding:10px 14px;margin:6px 0 12px;font-size:15.5px}.rptneed.warn{background:#ffecec;border:2px solid var(--look-warn)}.rptneed.done{background:#e6f4ea;border:1px solid #9ccfaa}
 .rptneed ul{margin:6px 0 4px 20px;padding:0}.rptneed li{margin:2px 0}
 .rptkey{display:block;margin-top:6px;font-size:13px}.rptkey .k{display:inline-block;padding:2px 8px;border-radius:4px;border:1px solid #cfd6de;margin-right:6px}.rptkey .own{background:#fff;font-weight:600}.rptkey .sug{background:#fff8e1;border-color:#e6cf8a;color:#6b6250;font-style:italic}
 .rptneed .rptkey .k{display:inline-block!important;width:auto!important}

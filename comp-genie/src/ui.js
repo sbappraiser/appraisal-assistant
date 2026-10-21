@@ -1037,3 +1037,6 @@ function wbRemoveAsk(J, cid) {
 document.addEventListener('wheel', e => { if (POP || e.deltaY <= 0 || e.ctrlKey) return; const w = e.target.closest && e.target.closest('#gridCard .tablewrap'); if (!w) return;
   const top = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--toph')) || 64; const r = w.getBoundingClientRect(); const gap = r.top - top;
   if (gap > 4 && window.scrollY + window.innerHeight < document.documentElement.scrollHeight - 2) { e.preventDefault(); window.scrollBy(0, Math.min(gap, Math.max(40, e.deltaY))); } }, { passive: false });
+
+/* the file she is in, top right (look.js) */
+window.lookFileName = () => app && app.job ? [app.job.fileNo || (app.job.subject && app.job.subject.fileNo) || '', app.job.subject.addr || app.job.name || ''].filter(Boolean).join(' · ') : '';
