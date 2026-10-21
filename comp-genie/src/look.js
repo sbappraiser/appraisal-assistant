@@ -16,7 +16,7 @@
     L.innerHTML = `<button class="x" aria-label="Close">×</button><h3>What the colors mean</h3><ul>${LEGEND.map(([s, t]) => `<li>${s}<span>${t}</span></li>`).join('')}</ul>`;
     L.querySelector('.x').onclick = () => L.remove(); document.body.appendChild(L); }
   let F = null; function corner() { if (!F) { F = document.createElement('div'); F.id = 'lookFile'; } const H = document.querySelector('header.top, .top');   // in the page's own top bar, at its right end (pages that redraw their top bar get it back)
-    if (H) { if (F.parentNode !== H) { F.className = 'inhead'; H.appendChild(F); } } else if (F.parentNode !== document.body) { F.className = ''; document.body.appendChild(F); }
+    if (H) { if (F.parentNode !== H) { F.className = 'inhead'; H.appendChild(F); const h = H.offsetHeight; if (h && getComputedStyle(H).position === 'sticky') document.documentElement.style.setProperty('--toph', h + 'px'); } }   // the genie keeps its grid under the top bar (--toph): adding this box can make the bar taller else if (F.parentNode !== document.body) { F.className = ''; document.body.appendChild(F); }
     let name = ''; try { name = typeof window.lookFileName === 'function' ? String(window.lookFileName() || '') : ''; } catch (e) {}
     const want = (name ? `<span title="The file you are working in">📄 ${name.replace(/[<>&]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]))}</span>` : '') + '<button type="button" data-lookleg="1" title="What the colors mean">ⓘ Colors</button>';
     if (F.innerHTML !== want) F.innerHTML = want; }

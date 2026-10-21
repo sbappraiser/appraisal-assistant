@@ -14,7 +14,7 @@ async function start() {
   const last = await DB.get('kv', 'lastJob');
   app.job = ((POP || CPOP) && app.jobs.find(j => j.id === (POP || CPOP).job)) || app.jobs.find(j => last && j.id === last.v) || app.jobs[0] || null;
   app.orders = await readOrders();
-  await archPhotoInit(); try { if (localStorage.getItem('genie.classic') === '1') document.body.classList.add('classic'); } catch (e) {} try { if (localStorage.getItem('genie.sbs') !== '0') document.body.classList.add('sbs'); } catch (e) { document.body.classList.add('sbs'); } try { const gl = await DB.get('kv', 'gridLines'); if (gl && gl.v) GRID_DEFAULT = gl.v; } catch (e) {}
+  await archPhotoInit(); try { if (localStorage.getItem('genie.classic') === '1') document.body.classList.add('classic'); } catch (e) {} try { if (localStorage.getItem('genie.lnotes') === '1') document.body.classList.add('lnotes'); } catch (e) {} try { if (localStorage.getItem('genie.sbs') !== '0') document.body.classList.add('sbs'); } catch (e) { document.body.classList.add('sbs'); } try { const gl = await DB.get('kv', 'gridLines'); if (gl && gl.v) GRID_DEFAULT = gl.v; } catch (e) {}
   const oq = new URLSearchParams(location.search).get('order');
   if (new URLSearchParams(location.search).get('embed')) document.body.classList.add('embed');
   if (POP) document.body.classList.add('popgrid');   // inside the Appraisal Assistant's Comp genie tab
@@ -390,6 +390,19 @@ function renderPage() {
   <header class="top"><h1>Comp Genie</h1><span class="pill ver" title="The Comp genie version – after Ctrl+R it should match the one I tell you">Version ${typeof BUILD !== 'undefined' ? BUILD : ''}</span>
     <span class="pill ${ARCH.loaded ? 'ok' : 'warn'}">${ARCH.loaded ? `Archive: ${ARCH.rows.length.toLocaleString()} records` : 'Archive not loaded'}</span>${archPhotoPill()}
     <span class="pill">${app.cort.length ? `CORT: ${app.cort.length} sales` : 'No CORT table'}</span><span class="pill" title="Your land sale and construction cost databases (shared with the cost approach)">${(app.land || []).length ? `Land sales: ${app.land.length}` : 'No land sales'} · ${app.costDb ? `Costs: ${app.costDb.projects.length} projects` : 'No cost database'}</span>
+    <details class="adddb setmenu"><summary class="btn sm" title="Your settings – the look, the grid, how notes show">⚙ Settings</summary><div class="adddbm">
+      <b>Look</b>
+      <label class="check"><input type="checkbox" data-classic="1" ${document.body.classList.contains('classic') ? 'checked' : ''}> Classic (ACI) look for the grid</label>
+      <label class="check"><input type="checkbox" data-lnotes="1" ${document.body.classList.contains('lnotes') ? 'checked' : ''}> Show line notes under the line names <small>(otherwise they are in each ⓘ)</small></label>
+      <b>Grid</b>
+      <label class="check"><input type="checkbox" data-sbs="1" ${document.body.classList.contains('sbs') ? 'checked' : ''}> Adjustment beside the entry</label>
+      <label class="check"><input type="checkbox" data-wbon="1" ${typeof WB !== 'undefined' && WB.on ? 'checked' : ''}> Workbook view (only the lines you adjust)</label>
+      <label>Open the grid <select data-gview="1"><option value="page" ${document.body.classList.contains('gridbox') ? '' : 'selected'}>on the page</option><option value="box" ${document.body.classList.contains('gridbox') ? 'selected' : ''}>in its own box (two scroll bars)</option></select></label>
+      <button class="btn sm" data-act="set-lines">Pick the grid lines this report needs…</button>
+      <button class="btn sm" data-act="starts-edit">Edit my starting points (rates)…</button>
+      <b>Your data</b>
+      <a class="btn sm" href="?view=db" target="genie-dbs">My databases – what each holds, safety, undo ↗</a>
+      <span class="help">Each setting is kept on this computer and applies to every assignment.</span></div></details>
     <details class="adddb"><summary class="btn sm" title="Add files to your databases – or drop them anywhere on this page">📥 Add to my databases</summary><div class="adddbm">
       <label class="btn sm">CORT weekly closings (PDF / CSV)<input type="file" multiple accept=".pdf,.csv" data-act="files" hidden></label>
       <label class="btn sm">Land sales (your land sales workbook, Excel)<input type="file" multiple accept=".xlsx" data-act="files" hidden></label>
@@ -760,6 +773,7 @@ document.addEventListener('click', async e => {
     case 'rmall-yes': app.job.comps = []; app.sel = null; app.confirm = null; await saveNow(); render(); toast('All comps removed – your files list is unchanged'); break;
     case 'path': { if (typeof e !== 'undefined' && e.preventDefault) e.preventDefault(); const x = pathSteps(app.job).find(y => y.k === t.dataset.p); if (!x) break; if (x.href) { window.top.location.href = x.href; break; }
       app.pathAt = x.k; app.job.stage = x.st; save(); render.top = true; render(); setTimeout(() => { const c = document.querySelector(x.sel); if (c) { const d = c.closest('details'); if (d) d.open = true; c.scrollIntoView({ behavior: 'smooth', block: 'start' }); } }, 120); break; }
+    case 'set-lines': { if (app.job.stage !== 'workbook') { app.job.stage = 'workbook'; save(); render.top = true; render(); } setTimeout(() => { const d = [...document.querySelectorAll('#gridCard details')].find(x => /Grid lines/.test(x.querySelector('summary') ? x.querySelector('summary').textContent : '')); if (d) { d.open = true; d.scrollIntoView({ behavior: 'smooth', block: 'start' }); } }, 120); break; }
     case 'goreport': { app.job.stage = 'final'; save(); render.top = true; render(); setTimeout(() => { const c = document.getElementById('reportCard'); if (c) c.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 120); break; }
     case 'close': if (CPOP) { window.close(); break; } app.sel = null; render(); break;
     case 'backup': backupJob(); break;
@@ -874,6 +888,7 @@ document.addEventListener('change', async e => {
   if (t.dataset.gfine) { const G = G0(app.job); G.fine = G.fine || {}; const [who, k] = t.dataset.gfine.split('|'); G.fine[who] = G.fine[who] || {}; G.fine[who][k] = t.value; save(); renderKeepFocus(); return; }
   if (t.dataset.gok !== undefined) { const G = G0(app.job); G.ok = G.ok || {}; const v = t.value.trim(); if (v) G.ok[t.dataset.gok] = v; else delete G.ok[t.dataset.gok]; save(); renderKeepFocus(); return; }
   if (t.dataset.sbs) { try { localStorage.setItem('genie.sbs', t.checked ? '1' : '0'); } catch (e) {} document.body.classList.toggle('sbs', t.checked); renderKeepFocus(); return; }
+  if (t.dataset.lnotes) { try { localStorage.setItem('genie.lnotes', t.checked ? '1' : '0'); } catch (e) {} document.body.classList.toggle('lnotes', t.checked); return; }
   if (t.dataset.classic) { try { localStorage.setItem('genie.classic', t.checked ? '1' : '0'); } catch (e) {} document.body.classList.toggle('classic', t.checked); return; }
   if (t.dataset.gline) { const G = G0(app.job); G.lines = G.lines || {}; G.lines[t.dataset.gline] = t.checked; save(); render(); return; }
   if (t.dataset.gfact) { const [cid, row] = t.dataset.gfact.split('|'); const c = app.job.comps.find(x => x.id === cid); if (!c) return;
