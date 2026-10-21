@@ -348,3 +348,16 @@ table.grid thead th .ghsub{padding-bottom:2px}
 table.tbl.cost input::placeholder{color:#9aa4ae;font-style:italic}
 .rv.rvgo{cursor:pointer}.rv.rvgo:hover{background:#fff6e8}.rvlink{color:#b35a00;font-weight:600;white-space:nowrap}
 .goflash{outline:3px solid #ff8a00!important;outline-offset:3px;border-radius:4px;transition:outline-color .4s}
+
+/* her ask (Oct 21 2026): Report details – bigger type; her own entries black on white, suggestions (from the order, CRS, inspection) grey italic on cream */
+#reportCard{font-size:15.5px}#reportCard h2{font-size:22px}#reportCard h3{font-size:18px;color:#b35a00}
+#reportCard .rptgrid .fld>span{font-size:14px;color:#1a1a1a;font-weight:600;margin-bottom:2px}
+#reportCard .rptgrid input.txt,#reportCard .rptgrid textarea,#reportCard .rptgrid select{font-size:15.5px;padding:6px 8px;color:#000}
+#reportCard .rptgrid input.txt:placeholder-shown,#reportCard .rptgrid textarea:placeholder-shown{background:#fff8e1;border-color:#e6cf8a}
+#reportCard .rptgrid input::placeholder,#reportCard .rptgrid textarea::placeholder{color:#6b6250!important;font-style:italic}
+#reportCard .rptgrid input.txt:not(:placeholder-shown),#reportCard .rptgrid textarea:not(:placeholder-shown){font-weight:600;background:#fff}
+#reportCard .rptgrid label.check{font-size:15px}
+.rptneed{border-radius:10px;padding:10px 14px;margin:6px 0 12px;font-size:15.5px}.rptneed.warn{background:#ffe9d1;border:2px solid #ff8a00}.rptneed.done{background:#e6f4ea;border:1px solid #9ccfaa}
+.rptneed ul{margin:6px 0 4px 20px;padding:0}.rptneed li{margin:2px 0}
+.rptkey{display:block;margin-top:6px;font-size:13px}.rptkey .k{display:inline-block;padding:2px 8px;border-radius:4px;border:1px solid #cfd6de;margin-right:6px}.rptkey .own{background:#fff;font-weight:600}.rptkey .sug{background:#fff8e1;border-color:#e6cf8a;color:#6b6250;font-style:italic}
+.rptneed .rptkey .k{display:inline-block!important;width:auto!important}

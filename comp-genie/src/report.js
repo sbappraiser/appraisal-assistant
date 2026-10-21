@@ -61,7 +61,11 @@ function reportHTML(J) {
   const sel = (k, list, def, note = 'from the order') => `<select data-rpt="${k}"><option value="">${def ? esc((list.find(x => x[0] === def) || [, ''])[1]) + ' (' + note + ')' : '—'}</option>${list.map(([v, l]) => `<option value="${v}"${R[k] === v ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select>`;
   const yn = (k, def) => `<select data-rpt="${k}"><option value="">${def === true ? 'Yes' : def === false ? 'No' : '—'}${def !== undefined ? ' (usual)' : ''}</option><option value="true"${R[k] === 'true' ? ' selected' : ''}>Yes</option><option value="false"${R[k] === 'false' ? ' selected' : ''}>No</option></select>`;
   const M = F.market;
-  return `<h2>Report details <small>for the full report</small></h2>
+  /* her ask (Oct 21 2026): she did not see this was hers to fill in – a clear banner with what is still missing (from the pre-check), bigger type */
+  const need = typeof precheckGrid === 'function' ? precheckGrid(J).filter(x => x.sev === 'Must fix' && typeof preGo === 'function' && (preGo(J, x) || {}).label === 'Report details') : [];
+  return `<h2>Report details <small>– yours to fill in before you export</small></h2>
+  <div class="rptneed ${need.length ? 'warn' : 'done'}">${need.length ? `<b>${need.length} answer${need.length > 1 ? 's' : ''} still needed here:</b><ul>${need.map(x => `<li>${esc(x.msg.replace(/\s*\(Report details[^)]*\)\.?/, '').replace(/ – it is the value on page 1 of the report\./, ' – the value on page 1 of the report.'))}</li>`).join('')}</ul>` : '<b>✓ Everything the report needs here is answered.</b>'}
+    <span class="rptkey"><span class="k own">your entry</span> <span class="k sug">suggested – type over it or leave it</span></span></div>
   <p class="help">${F.hasOrder ? 'Grey entries come from the order in the Appraisal Assistant, your inspection or the CRS report. Type over any of them.' : 'This assignment is not linked to an order, so nothing is filled from the Appraisal Assistant. Open it from the order (Comp genie button on the order page) to fill the assignment, client and market.'}</p>
   <div class="rptgrid">
     <section><h3>Assignment</h3>
@@ -131,7 +135,9 @@ document.addEventListener('change', e => {
   const t = e.target; if (!app.job) return; const R = R0(app.job);
   if (t.dataset.rpt) { const k = t.dataset.rpt, v = t.value.trim(); if (v === '') delete R[k]; else R[k] = k === 'zone' ? v.toUpperCase() : t.tagName === 'TEXTAREA' ? t.value : v;
     if (k === 'zoneDesc' && v) { const code = rv(app.job, 'zone').toUpperCase(); if (code) { zoneTable()[code] = v; DB.put('kv', { id: 'zoneDesc', v: app.zoneDesc }); } }
-    save(); if (['assign', 'zone', 'allRights', 'rightsType', 'sowGov', 'addlCond'].includes(k)) { const c = $('#reportCard'); if (c) c.innerHTML = reportHTML(app.job); } return; }
+    save(); if (['assign', 'zone', 'allRights', 'rightsType', 'sowGov', 'addlCond'].includes(k)) { const c = $('#reportCard'); if (c) c.innerHTML = reportHTML(app.job); }
+    else { const b = document.querySelector('#reportCard .rptneed'); if (b) { const d = document.createElement('div'); d.innerHTML = reportHTML(app.job); const nb = d.querySelector('.rptneed'); if (nb) b.replaceWith(nb); } }   /* the 'still needed' list follows her answers */
+    return; }
   if (t.dataset.hbu) { R.hbu[t.dataset.hbu] = t.checked; save(); }
 });
 document.addEventListener('click', e => {
