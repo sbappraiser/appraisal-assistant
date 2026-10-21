@@ -979,7 +979,8 @@ function hbarSync() {
   for (const t of document.querySelectorAll('.tablewrap')) {
     if (t.scrollWidth <= t.clientWidth + 2 || !t.offsetParent) continue;
     const r = t.getBoundingClientRect();
-    if (r.top < vh - 40 && r.bottom > vh) { w = t; break; }   // visible, but its own bar is off the bottom
+    const th = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--toph')) || 0;
+    if (r.top < vh - 40 && r.bottom > th + 60) { w = t; break; }   // her ask: the pinned bar shows whenever a wide grid is on screen
   }
   if (!w) { b.style.display = 'none'; HBW = null; return; }
   if (HBW !== w) { HBW = w; if (!w.dataset.hb) { w.dataset.hb = 1; w.addEventListener('scroll', () => { if (HBW === w && HB) HB.scrollLeft = w.scrollLeft; }); } }
