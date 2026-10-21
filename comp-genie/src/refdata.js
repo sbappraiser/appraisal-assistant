@@ -55,7 +55,40 @@ async function ingestXlsx(f) {
     return `${f.name}: ${land.length} land sales (your land sale database now has ${app.land.length})`; }
   return f.name + ': this workbook is not your land sales or your construction cost database';
 }
-async function refLoad() { const a = await DB.get('kv', 'landSales'), b = await DB.get('kv', 'costDb'); app.land = (a && a.v) || []; app.costDb = (b && b.v) || null; }
+async function refLoad() { const a = await DB.get('kv', 'landSales'), b = await DB.get('kv', 'costDb'), e = await DB.get('kv', 'landEdits'); app.land = (a && a.v) || []; app.costDb = (b && b.v) || null; app.landEd = (e && e.v) || {}; }
+/* her own changes to a land sale and the sales she adds (Oct 21 2026), kept apart from the workbook (kv 'landEdits') so a new copy of the workbook does not undo them */
+function landAll() { const E = app.landEd || {}; return [...(app.land || []).map(x => E[x.id] ? { ...x, ...E[x.id], id: x.id, edited: true } : x), ...Object.values(E).filter(x => x && x._add)].filter(x => !x._del); }
+const LAND_FIELDS = [['addr', 'Address'], ['cityZip', 'City, ZIP'], ['apn', 'APN'], ['date', 'Sale date', 'mm/dd/yyyy – 3.6 wants the full date'], ['price', 'Sale price $'], ['site', 'Site size', 'sq ft, or acres with “ac” (0.55 ac)'], ['usable', 'Usable area', 'acres (0.30)'],
+  ['locImp', 'Location impact'], ['loc', 'Location', 'e.g. 1 lot off Hollister Ave (arterial); adjacent to commercial; near bus stop'], ['access', 'Access', 'e.g. Shared driveway; Cul-de-sac'], ['viewImp', 'View impact'], ['view', 'View', 'e.g. Residential; Mountain (limited, average)'],
+  ['topo', 'Topography', 'e.g. Level'], ['zoning', 'Zoning'], ['util', 'Utilities / water', 'e.g. Water meter available'], ['source', 'Data source', 'e.g. MLS 24-1806 · Doc #37426'], ['note', 'Your notes']];
+function landEdit(id) { app.landEd = app.landEd || {};
+  const all = landAll(); const x = id ? all.find(o => o.id === id) : { _add: true, area: (app.ref || {}).area || '' }; if (!x) return; const isNew = !id;
+  const dShow = v => { const m = String(v || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? `${m[2]}/${m[3]}/${m[1]}` : String(v || ''); };
+  const val = k => k === 'date' ? dShow(x.date || '') : k === 'price' ? (x.price ? Math.round(x.price).toLocaleString() : '') : k === 'site' ? (x.site ? Math.round(x.site).toLocaleString() : '') : k === 'usable' ? (x.usable ? (x.usable / 43560).toFixed(2) : '') : (x[k] ?? '');
+  const imp = k => `<select data-le="${k}">${['', 'Neutral', 'Adverse', 'Beneficial'].map(v => `<option ${x[k] === v ? 'selected' : ''} value="${v}">${v || '–'}</option>`).join('')}</select>`;
+  const bg = document.createElement('div'); bg.className = 'sheetbg';
+  bg.innerHTML = `<div class="sheet"><h2>${isNew ? 'Add a land sale' : 'Edit land sale – ' + esc(x.addr || x.apn || '')}</h2>
+    <p class="help">${isNew ? 'For a sale that is not in your workbook.' : 'Your changes are kept for this sale in every assignment; your workbook stays as it is.'} The ym “Sold” column comes from the sale date. ${x.ym && !x.date ? 'Now: sold ' + esc(x.ym) + '.' : ''}</p>
+    <div class="legrid">${LAND_FIELDS.map(([k, l, h]) => `<label class="fld"><span>${esc(l)}</span>${/Imp$/.test(k) ? imp(k) : k === 'note' || k === 'loc' ? `<textarea class="txt" data-le="${k}" rows="2" placeholder="${esc(h || '')}">${esc(val(k))}</textarea>` : `<input class="txt" data-le="${k}" value="${esc(val(k))}" placeholder="${esc(h || '')}">`}</label>`).join('')}</div>
+    <div class="row">${isNew ? '' : `<button class="btn ghost" data-ledel="1" title="Hide this sale from your land sales (your workbook is not changed)">Remove from my land sales</button>${(app.landEd || {})[id] ? '<button class="btn ghost" data-lereset="1">Undo my changes</button>' : ''}`}<span class="grow"></span><button class="btn primary" data-lesave="1">Save</button><button class="btn" data-leclose="1">Cancel</button></div></div>`;
+  document.body.appendChild(bg);
+  const done = async (sid) => { bg.remove(); await DB.put('kv', { id: 'landEdits', v: app.landEd }); await landRedraw();
+    if (sid && !document.querySelector(`[data-landuse="${CSS.escape(sid)}"]`)) toast('Saved – it is outside the filters above (site size, date, price or area), so it is not in the list. Widen them or click Clear filters to see it.', 9000); };
+  bg.addEventListener('click', async e => { const t = e.target; if (t.dataset.leclose || t === bg) { bg.remove(); return; }
+    if (t.dataset.ledel) { app.landEd[id] = { ...(app.landEd[id] || {}), _del: true }; toast('Removed from your land sales'); await done(); return; }
+    if (t.dataset.lereset) { delete app.landEd[id]; await done(); return; }
+    if (!t.dataset.lesave) return; const o = {}; bg.querySelectorAll('[data-le]').forEach(el => { o[el.dataset.le] = el.value.trim(); });
+    const n = v => num(String(v || '').replace(/[^0-9.]/g, ''));
+    const d = o.date.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/) ; if (d) { const y = d[3].length === 2 ? '20' + d[3] : d[3]; o.date = `${y}-${d[1].padStart(2, '0')}-${d[2].padStart(2, '0')}`; } else if (o.date && !/^\d{4}-\d{2}(-\d{2})?$/.test(o.date)) { toast('Sale date: type it as mm/dd/yyyy'); return; }
+    if (o.date) o.ym = o.date.slice(0, 7); o.price = n(o.price); o.site = /ac/i.test(o.site) ? Math.round((n(o.site) || 0) * 43560) || null : n(o.site); o.usable = n(o.usable) ? Math.round(n(o.usable) * 43560) : null;
+    if (!o.price || !(o.addr || o.apn)) { toast('A land sale needs a price and an address or APN'); return; }
+    if (isNew) { const nid = 'own|' + (o.apn || o.addr) + '|' + (o.ym || ''); app.landEd[nid] = { ...o, _add: true, id: nid, area: x.area || refAreaGuess(app.job) || '', source: o.source || 'Your own entry' }; }
+    else { const base = (app.land || []).find(b => b.id === id); if (base && base._add) app.landEd[id] = { ...base, ...o }; else if ((app.landEd[id] || {})._add) app.landEd[id] = { ...app.landEd[id], ...o };
+      else { const P = { ...(app.landEd[id] || {}) }; Object.entries(o).forEach(([k, v]) => { const was = base ? base[k] : undefined; if (String(v ?? '') !== String(was ?? '')) P[k] = v; }); app.landEd[id] = P; } }
+    toast('Saved to your land sales'); await done(isNew ? Object.keys(app.landEd).find(k => app.landEd[k]._add && k.startsWith('own|' + (o.apn || o.addr))) : id); });
+}
+document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('[data-landedit],[data-landadd]'); if (!b || !app.job) return; landEdit(b.dataset.landedit || null); });
+const landLocTxt = x => [x.locImp && x.loc ? x.locImp + ': ' + x.loc : x.loc || x.locImp, x.access, x.viewImp && x.view ? 'View ' + x.viewImp.toLowerCase() + ': ' + x.view : x.view ? 'View: ' + x.view : '', x.topo].filter(Boolean).join(' · ');
 
 /* ---- what she sees ---- */
 const pick = (o, ...ks) => { for (const k of ks) if (o[k] !== undefined && o[k] !== null && o[k] !== '') return o[k]; return null; };
@@ -69,7 +102,7 @@ function landJob(J) { const L = J.land = J.land || {}; L.use = L.use || []; if (
 function landInArea(x, area) { if (x.area === area) return true; const t = [x.nbhd, x.addr, x.source, x.note].join(' ');
   if (/^goleta/i.test(area)) return /\b(?:goleta|noleta|93117|93111)\b/i.test(t); return new RegExp('\\b' + area.replace(/[-–].*$/, '').trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i').test(String(x.nbhd || '')); }
 function landUsedHTML(J) {
-  const LD = landJob(J); const U = (app.land || []).filter(x => LD.use.includes(x.id)); if (!U.length) return '';
+  const LD = landJob(J); const U = landAll().filter(x => LD.use.includes(x.id)); if (!U.length) return '';
   const pr = U.map(x => x.price), psf = U.map(x => x.site ? x.price / x.site : null).filter(Boolean), pua = U.map(x => x.usable ? x.price / (x.usable / 43560) : null).filter(Boolean);
   const rng = a => a.length ? money(Math.min(...a)) + ' to ' + money(Math.max(...a)) : '';
   const draft = landDraft(J, U); LD.lastDraft = draft; const cm = LD.comment != null ? LD.comment : draft;
@@ -82,7 +115,7 @@ function landUsedHTML(J) {
 }
 function landDraft(J, U) {
   const LD = landJob(J); const ym = U.map(x => x.ym).filter(Boolean).sort(); const psf = U.map(x => x.site ? x.price / x.site : null).filter(Boolean), pua = U.map(x => x.usable ? x.price / (x.usable / 43560) : null).filter(Boolean);
-  const one = x => `${x.addr || x.apn} (${x.ym ? x.ym.replace(/^(\d{4})-(\d{2})$/, '$2/$1') : 'date n/a'}, ${money(x.price)}${x.site ? ', ' + int(x.site) + ' sq ft site' : ''}${x.usable ? ', ' + (x.usable / 43560).toFixed(2) + ' usable acres' : ''})`;
+  const one = x => `${x.addr || x.apn} (${x.date && x.date.length === 10 ? x.date.replace(/^(\d{4})-(\d{2})-(\d{2})$/, '$2/$3/$1') : x.ym ? x.ym.replace(/^(\d{4})-(\d{2})$/, '$2/$1') : 'date n/a'}, ${money(x.price)}${x.site ? ', ' + int(x.site) + ' sq ft site' : ''}${x.usable ? ', ' + (x.usable / 43560).toFixed(2) + ' usable acres' : ''}${landLocTxt(x) ? '; ' + landLocTxt(x).replace(/ · /g, ', ') : ''})`;
   let t = `The site value was estimated by sales comparison. ${U.length} land sale${U.length > 1 ? 's' : ''}${ym.length ? ' from ' + ym[0].replace(/^(\d{4})-(\d{2})$/, '$2/$1') + (ym.length > 1 ? ' to ' + ym[ym.length - 1].replace(/^(\d{4})-(\d{2})$/, '$2/$1') : '') : ''} were considered: ${U.map(one).join('; ')}.`;
   if (psf.length) t += ` They indicate ${money(Math.min(...psf))} to ${money(Math.max(...psf))} per square foot of site area (median ${money(median(psf))})${pua.length ? ` and ${money(Math.min(...pua))} to ${money(Math.max(...pua))} per usable acre (median ${money(median(pua))})` : ''}.`;
   t += LD.value ? ` The subject site value is estimated at ${money(LD.value)}.` : ' The subject site value is estimated at $___.';
@@ -104,13 +137,13 @@ function refHTML(J) {
     const condo = typeof gridMode === 'function' && gridMode(J) === 'condo'; const RS = app.ref || {}; const open = RS.openFor === J.id ? true : RS.closedFor === J.id ? false : !condo;
     if (!open) return `<div class="row"><h2 style="margin:0">Land sales and construction costs <small>your own databases, shared with the cost approach</small></h2><span class="grow"></span><button class="btn sm" data-refopen="1">Show</button></div><p class="help">${condo ? 'Closed for this condo – land sales and site value are not used for a condominium unit.' : 'Closed.'} These are your land sale and construction cost databases (from your reports, your land sales workbook and CORT “vacant” sales), not comps for this assignment.</p>`;
   }
-  const L = app.land || [], C = app.costDb; const R = app.ref = app.ref || { tab: 'land', area: null, q: '', newOnly: true };
+  const L = landAll(), C = app.costDb; const R = app.ref = app.ref || { tab: 'land', area: null, q: '', newOnly: true };
   if (R.area === null || R.job !== J.id) { R.area = refAreaGuess(J); R.job = J.id; }
   if (!L.length && !C) return `<h2>Land sales and construction costs</h2><p class="help">Drop your <b>Land Sales by Market Area.xlsx</b> and your <b>Construction_Cost_Database.xlsx</b> on this page once. They are kept in this browser and shared with the cost approach.</p>`;
   const areas = [...new Set(L.map(x => x.area))].sort();
   let body = '';
   if (R.tab === 'land') { const LD = landJob(J); const F = LD.f; const q = R.q.toLowerCase(); const ys = F.years ? new Date().getFullYear() - F.years : 0;
-    const rows = L.filter(x => (!R.area || landInArea(x, R.area)) && (!q || [x.nbhd, x.addr, x.apn, x.zoning, x.note, x.area].join(' ').toLowerCase().includes(q))
+    const rows = L.filter(x => (!R.area || landInArea(x, R.area)) && (!q || [x.nbhd, x.addr, x.apn, x.zoning, x.note, x.area, x.loc, x.view, x.source].join(' ').toLowerCase().includes(q))
       && (!F.minSite || !x.site || x.site >= F.minSite) && (!F.maxSite || !x.site || x.site <= F.maxSite) && (!ys || (+String(x.ym).slice(0, 4) || 0) >= ys)
       && (!F.minP || x.price >= F.minP) && (!F.maxP || x.price <= F.maxP) || LD.use.includes(x.id)).sort((a, b) => (LD.use.includes(b.id) - LD.use.includes(a.id)) || String(b.ym).localeCompare(String(a.ym)));
     const pua = rows.map(x => x.usable ? x.price / (x.usable / 43560) : null), psf = rows.map(x => x.site ? x.price / x.site : null); const sub = subjFacts(J) || {};
@@ -119,10 +152,10 @@ function refHTML(J) {
       <div class="row landf"><label>Site from <input class="txt num" data-landf="minSite" value="${nf(F.minSite)}" inputmode="numeric"> to <input class="txt num" data-landf="maxSite" value="${nf(F.maxSite)}" inputmode="numeric"> sq ft</label>
         <label>Sold in the last <select data-landf="years">${[[1, '1 year'], [2, '2 years'], [3, '3 years'], [5, '5 years'], [10, '10 years'], [0, 'any time']].map(([v, l]) => `<option value="${v}" ${+F.years === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
         <label>Price from $<input class="txt num" data-landf="minP" value="${nf(F.minP)}" inputmode="numeric"> to $<input class="txt num" data-landf="maxP" value="${nf(F.maxP)}" inputmode="numeric"></label>
-        <button class="btn sm ghost" data-landreset="1">Like the subject</button><button class="btn sm ghost" data-landclear="1">Clear filters</button></div>
+        <button class="btn sm ghost" data-landreset="1">Like the subject</button><button class="btn sm ghost" data-landclear="1">Clear filters</button><button class="btn sm" data-landadd="1">+ Add a land sale</button></div>
       <p class="help">${rows.length} sale${rows.length === 1 ? '' : 's'}${median(pua) ? ' · median ' + money(median(pua)) + ' per usable acre' : ''}${median(psf) ? ' · median ' + money(median(psf)) + ' per site sq ft' : ''} · subject site ${sub.site ? int(sub.site) + ' sq ft' : 'not known yet'}. “Like the subject” = site ½ to 2 × the subject's, sold in the last 5 years. Tick <b>Use</b> for the sales you rely on for the site value.</p>
-      <div class="tablewrap" style="max-height:420px;overflow:auto"><table class="tbl"><thead><tr><th>Use</th><th>Market area</th><th>Address</th><th>APN</th><th>Sold</th><th class="r">Price</th><th class="r">Site</th><th class="r">Usable</th><th class="r">$/site sf</th><th class="r">$/usable ac</th><th>Zoning</th><th>Source</th><th>Check</th></tr></thead><tbody>
-      ${rows.map(x => `<tr${LD.use.includes(x.id) ? ' class="landon"' : ''}><td><input type="checkbox" data-landuse="${esc(x.id)}" ${LD.use.includes(x.id) ? 'checked' : ''} aria-label="Use this sale"></td><td>${esc(x.nbhd || x.area || '')}</td><td>${esc(x.addr || '')}</td><td>${esc(x.apn || '')}</td><td>${esc(x.ym || '')}</td><td class="r">${money(x.price)}</td><td class="r">${x.site ? int(x.site) + ' sf' : ''}</td><td class="r">${x.usable ? (x.usable / 43560).toFixed(2) + ' ac' : ''}</td><td class="r">${x.site ? money(x.price / x.site) : ''}</td><td class="r">${x.usable ? money(x.price / (x.usable / 43560)) : ''}</td><td>${esc(x.zoning || '')}</td><td><small>${esc(String(x.source || '').slice(0, 40))}</small></td><td><small>${esc(x.check || '')}</small></td></tr>`).join('')}</tbody></table></div>
+      <div class="tablewrap" style="max-height:420px;overflow:auto"><table class="tbl"><thead><tr><th>Use</th><th>Market area</th><th>Address</th><th>APN</th><th>Sold</th><th class="r">Price</th><th class="r">Site</th><th class="r">Usable</th><th class="r">$/site sf</th><th class="r">$/usable ac</th><th>Zoning</th><th>Location · access · view</th><th>Source</th><th>Check</th></tr></thead><tbody>
+      ${rows.map(x => `<tr${LD.use.includes(x.id) ? ' class="landon"' : ''}><td><input type="checkbox" data-landuse="${esc(x.id)}" ${LD.use.includes(x.id) ? 'checked' : ''} aria-label="Use this sale"> <button type="button" class="btn xs ghost" data-landedit="${esc(x.id)}" title="Change this sale's facts (location, view, usable area, sale date …)">✎</button></td><td>${esc(x.nbhd || x.area || '')}${x.edited || x._add ? ' <small class="muted" title="You changed or added this sale">✎ yours</small>' : ''}</td><td>${esc(x.addr || '')}</td><td>${esc(x.apn || '')}</td><td>${esc(x.date && x.date.length === 10 ? x.date.replace(/^(\d{4})-(\d{2})-(\d{2})$/, '$2/$3/$1') : x.ym || '')}</td><td class="r">${money(x.price)}</td><td class="r">${x.site ? int(x.site) + ' sf' : ''}</td><td class="r">${x.usable ? (x.usable / 43560).toFixed(2) + ' ac' : ''}</td><td class="r">${x.site ? money(x.price / x.site) : ''}</td><td class="r">${x.usable ? money(x.price / (x.usable / 43560)) : ''}</td><td>${esc(x.zoning || '')}</td><td><small>${esc(landLocTxt(x))}</small></td><td><small>${esc(String(x.source || '').slice(0, 40))}</small></td><td><small>${esc(x.check || '')}</small></td></tr>`).join('')}</tbody></table></div>
       ${landUsedHTML(J)}`; }
   else if (C) { const ps = C.projects.filter(p => !R.newOnly || !isRemodel(p));
     const v = (p, k) => num(p.s[k]); const rows = ps.map(p => ({ p, bd: v(p, 'Building direct $/SF GLA – indexed'), tot: v(p, 'Total budget – indexed') && num(p.f['GLA (SF) – appraisal']) ? v(p, 'Total budget – indexed') / num(p.f['GLA (SF) – appraisal']) : null, ex: v(p, 'Existing-site basis $/SF GLA – indexed'), gar: v(p, 'Garage – $/SF garage'), pool: v(p, 'Pool & spa'), land: v(p, 'Landscaping & irrigation') })).sort((a, b) => (b.bd || 0) - (a.bd || 0));
