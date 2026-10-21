@@ -536,15 +536,17 @@ function detailHTML(c) {
   const J = app.job; const S = srcVals(c); const flAll = compFlags(c, J); const fl = flAll.filter(x => !flagChecked(c, x)); const flDone = flAll.filter(x => flagChecked(c, x)); const ps = photosOf(c); const fr = frontOf(c); const prior = priorSales(c); const px = proximity(c, J);
   const cols = SRC_ORDER.filter(s => ['arch', 'mls', 'crs'].includes(s) || (s === 'cort' ? c.src.cort.length : c.src[s]));   // her three always side by side, even when empty
   let lastG = '';
+  const GRID_NEED = new Set(adjRows(J).filter(r => rowShown(r, J) && !GRID_INFO[r[0]]).map(r => WB_EDIT[r[0]] || ({ q: 'quality', c: 'condition', beds: 'beds', baths: 'full', heat: 'heatCool', cool: 'heatCool', xferTerms: 'saleType' })[r[0]]).filter(Boolean));
   const rows = FIELDS.map(f => {
     const u = val(c, f.k); const any = cols.some(s => S[s] && !blank(S[s][f.k])) || !blank(c.edit[f.k]); if (f.k === 'bathsTotal') return '';   // not used: full and half baths only (her rule, Oct 19 2026)
-    if (!any && !app.showAll && !DETAIL_ALWAYS.includes(f.k)) return '';   // her own Q and C ratings always have a row
+    const needG = c.use && GRID_NEED.has(f.k);   // a line the grid needs for this comp (required on the 3.6 grid, or one she ticked under ⚙ Grid lines)
+    if (!any && !app.showAll && !DETAIL_ALWAYS.includes(f.k) && !needG) return '';   // her own Q and C ratings always have a row
     const head = f.g !== lastG ? `<tr class="grp"><th colspan="${3 + cols.length}">${esc(f.g)}</th></tr>` : ''; lastG = f.g;
     const dis = disagree(c, f.k); const fk = c.use ? fl.filter(x => FLAG_KEY(x.t) === f.k) : [];
     const PICKED = { heatCool: ['grid_heat', 'grid_cool'], saleType: ['grid_xferTerms'], financing: ['grid_terms', 'pk_terms'], garage: ['vs'], carport: ['vs'], quality: ['pk_q'], condition: ['pk_c'] };   // a ▾ pick on the line counts as her value (Oct 20 2026)
     const picked = (PICKED[f.k] || []).some(k => !blank(c.edit[k]) && !(Array.isArray(c.edit[k]) && !c.edit[k].length));
     const open = dis && !c.pick[f.k] && blank(c.edit[f.k]) && !picked;
-    const none = !any && blank(u.v) && DETAIL_ALWAYS.includes(f.k) && !picked;   // her ask: a line no source has (quality, condition, beds, baths, garage …) – highlight it to fill in   // her ask Oct 20 2026: sources disagree and she has not chosen yet → yellow until she clicks one (or types her own)
+    const none = !any && blank(u.v) && (DETAIL_ALWAYS.includes(f.k) || needG) && !picked;   // her ask: a line no source has (quality, condition, beds, baths, garage …) – highlight it to fill in   // her ask Oct 20 2026: sources disagree and she has not chosen yet → yellow until she clicks one (or types her own)
     return head + `<tr${fk.length ? ` class="flagrow" title="${esc(fk.map(x => x.t).join(' · '))}"` : open ? ' class="disrow" title="The sources disagree – click the value to use"' : none ? ' class="disrow emptyrow" title="No source has this – type your value"' : ''}><th>${fk.length ? '<span class="flagmk">⚑</span> ' : ''}${esc(f.l)}${dis ? ' <span class="diff" title="Sources disagree">≠</span>' : ''}</th>
       <td class="using">${esc(fmt(f, u.v))}${u.src ? ` <span class="tag ${u.src}">${esc(SRC[u.src].short)}</span>` : ''}${(c.pick[f.k] || !blank(c.edit[f.k])) ? ` <button class="lnk" data-reset="${f.k}" title="Back to the automatic choice">↺</button>` : ''}</td>
       <td class="mine">${(() => { const own = !blank(c.edit[f.k]); const echo = own ? '' : (blank(u.v) ? '' : String(fmt(f, u.v)));   // her ask Oct 20 2026: the box shows the value in use (the green one); it becomes hers only when she changes it
