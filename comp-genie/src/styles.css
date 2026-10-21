@@ -338,3 +338,4 @@ table.grid th .grates .grate:only-child label{flex-direction:row;align-items:cen
 table.grid th .grates .grate:only-child input{width:90px;flex:0 0 90px}
 
 ul.oblist{list-style:none;margin:4px 0 2px;padding:0;font-size:13px;line-height:1.35;color:#111}ul.oblist li{padding:1px 0;border-bottom:1px dotted #c9d1d9}ul.oblist li:last-child{border-bottom:0}
+span.obslot{font-size:14.5px;font-weight:600;color:#000;display:inline-block;padding:3px 2px}

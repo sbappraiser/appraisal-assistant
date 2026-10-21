@@ -199,7 +199,7 @@ const STRUCTURES = ['Low-rise', 'Mid-rise', 'High-rise', 'Townhouse / rowhouse',
 function gridMode(J) { const G = G0(J); if (G.mode) return G.mode; const o = typeof orderOf === 'function' ? orderOf(J) : null; const pt = String((o && o.propType) || '');
   if (/condo/i.test(pt)) return 'condo'; if (/pud/i.test(pt)) return 'pud'; if (G.tier === 'condo' || (J.subject && J.subject.unit)) return 'condo'; return 'house'; }
 const landOwned = (J, F) => { const v = String(F.landCommon || '').trim(); if (v) return /^n/i.test(v); return gridMode(J) !== 'condo'; };   /* condo: site owned in common unless she says the unit owns land */
-function rowShown(row, J) { return rowShownMode(row, J) && lineOn(row[0], J); }
+function rowShown(row, J) { if (isObSlot(row[0])) return true; return rowShownMode(row, J) && lineOn(row[0], J); }
 function rowShownMode(row, J) { const id = row[0], m = gridMode(J);
   if (['backToBack', 'rowLoc'].includes(id)) return m !== 'house';
   if (['project', 'hoa', 'hoaAmen'].includes(id)) return m !== 'house';
@@ -295,7 +295,11 @@ const REQ_STAR = '<span class="req" title="Required – the UAD 3.6 grid always 
 const GRID_KEEP = new Set(['price', 'src', 'prox', 'listPrice', 'status', 'terms', 'conc', 'contract', 'sale', 'dom', 'attach', 'loc', 'view', 'year', 'heat', 'beds', 'baths', 'gla', 'bsmt', 'bsmtUnf', 'q', 'c', 'garage']);   // F-1 (Summary of Rows in Comparable Grids v1.3): rows that always display on the 3.6 sales grid
 let GRID_DEFAULT = null;   // her saved default (kv 'gridLines'): { on: {id: true/false}, custom: [{id, name, section}] }
 function customRows(J) { const G = G0(J); return (G.custom || []).map(x => [x.id, x.name, x.section || 'Your own lines', 'OTHER', null, x.name]); }
-function adjRows(J) { return J ? ADJ_ROWS.concat(customRows(J)) : ADJ_ROWS; }
+function adjRows(J) { if (!J) return ADJ_ROWS; const base = ADJ_ROWS.concat(customRows(J)); const SL = typeof obSlotRows === 'function' && gridMode(J) !== 'condo' ? obSlotRows(J) : [];
+  if (!SL.length) return base; const i = base.findIndex(r => r[0] === 'adu'); if (i < 0) return base.concat(SL);
+  /* her ADU / outbuilding entry line becomes the pick line; the adjustments go on the lines below it (an amount she typed there before still counts) */
+  const old = usedComps(J).some(c => !blank(((G0(J).cells || {})[c.id] || {}).adu)); const head = ['adu', 'ADUs and outbuildings', base[i][2], old ? base[i][3] : null, null, null, ['aduSf', 'aduBath', 'aduHalf']];   /* row[6]: rate boxes shown here once for all the lines below */
+  return [...base.slice(0, i), head, ...SL, ...base.slice(i + 1)]; }
 function lineOn(id, J) { const G = G0(J); if (GRID_KEEP.has(id)) return true; if (G.lines && id in G.lines) return !!G.lines[id];
   if (id === 'stl') return usedComps(J).some(c => compFacts(c, J).listing);   // F-1 22.01.35: on the grid when a comp is a listing
   if (GRID_DEFAULT && GRID_DEFAULT.on && id in GRID_DEFAULT.on) return !!GRID_DEFAULT.on[id];
@@ -322,7 +326,7 @@ const usedComps = J => J.comps.filter(c => c.use).sort((a, b) => a.use - b.use);
 const acOf = sf => sf ? Math.round(sf / 43560 * 100) / 100 : null;
 
 /* subject facts: what she typed in the grid, else her inspection (workfile), else the order / CRS */
-function subjFacts(J) { return rcMemo('subjFacts', 's', () => impNorm(subjFacts0(J), G0(J).subj)); }
+function subjFacts(J) { return rcMemo('subjFacts', 's', () => obAttach(impNorm(subjFacts0(J), G0(J).subj))); }
 function subjFacts0(J) {
   const I = J.subject.insp || {}, T = G0(J).subj, crs = J.subject.crs || {};
   const f = { price: '', ppsf: '', src: 'Inspection ' + (I.inspDate ? showDate(I.inspDate) : ''), prox: '', terms: '', conc: '', contract: '', sale: '', dom: '',
@@ -334,7 +338,7 @@ function subjFacts0(J) {
   f._own = landOwned(J, f); if (blank(f.landCommon)) f.landCommon = f._own ? 'No' : 'Yes';
   return f;
 }
-function compFacts(c, J) { return rcMemo('compFacts', c.id, () => impNorm(zapFacts(c, compFacts0(c, J)), c.edit)); }
+function compFacts(c, J) { return rcMemo('compFacts', c.id, () => obAttach(impNorm(zapFacts(c, compFacts0(c, J)), c.edit))); }
 /* view and location show each item with its impact ("Adverse: Busy roadway; Neutral: Residential") – her rule Oct 20 2026 */
 function impNorm(F, M) { M = M || {}; try {
   /* her rule (Oct 20 2026): landscaping goes on her own "Landscaping" Add Other line with its rating – not in Site characteristics too */
@@ -395,6 +399,7 @@ function showFact(k, v) {
 function rateAmount(row, S, C, J) {
   /* a listing (F-1 22.01.35 / .36): her anticipated sale-to-list ratio turns the list price into the expected sale price – the $ adjustment is the difference */
   if (row[0] === 'stl') { if (!C.listing || C.price) return null; const r = num(String(C.stl || '').replace(/[^0-9.]/g, '')), lp = num(C.listPrice); if (!r || !lp || !(C.stlOwn)) return null; return Math.round(lp * (r / 100 - 1) / 500) * 500; }
+  if (isObSlot(row[0])) return obSlotAmount(row, S, C, J);
   const R = G0(J).rates; const key = row[4];
   if (Array.isArray(key)) { let tot = 0, any = false; key.forEach(k => { const r = num(R[k]); if (!r) return; let x = null;
       if (['pool', 'spa', 'pond', 'lake', 'tennis', 'sport'].includes(k)) { const a = hasFeat(S, k), b = hasFeat(C, k); if (a !== null && b !== null) x = (a - b) * r; }
@@ -448,18 +453,19 @@ function gridHTML(J) {
   const HID = G0(J).hide || {}; const rows = adjRows(J).filter(WB_ROWS).filter(r => rowShown(r, J) && !HID[r[0]]).map(row => {   // her hidden empty lines: off the screen only – saved and exported as before
     const [id, label, section, type] = row; const head = section !== sec ? `<tr class="grp"><th colspan="${2 + used.length * (SBS ? 2 : 1)}">${esc(section)}</th></tr>` : ''; sec = section;
     const sv = id === 'baths' ? [S.full, S.half].every(blank) ? '' : `${S.full ?? '–'} / ${S.half ?? 0}` : showFact(id, S[id]);
-    const subjCell = ['price', 'ppsf', 'src', 'prox', 'dom', 'terms', 'conc', 'contract', 'sale', 'status', 'listPrice', 'origList', 'listDate', 'lastRed', 'redDays', 'cdom', 'overList', 'xferTerms', 'stl'].includes(id) ? `<td class="subj">${blank(sv) || sv === '' ? '<span class="na" title="Nothing to enter for the subject here – on the 3.6 grid this line is for the comparables (the subject’s own sale or listing, if any, comes from the Sales Contract and Subject Listing sections). Leave it blank; no N/A or dash.">—</span>' : esc(sv)}</td>`
-      : `<td class="subj"><input class="txt sm${(PICK[id] || id === 'view') && !blank(G.subj[id]) && !pkValid(id, G.subj[id], G.subj['pk_' + id]) ? ' bad' : ''}" data-gsubj="${id}" value="${esc(blank(G.subj[id]) ? '' : id === 'usable' && typeof G.subj[id] === 'number' ? G.subj[id] + ' ac' : id === 'land' ? landCanon(G.subj[id]) : G.subj[id])}" placeholder="${esc(sv || (id === 'usable' ? 'Measure it' : id === 'adu' ? 'e.g. Guest house 450 sf 1 bath' : ''))}">${id === 'garage' ? `${G.subj.vsText ? `<small class="vsx">${esc(G.subj.vsText)}</small>` : ''} <button type="button" class="btn xs" data-vspick="subj">▾ pick</button>` : id === 'q' || id === 'c' ? qcSel('subj', id, S[id]) + fineSel('subj', id, J) : id === 'loc' ? locBtn('subj') : id === 'view' ? vtSel('subj', J, S.view) + pkBtn('subj', 'view') : id === 'land' ? landSel('subj', S.land) : id === 'adu' ? obList(G.subj.adu ?? S.adu) + obBtn('subj') : PICK[id] ? pkBtn('subj', id) : ''}</td>`;
+    const subjCell = isObSlot(id) ? `<td class="subj">${S[id] ? `<span class="obslot">${esc(S[id])}</span>` : '<span class="na">none</span>'}</td>` : ['price', 'ppsf', 'src', 'prox', 'dom', 'terms', 'conc', 'contract', 'sale', 'status', 'listPrice', 'origList', 'listDate', 'lastRed', 'redDays', 'cdom', 'overList', 'xferTerms', 'stl'].includes(id) ? `<td class="subj">${blank(sv) || sv === '' ? '<span class="na" title="Nothing to enter for the subject here – on the 3.6 grid this line is for the comparables (the subject’s own sale or listing, if any, comes from the Sales Contract and Subject Listing sections). Leave it blank; no N/A or dash.">—</span>' : esc(sv)}</td>`
+      : `<td class="subj"><input class="txt sm${(PICK[id] || id === 'view') && !blank(G.subj[id]) && !pkValid(id, G.subj[id], G.subj['pk_' + id]) ? ' bad' : ''}" data-gsubj="${id}" value="${esc(blank(G.subj[id]) ? '' : id === 'usable' && typeof G.subj[id] === 'number' ? G.subj[id] + ' ac' : id === 'land' ? landCanon(G.subj[id]) : G.subj[id])}" placeholder="${esc(sv || (id === 'usable' ? 'Measure it' : id === 'adu' ? 'e.g. Guest house 450 sf 1 bath' : ''))}">${id === 'garage' ? `${G.subj.vsText ? `<small class="vsx">${esc(G.subj.vsText)}</small>` : ''} <button type="button" class="btn xs" data-vspick="subj">▾ pick</button>` : id === 'q' || id === 'c' ? qcSel('subj', id, S[id]) + fineSel('subj', id, J) : id === 'loc' ? locBtn('subj') : id === 'view' ? vtSel('subj', J, S.view) + pkBtn('subj', 'view') : id === 'land' ? landSel('subj', S.land) : id === 'adu' ? obBtn('subj') : PICK[id] ? pkBtn('subj', id) : ''}</td>`;
     const cells = used.map(c => { const C = compFacts(c, J);
       let shown = id === 'beds' && C.bedsBg ? `${C.beds} (${C.bedsBg} below grade)` : id === 'baths' ? ([C.full, C.half].every(blank) ? '' : `${C.full ?? '–'} / ${C.half ?? 0}`) : id === 'ppsf' ? (C.price && C.gla ? money(C.price / C.gla) : '') : showFact(id, C[id]);
-      if (!WB_NOEDIT.includes(id)) { /* she can change any comp fact right on the grid (Oct 19 2026), not only in Workbook view */ const raw = id === 'usable' ? (blank(C.usable) ? '' : C.usable + ' ac') : wbFactText(id, C);
+      if (isObSlot(id)) shown = C[id] ? `<span class="obslot">${esc(C[id])}</span>` : `<span class="na">${C._obKnown ? 'none' : '–'}</span>`;
+      else if (!WB_NOEDIT.includes(id)) { /* she can change any comp fact right on the grid (Oct 19 2026), not only in Workbook view */ const raw = id === 'usable' ? (blank(C.usable) ? '' : C.usable + ' ac') : wbFactText(id, C);
         shown = `<input class="txt sm fact${(PICK[id] || id === 'view') && !pkValid(id, raw, (c.edit || {})['pk_' + id]) ? ' bad' : ''}" data-gfact="${c.id}|${id}" value="${esc(raw)}" placeholder="${id === 'usable' ? 'Measure it (ac)' : id === 'contract' ? 'Unknown' : id === 'stl' && C.listing ? 'e.g. 98%' : ''}" title="Type the comp's entry · = copies the subject · =2 copies comp 2">`; }
       else if (id === 'usable' && blank(C.usable)) shown = '<span class="measure">Measure it</span>'; else shown = id === 'src' ? esc(shown).replace(/\n/g, '<br>') : esc(shown);
       if (id === 'overList' && C.over > 0) { const dm = num(C.cdom) || num(C.dom); shown += dm === null ? '' : dm <= OVER_SHORT ? `<small class="muted rdays">${dm} days on market – likely multiple offers</small>` : dm >= OVER_LONG ? `<small class="overcall">${dm} days on market – call the agent</small>` : `<small class="muted rdays">${dm} days on market</small>`; }
       if (id === 'usable' && C.landSplit) { const t = splitText(C.landSplit); if (t) shown += `<small class="muted rdays" title="Your 2.6 land split. The usable figure counts the residential (r) part only – if the orchard or other part is usable for this comparison, type the total.">split: ${esc(t)}</small>`; }
       if (id === 'lastRed') { const d = redDaysOf(C) ?? C.redDays; shown += d !== null && d !== undefined ? `<small class="muted rdays">${d} day${d === 1 ? '' : 's'} to pending${redDaysOf(C) === null && C.redSrc === 'arch' ? ' (your archive: lpr)' : ''}</small>` : (C.lastRed ? '<small class="muted rdays">no contract date</small>' : ''); }
       if (id === 'conc') shown += concSel(c.id, C);
-      if (id === 'adu' && typeof obBtn === 'function') shown += obList(C.adu) + obBtn(c.id);
+      if (id === 'adu' && typeof obBtn === 'function') shown += obBtn(c.id);
       if (id === 'land') shown += landSel(c.id, C.land);
       if (id === 'contract' || id === 'cdom') shown += unkSel(c.id, id, C);
       if (id === 'nbhd' && typeof saSel === 'function') shown += saSel(J, c, C);
@@ -470,7 +476,7 @@ function gridHTML(J) {
       if (SBS) return `<td class="dsc" data-cc="${c.id}">${shown}</td><td class="adjc${a.v ? ' hasadj' : ''}" data-cc="${c.id}">${inp}</td>`;
       return `<td class="${a.v ? 'hasadj' : ''}" data-cc="${c.id}"><div class="gval">${shown}</div><input class="txt sm adj ${a.own ? 'own' : a.v !== null ? 'auto' : ''}" data-gadj="${c.id}|${id}" value="${a.own ? (a.v > 0 ? '+' : a.v < 0 ? '-' : '') + Math.abs(a.v).toLocaleString() : ''}" placeholder="${a.v !== null && !a.own ? (a.v >= 0 ? '+' : '') + a.v.toLocaleString() : '$ adj'}" inputmode="decimal" title="${a.own ? 'Your amount – clear it to use the rate' : a.v !== null ? 'From your rate – type to override' : 'Type the adjustment'}"></td>`; }).join('');
     const bedAsk = id === 'beds' && blank(G.rates.bed) ? used.filter(c => { const C = compFacts(c, J); const a = capBeds(S.beds), b = capBeds(C.beds); return a !== null && b !== null && a !== b && blank((G.cells[c.id] || {}).beds); }) : [];
-    const rk = row[4]; const rate = rk ? '<div class="grates">' + [].concat(rk === 'bath' ? ['bath', 'halfBath'] : rk).map(k => { const fr = G.rateFrom && G.rateFrom[k] && !blank(G.rates[k]) ? (/ · /.test(G.rateFrom[k]) ? `From your starting points (${G.rateFrom[k]})` : 'From ' + G.rateFrom[k]) : '';
+    const rk = isObSlot(id) ? null : (row[6] || row[4]); const rate = rk ? '<div class="grates">' + [].concat(rk === 'bath' ? ['bath', 'halfBath'] : rk).map(k => { const fr = G.rateFrom && G.rateFrom[k] && !blank(G.rates[k]) ? (/ · /.test(G.rateFrom[k]) ? `From your starting points (${G.rateFrom[k]})` : 'From ' + G.rateFrom[k]) : '';
       return `<div class="grate"><label title="${esc(RATES[k][0] + ' – ' + RATES[k][1] + (fr ? '\n' + fr : ''))}"><span>${esc(rateShort(RATES[k][0]))}${fr ? '<i class="fromdot">●</i>' : ''}</span><input class="txt xs" data-grate="${k}" value="${esc(blank(G.rates[k]) ? '' : G.rates[k])}" inputmode="decimal"></label></div>`; }).join('') + '</div>' : '';
     const ask = bedAsk.length ? `<div class="bedask">${bedAsk.map(c => `Comp ${c.use} has ${compFacts(c, J).beds} bedroom${compFacts(c, J).beds === 1 ? '' : 's'}`).join(', ')} – what bedroom adjustment do you want? Type it per bedroom above, or in the comp's box.</div>` : '';
     return head + `<tr class="${[ask ? 'asking' : '', GRID_INFO[id] ? 'info' : '', GRID_KEEP.has(id) ? 'reqrow' : 'optrow'].filter(Boolean).join(' ')}"><th>${GRID_KEEP.has(id) ? REQ_STAR : ''}${esc(label)}${GUIDE[id] || PICK[id] ? `<button type="button" class="ginfo" data-ginfo="${id}" title="UAD 3.6 guidance for this line">i</button>` : ''}${type && type !== 'OTHER' && !GRID_INFO[id] && LINE_EG[id] ? `<br><small class="uadn" title="The UAD 3.6 line this goes to in SFREP: ${esc(type)}">${esc(LINE_EG[id])}</small>` : type === 'OTHER' ? `<br><small class="uadn">Add Other: “${esc(row[5])}”</small>` : ''}${GRID_INFO[id] && GRID_INFO[id] !== 'UAD 3.6' ? `<br><small class="muted">${esc(GRID_NOTE[id] || GRID_INFO[id].replace(/^UAD 3\.6 \((.*)\)$/, '$1'))}</small>` : ''}${id === 'structure' ? '<br><small class="muted">' + STRUCTURES.join(' · ') + '</small>' : id === 'unitPos' ? '<br><small class="muted">Interior · Corner · End</small>' : id === 'landCommon' ? '<br><small class="muted">Yes = no land owned · No = the unit owns land</small>' : ''}${rate}${ask}</th>${subjCell}${cells}</tr>`;

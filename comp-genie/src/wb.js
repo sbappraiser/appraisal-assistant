@@ -58,7 +58,7 @@ function wbPagerText() {
   if (pb) pb.disabled = w.scrollLeft < 4; if (nb) nb.disabled = w.scrollLeft + w.clientWidth >= w.scrollWidth - 4;
   if (!w.dataset.pg) { w.dataset.pg = 1; w.addEventListener('scroll', () => wbPagerText(), { passive: true }); }
 }
-const WB_ROWS = row => !wbLean() || row[3] || ['price', 'prox', 'src'].includes(row[0]) || !!GRID_INFO[row[0]] || row[0] === 'structure';   /* her listing lines and HOA facts show in Workbook view too */
+const WB_ROWS = row => !wbLean() || row[3] || ['price', 'prox', 'src', 'adu'].includes(row[0]) || !!GRID_INFO[row[0]] || row[0] === 'structure';   /* her listing lines and HOA facts show in Workbook view too */
 const WB_NOEDIT = ['ppsf', 'src', 'prox', 'overList'];
 /* a line's entry as text, for the subject or a comp (what "=" / "=2" copies) */
 function wbFactText(id, F) {

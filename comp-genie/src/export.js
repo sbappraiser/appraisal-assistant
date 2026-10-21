@@ -140,7 +140,7 @@ function buildCompXML(PROPS, RELS, DSS, c, n, job) {
   if (mode !== 'house' && (CF.project || CF.hoaAmen)) { const PJ = X(P, 'PROJECT'); const am = uadProjAmen(CF.hoaAmen); if (am.length) { const PA = X(PJ, 'PROJECT_AMENITIES'); am.forEach(a => { const e = X(PA, 'PROJECT_AMENITY'); XV(e, 'AmenityType', a.t); if (a.other) XV(e, 'AmenityTypeOtherDescription', a.other); }); } if (CF.project) XV(X(PJ, 'PROJECT_DETAIL'), 'ProjectName', String(CF.project).slice(0, 100)); }
   if (catKeys.length) { const AC = X(X(P, 'PROPERTY_AMENITY'), 'AMENITY_CATEGORIES'); catKeys.forEach(k => { const cat = X(AC, 'AMENITY_CATEGORY'); const A = X(cat, 'AMENITIES'); cats[k].forEach(t => XV(X(X(A, 'AMENITY'), 'AMENITY_DETAIL'), 'AmenityType', t)); XV(X(cat, 'AMENITY_CATEGORY_DETAIL'), 'AmenityCategoryType', k); }); }
   // PROPERTY_DETAIL
-  const pd = X(P, 'PROPERTY_DETAIL'); const aduTxt = String(g('adu') || ''); const aduN = /2 ADUs/.test(aduTxt) ? 2 : /^ADU/i.test(aduTxt) ? 1 : 0;
+  const pd = X(P, 'PROPERTY_DETAIL'); const aduTxt = String(g('adu') || ''); const aduN = typeof obParse === 'function' && obParse(aduTxt).items.length ? obParse(aduTxt).items.filter(x => OB_ADU.includes(x.t)).length : /2 ADUs/.test(aduTxt) ? 2 : /^ADU/i.test(aduTxt) ? 1 : 0;
   XV(pd, 'AccessoryDwellingUnitTotalCount', aduN); XV(pd, 'AttachmentType', /attach|row|semi|mid-rise|garden/i.test(g('attach') || '') && !/detach/i.test(g('attach')) ? 'Attached' : g('attach') ? 'Detached' : null);
   XV(pd, 'DwellingCount', 1); XV(pd, 'LivingUnitExcludingADUCount', 1);
   const cond = String(g('condition') || '').match(/C[1-6]/), qual = String(g('quality') || '').match(/Q[1-6]/);
