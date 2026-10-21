@@ -459,14 +459,14 @@ function gridHTML(J) {
   const sumRow = (label, fn, cls = '') => `<tr class="tot ${cls}"><th>${label}</th><td></td>${used.map((c, i) => `<td>${fn(tot[i], c)}</td>`).join('')}</tr>`;
   const adjs = totAll.map(t => t.adj).filter(Boolean); const lo = Math.min(...adjs), hi = Math.max(...adjs);
   const med = adjs.length ? [...adjs].sort((a, b) => a - b)[Math.floor((adjs.length - 1) / 2)] : null;
-  if (POP) return `<div class="tablewrap"><table class="grid${lean ? ' wb' : ''}"><thead><tr><th></th><th>Subject<br><span class="gaddr">${esc(J.subject.addr || '')}</span></th>${used.map(c => `<th data-wbcol="${c.id}" class="${WB.cur === c.id ? 'cur' : ''}">Comp ${c.use}<br><span class="gaddr">${esc(compTitle(c))}</span>${gridMlsLink(c)}</th>`).join('')}</thead><tbody>${rows}
+  if (POP) return `<div class="tablewrap"><table class="grid${lean ? ' wb' : ''}"><thead><tr><th></th><th>Subject<br><span class="gaddr">${esc(J.subject.addr || '')}</span></th>${used.map(c => `<th data-wbcol="${c.id}" class="${WB.cur === c.id ? 'cur' : ''}">Comp ${c.use}<br><span class="gaddr">${esc(compTitle(c))}</span>${gridHeadSale(c, J)}${gridMlsLink(c)}</th>`).join('')}</thead><tbody>${rows}
     ${sumRow('Net adjustment', t => `${t.net >= 0 ? '+' : '−'}${money(Math.abs(t.net))} <small class="${Math.abs(t.netPct) > GRID_LIMITS.net ? 'over' : ''}">${t.netPct.toFixed(1)}%</small>`)}
     ${sumRow('Gross adjustment', t => `${money(t.gross)} <small class="${t.grossPct > GRID_LIMITS.gross ? 'over' : ''}">${t.grossPct.toFixed(1)}%</small>`)}
     ${sumRow('Adjusted sale price', t => `<b>${money(t.adj)}</b>${t.adjPsf ? `<br><small>${money(t.adjPsf)} / sq ft</small>` : ''}`, 'big')}</tbody></table></div>
     <div class="gsum"><div><span>Adjusted range (all comps)</span><b>${adjs.length ? money(lo) + ' – ' + money(hi) : '–'}</b></div><div><span>Median</span><b>${med ? money(med) : '–'}</b></div><div><span>Your value</span><b>${blank(G.value) ? '–' : money(G.value)}</b></div></div>`;
   return `<div class="row"><h2 style="margin:0">Adjustment grid <small>UAD 3.6 lines · your amounts</small></h2><span class="grow"></span><label class="check" title="Grey boxes, thin black lines and compact rows, like your ACI forms"><input type="checkbox" data-classic="1" ${classicOn() ? 'checked' : ''}> Classic (ACI) look</label></div>${startsBar(J)}${gridLinesHTML(J)}${wbBar(J, usedAll)}
     <p class="help">${inspNote} Type an amount in any cell (minus for a downward adjustment). Or type a rate once beside a line; cells without your own amount then use it (shown in grey). Clear a cell to go back to the rate. Usable Lot Area/Utility comes only from your archive or your measurement – blank comps say <span class="measure">Measure it</span>.</p>
-    <div class="tablewrap"><table class="grid${lean ? ' wb' : ''}"><thead><tr><th></th><th>Subject<br><span class="gaddr">${esc(J.subject.addr || '')}</span></th>${used.map(c => `<th data-wbcol="${c.id}" class="${WB.cur === c.id ? 'cur' : ''}" title="Click to pick this comp for Ctrl+Shift+number or Ctrl+Z">Comp ${c.use}<br><span class="gaddr">${esc(compTitle(c))}</span>${gridMlsLink(c)}</th>`).join('')}</tr></thead>
+    <div class="tablewrap"><table class="grid${lean ? ' wb' : ''}"><thead><tr><th></th><th>Subject<br><span class="gaddr">${esc(J.subject.addr || '')}</span></th>${used.map(c => `<th data-wbcol="${c.id}" class="${WB.cur === c.id ? 'cur' : ''}" title="Click to pick this comp for Ctrl+Shift+number or Ctrl+Z">Comp ${c.use}<br><span class="gaddr">${esc(compTitle(c))}</span>${gridHeadSale(c, J)}${gridMlsLink(c)}</th>`).join('')}</tr></thead>
     <tbody>${rows}
     ${sumRow('Net adjustment', t => `${t.net >= 0 ? '+' : '−'}${money(Math.abs(t.net))} <small class="${Math.abs(t.netPct) > GRID_LIMITS.net ? 'over' : ''}">${t.netPct.toFixed(1)}%</small>`)}
     ${sumRow('Gross adjustment', t => `${money(t.gross)} <small class="${t.grossPct > GRID_LIMITS.gross ? 'over' : ''}">${t.grossPct.toFixed(1)}%</small>`)}
@@ -483,6 +483,10 @@ function gridHTML(J) {
 
 const scCount = t => { const n = String(t || '').length; return `${n.toLocaleString()} of 10,000 characters (UAD 3.6 limit)${n > 10000 ? ` – <b class="over">${(n - 10000).toLocaleString()} over</b>` : ''}`; };
 /* low / mid / high within a UAD rating – on her grid and in her comments, never in the UAD fields */
+/* her ask (Oct 20 2026): the sale price and date stay in view with the comp's name – a listing shows its list price and status */
+function gridHeadSale(c, J) { const C = compFacts(c, J);
+  if (C.listing) return `<span class="ghsale">${C.listPrice ? 'List ' + money(num(C.listPrice)) : ''}${C.status ? ' · ' + esc(C.status) : ''}${C.contract ? ' ' + showDate(C.contract) : ''}</span>`;
+  return C.price || C.sale ? `<span class="ghsale">${C.price ? money(C.price) : ''}${C.sale ? ' · ' + showDate(C.sale) : ''}</span>` : ''; }
 function gridMlsLink(c) { const n = String(V(c, 'mls') || '').trim(); if (!n) return '';   /* the MLS listing in a window of its own (her logged-in MLS) */
   if (typeof MLSLINK === 'undefined' || !MLSLINK) return `<br><button class="lnk sm" data-act="mlsgo" data-n="${esc(n)}" title="Copies the MLS number and brings up your MLS window (opens the MLS sign-in the first time) – paste it in the MLS search box">MLS ${esc(n)} ↗</button>`;
   const u = MLSLINK.replace('{mls}', encodeURIComponent(n)).replace('{mlsnodash}', encodeURIComponent(n.replace(/-/g, '')));
@@ -913,6 +917,6 @@ function finalGridHTML(J) {
   const T = U.map(c => compTotals(J, c));
   const tot = (l, f) => `<tr class="tot"><th>${l}</th><td></td>${T.map(f).map(x => `<td>${x}</td>`).join('')}</tr>`;
   return `<h2>Final grid <small>what goes to SFREP – read only; change things in ② Workbook</small></h2>
-    <div class="tablewrap"><table class="grid final"><thead><tr><th></th><th>Subject<br><span class="gaddr">${esc(J.subject.addr || '')}</span></th>${U.map(c => `<th>Comp ${c.use}<br><span class="gaddr">${esc(compTitle(c))}</span></th>`).join('')}</tr></thead><tbody>${rows}
+    <div class="tablewrap"><table class="grid final"><thead><tr><th></th><th>Subject<br><span class="gaddr">${esc(J.subject.addr || '')}</span></th>${U.map(c => `<th>Comp ${c.use}<br><span class="gaddr">${esc(compTitle(c))}</span>${gridHeadSale(c, J)}</th>`).join('')}</tr></thead><tbody>${rows}
     ${tot('Net adjustment', t => `${t.net >= 0 ? '+' : '−'}${money(Math.abs(t.net))} (${t.netPct.toFixed(1)}%)`)}${tot('Gross adjustment', t => `${money(t.gross)} (${t.grossPct.toFixed(1)}%)`)}${tot('Adjusted price', t => `<b>${money(t.adj)}</b>`)}</tbody></table></div>`;
 }

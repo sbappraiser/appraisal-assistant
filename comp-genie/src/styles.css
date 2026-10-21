@@ -298,3 +298,4 @@ input:focus::placeholder{color:#3a2a00!important;opacity:1}
 .lastcell:not(:focus){outline:2px dashed #ff8a00!important;outline-offset:1px}
 /* her own typed amount: black and upright like a normal entry (the rate's amounts are orange italic) – no orange border, not bold */
 table.grid input.adj.own,body:not(.classic) table.grid input.adj.own{font-weight:400;border-color:var(--line);color:#000}
+table.grid thead th .ghsale{display:block;font-size:12.5px;font-weight:600;color:#000;margin-top:2px;white-space:nowrap}
