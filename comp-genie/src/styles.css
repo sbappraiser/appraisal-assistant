@@ -268,3 +268,4 @@ button.wbtick:hover{border-color:#1e7a3c;background:#eef8f1}button.wbtick.on{bac
 /* the popped-out workbook (her ask Oct 20 2026): the grid fills the window – side-to-side bar at the bottom, mouse wheel up and down */
 body.popgrid{overflow:hidden}body.popgrid #app{max-width:none;padding-bottom:0}body.popgrid #gridCard{margin:0;padding:6px}
 body.popgrid #gridCard .tablewrap{height:calc(100vh - var(--toph,60px) - 24px);max-height:none;overflow:auto}
+td.subj span.na{color:#8a96a3;cursor:help}

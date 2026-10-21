@@ -671,3 +671,4 @@ Decisions (her, Oct 19–20): "Exterior of dwelling" instead of left/right/side 
 - g2-1021-0057: workbook comps per page default 6 (choices 3,4,5,6,9,all); grid scrolls in its own box (side-to-side bar always on screen), sticky comp names and line names.
 - g2-1021-0101: Pop out 'all comps' (POP to=99, full-screen window): body.popgrid – the grid box fills the window, horizontal scroll bar at the window bottom, wheel scrolls up/down, sticky comp names / line names.
 - g2-1021-0103: comp page column 'Your value' renamed 'New value'.
+- g2-1021-0104: subject cells of the sales / listing lines (and Ownership transfer terms, sale-to-list) show a grey — with a note: nothing to enter for the subject (F-1: comparables only; subject sale/listing come from the Sales Contract / Subject Listing sections). No N/A or dash in the data.
