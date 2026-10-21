@@ -7,7 +7,7 @@
    to-dos (order.todos on the iPad: plain lines) until they are ticked done.
    Stored on the order: reqs [{id, docId, doc, page, cat, text, quote, done, ipad, by, edited}], reqsRead {docId: version}.
    ===================================================================== */
-const REQ_V = 2;   // bump when the rules change: not-yet-edited items are read again
+const REQ_V = 3;   // bump when the rules change: not-yet-edited items are read again
 const REQ_CATS = ['Before you accept', 'Inspection', 'Photos', 'Comparables', 'Approaches to value', 'Report and addenda', 'Comments to include', 'Before you deliver', 'Delivery and invoice', 'Other'];
 // first rule that matches wins; ipad: true / a regex on the sentence / false
 const REQ_RULES = [
@@ -24,6 +24,9 @@ const REQ_RULES = [
   { cat: 'Report and addenda', re: /location map|plat map|aerial|flood map|floor ?plan|sketch/i },
   { cat: 'Photos', re: /photo(?!cop)/i, ipad: s => !/^(photos? of )?(the )?comparable|comparable (sales|rents|listings)\b.{0,20}photo|photos? of (the )?comp/i.test(s) || /subject|interior|exterior|street|front|rear|room|bath|kitchen|amenit|pool|structure/i.test(s) },
   { cat: 'Comparables', re: /comparable (sales|listings|rents)|minimum of (\d+|two|three|four|five|six)\b|(settled|closed|sold) within|within \d+ (months|miles)|bracket/i },
+  { cat: 'Approaches to value', re: /\bACN\b|actual cash value/i },
+  { cat: 'Approaches to value', re: /operating (income )?statement|\bops? statement|\b216\b|rent (survey|roll)/i },
+  { cat: 'Report and addenda', re: /\b(review|analy[sz]e|comment on|reconcile|summari[sz]e)\b[^.]{0,40}\b(purchase (contract|agreement)|sales? contract|plans|specifications|budget|leases?|rent roll|HOA (documents|budget)|CC&Rs|preliminary title|title report|prior appraisals?|permits?|inspection reports?)/i },
   { cat: 'Approaches to value', re: /cost approach|income approach|sales comparison approach|replacement cost|\bRCN\b|land value|approach(es)? to value/i },
   { cat: 'Report and addenda', re: /\b1004MC\b|\b1007\b|rent schedule|\b1004D\b|\b216\b|addend|exhibit|client file ?#|document id ?#|USPAP and FIRREA|certified appraiser|license|E&O|errors and omissions|signatory|trainee|supervisory|report form|this (appraisal )?form is not to be used/i },
   { cat: 'Comments to include', re: /highest and best use|zoning|exposure time|marketing time|USPS|non-?conforming|external (issues|obsolescence)|railroad|climate|extraordinary assumption|cost to cure|repairs? noted|commentary|comment on|please comment|explain|value to be reported|\bas is.{0,6}market value|\bas[ -]complete\b/i },

@@ -377,7 +377,15 @@ async function readClientLetter(file) {
   m = T.match(/interest appraised[^:]{0,60}:\s*(Fee Simple|Leased Fee|Leasehold)/i); if (m) F.interest = G.titleCase(m[1]);
   m = T.match(/Value Determination:\s*((?:[\s|]*(?:Cost|Sales Comparison|Income)\b)+)/i); if (m) F.approaches = m[1].match(/Cost|Sales Comparison|Income/gi).map(x => x.toLowerCase());
   if (/\brent survey\b/i.test(T)) { F.rent = true; F.rentWord = 'rent survey'; }
-  if (/\bops? statement|operating statement|operating expenses? statement/i.test(T)) F.ops = true;
+  if (/\bops? statement|operating statement|operating expenses? statement|operating income statement|\b216\b/i.test(T)) F.ops = true;
+  /* her ask (Oct 21 2026): tell her when the cost approach is not required, and about other client requirements */
+  { const T2 = T.replace(/(in the event|if)[^.]{0,80}(cost approach)[^.]*\./gi, '');
+    if (/cost approach[^.]{0,40}\b(is |are )?(not (required|necessary|needed|requested)|optional|may be omitted|at the appraiser'?s discretion)|no cost approach|cost approach\s*(required)?\s*:\s*(no|n)\b/i.test(T2)) F.noCost = true; }
+  if (/\bACN\b|actual cash value/i.test(T)) F.acn = true;
+  if (/\b(RCN|replacement cost new|reproduction cost new)\b[^.]{0,80}\b(each|every|all|individual|separate)\b[^.]{0,30}(building|structure|improvement|dwelling)|(each|every|all) (building|structure|improvement)s?[^.]{0,60}\b(RCN|replacement cost new)\b/i.test(T)) F.rcnEach = true;
+  else if (/\bRCN\b|replacement cost new|insurable value|cost to rebuild/i.test(T)) F.rcn = true;
+  { const D = []; const re = /\b(review|analy[sz]e|comment on|reconcile|summari[sz]e|provide)\b[^.]{0,40}?\b(purchase (contract|agreement)|sales? contract|contract of sale|plans( and spec(ification)?s)?|specifications|budget|leases?|rent roll|HOA (documents|budget|financials?)|CC&Rs|preliminary title( report)?|title report|prior appraisals?|permits?|inspection reports?|survey)/gi; let m;
+    while ((m = re.exec(T))) { const d = m[2].toLowerCase(); if (!D.includes(d)) D.push(d); } if (D.length) F.docReview = D; }
   return F;
 }
 /* her own engagement letter, signed and uploaded (Oct 18 2026): the letter is the record of the agreement, so the order follows it */
@@ -427,9 +435,10 @@ function applyClientLetter(F) { // fills only empty boxes (type, form, client al
   if (F.clientAddr1 || F.clientAddr2) { const a1 = $('#c0_addr1'), a2 = $('#c0_addr2'); if (a1 && !a1.value.trim() && !(a2 && a2.value.trim())) { a1.value = F.clientAddr1 || ''; if (a2) a2.value = F.clientAddr2 || ''; did.push(['Client address', [F.clientAddr1, F.clientAddr2].filter(Boolean).join(', ')]); } }
   set('apn', F.apn, 'APN'); set('interest', F.interest, 'Interest valued');
   if (F.approaches) { [['sales comparison', 'apSales', 'Sales comparison'], ['cost', 'apCost', 'Cost approach'], ['income', 'apIncome', 'Income approach']].forEach(([k, id, l]) => { if (F.approaches.includes(k)) set(id, true, l + ' requested'); }); }
-  if (F.rent) set('rent', true, 'Rent schedule (1007) requested'); if (F.cost) set('apCost', true, 'Cost approach required'); if (F.exterior) { $('#f_inspection').value = 'exterior'; did.push(['Inspection', 'Exterior only']); }
+  if (F.rent) set('rent', true, F.rentWord ? 'Rent survey requested' : 'Rent schedule (1007) requested'); if (F.cost) set('apCost', true, 'Cost approach required'); else if (F.noCost) set('apCost', false, 'Cost approach not required per the client'); else if (F.rcnEach || F.rcn) set('apCost', true, 'Cost approach – the client asks for replacement cost new');
+  if (F.ops) set('apIncome', true, 'Operating income statement requested (income approach)'); if (F.exterior) { $('#f_inspection').value = 'exterior'; did.push(['Inspection', 'Exterior only']); }
   if (F.propAddr) { const a = $('#f_address'); if (!a.value.trim()) { setOrderAddr(splitAddr(G.titleCase(F.propAddr).replace(/\b(Ca)\b/, 'CA'))); did.push(['Property address', a.value]); } else if (!sameStreet(F.propAddr, a.value)) did.push(['⚠ Address in the letter', F.propAddr + ' – not the same as the order']); }
-  const notes = [F.use && 'Intended use per client: ' + F.use, F.users && 'Intended user per client: ' + F.users, F.price && 'Sales price per order: $' + Number(String(F.price).replace(/[^\d.]/g, '')).toLocaleString(), F.mc && '1004MC required', F.ops && 'Operating (ops) statement requested', F.occupancy && 'Occupancy: ' + F.occupancy].filter(Boolean);
+  const notes = [F.use && 'Intended use per client: ' + F.use, F.users && 'Intended user per client: ' + F.users, F.price && 'Sales price per order: $' + Number(String(F.price).replace(/[^\d.]/g, '')).toLocaleString(), F.mc && '1004MC required', F.ops && 'Operating income statement (216 / ops statement) requested', F.noCost && 'Cost approach not required per the client', F.acn && 'ACN (actual cash value) requested', F.rcnEach && 'RCN (replacement cost new) of EACH building requested', F.rcn && 'Replacement cost new / insurable value requested', F.rentWord && 'Rent survey requested', F.docReview && 'Review / comment on: ' + F.docReview.join(', '), F.occupancy && 'Occupancy: ' + F.occupancy].filter(Boolean);
   if (notes.length) { const n = $('#f_notes'); const add = notes.filter(x => !n.value.includes(x)); if (add.length) { n.value = (n.value ? n.value + '\n' : '') + add.join('\n'); did.push(['Notes', add.join('; ')]); } }
   return did;
 }

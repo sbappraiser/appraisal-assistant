@@ -18,6 +18,18 @@ const ORDER_ASSIGN = { uadPurchase: 'Purchase', uadRefi: 'Refinance', uadHeloc: 
 
 const R0 = J => { J.report = J.report || { hbu: {} }; J.report.hbu = J.report.hbu || {}; return J.report; };
 const orderOf = J => (app.orders || []).find(o => o.id === J.orderId) || null;
+/* what the client's engagement letter asks for (read in the hub: order.letterFields, order.reqs) – her ask Oct 21 2026 */
+function clientNeeds(J) { const o = orderOf(J); if (!o) return []; const F = o.letterFields || {}; const out = [];
+  if (F.noCost) out.push({ k: 'noCost', t: 'Cost approach not required' }); else if (F.cost) out.push({ k: 'cost', t: 'Cost approach required' });
+  if (F.rcnEach) out.push({ k: 'rcnEach', t: 'Replacement cost new (RCN) of each building' }); else if (F.rcn) out.push({ k: 'rcn', t: 'Replacement cost new / insurable value' });
+  if (F.acn) out.push({ k: 'acn', t: 'ACN (actual cash value)' });
+  if (F.rentWord || F.rent || o.rent) out.push({ k: 'rent', t: F.rentWord ? 'Rent survey' : 'Rent schedule (1007)' });
+  if (F.ops) out.push({ k: 'ops', t: 'Operating income statement (216)' });
+  if (F.mc) out.push({ k: 'mc', t: '1004MC market conditions' });
+  if (F.docReview && F.docReview.length) out.push({ k: 'docs', t: 'Review / comment on: ' + F.docReview.join(', ') });
+  const open = (o.reqs || []).filter(r => !r.done).length; if (open) out.push({ k: 'reqs', t: `${open} client requirement${open > 1 ? 's' : ''} not ticked yet (hub › Order › Client requirements)`, warn: true });
+  return out; }
+const clientNeedsHTML = J => { const L = clientNeeds(J); return L.length ? `<div class="cneeds"><b>The client's letter asks for:</b> ${L.map(x => `<span class="cneed${x.warn ? ' warn' : ''}">${esc(x.t)}</span>`).join(' ')}</div>` : ''; };
 function zoneTable() { if (!app.zoneDesc) { app.zoneDesc = {}; DB.get('kv', 'zoneDesc').then(r => { app.zoneDesc = (r && r.v) || {}; const c = $('#reportCard'); if (c && app.job) c.innerHTML = reportHTML(app.job); }); } return app.zoneDesc; }
 
 /* what the order, the inspection and the CRS already say (shown grey until she types her own) */
@@ -70,6 +82,7 @@ function reportHTML(J) {
   return `<h2>Report details <small>– yours to fill in before you export</small></h2>
   <div class="rptneed ${need.length ? 'warn' : 'done'}">${need.length ? `<b>${need.length} answer${need.length > 1 ? 's' : ''} still needed here:</b><ul>${need.map(x => `<li>${esc(x.msg.replace(/\s*\(Report details[^)]*\)\.?/, '').replace(/ – it is the value on page 1 of the report\./, ' – the value on page 1 of the report.'))}</li>`).join('')}</ul>` : '<b>✓ Everything the report needs here is answered.</b>'}
     <span class="rptkey"><span class="k own">your entry</span> <span class="k sug">suggested – type over it or leave it</span></span></div>
+  ${clientNeedsHTML(J)}
   <p class="help">${F.hasOrder ? 'Grey entries come from the order in the Appraisal Assistant, your inspection or the CRS report. Type over any of them.' : 'This assignment is not linked to an order, so nothing is filled from the Appraisal Assistant. Open it from the order (Comp genie button on the order page) to fill the assignment, client and market.'}</p>
   <div class="rptgrid">
     <section><h3>Assignment</h3>

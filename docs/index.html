@@ -277,6 +277,10 @@ nav.tabs button[aria-selected="true"] { background: var(--look-navy) !important;
 .hmtile.primary { color: #fff !important; } .hmtile.primary small, .hmtile.primary b { color: #fff !important; }
 .hmtile.primary .hmicon { background: #fff !important; color: var(--look-navy) !important; }
 .btn.primary, button.primary { color: #fff !important; }
+/* the client's letter asks for … (Report details) */
+.cneeds { margin: 8px 0 10px; padding: 8px 12px; border: 2px solid var(--look-navy); border-radius: 10px; background: #f4f8fd; font-size: 15px; }
+.cneed { display: inline-block; margin: 3px 4px 0 0; padding: 2px 10px; border-radius: 999px; background: var(--look-pink); border: 1px solid var(--look-pink-b); font-weight: 600; }
+.cneed.warn { background: #ffecec; border-color: var(--look-warn); color: var(--look-warn); }
 
 </style>
 </head>
@@ -788,6 +792,7 @@ nav.tabs button[aria-selected="true"] { background: var(--look-navy) !important;
       <li>Your comments: click a 3.6 row to see what you wrote about that comp in that assignment (the sales comparison comment sentences that name it, the considered-not-used comment, your notes) with a <b>Copy</b> button. For ACI reports the comments are in the report itself – open the report named on the row.</li></ol></details>
     <details><summary>Adjustment grid and the full report for SFREP (Comp genie)</summary><ol>
       <li><b>Red boxes in SFREP after the import:</b> the genie now sends what Fannie Mae's own sample sends – a <b>0</b> in every adjustment box with no adjustment, the comps' unfinished basement (0), interior and exterior quality and condition, "homeowner keeps up the outside", the data source for each comp's transfer history, the subject's market area name, and named units for a comp with an ADU. The recorded document number now comes in as the identifier of the <b>Assessor Record</b> source (SFREP's list has no "Deed"). What only you can answer is in the <b>Pre-check</b>: each comp's <b>street surface</b>, <b>view range</b> (Full, Partial, Seasonal) and <b>energy efficient features</b> (pick None when it has none) – click the line to go to the box; type <b>=</b> to copy the subject's.</li>
+      <li><b>What the client's letter asks for:</b> when you drop the engagement letter or order in Documents, it is read for: cost approach required or <b>not required</b>, replacement cost new (RCN) of <b>each building</b>, ACN (actual cash value), a rent survey or 1007, an operating income statement (216), 1004MC, and documents to review or comment on (purchase contract, plans, leases, title …). They go in the order's Notes and the Client requirements list, and the Comp genie shows them at the top of Report details and the Cost approach; the pre-check reminds you of each one.</li>
       <li><b>Extraordinary assumptions and hypothetical conditions:</b> type them in Report details › <b>Extraordinary assumptions and hypothetical conditions</b> (their own boxes); what you did beyond the standard scope goes in Scope of work. All three go together into 3.6 Additional Scope of Work (2,500 characters in all – the count shows under the boxes) and answer it Yes; it prints under Certifications › Scope of Work. A value <i>subject to</i> repairs or completion is chosen in Market value condition. When the income or cost approach is answered No, pick its <b>reason</b> under Value and reconciliation.</li>
       <li><b>Subject data sources:</b> the listing check (MLS), the transfer history (CRS, or MLS) and the living-area source (measured at your inspection) are now sent, so those boxes are no longer red. The pre-check also asks for the <b>legal description</b> (Report details).</li>
       <li><b>Exterior / interior quality and condition</b> (Dwelling lines, shown with Lines): blank sends the comp's overall rating (the grey <i>= Q4</i>); type Q1–Q6 or C1–C6 when the outside or inside differs.</li>
@@ -903,7 +908,7 @@ nav.tabs button[aria-selected="true"] { background: var(--look-navy) !important;
 </div>
 <div id="toast" role="status" hidden></div>
 <script>
-const BUILD='o1-1021-1708';
+const BUILD='o1-1021-1722';
 const G = (() => {
 /* ---------------- small helpers ---------------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -2463,7 +2468,15 @@ async function readClientLetter(file) {
   m = T.match(/interest appraised[^:]{0,60}:\s*(Fee Simple|Leased Fee|Leasehold)/i); if (m) F.interest = G.titleCase(m[1]);
   m = T.match(/Value Determination:\s*((?:[\s|]*(?:Cost|Sales Comparison|Income)\b)+)/i); if (m) F.approaches = m[1].match(/Cost|Sales Comparison|Income/gi).map(x => x.toLowerCase());
   if (/\brent survey\b/i.test(T)) { F.rent = true; F.rentWord = 'rent survey'; }
-  if (/\bops? statement|operating statement|operating expenses? statement/i.test(T)) F.ops = true;
+  if (/\bops? statement|operating statement|operating expenses? statement|operating income statement|\b216\b/i.test(T)) F.ops = true;
+  /* her ask (Oct 21 2026): tell her when the cost approach is not required, and about other client requirements */
+  { const T2 = T.replace(/(in the event|if)[^.]{0,80}(cost approach)[^.]*\./gi, '');
+    if (/cost approach[^.]{0,40}\b(is |are )?(not (required|necessary|needed|requested)|optional|may be omitted|at the appraiser'?s discretion)|no cost approach|cost approach\s*(required)?\s*:\s*(no|n)\b/i.test(T2)) F.noCost = true; }
+  if (/\bACN\b|actual cash value/i.test(T)) F.acn = true;
+  if (/\b(RCN|replacement cost new|reproduction cost new)\b[^.]{0,80}\b(each|every|all|individual|separate)\b[^.]{0,30}(building|structure|improvement|dwelling)|(each|every|all) (building|structure|improvement)s?[^.]{0,60}\b(RCN|replacement cost new)\b/i.test(T)) F.rcnEach = true;
+  else if (/\bRCN\b|replacement cost new|insurable value|cost to rebuild/i.test(T)) F.rcn = true;
+  { const D = []; const re = /\b(review|analy[sz]e|comment on|reconcile|summari[sz]e|provide)\b[^.]{0,40}?\b(purchase (contract|agreement)|sales? contract|contract of sale|plans( and spec(ification)?s)?|specifications|budget|leases?|rent roll|HOA (documents|budget|financials?)|CC&Rs|preliminary title( report)?|title report|prior appraisals?|permits?|inspection reports?|survey)/gi; let m;
+    while ((m = re.exec(T))) { const d = m[2].toLowerCase(); if (!D.includes(d)) D.push(d); } if (D.length) F.docReview = D; }
   return F;
 }
 /* her own engagement letter, signed and uploaded (Oct 18 2026): the letter is the record of the agreement, so the order follows it */
@@ -2513,9 +2526,10 @@ function applyClientLetter(F) { // fills only empty boxes (type, form, client al
   if (F.clientAddr1 || F.clientAddr2) { const a1 = $('#c0_addr1'), a2 = $('#c0_addr2'); if (a1 && !a1.value.trim() && !(a2 && a2.value.trim())) { a1.value = F.clientAddr1 || ''; if (a2) a2.value = F.clientAddr2 || ''; did.push(['Client address', [F.clientAddr1, F.clientAddr2].filter(Boolean).join(', ')]); } }
   set('apn', F.apn, 'APN'); set('interest', F.interest, 'Interest valued');
   if (F.approaches) { [['sales comparison', 'apSales', 'Sales comparison'], ['cost', 'apCost', 'Cost approach'], ['income', 'apIncome', 'Income approach']].forEach(([k, id, l]) => { if (F.approaches.includes(k)) set(id, true, l + ' requested'); }); }
-  if (F.rent) set('rent', true, 'Rent schedule (1007) requested'); if (F.cost) set('apCost', true, 'Cost approach required'); if (F.exterior) { $('#f_inspection').value = 'exterior'; did.push(['Inspection', 'Exterior only']); }
+  if (F.rent) set('rent', true, F.rentWord ? 'Rent survey requested' : 'Rent schedule (1007) requested'); if (F.cost) set('apCost', true, 'Cost approach required'); else if (F.noCost) set('apCost', false, 'Cost approach not required per the client'); else if (F.rcnEach || F.rcn) set('apCost', true, 'Cost approach – the client asks for replacement cost new');
+  if (F.ops) set('apIncome', true, 'Operating income statement requested (income approach)'); if (F.exterior) { $('#f_inspection').value = 'exterior'; did.push(['Inspection', 'Exterior only']); }
   if (F.propAddr) { const a = $('#f_address'); if (!a.value.trim()) { setOrderAddr(splitAddr(G.titleCase(F.propAddr).replace(/\b(Ca)\b/, 'CA'))); did.push(['Property address', a.value]); } else if (!sameStreet(F.propAddr, a.value)) did.push(['⚠ Address in the letter', F.propAddr + ' – not the same as the order']); }
-  const notes = [F.use && 'Intended use per client: ' + F.use, F.users && 'Intended user per client: ' + F.users, F.price && 'Sales price per order: $' + Number(String(F.price).replace(/[^\d.]/g, '')).toLocaleString(), F.mc && '1004MC required', F.ops && 'Operating (ops) statement requested', F.occupancy && 'Occupancy: ' + F.occupancy].filter(Boolean);
+  const notes = [F.use && 'Intended use per client: ' + F.use, F.users && 'Intended user per client: ' + F.users, F.price && 'Sales price per order: $' + Number(String(F.price).replace(/[^\d.]/g, '')).toLocaleString(), F.mc && '1004MC required', F.ops && 'Operating income statement (216 / ops statement) requested', F.noCost && 'Cost approach not required per the client', F.acn && 'ACN (actual cash value) requested', F.rcnEach && 'RCN (replacement cost new) of EACH building requested', F.rcn && 'Replacement cost new / insurable value requested', F.rentWord && 'Rent survey requested', F.docReview && 'Review / comment on: ' + F.docReview.join(', '), F.occupancy && 'Occupancy: ' + F.occupancy].filter(Boolean);
   if (notes.length) { const n = $('#f_notes'); const add = notes.filter(x => !n.value.includes(x)); if (add.length) { n.value = (n.value ? n.value + '\n' : '') + add.join('\n'); did.push(['Notes', add.join('; ')]); } }
   return did;
 }
@@ -3918,7 +3932,7 @@ async function droppedFiles(dt) {
    to-dos (order.todos on the iPad: plain lines) until they are ticked done.
    Stored on the order: reqs [{id, docId, doc, page, cat, text, quote, done, ipad, by, edited}], reqsRead {docId: version}.
    ===================================================================== */
-const REQ_V = 2;   // bump when the rules change: not-yet-edited items are read again
+const REQ_V = 3;   // bump when the rules change: not-yet-edited items are read again
 const REQ_CATS = ['Before you accept', 'Inspection', 'Photos', 'Comparables', 'Approaches to value', 'Report and addenda', 'Comments to include', 'Before you deliver', 'Delivery and invoice', 'Other'];
 // first rule that matches wins; ipad: true / a regex on the sentence / false
 const REQ_RULES = [
@@ -3935,6 +3949,9 @@ const REQ_RULES = [
   { cat: 'Report and addenda', re: /location map|plat map|aerial|flood map|floor ?plan|sketch/i },
   { cat: 'Photos', re: /photo(?!cop)/i, ipad: s => !/^(photos? of )?(the )?comparable|comparable (sales|rents|listings)\b.{0,20}photo|photos? of (the )?comp/i.test(s) || /subject|interior|exterior|street|front|rear|room|bath|kitchen|amenit|pool|structure/i.test(s) },
   { cat: 'Comparables', re: /comparable (sales|listings|rents)|minimum of (\d+|two|three|four|five|six)\b|(settled|closed|sold) within|within \d+ (months|miles)|bracket/i },
+  { cat: 'Approaches to value', re: /\bACN\b|actual cash value/i },
+  { cat: 'Approaches to value', re: /operating (income )?statement|\bops? statement|\b216\b|rent (survey|roll)/i },
+  { cat: 'Report and addenda', re: /\b(review|analy[sz]e|comment on|reconcile|summari[sz]e)\b[^.]{0,40}\b(purchase (contract|agreement)|sales? contract|plans|specifications|budget|leases?|rent roll|HOA (documents|budget)|CC&Rs|preliminary title|title report|prior appraisals?|permits?|inspection reports?)/i },
   { cat: 'Approaches to value', re: /cost approach|income approach|sales comparison approach|replacement cost|\bRCN\b|land value|approach(es)? to value/i },
   { cat: 'Report and addenda', re: /\b1004MC\b|\b1007\b|rent schedule|\b1004D\b|\b216\b|addend|exhibit|client file ?#|document id ?#|USPAP and FIRREA|certified appraiser|license|E&O|errors and omissions|signatory|trainee|supervisory|report form|this (appraisal )?form is not to be used/i },
   { cat: 'Comments to include', re: /highest and best use|zoning|exposure time|marketing time|USPS|non-?conforming|external (issues|obsolescence)|railroad|climate|extraordinary assumption|cost to cure|repairs? noted|commentary|comment on|please comment|explain|value to be reported|\bas is.{0,6}market value|\bas[ -]complete\b/i },

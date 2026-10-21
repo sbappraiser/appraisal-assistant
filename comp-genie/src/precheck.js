@@ -71,6 +71,17 @@ function precheckGrid(J) { if (!RC) return rcRun(() => precheckGrid(J));
     if (blank(String(R.reconNote || '').trim())) out.push({ sev: 'Must fix', msg: 'Reconciliation comment is blank (Report details › Value and reconciliation) – 3.6 requires it (Reconciliation of Market Value).' });
     if (sowLen(R) > 2500) out.push({ sev: 'Must fix', msg: `Additional scope of work is ${sowLen(R).toLocaleString()} characters – 3.6 allows 2,500 for the scope, extraordinary assumptions and hypothetical conditions together (Report details).` });
     if (R.sowAddlScope === 'true' && !sowAny(R)) out.push({ sev: 'Must fix', msg: 'Additional scope of work is Yes but its text is blank (Report details › Scope of work) – type your extraordinary assumptions, hypothetical conditions or added scope, or answer No.' });
+    { const N = typeof clientNeeds === 'function' ? clientNeeds(J) : []; const has = k => N.some(x => x.k === k);   /* the client's letter (her ask Oct 21 2026) */
+      const cost = R.sowCost === 'true' || (blank(R.sowCost) && F.sowCost === true), inc = R.sowIncome === 'true' || (blank(R.sowIncome) && F.sowIncome === true), rent = R.sowRent === 'true' || (blank(R.sowRent) && F.sowRent === true);
+      if (has('cost') && !cost) out.push({ sev: 'Must fix', msg: 'The client asks for the cost approach, but Cost approach developed is not Yes (Report details › Scope of work).' });
+      if ((has('rcn') || has('rcnEach')) && !cost) out.push({ sev: 'Check', msg: 'The client asks for replacement cost new, but the cost approach is not developed – give it in the cost approach, or answer their request in a comment.' });
+      if (has('noCost') && cost) out.push({ sev: 'Check', msg: 'The client says the cost approach is not required – you are developing it anyway (fine; or answer No in Report details › Scope of work).' });
+      if (has('rcnEach')) out.push({ sev: 'Check', msg: 'The client asks for replacement cost new of EACH building – show each building on its own cost line and say so in the cost comment.' });
+      if (has('acn')) out.push({ sev: 'Check', msg: 'The client asks for ACN (actual cash value) – state it in the cost approach comment (replacement cost new less depreciation).' });
+      if (has('rent') && !rent) out.push({ sev: 'Must fix', msg: 'The client asks for a rent survey / rent schedule, but Rent schedule included is not Yes (Report details › Scope of work).' });
+      if (has('ops') && !inc) out.push({ sev: 'Check', msg: 'The client asks for an operating income statement (216) – Income approach developed is not Yes (Report details › Scope of work).' });
+      const d = N.find(x => x.k === 'docs'); if (d) out.push({ sev: 'Check', msg: 'The client asks you to ' + d.t.replace(/^Review \/ comment on/, 'review and comment on') + ' – say so in the report.' });
+      const q = N.find(x => x.k === 'reqs'); if (q) out.push({ sev: 'Check', msg: q.t.replace(/^(\d+)/, '$1') + '.' }); }
     if (blank(rv(J, 'legal'))) out.push({ sev: 'Must fix', msg: 'Legal description is blank (Report details › Legal description) – 3.6 needs the text or an image of it; SFREP showed Text / Image red.' });
     if (blank(R.expLow) && blank(R.expHigh)) out.push({ sev: 'Check', msg: 'No reasonable exposure time entered (Report details › Value and reconciliation).' }); }
   const tot = used.map(c => compTotals(J, c)).filter(t => t.price); const adj = tot.map(t => t.adj);
@@ -148,6 +159,7 @@ function preGo(J, x) { const m = String(x.msg || ''); const byUse = n => usedCom
   if (/All rights included|Kind of rights|rights not appraised/i.test(m)) return { stage: 'final', text: 'All rights included', label: 'Report details' };
   if (/Prior services|listed for sale in the past year/i.test(m)) return { stage: 'final', text: 'Prior services and certifications', label: 'Report details' };
   if (/Scope of work/i.test(m)) return { stage: 'final', text: 'Scope of work', label: 'Report details' };
+  if (/^The client (asks|says)/i.test(m)) return { stage: 'final', text: 'Scope of work', label: 'Report details' };
   if (/Reconciliation comment is blank/i.test(m)) return { stage: 'final', text: 'Reconciliation comment', label: 'Report details' };
   if (/Additional scope of work is Yes/i.test(m)) return { stage: 'final', text: 'Additional scope of work – text', label: 'Report details' };
   if (/Legal description is blank/i.test(m)) return { stage: 'final', text: 'Legal description', label: 'Report details' };
