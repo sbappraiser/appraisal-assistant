@@ -1020,3 +1020,8 @@ function wbRemoveAsk(J, cid) {
     if (b.dataset.wa === 'off') await wbRemove(J, cid); else if (b.dataset.wa === 'out') await outOfArea(J, cid); });
   document.addEventListener('keydown', key); document.body.appendChild(bg); bg.querySelector('[data-wa="off"]').focus();
 }
+
+/* scrolling down over the grid: first bring the grid box up under the top bar, so the comp names are on screen, then scroll inside it */
+document.addEventListener('wheel', e => { if (POP || e.deltaY <= 0 || e.ctrlKey) return; const w = e.target.closest && e.target.closest('#gridCard .tablewrap'); if (!w) return;
+  const top = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--toph')) || 64; const r = w.getBoundingClientRect(); const gap = r.top - top;
+  if (gap > 4 && window.scrollY + window.innerHeight < document.documentElement.scrollHeight - 2) { e.preventDefault(); window.scrollBy(0, Math.min(gap, Math.max(40, e.deltaY))); } }, { passive: false });

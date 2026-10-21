@@ -289,3 +289,5 @@ table.grid thead th:nth-child(2){z-index:4}table.grid tr.tot td:nth-child(2){bac
 /* a fixed double line under the comp names, so the header stays set off while the lines scroll under it */
 table.grid thead th,table.grid thead th:nth-child(n){background-image:linear-gradient(#4a5866,#4a5866),linear-gradient(#4a5866,#4a5866);background-size:100% 2px,100% 2px;background-position:left 0 bottom 0,left 0 bottom 4px;background-repeat:no-repeat;padding-bottom:10px}
 body.classic table.grid thead th{background-image:linear-gradient(#4a5866,#4a5866),linear-gradient(#4a5866,#4a5866)}
+/* her ask (Oct 20 2026): the comp names stay on screen while she scrolls down – the grid box itself sticks under the top bar */
+body:not(.popgrid) #gridCard .tablewrap{position:sticky;top:var(--toph,64px)}
