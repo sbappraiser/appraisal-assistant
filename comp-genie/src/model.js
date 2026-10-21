@@ -333,3 +333,8 @@ function remodelAfter(c, priorDate) {
 
 /* the comp sold without an MLS listing for this sale (her Oct 20 2026 case: 719 Camino Cascada – cancelled in the MLS, sold later off-market): the sale is from public record */
 function offMlsSale(c) { const s = currentSale(c); if (!s || !/crs|cort/.test(s.from || '')) return false; return ![c.src.mls, c.src.pdf].some(o => o && (o.saleDate || o.contractDate || /Pending|Active/i.test(o.status || ''))); }
+
+/* the recorded document number of THIS sale (her ask Oct 20 2026) – the CRS sale or the CORT line whose date matches the sale (±2 months); CRS first */
+function docNoOf(c) { const cs = currentSale(c); if (!cs || !cs.date) return null; const near = d => d && Math.abs(monthsBetween(d, cs.date)) <= 2;
+  const L = c.src.crs && c.src.crs.lastSale; if (L && L.doc && near(L.recorded || L.date)) return { doc: L.doc, from: 'crs' };
+  const t = (c.src.cort || []).find(x => x.doc && near(x.saleDate)); if (t) return { doc: t.doc, from: 'cort' }; return null; }
