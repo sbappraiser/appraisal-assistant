@@ -168,11 +168,11 @@ async function openInspection2(id, tab) {
   const root = $('#app');
   root.innerHTML = `<header class="bar"><div class="bar-row">
       <button class="icon-btn" id="homeBtn" aria-label="All inspections">‹ All</button>
-      <div class="title"><b id="tTitle"></b><span id="tAddr"></span></div>
+      <div class="title"><b id="tTitle"></b> <i class="tent" title="Tentacle 2 of the Appraisal Assistant – the subject">2 · Subject</i><span id="tAddr"></span></div>
       <span class="saved" id="saved">Saved ✓</span>
       <button class="icon-btn" id="saveBtn">Save</button>
-      <button class="icon-btn" id="jumpBtn">🔍 Search</button>
-      <button class="icon-btn sk-btn" id="sketchBtn">✏️ Sketch</button>
+      <button class="icon-btn" id="jumpBtn" aria-label="Search">🔍<span class="bl"> Search</span></button>
+      <button class="icon-btn sk-btn" id="sketchBtn" aria-label="Sketch">✏️<span class="bl"> Sketch</span></button>
       ${hcBtn()}
       <button class="attn-pill" id="attnPill"></button></div>
     <nav class="tabs" id="tabs" role="tablist"></nav></header>
@@ -189,7 +189,7 @@ function refreshChrome() {
   document.title = insTitle(ins) + ' – Inspection';
   const issues = computeIssues(ins).filter(x => !ins.overrides[x.key]);
   const req = issues.filter(x => x.sev === 'Required' || x.sev === 'Photo').length;
-  const pill = $('#attnPill'); pill.textContent = req ? `${req} need${req === 1 ? 's' : ''} attention` : (issues.length ? issues.length + ' to review' : 'Ready ✓'); pill.classList.toggle('ok', !req);
+  const pill = $('#attnPill'); pill.textContent = req ? (innerWidth < 520 ? `⚠ ${req}` : `${req} need${req === 1 ? 's' : ''} attention`) : (issues.length ? issues.length + ' to review' : 'Ready ✓'); pill.classList.toggle('ok', !req);
   const byTab = {}; issues.forEach(x => { if (x.sev === 'Required' || x.sev === 'Photo') byTab[x.tab] = (byTab[x.tab] || 0) + 1; });
   $('#tabs').innerHTML = ALL_TABS().map(t => `<button class="tab" role="tab" aria-selected="${t.id === app.tab}" data-tab="${t.id}">${esc(t.title)}${byTab[t.id] ? `<span class="dot">${byTab[t.id]}</span>` : (SECTIONS.some(s => s.id === t.id) ? '<span class="dot done">✓</span>' : '')}</button>`).join('');
   $('#tabs').querySelectorAll('[data-tab]').forEach(b => b.onclick = () => goTab(b.dataset.tab));
@@ -262,7 +262,7 @@ function returnNow() {
 document.addEventListener('pointerdown', e => { if (e.target.closest && e.target.closest('.ret-go')) { e.preventDefault(); returnNow(); } else if (e.target.closest && e.target.closest('.ret-x')) { e.preventDefault(); app.returnTo = null; returnBar(); } }, true);
 function hcInit() { let on = false; try { on = localStorage.getItem('hc') === '1'; } catch (e) {} document.documentElement.classList.toggle('hc', on); }
 function hcToggle() { const on = !document.documentElement.classList.contains('hc'); document.documentElement.classList.toggle('hc', on); try { localStorage.setItem('hc', on ? '1' : '0'); } catch (e) {} document.querySelectorAll('.hc-btn').forEach(b => b.setAttribute('aria-pressed', on)); }
-const hcBtn = () => `<button class="icon-btn hc-btn" aria-pressed="${document.documentElement.classList.contains('hc')}" onclick="hcToggle()">☀ Outdoor</button>`;
+const hcBtn = () => `<button class="icon-btn hc-btn" aria-pressed="${document.documentElement.classList.contains('hc')}" onclick="hcToggle()" aria-label="Outdoor">☀<span class="bl"> Outdoor</span></button>`;
 function legend() {
   const n = computeIssues(app.ins).filter(x => !app.ins.overrides[x.key] && x.tab === app.tab && (x.sev === 'Required' || x.sev === 'Photo')).length;
   return `<div class="legend"><span class="lg req">Required (UAD)</span><span class="lg opt">Optional</span>

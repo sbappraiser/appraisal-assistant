@@ -1,7 +1,8 @@
 /* Layout: white top bar with a tangerine rule + black tab strip, one column of folding subsections.
    Palette for direct sun: pure white page, black text, every fill carries dark text and a black edge.
-   Mint = required, powder blue = optional, red = missing, neon lime = done,
-   highlighter yellow = where you are, tangerine = what you picked / what you're working on, lilac = camera. */
+   Soft colors (her choice, Oct 22): baby green = required, baby blue = optional, red = missing, green = done (with a green check),
+   baby yellow = where you are, baby pink = what you picked / what you're working on and the camera.
+   ☀ Outdoor mode switches to the electric colors for direct sun (html.hc below). */
 :root {
   --bg: #ffffff;
   --ink: #000000;
@@ -10,12 +11,12 @@
   --soft: #f2f2f2;
   --bar: #ffffff;
   --tabbar: #000000;
-  --tangerine: #ff8a00;
-  --cyan: #ffb25c;
-  --cyan-dk: #b35a00;
-  --lime: #b4ff2e;
-  --pink: #d9c6ff;
-  --yellow: #fff200;
+  --tangerine: #ff9cc5;
+  --cyan: #ffc8de;
+  --cyan-dk: #a3195b;
+  --lime: #b8eab0;
+  --pink: #fde2ec;
+  --yellow: #fff4a3;
   --req: #c4f2d6;
   --req-ink: #0a4d27;
   --req-lt: #eefbf3;
@@ -23,7 +24,7 @@
   --opt-ink: #0b3570;
   --warn: #e00000;
   --warn-lt: #ffe1e1;
-  --focus: #ff8a00;
+  --focus: #1f3f66;
   --go: #0fa84a;
   --font: "Atkinson Hyperlegible", -apple-system, "Segoe UI", system-ui, sans-serif;
   --mono: ui-monospace, "SF Mono", Menlo, monospace;
@@ -153,7 +154,7 @@ textarea.txt { min-height: 100px; resize: vertical; line-height: 1.45; }
 /* ---------- Lists (rooms, baths, etc.) ---------- */
 .item { border-top: 3px solid #000; }
 .item-head { display: flex; align-items: center; gap: 10px; padding: 10px 16px; background: #fff; flex-wrap: wrap; }
-.item.open > .item-head { background: #ffdcb5; }
+.item.open > .item-head { background: var(--cyan); }
 .item-head .name { flex: 1; min-width: 200px; font-weight: 700; font-size: 20px; color: #000; border: 0; background: none; text-align: left; padding: 8px 0; }
 .item-head .name small { font-weight: 700; color: var(--ink-2); font-size: 15px; margin-left: 10px; }
 .item-head .badge { font-size: 14px; font-weight: 700; padding: 4px 10px; border-radius: 999px; background: var(--warn); color: #fff; border: 2px solid #000; white-space: nowrap; }
@@ -244,7 +245,8 @@ textarea.txt { min-height: 100px; resize: vertical; line-height: 1.45; }
   .new-form { grid-template-columns: 2fr 1fr auto; align-items: end; }
 }
 
-/* Outdoor mode: even heavier type and borders */
+/* Outdoor mode: electric colors for direct sun, heavier type and borders */
+html.hc { --tangerine: #ff8a00; --cyan: #ffb25c; --cyan-dk: #b35a00; --lime: #b4ff2e; --pink: #d9c6ff; --yellow: #fff200; --focus: #ff8a00; }
 html.hc body { font-size: 21px; }
 html.hc .chip { font-size: 20px; min-height: 58px; border-width: 4px; }
 html.hc .flabel, html.hc .help, html.hc .chip { font-weight: 700; }
@@ -272,7 +274,7 @@ html.hc .group { border-width: 4px; }
 /* pale fills need an edge to read in sun */
 .flabel .tag, .lg.req, .lg.opt { border: 2px solid #000; }
 .cam { font-weight: 700; }
-.item.open > .item-head { background: #ffdcb5; }
+.item.open > .item-head { background: var(--cyan); }
 .chip[aria-pressed="true"] .box { background: #000; }
 
 /* stoplight check beside each subsection: grey until reviewed, green when reviewed with nothing missing */
@@ -378,3 +380,17 @@ input.txt:focus, select.txt:focus, textarea.txt:focus { background: #fff4b0 !imp
 .wchip.on { color: #fff; }
 
 .starters{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 4px;align-items:center}.starters .stlab{font-size:.8em;color:#5b2a86;width:100%}.chip.starter{font-size:.85em;padding:6px 10px;border-radius:14px;border:1px solid #c9b8e0;background:#f7f2fc;color:#3b1d5e}
+
+/* the octopus (Oct 22 2026): navy top line like the Appraisal Assistant, and the tentacle tag */
+.bar { border-top: 5px solid #1f3f66; }
+.bar .tent { display: inline-block; font-style: normal; font-size: .72em; font-weight: 700; color: #1f3f66; border: 1.5px solid #1f3f66; border-radius: 10px; padding: 0 7px; margin-left: 4px; vertical-align: 2px; }
+
+/* iPhone (Oct 22 2026): a compact top bar so the form has the screen */
+@media (max-width: 520px) {
+  .bar-row { gap: 6px; padding: 6px 8px; min-height: 0; }
+  .bar .icon-btn { padding: 6px 10px; min-height: 40px; font-size: 15px; }
+  .bar .bl, .bar .tent { display: none; }
+  .bar .title { min-width: 0; flex: 1 1 140px; } .bar .title b { font-size: 17px; } .bar .title span { font-size: 13px; }
+  .attn-pill { padding: 6px 10px; font-size: 15px; }
+  .bar .saved { font-size: 13px; padding: 4px 6px; }
+}

@@ -84,3 +84,5 @@ html.testcopy .skbar, html.testcopy .bar { border-bottom-color: #7b2cbf; }
 .ctx select, .ctx select.txt, .ctx .txt { min-height: 30px; font-size: 14px; padding: 2px 6px; width: auto; border-width: 2px; }
 .key { min-height: 34px; } .key.arr { min-height: 38px; }
 body.padmin .pad { display: none; }
+/* iPhone (Oct 22): keypad and arrows side by side, the action buttons below in two columns – nothing runs off the right edge */
+@media (max-width: 520px) { .pad { grid-template-columns: 1fr 1fr; } .acts { grid-column: 1 / -1; grid-template-columns: 1fr 1fr; } .acts .two { grid-column: span 2; } .btn.big { min-height: 44px; font-size: 16px; } }

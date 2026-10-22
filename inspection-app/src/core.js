@@ -330,3 +330,9 @@ const safeName = s => String(s || '').replace(/[\\/:*?"<>|#%]+/g, '-').replace(/
    property is Detached, not a PUD and not a condominium / cooperative – only while those are unanswered, so her own answer always stays */
 function propDefaults(p) { if (!p) return; if (p.native === undefined) p.native = false;
   if (p.hoExt === undefined && p.attach === 'Detached' && p.pud === false && p.project === false) p.hoExt = true; }
+
+/* the same app on her iPhone (Oct 22 2026): say iPhone instead of iPad in what she reads */
+const DEVICE = /iPhone/.test(navigator.userAgent) ? 'iPhone' : 'iPad';
+if (DEVICE === 'iPhone') { const fix = n => { if (n.nodeType === 3) { if (n.nodeValue.includes('iPad')) n.nodeValue = n.nodeValue.replace(/iPad/g, 'iPhone'); return; } if (n.nodeType === 1 && !/^(SCRIPT|STYLE|TEXTAREA|INPUT)$/.test(n.nodeName)) { n.childNodes.forEach(fix); ['title', 'placeholder', 'aria-label'].forEach(a => { const v = n.getAttribute && n.getAttribute(a); if (v && v.includes('iPad')) n.setAttribute(a, v.replace(/iPad/g, 'iPhone')); }); } };
+  const start = () => { fix(document.body); new MutationObserver(L => L.forEach(m => { m.addedNodes.forEach(fix); if (m.type === 'characterData') fix(m.target); })).observe(document.body, { childList: true, subtree: true, characterData: true }); };
+  if (document.body) start(); else document.addEventListener('DOMContentLoaded', start); }

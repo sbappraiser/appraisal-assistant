@@ -4,7 +4,7 @@
 .wk-stop { flex: 0 0 auto; border: 2px solid #000; background: #fff; border-radius: 999px; padding: 8px 14px; font: 700 15px var(--font); color: #000; }
 .wk-stop.on { background: var(--yellow); color: #000; border-width: 3px; box-shadow: 0 0 0 2px #000; }
 .wk-stop.part { border-color: var(--tangerine); }
-.wk-stop.done { background: #8fe3ad; border-color: #0a7a35; }
+.wk-stop.done { background: var(--lime); border-color: #0a7a35; }
 .wk-stop.on.done { background: var(--yellow); border-color: var(--go); }
 .wk-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
 .wk-head small { font: 700 13px var(--font); text-transform: uppercase; letter-spacing: .05em; color: #555; }
@@ -32,13 +32,13 @@
 .wcam { position: fixed; inset: 0; z-index: 9000; background: #000; color: #fff; }
 .wcam video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #000; }
 .wcam-top { position: absolute; left: 0; right: 0; top: 0; padding: calc(10px + env(safe-area-inset-top)) 14px 10px; background: linear-gradient(rgba(0,0,0,.75), rgba(0,0,0,0)); }
-.wcam-to { font-size: 19px; } .wcam-to b { color: #ffb25c; }
+.wcam-to { font-size: 19px; } .wcam-to b { color: var(--cyan); }
 .wcam-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
-.wcam-msg { position: absolute; left: 20px; right: 20px; top: 35%; background: #222; border: 2px solid #ffb25c; border-radius: 12px; padding: 16px; font-size: 17px; line-height: 1.4; }
+.wcam-msg { position: absolute; left: 20px; right: 20px; top: 35%; background: #222; border: 2px solid var(--cyan); border-radius: 12px; padding: 16px; font-size: 17px; line-height: 1.4; }
 .wcam-bot { position: absolute; left: 0; right: 0; bottom: 0; padding: 14px 18px calc(18px + env(safe-area-inset-bottom)); display: flex; align-items: center; justify-content: space-between; background: linear-gradient(rgba(0,0,0,0), rgba(0,0,0,.75)); }
 .wcam-shut { width: 88px; height: 88px; border-radius: 50%; border: 5px solid #fff; background: transparent; padding: 6px; }
 .wcam-shut span { display: block; width: 100%; height: 100%; border-radius: 50%; background: #fff; }
-.wcam-shut:active span { background: #ffb25c; }
+.wcam-shut:active span { background: var(--cyan); }
 .wcam.nocam .wcam-shut { opacity: .25; }
 .wcam-ipad, .wcam-done { min-width: 130px; font-size: 18px; }
 .wcam-flash { position: absolute; inset: 0; background: #fff; opacity: 0; pointer-events: none; }
