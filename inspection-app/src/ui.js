@@ -479,7 +479,11 @@ async function clearOrders() {
   for (const r of all) if (r.id === 'orders:active') await DB.del('sketches', r.id);
 }
 async function loadOrdersFile(file) {
-  if (!file) return; toast('Reading the orders file…');
+  if (!file) return;
+  if (/\.zip$/i.test(file.name) || /zip/.test(file.type)) {   // her Oct 22 try: an iPad export picked here – a Workfile moves the inspection over, an SFREP file cannot
+    if (/workfile/i.test(file.name)) { toast('That is an inspection Workfile – adding the inspection to this ' + (typeof DEVICE !== 'undefined' ? DEVICE : 'device') + '…', 5000); return restoreBackup(file); }
+    toast('“' + file.name + '” is the SFREP file – it goes to the computer, not here. To move an inspection to this ' + (typeof DEVICE !== 'undefined' ? DEVICE : 'device') + ', export it as a Workfile on the other device, then tap Restore backup here (or Get orders) and pick the “– Workfile.zip”.', 14000); return; }
+  toast('Reading the orders file…');
   try {
     let d; try { d = JSON.parse(await file.text()); } catch (e) { throw new Error('“' + file.name + '” is not an orders file. Pick “Active Orders.json” or an “Order … .json” file from the Appraisal Assistant.'); }
     if (d.app !== 'appraisal-assistant' || d.kind !== 'active-orders') throw new Error('That is not an Active Orders file from the Appraisal Assistant.');

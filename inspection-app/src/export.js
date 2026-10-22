@@ -529,7 +529,7 @@ async function restoreBackup(file) {
   if (!file) return;
   try {
     const files = await readZip(file); const json = files.get('inspection-backup.json');
-    if (!json) throw new Error('This zip has no inspection backup. Choose a Workfile package exported by this app.');
+    if (!json) throw new Error(/SFREP/i.test(file.name) ? '“' + file.name + '” is the SFREP file (for the computer). To move an inspection here, export it as a Workfile on the other device and pick the “– Workfile.zip”.' : 'This zip has no inspection backup. Choose a Workfile package exported by this app (its name ends in “– Workfile.zip”).');
     const data = JSON.parse(new TextDecoder().decode(json)); const ins = normalize(data.inspection);
     const names = photoFileNames(ins); let n = 0;
     if (await DB.get('inspections', ins.id)) { ins.id = uid(); ins.data.property.fileName = insTitle(ins) + ' (restored copy)'; }
