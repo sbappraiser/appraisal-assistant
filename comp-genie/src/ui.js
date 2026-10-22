@@ -626,6 +626,7 @@ function detailHTML(c) {
 function exportHTML(J) {
   const used = J.comps.filter(c => c.use).sort((a, b) => a.use - b.use);
   return `<p>${used.length ? `Comps chosen: ${used.map(c => `<b>${c.use}</b> ${esc(compTitle(c))}`).join(' · ')}` : 'Pick comps with “Use as” in the list. If none are picked, the table export includes every comp considered.'}</p>
+  <div class="row"><button class="btn" data-a26open="1" title="Every grid answer written the UAD 2.6 way, to copy into ACI">📋 2.6 copy sheet for ACI</button></div>
   <div class="row"><button class="btn primary" data-act="x-full" ${used.length && J.subject.insp ? '' : 'disabled'} title="${J.subject.insp ? '' : 'Drop your iPad Workfile package first'}">Full report for SFREP (.zip)</button><button class="btn primary" data-act="x-sfrep" ${used.length ? '' : 'disabled'}>SFREP comps file (.zip)</button>
   <button class="btn" data-act="x-csv">Comps table (.csv)</button>
   <button class="btn" data-act="x-photos">Front photos (.zip)</button></div>

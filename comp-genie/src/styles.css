@@ -418,3 +418,11 @@ header.top h1 small{font-size:.5em;font-weight:600;color:#5b2a86;margin-left:6px
 .dbcask{max-width:640px}.dbcsum li{margin:4px 0}.dbcsum ul{font-size:14px;color:#334}
 .dbcview{max-width:min(1300px,96vw);width:96vw}.dbctab{max-height:62vh;overflow:auto}.dbctab th{position:sticky;top:0;background:#eef2f7;cursor:pointer;white-space:nowrap}.dbctab td{white-space:nowrap;max-width:260px;overflow:hidden;text-overflow:ellipsis}
 .dbcint{margin:8px 0;line-height:1.7}.dbcmix{margin:4px 0 0 18px;font-size:14px}
+
+/* 2.6 copy sheet for ACI */
+.a26sheet { max-width: 96vw; width: 1400px; max-height: 92vh; overflow: auto; }
+table.a26 th { text-align: left; vertical-align: top; white-space: nowrap; font-size: .85em; }
+table.a26 td { vertical-align: top; }
+.a26cp { font: inherit; font-size: .9em; text-align: left; background: #fff; border: 1px solid var(--line, #ccd); border-radius: 6px; padding: 2px 6px; cursor: copy; max-width: 28em; white-space: pre-wrap; }
+.a26cp:hover { background: #eef4ff; } .a26cp.done { background: #e5f4e4; border-color: #6a6; }
+.a26t { display: inline-block; margin-left: 4px; color: #5b2a86; font-size: .75em; } .a26adj { margin-top: 2px; } .a26txt { margin: 8px 0; }
