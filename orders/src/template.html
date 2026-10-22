@@ -238,7 +238,10 @@ nav.shared .headLbl { font-weight: 800; color: #5b2a86; font-size: 13px; letter-
 nav.shared button { font: inherit; font-size: 15px; border: 1px solid var(--line); background: #fff; border-radius: 9px; padding: 6px 12px; cursor: pointer; font-weight: 600; }
 nav.shared button[aria-current="true"] { background: #1f3a68; color: #fff; border-color: #1f3a68; }
 nav.octo { border: 2px solid #1f3a68; border-radius: 14px; padding: 6px 8px; background: #f4f7fb; }
-nav.octo .octoFile { font-weight: 700; margin-right: 6px; color: #1f3a68; }
+nav.octo .octoFile { font-weight: 700; margin-right: 6px; color: #1f3a68; display: inline-flex; flex-direction: column; line-height: 1.2; }
+nav.octo .octoFile .tNo, #gnTitle .tNo { font-size: .8em; font-weight: 600; color: #4a5d78; }
+#gnTitle .gnSub { display: flex; flex-direction: column; font-size: .72em; margin-top: 4px; line-height: 1.25; }
+#gnTitle .gnSub .tNo { font-size: .85em; }
 nav.octo button { font: inherit; font-size: 15px; font-weight: 700; border: 1.5px solid #c9d3df; background: #fff; border-radius: 10px; padding: 6px 11px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
 nav.octo button .tn { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; border: 2px solid currentColor; font-size: 13px; }
 nav.octo button[aria-current="true"] { background: #1f3a68; color: #fff; border-color: #1f3a68; box-shadow: 0 2px 0 #f2c94c; }

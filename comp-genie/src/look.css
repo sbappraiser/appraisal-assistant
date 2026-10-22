@@ -70,3 +70,7 @@ nav.tabs button[aria-selected="true"] { background: var(--look-navy) !important;
 .cneeds { margin: 8px 0 10px; padding: 8px 12px; border: 2px solid var(--look-navy); border-radius: 10px; background: #f4f8fd; font-size: 15px; }
 .cneed { display: inline-block; margin: 3px 4px 0 0; padding: 2px 10px; border-radius: 999px; background: var(--look-pink); border: 1px solid var(--look-pink-b); font-weight: 600; }
 .cneed.warn { background: #ffecec; border-color: var(--look-warn); color: var(--look-warn); }
+
+#lookFile .lfName { display: inline-flex; align-items: center; gap: 4px; vertical-align: middle; }
+#lookFile .lfT { display: inline-flex; flex-direction: column; line-height: 1.15; }
+#lookFile .lfT small { font-weight: 600; font-size: .78em; opacity: .8; }

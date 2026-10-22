@@ -138,7 +138,8 @@ async function pullMicro(o, quiet) {
   return note;
 }
 window.addEventListener('focus', async () => { const o = await readOrders(); if (o.length !== (app.orders || []).length) { app.orders = o; render(); } else app.orders = o; });
-const jobLabel = j => { const same = app.jobs.filter(x => x.name === j.name).length > 1; return j.name + (same ? ` – started ${new Date(j.created || 0).toLocaleDateString()} ${new Date(j.created || 0).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}, ${(j.comps || []).filter(c => c.use).length} on the grid` : ''); };   // two assignments with one name: tell them apart
+const jobShow = j => { const n = String(j.name || ''); const f = String(j.fileNo || (j.subject && j.subject.fileNo) || ''); return f && n.startsWith(f + ' ') ? n.slice(f.length + 1) + ' — File ' + f : n; };   /* her ask (Oct 22 2026): address first, the file number apart from it */
+const jobLabel = j => { const same = app.jobs.filter(x => x.name === j.name).length > 1; return jobShow(j) + (same ? ` – started ${new Date(j.created || 0).toLocaleDateString()} ${new Date(j.created || 0).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}, ${(j.comps || []).filter(c => c.use).length} on the grid` : ''); };   // two assignments with one name: tell them apart
 const orderName = o => [o.fileNo, String(o.address || '').split(',')[0].trim()].filter(Boolean).join(' ') || 'Order';
 async function jobFromOrder(o) {
   const parts = String(o.address || '').split(',').map(x => x.trim());

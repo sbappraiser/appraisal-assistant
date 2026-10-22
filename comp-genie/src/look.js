@@ -18,7 +18,9 @@
   let F = null; function corner() { if (!F) { F = document.createElement('div'); F.id = 'lookFile'; } const H = document.querySelector('header.top, .top');   // in the page's own top bar, at its right end (pages that redraw their top bar get it back)
     if (H) { if (F.parentNode !== H) { F.className = 'inhead'; H.appendChild(F); const h = H.offsetHeight; if (h && getComputedStyle(H).position === 'sticky') document.documentElement.style.setProperty('--toph', h + 'px'); } }   /* the genie keeps its grid under the top bar (--toph): adding this box can make the bar taller */ else if (F.parentNode !== document.body) { F.className = ''; document.body.appendChild(F); }
     let name = ''; try { name = typeof window.lookFileName === 'function' ? String(window.lookFileName() || '') : ''; } catch (e) {}
-    const want = (name ? `<span title="The file you are working in">📄 ${name.replace(/[<>&]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]))}</span>` : '') + '<button type="button" data-lookleg="1" title="What the colors mean">ⓘ Colors</button>';
+    const e = t => t.replace(/[<>&]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]));
+    const parts = name.split(' · '); const fno = parts.length > 1 ? parts.shift() : '', addr = parts.join(' · ');   /* her ask (Oct 22 2026): the address on its own line, the file number under it */
+    const want = (name ? `<span class="lfName" title="The file you are working in">📄 <span class="lfT"><span>${e(addr)}</span>${fno ? `<small>File ${e(fno)}</small>` : ''}</span></span>` : '') + '<button type="button" data-lookleg="1" title="What the colors mean">ⓘ Colors</button>';
     if (F.innerHTML !== want) F.innerHTML = want; }
   document.addEventListener('click', e => { if (e.target.closest && e.target.closest('[data-lookleg]')) legend(); });
   /* the mouse wheel moves a drop-down up and down once she has clicked on it (her ask) – the page still scrolls everywhere else */

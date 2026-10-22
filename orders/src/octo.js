@@ -23,13 +23,16 @@ function octoMark() {
   document.querySelectorAll('nav.shared [data-go]').forEach(b => b.setAttribute('aria-current', String(b.dataset.go === tab)));
   const sub = $('#t1sub'); if (sub) { sub.hidden = OCTO.t !== 1; sub.querySelectorAll('[data-go]').forEach(b => b.setAttribute('aria-current', String(b.dataset.go === tab))); }
   const on = octoHasOrder(); const nav = document.querySelector('nav.octo'); if (nav) nav.classList.toggle('noorder', !on);
-  const f = $('#octoFile'); if (f) f.textContent = on ? ([cur.fileNo, typeof street === 'function' ? street(cur) : ''].filter(Boolean).join(' · ') || 'This order') + ':' : 'No order open:';
+  /* her ask (Oct 22 2026): the address on its own line, the file number on a separate line under it */
+  const oAddr = on && typeof street === 'function' ? street(cur) : '', oNo = on ? cur.fileNo || '' : '';
+  const ttl = (a, n) => (a ? `<span class="tAddr">${hesc(a)}</span>` : '') + (n ? `<span class="tNo">File ${hesc(n)}</span>` : '');
+  const f = $('#octoFile'); if (f) f.innerHTML = on ? (ttl(oAddr, oNo) || 'This order') : 'No order open';
   /* green ✓: tentacle 1 from the order; the others from the Comp genie's steps for this order (it tells this page after each redraw) */
   const done = {}; if (on && typeof oDone === 'function') { const d = oDone(cur); done[1] = d.docs && d.letter && d.scope; }
   const S = on && OCTO.steps.order === cur.id ? OCTO.steps.list || [] : [];
   for (let t = 2; t <= 9; t++) { const L = S.filter(x => +x.n === t); if (L.length) done[t] = L.every(x => x.done); }
   document.querySelectorAll('nav.octo [data-tent]').forEach(b => { const i = b.querySelector('.tck'); if (i) i.textContent = done[+b.dataset.tent] ? '✓' : ''; });
-  const g = $('#gnTitle'); if (g && tab === 'genie' && OCTO.t > 1) g.textContent = OCTO.t + ' · ' + OCTO_NAMES[OCTO.t] + (on ? ' – ' + [cur.fileNo, typeof street === 'function' ? street(cur) : ''].filter(Boolean).join(' ') : '');
+  const g = $('#gnTitle'); if (g && tab === 'genie' && OCTO.t > 1) g.innerHTML = hesc(OCTO.t + ' · ' + OCTO_NAMES[OCTO.t]) + (on ? `<span class="gnSub">${ttl(oAddr, oNo)}</span>` : '');
   const gh = $('#gnHelp'); if (gh && tab === 'genie') gh.textContent = OCTO.t >= 3 && OCTO.t <= 6 ? 'With the Comp genie – your data, databases and comparables for this section.' : OCTO.t > 1 ? 'Part of the Appraisal Assistant. The numbered steps underneath carry each tentacle\'s number.' : 'The Comp genie for the order that is open.';
   const mt = $('#mkTitle'); if (mt) mt.innerHTML = '3 · Market <small style="font-size:.55em;color:#5b2a86">Comp genie</small>';
 }
