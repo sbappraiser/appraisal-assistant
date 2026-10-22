@@ -64,17 +64,17 @@ document.addEventListener('input', e => { if (e.target.id !== 'dbcQ') return; DB
 document.addEventListener('keydown', e => { if (e.key === 'Escape') { const bg = document.getElementById('dbcBg'); if (bg) bg.remove(); } });
 /* --- integrity: duplicates, missing key facts, one APN with two different addresses (two properties mixed?) --- */
 function dbcIntegrity() { const out = [];
-  const check = (name, id, rows, keyOf, need) => { if (!rows.length) return; const seen = new Map(); let dup = 0; rows.forEach(r => { const k = keyOf(r); if (!k) return; seen.set(k, (seen.get(k) || 0) + 1); }); seen.forEach(n => { if (n > 1) dup += n - 1; });
-    const miss = rows.filter(r => need.some(k => blank(r[k]) || r[k] === '')).length;
+  const check = (name, id, rows, keyOf, need, only, missLbl) => { if (!rows.length) return; const seen = new Map(); let dup = 0; rows.forEach(r => { const k = keyOf(r); if (!k) return; seen.set(k, (seen.get(k) || 0) + 1); }); seen.forEach(n => { if (n > 1) dup += n - 1; });
+    const miss = rows.filter(r => (!only || only(r)) && need.some(k => blank(r[k]) || r[k] === '')).length;
     const byApn = new Map(); rows.forEach(r => { const a = apnKey(r.apn); const ad = r.addr || r.address; if (!a || !ad) return; const k = addrKey(ad); if (!k) return; if (!byApn.has(a)) byApn.set(a, new Set()); byApn.get(a).add(k + '¦' + ad); });
     const mixed = [...byApn.entries()].filter(([, S]) => new Set([...S].map(x => x.split('¦')[0])).size > 1).map(([a, S]) => ({ apn: a, addrs: [...new Set([...S].map(x => x.split('¦')[1]))].slice(0, 3) }));
-    out.push({ name, id, n: rows.length, dup, miss, need, mixed }); };
+    out.push({ name, id, n: rows.length, dup, miss, need, mixed, missLbl }); };
   check('CORT weekly closings', 'cort', app.cort || [], dbcKey.cort, ['apn', 'saleDate', 'salePrice']);
   check('Land sales', 'land', app.land || [], r => String(r.id || ''), ['salePrice']);
-  if (ARCH.loaded) { const rows = []; for (let i = 0; i < ARCH.rows.length; i++) rows.push(archRow(i)); check('Comp archive', 'arch', rows, () => '', []); }
+  if (ARCH.loaded) { const rows = []; for (let i = 0; i < ARCH.rows.length; i++) rows.push(archRow(i)); check('Comp archive', 'arch', rows, () => '', ['apn'], r => r.record_role === 'subject', [n => n === 1 ? 'subject record is missing its APN' : 'subject records are missing an APN', 'every subject has an APN (comps used only as comparables do not need one)']); }   // her rule Oct 21 2026: an archive comp has no APN; a subject does
   return out; }
 function dbcIntegrityHTML() { const L = dbcIntegrity(); if (!L.length) return '';
   return `<section class="card"><h2>Integrity check <small>– nothing is changed; check these yourself</small></h2>${L.map(x => `<div class="dbcint"><b>${esc(x.name)}</b> · ${x.n.toLocaleString()} records ·
       ${x.dup ? `<span class="dbst off">${x.dup} duplicate${x.dup > 1 ? 's' : ''}</span>` : '<span class="dbst on">✓ no duplicates</span>'}
-      ${x.need.length ? (x.miss ? ` <span class="dbst off">${x.miss} missing ${x.need.join(' / ')}</span>` : ' <span class="dbst on">✓ key facts present</span>') : ''}
+      ${x.need.length ? (x.miss ? ` <span class="dbst off">${x.miss} ${x.missLbl ? x.missLbl[0](x.miss) : 'missing ' + x.need.join(' / ')}</span>` : ` <span class="dbst on">✓ ${x.missLbl ? x.missLbl[1] : 'key facts present'}</span>`) : ''}
       ${x.mixed.length ? ` <span class="dbst off">${x.mixed.length} APN${x.mixed.length > 1 ? 's' : ''} with more than one address</span><ul class="dbcmix">${x.mixed.slice(0, 8).map(m => `<li><button class="linkbtn" data-dbcopen="${x.id}" data-dbcq="${esc(m.apn)}">APN ${esc(m.apn)}</button>: ${m.addrs.map(esc).join(' · ')}</li>`).join('')}${x.mixed.length > 8 ? `<li>… and ${x.mixed.length - 8} more</li>` : ''}</ul><p class="help">One parcel number with two different addresses can be a corner lot or a unit – or two properties' data mixed. Click to look.</p>` : ' <span class="dbst on">✓ each APN has one address</span>'}</div>`).join('')}</section>`; }

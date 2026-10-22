@@ -838,3 +838,4 @@ Decisions (her, Oct 19–20): "Exterior of dwelling" instead of left/right/side 
 - Look inside: a read-only viewer for each database (search, sort by column, paging, Download CSV).
 - Integrity check: duplicates, records missing APN/sale date/price, one APN with more than one address (reports only; fixes nothing).
 - dbview.js is titled "Database center"; the results window after a Cancel says "Not changed" instead of "could not read". Hub Help: "Databases (the Database center)". Tested st218 (200 → modal → Cancel 200 → OK 220; viewer; integrity).
+- Her rule (Oct 21 2026): in the ACI archive a property used only as a comparable has no APN; a subject does. The integrity check asks for an APN only on archive records with record_role "subject". (Matching comps to CORT already works by APN or address.)
