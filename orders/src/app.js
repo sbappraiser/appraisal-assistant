@@ -380,8 +380,8 @@ function showTab(t) { CUR_TAB = t;
   if (t === 'genie') { const on = cur && hasContent(cur); if (on) saveLetter(true, true); const nm = on ? [cur.fileNo, street(cur)].filter(Boolean).join(' ') : '';
     $('#gnTitle').textContent = 'Comp genie' + (nm ? ' – ' + nm : ''); $('#gnOwn').href = on ? genieURL(cur) : '../comp-genie/';
     const fr = $('#genieFrame'); const want = on ? cur.id : '';
-    if (!fr.dataset.loaded) { fr.dataset.loaded = '1'; fr.dataset.order = want; fr.src = '../comp-genie/index.html?embed=1&v=' + Date.now() + (want ? '&order=' + encodeURIComponent(want) : ''); /* v = always the newest Comp genie, never a cached copy */ }
-    else { fr.dataset.order = want; setTimeout(() => { try { fr.contentWindow.postMessage({ type: 'aa-refresh', order: want }, location.origin); } catch (e) {} }, on ? 400 : 0); } }
+    if (!fr.dataset.loaded) { fr.dataset.loaded = '1'; fr.dataset.order = want; fr.src = '../comp-genie/index.html?embed=1&v=' + Date.now() + (want ? '&order=' + encodeURIComponent(want) : '') + (window.GENIE_GO ? '&go=' + window.GENIE_GO : ''); window.GENIE_GO = ''; /* v = always the newest Comp genie, never a cached copy */ }
+    else { fr.dataset.order = want; setTimeout(() => { try { fr.contentWindow.postMessage({ type: 'aa-refresh', order: want, go: window.GENIE_GO || '' }, location.origin); window.GENIE_GO = ''; } catch (e) {} }, on ? 400 : 0); } }
   if (t === 'books') { $('#bkTitle').textContent = 'Bookkeeping' + (cur && (cur.fileNo || street(cur)) ? ' – ' + [cur.fileNo, street(cur)].filter(Boolean).join(' ') : ''); renderBooks(); const a = $('#bkAll'); if (a) { a.innerHTML = unpaidHTML(); wireUnpaid(a); } }
   if (t === 'market') { $('#mkTitle').textContent = 'Market conditions' + (cur && (cur.fileNo || street(cur)) ? ' – ' + [cur.fileNo, street(cur)].filter(Boolean).join(' ') : ''); mkRender(); }
 }
@@ -582,7 +582,7 @@ function oSetup() { if (oSetup.done) return; oSetup.done = true;
   const ap = $('#f_apSales') && $('#f_apSales').closest('.checks'); if (ap && ap.parentElement) $('#scopeApproaches').appendChild(ap.parentElement);
   ['#f_ea', '#f_hc'].forEach(id => { const el = $(id); const lab = el && el.closest('label'); if (lab) $('#scopeEaHc').appendChild(lab); });
   document.querySelectorAll('#panel-letter [data-otab]').forEach(b => b.onclick = () => { OTAB = b.dataset.otab; if (cur) cur.otab = OTAB; oRender(cur); window.scrollTo({ top: 0 }); });
-  $('#oNext').onclick = () => { const t = document.querySelector('nav.tabs [data-tab="genie"]'); if (t) t.click(); };
+  $('#oNext').onclick = () => { window.GENIE_GO = 'insp'; const t = document.querySelector('nav.tabs [data-tab="genie"]'); if (t) t.click(); };
   $('#hbuAll').onclick = () => { ['Legal', 'Phys', 'Fin', 'Max'].forEach(k => { $('#f_hbu' + k).checked = true; }); $('#f_hbuPresent').value = 'true'; update(); };
   ['#f_hbuLegal', '#f_hbuPhys', '#f_hbuFin', '#f_hbuMax', '#f_hbuPresent', '#f_hbuNote', '#f_sowNote', '#f_addlCond', '#f_addlCondText'].forEach(id => { const el = $(id); if (el) { el.addEventListener('input', update); el.addEventListener('change', update); } }); }
 function oDone(f) { const D = f.docs || [], has = t => D.some(d => d.type === t);

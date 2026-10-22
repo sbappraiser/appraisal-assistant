@@ -16,11 +16,13 @@ async function start() {
   app.orders = await readOrders();
   await archPhotoInit(); try { if (localStorage.getItem('genie.classic') === '1') document.body.classList.add('classic'); } catch (e) {} try { if (localStorage.getItem('genie.lnotes') === '1') document.body.classList.add('lnotes'); } catch (e) {} try { if (localStorage.getItem('genie.sbs') !== '0') document.body.classList.add('sbs'); } catch (e) { document.body.classList.add('sbs'); } try { const gl = await DB.get('kv', 'gridLines'); if (gl && gl.v) GRID_DEFAULT = gl.v; } catch (e) {}
   const oq = new URLSearchParams(location.search).get('order');
+  const goq = new URLSearchParams(location.search).get('go');   // the order's ④ button: open on that step
   if (new URLSearchParams(location.search).get('embed')) document.body.classList.add('embed');
   if (POP) document.body.classList.add('popgrid');   // inside the Appraisal Assistant's Comp genie tab
   if (CPOP) app.sel = CPOP.id;
   app.home = !POP && !CPOP && !oq && !new URLSearchParams(location.search).get('job');   // her request (Oct 19 2026): open on the list of assignments, not the last one
   if (oq) { history.replaceState(null, '', location.pathname); const o = app.orders.find(x => x.id === oq); if (o) await jobFromOrder(o); else toast('That order was not found in this browser. Open the Appraisal Assistant in this same browser (Chrome).', 6000); }
+  if (goq && app.job) genieGo(goq, true);
   if (!app.job && !app.home) await newJob();
   app.jobs.forEach(j => (j.files || []).forEach(f => { if (!f.id) { f.id = uid(); f.legacy = true; } }));
   for (const j of app.jobs) { let ch = false; (j.comps || []).forEach(c => { const m = String((c.edit || {}).mlsCondition || '').trim().toUpperCase().match(/^(?:(LOW|MID|HIGH)\s+)?C\s*([1-6])\s*([+-])?$/); if (!m || !blank(c.edit.condition)) return;   // a C rating typed in the MLS words line before Oct 19 2026
@@ -37,6 +39,7 @@ window.addEventListener('message', async e => {   // the Appraisal Assistant sho
   if (e.data.order && (!app.job || app.job.orderId !== e.data.order || app.home)) { const o = app.orders.find(x => x.id === e.data.order); if (o) { app.home = false; await jobFromOrder(o); await loadPhotos(); } }
   if (e.data.order && app.job && app.job.orderId === e.data.order) { const o = app.orders.find(x => x.id === e.data.order); if (o) await pullWorkfile(o); }
   if (!e.data.order && !app.job) app.home = true;
+  if (e.data.go && app.job) { genieGo(e.data.go); return; }
   render();
 });
 function setCort(rows) {
@@ -1091,3 +1094,7 @@ function inspCardHTML(J) { const I = J.subject.insp;
   return `<div class="row inspdrop">${I ? '' : '<b class="warnTxt">No inspection yet.</b>'}
     <label class="btn ${I ? '' : 'primary'}">${I ? 'Replace with a newer Workfile package' : 'Add your iPad Workfile package (.zip)'}<input type="file" accept=".zip" data-act="files" hidden></label></div>
     <p class="help">The subject's data, photos and sketch come from it. Comps are added on ⑦ Comp selection.</p>`; }
+
+/* open a numbered step: its page, then scroll to it */
+function genieGo(k, quiet) { const x = pathSteps(app.job).find(y => y.k === k); if (!x || !x.st) return; app.pathAt = k; app.job.stage = x.st; app.home = false; save();
+  if (quiet) return; render.top = true; render(); setTimeout(() => { const c = document.querySelector(x.sel); if (c) c.scrollIntoView({ block: 'start' }); }, 150); }
