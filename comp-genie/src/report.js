@@ -56,7 +56,7 @@ function reportFrom(J) {
     client: c0.company || c0.name || '', clientAddr1: c0.addr1 || '', clientAddr2: c0.addr2 || '',
     lender: o.lenderDiff ? (o.lenderCo || '') : '', lenderAddr1: o.lenderDiff ? o.lenderAddr1 || '' : '', lenderAddr2: o.lenderDiff ? o.lenderAddr2 || '' : '',
     amc: o.amcUsed ? (o.amcCo || '') : '', amcAddr1: o.amcUsed ? o.amcAddr1 || '' : '', amcAddr2: o.amcUsed ? o.amcAddr2 || '' : '',
-    insp: I.inspType || 'InteriorAndExterior', market: (o.market && o.market.uad) || null, contract: o.uad || null, hasOrder: !!o.id, fee: o.fee || '', otherUsers: o.otherUsers || '', zoneComp: I.zoneComp || '', accessRaw: I.accessRaw || '',
+    purchase: o.id ? /purchase/i.test(String(o.purpose || '')) : undefined, insp: I.inspType || 'InteriorAndExterior', market: (o.market && o.market.uad) || null, contract: o.uad || null, hasOrder: !!o.id, fee: o.fee || '', otherUsers: o.otherUsers || '', zoneComp: I.zoneComp || '', accessRaw: I.accessRaw || '',
     sowCost: o.id ? !!o.apCost : undefined, sowIncome: o.id ? !!o.apIncome : undefined, sowRent: o.id ? !!o.rent : undefined, sowAddlUser: o.id ? !!String(o.otherUsers || '').trim() : undefined,
     /* her Order › Scope of work tab (Oct 21 2026): highest and best use, added scope, extraordinary assumptions, hypothetical conditions */
     hbu: { legal: !!o.hbuLegal, phys: !!o.hbuPhys, fin: !!o.hbuFin, max: !!o.hbuMax }, hbuPresent: o.hbuPresent || '', hbuNote: o.hbuNote || '', sowNote: o.sowNote || '', eaNote: o.ea || '', hcNote: o.hc || '', addlCond: o.addlCond || '', addlCondText: o.addlCondText || '',
@@ -154,6 +154,8 @@ function reportHTML(J, part) {   // part: 'early' (Assignment, scope and site �
       <p class="help">The rooms, finishes, quality, condition, defects and photos come from your inspection. Add here only what those fields cannot show.</p>
       ${cmtBoxHTML(J, 'cSubject')}</section>
     <section><h3>Contract and history</h3>
+      <label class="fld"><span>Is there a sales contract? <small>(3.6 always asks)</small></span>${yn('contractYN', F.contract && (F.contract.price || F.contract.cdate) ? true : F.purchase)}</label>
+      ${(R.contractYN || (F.purchase ? 'true' : '')) === 'true' && !(F.contract && (F.contract.price || F.contract.cdate)) ? `<p class="help warnTxt">Read the contract in <b>1 Intake › Order documents</b> (drop the purchase agreement) so its price, date and terms go into the report.</p>` : ''}
       ${F.contract && F.contract.arms === 'false' || R.nonArmsNote ? fx('Not an arm’s-length sale – explain', ta('nonArmsNote', 1250, 'e.g. The buyer is the seller’s daughter; the price was set by the family.'), '1,250 characters') : ''}
       <label class="fld"><span>Subject listed for sale in the past year?</span>${yn('listedYear', F.listedYear)}</label>
       ${rv(J, 'listedYear') === 'true' || RX.listedYear === 'true' ? fx('Listing type', selA('lstType', 'LISTING_INFORMATION_DETAIL/ListingType', 'MLS')) + (R.lstType === 'Other' ? fx('Describe', inp('lstTypeOther', '45 characters')) : '') + fx('Status', selA('lstStatus', 'LISTING_INFORMATION_DETAIL/ListingStatusType', '')) + fx('Listing number (MLS #)', inp('lstId')) + fx('Start date', inp('lstStart', 'YYYY-MM-DD')) + fx('End date', inp('lstEnd', 'YYYY-MM-DD'), 'blank while still listed') + fx('Starting list price', inp('lstOrig', '$')) + fx('Final or current list price', inp('lstFinal', '$')) + fx('Days on market', inp('lstDom', '', '6em')) + fx('Total days on market (all listings)', inp('lstCdom', '', '6em')) : ''}
@@ -337,7 +339,7 @@ function writeReportXML(doc, NS, J, SUBJ, VA, SVC) {
     set(tr, 'MarketingTimeType', M.mktime); set(tr, 'MarketSupplyTrendType', M.supply); set(tr, 'MarketTrendsForeclosureActivityIndicator', M.distress);
     if (M.comment) set(tr, 'PriceTrendsAnalysisDescription', M.comment.slice(0, 2500)); }
   // sales contract (hub document reader)
-  const K = F.contract;
+  const K = F.contract; { const cy = R.contractYN || (K && (K.price || K.cdate) ? 'true' : F.purchase === true ? 'true' : F.purchase === false ? 'false' : ''); if (cy) set(path(SUBJ, 'SALES_CONTRACTS', 'SALES_CONTRACT', 'SALES_CONTRACT_DETAIL'), 'SalesContractExistsIndicator', cy); }   // A-1 R: always Yes or No (her Oct 22 2026 full test)
   if (K && (K.price || K.cdate || K.saleType)) { const sc = path(SUBJ, 'SALES_CONTRACTS', 'SALES_CONTRACT', 'SALES_CONTRACT_DETAIL');
     const yn = v => v === 'true' ? 'true' : v === 'false' ? 'false' : null;
     set(sc, 'ArmsLengthIndicator', yn(K.arms)); set(sc, 'PersonalPropertyIncludedIndicator', yn(K.pp)); set(sc, 'SalesConcessionIndicator', yn(K.conc)); set(sc, 'SalesConcessionsTypicalToMarketIndicator', yn(K.concTyp));

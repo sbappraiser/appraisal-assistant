@@ -49,6 +49,7 @@ function precheckXML(xml) {
   };
   walk(doc.documentElement);
   unknown.forEach((n, k) => out.push({ sev: 'Check', msg: `${k} is not in the UAD 3.6 delivery spec (A-1)${n > 1 ? ` – ${n} times` : ''}`, hint: 'The import may ignore or reject it.' }));
+  out.push(...precheckReq(doc));   // Fannie Mae's always-required fields that are missing (A-1 "R", Oct 22 2026)
   return out;
 }
 function precheckGrid(J) { if (!RC) return rcRun(() => precheckGrid(J));
@@ -65,7 +66,9 @@ function precheckGrid(J) { if (!RC) return rcRun(() => precheckGrid(J));
   { const R = J.report || {}; const F = reportFrom(J);
     if (R.priorSvc !== 'true' && R.priorSvc !== 'false') out.push({ sev: 'Must fix', msg: 'Prior services: answer whether you performed services on this property in the past three years (Report details › Prior services).' + (F.priorHits.length ? ' Your records show: ' + F.priorHits.join('; ') + '.' : '') });
     if (R.priorSvc === 'true' && !String(R.priorSvcText || '').trim()) out.push({ sev: 'Must fix', msg: 'Prior services is Yes – describe the services (Report details).' });
-    if (R.listedYear !== 'true' && R.listedYear !== 'false' && F.listedYear === undefined) out.push({ sev: 'Must fix', msg: 'Answer "Subject listed for sale in the past year?" (Report details › Prior services and certifications).' });
+    if (R.listedYear !== 'true' && R.listedYear !== 'false' && F.listedYear === undefined) out.push({ sev: 'Must fix', msg: 'Answer "Subject listed for sale in the past year?" (Report details › Contract and history).' });
+    { const K = F.contract, has = K && (K.price || K.cdate); const cy = R.contractYN || (has ? 'true' : F.purchase === true ? 'true' : F.purchase === false ? 'false' : '');
+      if (!cy) out.push({ sev: 'Must fix', msg: 'Answer "Is there a sales contract?" (Report details › Contract and history).' }); else if (cy === 'true' && !has) out.push({ sev: 'Must fix', msg: 'Sales contract: drop the purchase agreement in 1 Intake › Order documents so its price, date and terms are read (Report details › Contract and history).' }); }
     [['sowCost', 'Cost approach developed?'], ['sowIncome', 'Income approach developed?'], ['sowRent', 'Rent schedule included?'], ['sowAddlUser', 'Intended users besides the client?']].forEach(([k, l]) => { if (R[k] !== 'true' && R[k] !== 'false' && F[k] === undefined) out.push({ sev: 'Must fix', msg: `Scope of work: answer "${l}" (Report details).` }); });
     if (blank(rptOpinion(J))) out.push({ sev: 'Must fix', msg: 'Opinion of market value is blank (Report details › Value and reconciliation) – it is the value on page 1 of the report.', hint: blank(G.value) ? '' : 'The grey ' + money(G.value) + ' there is only your sales comparison value as a hint – type your final value.' });   /* her Oct 21 import: page 1 Opinion of Market Value was blank */
     if (blank(String(R.reconNote || '').trim())) out.push({ sev: 'Must fix', msg: 'Reconciliation comment is blank (Report details › Value and reconciliation) – 3.6 requires it (Reconciliation of Market Value).' });
@@ -224,3 +227,12 @@ function qcdCheck(J, F, who, out, subj) { if (typeof QCD_IDS === 'undefined') re
     if (!v) { if (subj && !sum) return; out.push({ sev: 'Must fix', msg: `${who}: ${name(id)} is blank – the line is ticked on your grid, so 3.6 needs an entry${sum ? ' (a few words, up to 70 characters)' : ' (▾ pick it)'}, or untick the line under ⚙ Grid lines.` }); return; }
     if (sum && v.length > 70) out.push({ sev: 'Check', msg: `${who}: ${name(id)} is ${v.length} characters – 3.6 allows 70; the rest is cut off.` });
     if (!sum && !qcdPick(id, v)) out.push({ sev: 'Must fix', msg: `${who}: ${name(id)} "${v}" is not one of the 3.6 answers – ▾ pick it.` }); }); }
+
+/* A-1 "R" (always required) fields the file must carry – each named with its F-1 place and the tentacle where it is answered */
+function precheckReq(doc) { if (typeof A1_REQ === 'undefined') return []; const out = []; const kids = (el, t) => [...el.children].filter(k => k.localName === t);
+  const VA = doc.getElementsByTagNameNS('*', 'VALUATION_ANALYSIS')[0]; if (!VA) return out; const PR = kids(VA, 'PROPERTIES')[0]; const SUBJ = PR && kids(PR, 'PROPERTY').find(p => p.getAttribute('ValuationUseType') === 'SubjectProperty');
+  A1_REQ.forEach(([subj, rel, fld, lab, t]) => { const base = subj ? SUBJ : VA; if (!base) return; let nodes = [base];
+    rel.split('/').filter(Boolean).forEach(tag => { nodes = nodes.flatMap(n => kids(n, tag)); });
+    const ok = nodes.some(n => kids(n, fld).some(f => f.textContent.trim() !== ''));
+    if (!ok) out.push({ sev: 'Must fix', msg: `Required by Fannie Mae and missing: ${lab} – tentacle ${t} ${typeof OCTO_T !== 'undefined' ? '' : ''}(${fld})`, hint: 'SFREP shows this field red until it is answered.', tent: t }); });
+  return out; }

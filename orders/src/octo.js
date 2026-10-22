@@ -47,6 +47,9 @@ document.addEventListener('click', e => {
 });
 window.addEventListener('message', e => { if (e.origin !== location.origin || !e.data || e.data.type !== 'aa-path') return; OCTO.steps = { order: e.data.order, list: e.data.steps || [] }; octoMark(); });
 /* every tab change marks the octopus */
-(() => { const st = showTab; showTab = function (t) { const r = st.apply(this, arguments); try { if (t === 'settings' || t === 'claude') octoSettings(); octoMark();
+(() => { const st = showTab; showTab = function (t) { const was = OCTO.t; const r = st.apply(this, arguments); if (t === 'help') setTimeout(() => octoHelpAt(was), 50); try { if (t === 'settings' || t === 'claude') octoSettings(); octoMark();
     if (t === 'market') { const mb = $('#panel-market'); if (mb && !mb.querySelector('.mkocto')) mb.insertAdjacentHTML('afterbegin', '<div class="mkocto"><span class="help" style="margin:0">Tentacle 3 also holds comp selection:</span><button type="button" class="btn small" data-octogo="sel">3 · Comp selection →</button></div>'); } } catch (e) {} return r; }; })();
 setTimeout(() => { document.querySelectorAll('nav.octo [data-tent]').forEach(b => { if (+b.dataset.tent >= 3 && +b.dataset.tent <= 6) { b.classList.add('cg'); b.title = 'With the Comp genie – your data, databases and comparables'; } }); octoMark(); }, 300);
+/* Help opens at the tentacle she was in (the map: "Opens at the tentacle you are in") */
+function octoHelpAt(t) { const q = $('#helpSearch'); if (q && q.value) return; const g = document.querySelector(`.help-page .hgroup[data-hg="${t >= 1 && t <= 9 ? t : 'start'}"]`); if (!g) return;
+  document.querySelectorAll('.help-page .hgroup').forEach(x => x.classList.toggle('here', x === g)); if (t >= 1 && t <= 9) { const d = g.querySelector('details'); if (d) d.open = true; g.scrollIntoView({ block: 'start' }); } }
