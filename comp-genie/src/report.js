@@ -152,7 +152,7 @@ function reportHTML(J, part) {   // part: 'early' (Assignment, scope and site â€
       ${CMT_TIP}${cmtBoxHTML(J, 'cSite')}</section>
     <section><h3>Improvements</h3>
       <p class="help">The rooms, finishes, quality, condition, defects and photos come from your inspection. Add here only what those fields cannot show.</p>
-      ${cmtBoxHTML(J, 'cSubject')}</section>
+      ${cmtBoxHTML(J, 'cSubject')}${cmtBoxHTML(J, 'cQC')}</section>
     <section><h3>Contract and history</h3>
       <label class="fld"><span>Is there a sales contract? <small>(3.6 always asks)</small></span>${yn('contractYN', F.contract && (F.contract.price || F.contract.cdate) ? true : F.purchase)}</label>
       ${(R.contractYN || (F.purchase ? 'true' : '')) === 'true' && !(F.contract && (F.contract.price || F.contract.cdate)) ? `<p class="help warnTxt">Read the contract in <b>1 Intake â€º Order documents</b> (drop the purchase agreement) so its price, date and terms go into the report.</p>` : ''}

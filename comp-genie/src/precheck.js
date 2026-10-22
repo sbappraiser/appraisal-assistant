@@ -231,6 +231,9 @@ function qcdCheck(J, F, who, out, subj) { if (typeof QCD_IDS === 'undefined') re
 /* A-1 "R" (always required) fields the file must carry – each named with its F-1 place and the tentacle where it is answered */
 function precheckReq(doc) { if (typeof A1_REQ === 'undefined') return []; const out = []; const kids = (el, t) => [...el.children].filter(k => k.localName === t);
   const VA = doc.getElementsByTagNameNS('*', 'VALUATION_ANALYSIS')[0]; if (!VA) return out; const PR = kids(VA, 'PROPERTIES')[0]; const SUBJ = PR && kids(PR, 'PROPERTY').find(p => p.getAttribute('ValuationUseType') === 'SubjectProperty');
+  { const VR = kids(VA, 'VALUATION_REPORT')[0], VC = VR && kids(VR, 'VALUATION_COMMENTARIES')[0];   // A-1 R: the reconciliation of overall quality and condition (F-1 15.010)
+    const ok = VC && kids(VC, 'VALUATION_COMMENTARY').some(c => kids(c, 'ValuationAnalysisCategoryType').some(x => x.textContent === 'OverallQualityAndCondition') && kids(c, 'ValuationCommentText').some(x => x.textContent.trim()));
+    if (!ok) out.push({ sev: 'Must fix', msg: 'Required by Fannie Mae and missing: 15.010 Reconciliation of Overall Quality and Condition – tentacle 2 (your iPad comments, or Report details › Improvements)', hint: 'One short comment on how the quality and condition ratings were reached.', tent: 2 }); }
   A1_REQ.forEach(([subj, rel, fld, lab, t]) => { const base = subj ? SUBJ : VA; if (!base) return; let nodes = [base];
     rel.split('/').filter(Boolean).forEach(tag => { nodes = nodes.flatMap(n => kids(n, tag)); });
     const ok = nodes.some(n => kids(n, fld).some(f => f.textContent.trim() !== ''));

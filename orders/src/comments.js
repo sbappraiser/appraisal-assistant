@@ -14,7 +14,7 @@ let CMT = {}; const CMT_UI = { q: '', sec: '', ver: '', edit: null, open: {}, gr
 const CMT_GROUPS = [
   ['Assignment and scope of work', /assignment|scope of work|intended (use|user)|extraordinary|hypothetical|\bEA\b|\bHC\b|data source|confidential|engagement|prior (appraisal|service)|inspection|ansi|measure/i],
   ['Subject and transfer history', /subject prior|prior sale|transfer|listing|sales history/i],
-  ['Market', /market|price trend|neighbou?rhood|boundar/i],
+  ['Market', /market|price trend|neighbou?rhood|boundar|search criteria/i],
   ['Site', /^site(?! value)|zoning|hazard|flood|fire|views?\b|easement|well|septic|utilit|access|lot\b|mineral|rights/i],
   ['Highest and best use', /highest and best|\bhbu\b/i],
   ['Improvements', /subject property|improvement|dwelling|quality|condition|functional|energy|green|adu|outbuilding|permit|garage|pool/i],

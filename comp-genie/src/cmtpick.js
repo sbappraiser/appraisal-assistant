@@ -24,6 +24,7 @@ const CPK_BOX = [
   ['textarea[data-rpt="cSubjPrior"], textarea[data-rpt="cCompPrior"]', 'Prior sales and transfers', /prior sale|transfer|sales history/i],
   ['textarea[data-rpt="cSite"]', 'Site', /^site(?! value)|zoning|hazard|flood|fire|views?\b/i],
   ['textarea[data-rpt="cSubject"]', 'Subject property', /subject|improvement|functional|energy|green|ansi/i],
+  ['textarea[data-rpt="cQC"]', 'Quality and condition', /quality and condition|overall quality|condition rating/i],
   ['textarea[data-rpt="cMarket"], textarea[data-mcx="summary"]', 'Market', /market(?! boundar)|price trend/i],
   ['textarea[data-mk="general"]', 'Market', /market(?! boundar)|price trend/i],
   ['textarea[data-mk="comment"]', 'Price trends', /price trend|market commentary|market condition/i],

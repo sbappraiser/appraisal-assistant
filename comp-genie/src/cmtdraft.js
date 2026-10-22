@@ -10,6 +10,7 @@ const CMT_BOXES = [
   ['cCompPrior', 'ComparablesPriorSalesAndTransferHistory', 'Analysis of prior sale and transfer history – comparable sales', 5000],
   ['cSite', 'Site', 'Site commentary', 5000],
   ['cSubject', 'SubjectProperty', 'Subject property commentary', 5000],
+  ['cQC', 'OverallQualityAndCondition', 'Reconciliation of overall quality and condition (always required, F-1 15.010) – blank uses the one from your iPad', 5000],
   ['cMarket', 'Market', 'Market commentary', 5000]];
 /* her view line in words, each view once: "a partial residential view (neutral)" */
 function cmtView(v) { if (!v) return ''; let L = []; try { L = vwParse(v); } catch (e) {} const seen = new Set(); L = L.filter(x => { const k = x.type + '|' + x.range + '|' + x.impact; if (seen.has(k)) return false; seen.add(k); return true; });
@@ -33,6 +34,7 @@ function cmtDraft(J, k) { const S = subjFacts(J), F = reportFrom(J), o = orderOf
   /* Site, Subject property and Market: the fields already carry size, topography, view, location, zoning, rooms, ratings and market numbers – the
      commentary adds only what they cannot show (her note Oct 22 2026), so no repeating */
   if (k === 'cSite') return 'No adverse easements, encroachments or site conditions were apparent from the inspection or the documents reviewed [plat map / preliminary title report / CRS]. [Add only what the Site fields do not show – e.g. shared driveway or road, excess or surplus land, drainage, slope stability, off-site influences.]';
+  if (k === 'cQC') { const q = S.q || '[Q]', c = S.c || '[C]'; return `The overall quality rating of ${q} and condition rating of ${c} were reconciled from the exterior and interior ratings and the components observed: [what sets the ratings – e.g. updated kitchen and baths, original windows and roof, deferred maintenance].`; }
   if (k === 'cSubject') return '[Add only what the Improvements fields do not show – e.g. the scope and quality of recent work, permits, unusual features or layout, deferred maintenance.]';
   if (k === 'cMarket') return '[Add what the market numbers do not show – e.g. what is driving demand, financing and interest rates, seasonality, how this property type is selling in this market.]';
   return ''; }
