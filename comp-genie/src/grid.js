@@ -711,6 +711,7 @@ async function ingestInspection(files, name) {
     primaryAccess: (() => { const v = (D.street || {}).primaryAccess; const o = typeof PICK !== 'undefined' && PICK.primaryAccess.opts.find(x => x[0] === v); return o ? o[1].replace(/ \(.*\)$/, '') : (v || ''); })(),
     siteChar: ((D.site || {}).siteFeat || []).map(v => { const o = typeof PICK !== 'undefined' && PICK.siteChar.opts.find(x => x[0] === v); return o ? o[1].replace(/ \(.*\)$/, '') : v; }).join('; '),
     fire: ((D.site || {}).fire || []).join('; '),
+    kitU: (L.kitchens || []).map(k => ({ upd: k.upd || '', time: k.time || '' })), bathU: (L.baths || []).map(k => ({ upd: k.upd || '', time: k.time || '' })),
     hazard: ((D.site || {}).hazard || []).map(v => v === 'None' ? 'None' : v === 'FEMASpecialFloodHazardArea' ? 'FEMA special flood hazard area' : 'Other: ' + (v === 'Other' ? (D.site.hazardOther || 'Other') : v)).join('; '),
     sk: { gar: (T.gar || []).map(x => ({ name: x.name, sf: x.sf })), adu: (T.adu || []).map(x => ({ name: x.name, sf: x.sf })), ob: (T.ob || []).map(x => ({ name: x.name, sf: x.sf })), agNon: T.agNon || 0, bgNon: T.bgNon || 0 } };
   if (!s.addr && D.property.addr) s.addr = D.property.addr;

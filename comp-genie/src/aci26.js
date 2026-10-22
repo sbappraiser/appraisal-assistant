@@ -92,7 +92,33 @@ function a26HTML(J) { if (!RC) return rcRun(() => a26HTML(J)); const U = usedCom
     <div class="tablewrap"><table class="tbl a26">${head}${body}${net}</table></div>
     ${val ? `<p>Indicated value by sales comparison: ${cp(Math.round(num(G0(J).value) || 0) || '')} · Opinion of market value: ${cp(Math.round(val))}</p>` : ''}
     ${texts.length ? `<h3>Comments</h3>${texts.map(([l, t]) => `<div class="a26txt"><b>${esc(l)}</b> <small>${String(t).length.toLocaleString()} characters</small><br>${cp(String(t).trim())}</div>`).join('')}` : ''}
-    <p class="help">Not covered here: the subject's Improvements condition line (kitchen and bath updates) – type it in ACI from your inspection. Condos use ACI's condo design and parking formats (e.g. GR2L;Garden, 1g1cv).</p>`; }
+    ${a26CondHTML(J, S)}
+    <p class="help">Condos use ACI's condo design and parking formats (e.g. GR2L;Garden, 1g1cv) – not on this sheet yet.</p>`; }
+/* her 2.6 Improvements condition line (Appendix D: "C3;Kitchen-updated-one to five years ago;Bathrooms-not updated;<description>").
+   Suggested from the iPad's 3.6 answers – the two do not line up exactly (3.6 has no "remodeled", and its time frames differ),
+   so every part is a drop-down she sets; the copy button builds the line. */
+const A26_LVL = [['not updated', 'not updated'], ['updated', 'updated'], ['remodeled', 'remodeled']];
+const A26_TF = ['less than one year ago', 'one to five years ago', 'six to ten years ago', 'eleven to fifteen years ago', 'timeframe unknown'];
+function a26Sug(list) { const L = (list || []).filter(x => x && x.upd); if (!L.length) return null; const rank = { LessThanOneYear: 0, OneToFiveYears: 1, FiveToTenYears: 2, TenOrMoreYears: 3 };
+  const upd = L.filter(x => x.upd !== 'NotUpdated').sort((a, b) => (rank[a.time] ?? 9) - (rank[b.time] ?? 9))[0]; if (!upd) return { lvl: 'not updated', tf: '' };
+  return { lvl: 'updated', tf: { LessThanOneYear: A26_TF[0], OneToFiveYears: A26_TF[1], FiveToTenYears: A26_TF[2], TenOrMoreYears: A26_TF[3] }[upd.time] || A26_TF[4], from: upd }; }
+function a26CondHTML(J, S) { const I = (J.subject && J.subject.insp) || {}; const K = J.a26c || (J.a26c = {});
+  const k = a26Sug(I.kitU), b = a26Sug(I.bathU); const c = String(S.c || I.c || '').match(/C[1-6]/); 
+  const v = (key, dflt) => K[key] !== undefined ? K[key] : dflt;
+  const st = { cr: v('cr', c ? c[0] : ''), none15: v('none15', !!(k && b && k.lvl === 'not updated' && b.lvl === 'not updated')), kl: v('kl', k ? k.lvl : 'not updated'), kt: v('kt', k ? k.tf : ''), bl: v('bl', b ? b.lvl : 'not updated'), bt: v('bt', b ? b.tf : ''), txt: v('txt', '') };
+  const sel = (key, opts, cur) => `<select data-a26c="${key}">${opts.map(o => { const [val, lab] = Array.isArray(o) ? o : [o, o]; return `<option value="${esc(val)}" ${cur === val ? 'selected' : ''}>${esc(lab)}</option>`; }).join('')}</select>`;
+  const part = (lab, l, t) => l === 'not updated' ? `${lab}-not updated` : `${lab}-${l}-${t || 'timeframe unknown'}`;
+  const line = `${st.cr || '[C rating]'};${st.none15 ? 'No updates in the prior 15 years' : part('Kitchen', st.kl, st.kt) + ';' + part('Bathrooms', st.bl, st.bt)};${String(st.txt).trim() || '[enter description of property condition]'}`;
+  const note = [k && k.from ? `kitchen: iPad says ${camelWords(k.from.upd).toLowerCase()}, ${camelWords(k.from.time || '').toLowerCase() || 'no time frame'}` : '', b && b.from ? `bathrooms: iPad says ${camelWords(b.from.upd).toLowerCase()}, ${camelWords(b.from.time || '').toLowerCase() || 'no time frame'}` : ''].filter(Boolean).join(' · ');
+  return `<h3>Improvements condition line (subject)</h3>
+    <p class="help">Appendix D format. Suggested from your iPad answers${note ? ' (' + esc(note) + ')' : ''} – 3.6 has no “remodeled” and its time frames are not the same as 2.6, so check each part. “10 or more years” could be over 15 years.</p>
+    <div class="row a26cond">${sel('cr', ['', 'C1', 'C2', 'C3', 'C4', 'C5', 'C6'], st.cr)}
+      <label class="check"><input type="checkbox" data-a26c="none15" ${st.none15 ? 'checked' : ''}> No updates in the prior 15 years</label>
+      ${st.none15 ? '' : `<span>Kitchen ${sel('kl', A26_LVL, st.kl)} ${st.kl === 'not updated' ? '' : sel('kt', A26_TF, st.kt || A26_TF[4])}</span><span>Bathrooms ${sel('bl', A26_LVL, st.bl)} ${st.bl === 'not updated' ? '' : sel('bt', A26_TF, st.bt || A26_TF[4])}</span>`}</div>
+    <label class="fld"><span>Description of the condition (yours)</span><textarea rows="2" data-a26c="txt">${esc(st.txt)}</textarea></label>
+    <p>${String(st.txt).trim() && st.cr ? '' : '<small class="warnTxt">Fill in the [brackets] before you copy. </small>'}<button type="button" class="a26cp" data-cp="${esc(line)}">${esc(line)}</button></p>`; }
+document.addEventListener('change', e => { const t = e.target; if (!t.dataset || t.dataset.a26c === undefined || !app.job) return; const K = app.job.a26c || (app.job.a26c = {});
+  const k = t.dataset.a26c; K[k] = t.type === 'checkbox' ? t.checked : t.value; save(); const sc = document.querySelector('.a26sheet'); const y = sc ? sc.scrollTop : 0; a26Open(); const sc2 = document.querySelector('.a26sheet'); if (sc2) sc2.scrollTop = y; });
 function a26Open() { if (!app.job) return; let bg = document.getElementById('a26Bg'); if (!bg) { bg = document.createElement('div'); bg.className = 'sheet-bg'; bg.id = 'a26Bg'; document.body.appendChild(bg); } bg.innerHTML = `<div class="sheet a26sheet">${a26HTML(app.job)}</div>`; }
 document.addEventListener('click', async e => { const t = e.target.closest && e.target.closest('[data-a26open],[data-a26close],.a26cp'); if (!t) return;
   if (t.dataset.a26open) { a26Open(); return; } if (t.dataset.a26close) { const bg = document.getElementById('a26Bg'); if (bg) bg.remove(); return; }
