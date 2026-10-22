@@ -84,7 +84,8 @@ function abCardHTML() {
   return `<h3>Automatic backup – your data folder</h3>${rescue}${body}${lock}`;
 }
 function abRender() {
-  const box = document.getElementById('abCard'); if (!box) return; box.innerHTML = abCardHTML();
+  const B = ['abCard', 'abCardSet'].map(i => document.getElementById(i)).filter(Boolean); const box = B.find(b => { const p = b.closest('.panel'); return p && !p.hidden; }) || B[0]; if (!box) return;
+  B.forEach(b => { if (b !== box) b.innerHTML = ''; }); box.innerHTML = abCardHTML();   // Home or Settings (the octopus, Oct 22 2026) – drawn in the one on screen so its buttons stay unique
   const on = (id, fn) => { const b = document.getElementById(id); if (b) b.onclick = fn; };
   on('abChoose', abChoose); on('abAllow', abAllow); on('abNow', () => abRun(true)); on('abRestore', abRestoreNewest);
   on('vaultOn', vaultTurnOn); on('vaultOld', vaultLockOld); on('vaultOff', async () => { if (!confirm('Turn the password lock off? Backups from now on are saved unlocked; the locked ones stay locked.')) return; await vaultOff(); abRender(); });

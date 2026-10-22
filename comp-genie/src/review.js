@@ -9,7 +9,7 @@ function reviewRun(J) { if (typeof RC !== 'undefined' && !RC && typeof rcRun ===
   const T = f => { try { f(); } catch (e) { A('math', 'Check', 'Part of the review could not run: ' + e.message); } };
   const G = G0(J), R = typeof RE === 'function' ? RE(J) : R0(J), F = reportFrom(J), S = subjFacts(J), U = usedComps(J), o = orderOf(J) || {};
   const eff = J.subject.eff || F.eff; const opinion = rptOpinion(J); const ind = num(G.value);
-  const grid = { st: 'workbook', sel: '#gridCard' }, rep = { st: 'final', sel: '#reportCard' }, cost = { st: 'cost', sel: '#costCard' };
+  const grid = { st: 'workbook', sel: '#gridCard' }, rep = { st: 'recon', sel: '#reportCard' }, cost = { st: 'cost', sel: '#costCard' };
   /* ---- math ---- */
   T(() => { const tot = U.map(c => ({ c, t: compTotals(J, c) }));
     tot.forEach(({ c, t }) => { if (!t.price) return;

@@ -230,6 +230,23 @@ mark.blank{background:#fff3a8;padding:0 2px;border-radius:3px}.cmt textarea{widt
 .vaultbg { position: fixed; inset: 0; z-index: 90; background: rgba(15,25,40,.45); display: grid; place-items: center; }
 .vaultbox { background: #fff; border: 2px solid #1f3f66; border-radius: 14px; padding: 18px 20px; width: min(460px, 92vw); display: grid; gap: 10px; box-shadow: 0 16px 50px rgba(0,0,0,.3); }
 .vaultbox input { font-size: 17px; }
+/* the octopus (her structure, Oct 22 2026): shared places, then the nine tentacles of the order */
+nav.tabs { display: none !important; }
+nav.shared, nav.octo, nav.t1sub { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 6px 0; }
+nav.shared button { font: inherit; font-size: 15px; border: 1px solid var(--line); background: #fff; border-radius: 9px; padding: 6px 12px; cursor: pointer; font-weight: 600; }
+nav.shared button[aria-current="true"] { background: #1f3a68; color: #fff; border-color: #1f3a68; }
+nav.octo { border: 2px solid #1f3a68; border-radius: 14px; padding: 6px 8px; background: #f4f7fb; }
+nav.octo .octoFile { font-weight: 700; margin-right: 6px; color: #1f3a68; }
+nav.octo button { font: inherit; font-size: 15px; font-weight: 700; border: 1.5px solid #c9d3df; background: #fff; border-radius: 10px; padding: 6px 11px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+nav.octo button .tn { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; border: 2px solid currentColor; font-size: 13px; }
+nav.octo button[aria-current="true"] { background: #1f3a68; color: #fff; border-color: #1f3a68; box-shadow: 0 2px 0 #f2c94c; }
+nav.octo button .tck:not(:empty) { font-style: normal; color: #fff; background: #1e8e3e; border-radius: 50%; width: 18px; height: 18px; display: inline-grid; place-items: center; font-size: 12px; }
+nav.octo.noorder button:not([data-tent="1"]) { opacity: .5; }
+nav.t1sub { padding-left: 10px; }
+nav.t1sub button { font: inherit; font-size: 14px; border: 1px solid var(--line); background: #fff; border-radius: 8px; padding: 4px 10px; cursor: pointer; }
+nav.t1sub button[aria-current="true"] { border-color: #1f3a68; color: #1f3a68; font-weight: 700; background: #eef4ff; }
+.setcard { margin-top: 14px; } .liblinks { font-size: 16px; line-height: 1.8; }
+.mkocto { display: flex; gap: 10px; align-items: center; margin: 0 0 10px; }
 </style>
 </head>
 <body>
@@ -248,6 +265,10 @@ mark.blank{background:#fff3a8;padding:0 2px;border-radius:3px}.cmt textarea{widt
     <button type="button" data-tab="wording" aria-selected="false">Standard wording</button>
     <button type="button" data-tab="help" aria-selected="false">Help</button>
   </nav>
+  <nav class="shared" aria-label="Always here"><button type="button" data-go="home">Home</button><button type="button" data-go="library">Library</button><button type="button" data-go="comments">Comments</button><button type="button" data-go="dbs">Database center</button><button type="button" data-go="settings">Settings</button><button type="button" data-go="help">Help</button></nav>
+  <nav class="octo" aria-label="The report, tentacle by tentacle"><span class="octoFile" id="octoFile"></span>
+    <button type="button" data-tent="1"><span class="tn">1</span>Intake<i class="tck"></i></button><button type="button" data-tent="2"><span class="tn">2</span>Subject<i class="tck"></i></button><button type="button" data-tent="3"><span class="tn">3</span>Market<i class="tck"></i></button><button type="button" data-tent="4"><span class="tn">4</span>Sales comparison<i class="tck"></i></button><button type="button" data-tent="5"><span class="tn">5</span>Cost<i class="tck"></i></button><button type="button" data-tent="6"><span class="tn">6</span>Income<i class="tck"></i></button><button type="button" data-tent="7"><span class="tn">7</span>Reconciliation<i class="tck"></i></button><button type="button" data-tent="8"><span class="tn">8</span>Review and wrap-up<i class="tck"></i></button><button type="button" data-tent="9"><span class="tn">9</span>Exhibits<i class="tck"></i></button></nav>
+  <nav class="t1sub" id="t1sub" hidden aria-label="Intake"><button type="button" data-go="letter">This order</button><button type="button" data-go="saved">All orders</button><button type="button" data-go="new">New order</button><button type="button" data-go="contacts">Clients</button><button type="button" data-go="books">Bookkeeping</button><button type="button" data-go="wording">Letter templates and wording</button></nav>
   <div class="toolrow"><button type="button" class="btn ghost" id="btnBackup">Back up</button><label class="btn ghost" for="restoreFile">Restore<input type="file" id="restoreFile" accept=".locked,.zip,.json,application/json"></label></div>
 </header>
 <main>
@@ -255,7 +276,7 @@ mark.blank{background:#fff3a8;padding:0 2px;border-radius:3px}.cmt textarea{widt
 <section class="panel" id="panel-new" hidden><div class="listHead"><div><h2>New order</h2></div></div><div id="newBody"></div></section>
 <section class="panel" id="panel-letter" hidden>
  <div class="otop"><div class="otitle" id="oTitle"></div>
-  <nav class="otabs" aria-label="This order"><button type="button" data-otab="docs">① Documents<span class="ock"></span></button><button type="button" data-otab="letter">② Engagement letter<span class="ock"></span></button><button type="button" data-otab="scope">③ Scope of work<span class="ock"></span></button><button type="button" class="onext" id="oNext" title="Next: your iPad inspection and the comps, in the Comp genie">④ Inspection and comps → Comp genie</button></nav></div>
+  <nav class="otabs" aria-label="This order"><button type="button" data-otab="docs">① Documents<span class="ock"></span></button><button type="button" data-otab="letter">② Engagement letter<span class="ock"></span></button><button type="button" data-otab="scope">③ Assignment and scope<span class="ock"></span></button><button type="button" class="onext" id="oNext" title="Next: tentacle 2 – your inspection and the subject">Next: 2 Subject →</button></nav></div>
  <div id="oAsk" class="oask" hidden></div>
  <div class="desk">
   <div class="leftCol">
@@ -487,11 +508,27 @@ mark.blank{background:#fff3a8;padding:0 2px;border-radius:3px}.cmt textarea{widt
   </form>
   <div class="hmpanel" id="bkAll"></div>
 </section>
+<section class="panel" id="panel-library" hidden>
+  <div class="listHead"><div><h2>Library</h2><p class="help">Your reference documents, searchable, in one place. Coming next in the build: Fannie Mae's F-1 (URAR guide), A-1 (fields and choices), D-1 samples and UAD FAQs; Selling Guide sections; USPAP with its FAQs and Advisory Opinions (your own purchased copy – it is copyrighted); your clients' guidelines. Each question's ⓘ will open the matching F-1 line.</p></div></div>
+  <ul class="liblinks"><li><a href="https://singlefamily.fanniemae.com" target="_blank" rel="noopener">Fannie Mae Single-Family</a> – UAD 3.6, the Selling Guide</li><li><a href="https://appraisalfoundation.org" target="_blank" rel="noopener">The Appraisal Foundation</a> – USPAP</li></ul>
+</section>
+<section class="panel" id="panel-settings" hidden>
+  <div class="listHead"><div><h2>Settings</h2><p class="help">Your data folder and password lock, Claude, and where the other settings are.</p></div></div>
+  <div class="hmpanel" id="abCardSet"></div>
+  <div class="card setcard" id="setAi"></div>
+  <div class="card setcard"><h3>More settings</h3><ul><li>Grid look, starting points, lines shown, pop-out grid: in the Comp genie, ⚙ Settings at the top (tentacle 4).</li><li>Your writing rules for Help me write: “My writing rules” under any comment box.</li><li>Letter wording: Intake › Letter templates and wording.</li></ul></div>
+</section>
 <section class="panel" id="panel-help" hidden>
   <div class="wording help-page">
     <h2>How to</h2>
     <p class="help">Step-by-step directions for each part of the Appraisal Assistant. Type a word to find the right section.</p>
     <input id="helpSearch" type="search" placeholder="for example: sticky, blur, iPad, backup, market">
+    <details open><summary>The octopus – how the Appraisal Assistant is laid out</summary><ol>
+      <li><b>Top right, always there:</b> Home · Library · Comments (your comment library) · Database center · Settings (data folder, password lock, Claude) · Help.</li>
+      <li><b>The blue bar is the open order, tentacle by tentacle,</b> in the order you work: <b>1 Intake</b> (this order's documents, engagement letter, assignment and scope; also All orders, New order, Clients, Bookkeeping, Letter templates) · <b>2 Subject</b> (inspection and subject details) · <b>3 Market</b> (market tab, then comp selection) · <b>4 Sales comparison</b> (comp data, grid, support, comment) · <b>5 Cost</b> · <b>6 Income</b> (only when you develop it) · <b>7 Reconciliation</b> · <b>8 Review and wrap-up</b> (review genie, pre-check, SFREP export) · <b>9 Exhibits</b> (maps, photos).</li>
+      <li>A green ✓ on a tentacle means everything in it is done. Tentacles 2 and 4–9 open inside this window; their numbered steps underneath carry the same tentacle number.</li>
+      <li>Click a tentacle with no order open and it asks you to open one first (1 Intake › All orders, or New order).</li>
+      <li>Being built next: each answer in one home only (tentacle 2 for highest and best use, assumptions and conditions), then the Library and the Database center. The plan is your doc “The Octopus – where everything lives”.</li></ol></details>
     <details><summary>Start a new order</summary><ol>
       <li>On <b>Home</b>, click <b>New order</b>.</li>
       <li><b>1 · Order:</b> type the <b>street address</b> only (with the unit, e.g. #3), then Tab to <b>City</b>, <b>State</b>, <b>ZIP</b> and <b>+4</b>. City and ZIP are drop-down lists of the places you work (Santa Barbara County first, then Ventura County) – click and scroll with the mouse wheel. Not in the list? Pick <b>Other – type it</b>. Picking a ZIP fills the city, and Goleta, Carpinteria, Summerland or Montecito fill their ZIP; you can change either. When you upload the CRS report, it puts in the USPS form of the address with the ZIP+4. The file number fills in by your rule: the first 4 consonants of the street name (short names like Bath or Hill keep their first 4 letters), the house number, the unit if any, and the report count. 1729 Bath St → <b>Bath1729-1</b>; unit B → <b>Bath1729-b-1</b>; 223 W. Arrellaga St #3 → <b>Arrl223-3-1</b>. If you have done this property before in the assistant (or an old order is numbered the ACI way, like Bath1729a or Bath1729b), the count goes up: <b>Bath1729-2</b>. You can always type over it. Answer three questions: did the client send an engagement letter or will you write one, is it a purchase, and is the property listed now or in the last 12 months. Click <b>Next</b>.</li>
@@ -890,10 +927,11 @@ mark.blank{background:#fff3a8;padding:0 2px;border-radius:3px}.cmt textarea{widt
     <label>AI-use paragraph<textarea id="aiTextBox"></textarea></label>
     <div class="toolrow"><button type="button" class="btn primary" id="aiSave">Save wording</button><button type="button" class="btn ghost" id="aiReset">Go back to the draft</button></div>
     <p class="note">Your orders, documents, clients and wording are kept in this browser on this computer only – nothing is sent anywhere. Press Back up now and then and keep the zip with your OneDrive records. To bring in the clients and orders from the old Engagement Letter Writer file: open it, press Back up there, then press Restore here and choose that file.</p>
+    <div id="aiSettingsBox">
     <h2 style="margin-top:24px">AI settings</h2>
     <p class="help">Used only by <b>Read with Claude</b> in the document reader, and only on orders where AI use is Yes or Redacted. The key is kept in this browser on this computer. Get one at platform.claude.com (the Claude Console): add credits and a spending limit under Billing, then Settings → API keys → Create key.</p>
     <div class="grid2"><label>Claude API key<input id="aiKeyBox" type="password" autocomplete="off" placeholder="sk-ant-…"></label><label>Model<input id="aiModelBox" placeholder="claude-sonnet-5-5"></label></div>
-    <div class="toolrow"><button type="button" class="btn primary" id="aiKeySave">Save AI settings</button><button type="button" class="btn ghost" id="aiKeyClear">Remove the key</button></div>
+    <div class="toolrow"><button type="button" class="btn primary" id="aiKeySave">Save AI settings</button><button type="button" class="btn ghost" id="aiKeyClear">Remove the key</button></div></div>
     <p class="note" id="build"></p>
   </div>
 </section>

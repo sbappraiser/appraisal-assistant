@@ -149,7 +149,7 @@ async function precheckRun(J, wantExport) {
 }
 
 /* her ask (Oct 21 2026): each pre-check line takes her to the place to fix it – the step, then the box (scrolled to and outlined) */
-function preGo(J, x) { const g = preGo0(J, x); if (g && g.label === 'Report details' && typeof rptLateMsg === 'function' && !rptLateMsg(String(x.msg || ''))) { g.stage = 'setup'; g.label = 'Assignment, scope and site'; } return g; }
+function preGo(J, x) { const g = preGo0(J, x); if (g && g.label === 'Report details' && typeof rptLateMsg === 'function' && !rptLateMsg(String(x.msg || ''))) { g.stage = 'setup'; g.label = 'Subject details'; } else if (g && g.label === 'Report details' && g.stage === 'final') g.stage = 'recon'; return g; }
 function preGo0(J, x) { const m = String(x.msg || ''); const byUse = n => usedComps(J).find(c => +c.use === +n);
   let r;
   if ((r = m.match(/^Comp (\d+): Construction method/))) { const c = byUse(r[1]); if (c) return { stage: 'workbook', sel: `[data-gfact="${c.id}|constr"]`, label: 'comp ' + c.use + ' construction method' }; }

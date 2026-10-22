@@ -442,18 +442,19 @@ function renderPage() {
   <div id="detail" class="st st-micro st-workbook">${app.sel && ON("micro", "workbook") ? detailHTML(J.comps.find(c => c.id === app.sel)) : ''}</div>
   <section class="card st st-workbook" id="gridCard">${ON('workbook') ? `<div class="gboxbar"><b>The grid in its own box</b> <span class="help" style="margin:0">scroll inside it – up and down with the mouse wheel, side to side with the bar at the bottom (or Shift + wheel)</span><span class="grow"></span><button class="btn primary" data-act="gbox-close">✕ Close the box (Esc)</button></div>` + gridHTML(J) : ''}</section>
   <section class="card st st-final" id="finalCard">${ON('final') ? finalGridHTML(J) : ''}</section>
-  <section class="card st st-final" id="mapCard"></section>
+  <section class="card st st-exhibits" id="mapCard"></section>
   <section class="card st st-cost" id="refCard">${ON('cost') ? refHTML(J) : ''}</section>
   <section class="card st st-cost" id="costCard">${ON('cost') ? costHTML(J) : ''}</section>
   <section class="card st st-income" id="incomeCard">${ON('income') ? incomeHTML(J) : ''}</section>
   <section class="card st st-workbook st-final" id="nuCard">${ON('workbook', 'final') ? notUsedHTML(J) : ''}</section>
   <section class="card st st-workbook" id="timeCard">${ON('workbook') ? timeHTML(J) : ''}</section>
   <section class="card st st-workbook" id="supCard">${ON('workbook') ? supHTML(J) : ''}</section>
-  <section class="card st st-final" id="reportCard">${ON('final') ? reportHTML(J, 'late') : ''}</section>
+  <section class="card st st-recon" id="reportCard">${ON('recon') ? reportHTML(J, 'late') : ''}</section>
   <section class="card st st-final" id="reviewCard">${ON('final') ? reviewHTML(J) : ''}</section>
   <section class="card st st-final" id="preCard">${ON('final') ? precheckHTML(J) : ''}</section>
   <section class="card st st-final" id="exportCard"><h2>Export</h2>${ON('final') ? exportHTML(J) : ''}</section>
   <footer class="foot">Comp Genie · your data stays on this computer · build ${typeof BUILD !== 'undefined' ? BUILD : ''}</footer>`;
+  if (window.parent !== window && app.job) try { window.parent.postMessage({ type: 'aa-path', order: app.job.orderId || '', steps: pathSteps(app.job).map(x => ({ n: x.n, done: !!x.done })) }, location.origin); } catch (e) {}   // the octopus menu's green ✓ per tentacle
   fillImages(); mapsRender(); { const t = document.querySelector('.top'); if (t) document.documentElement.style.setProperty('--toph', t.offsetHeight + 'px'); }   // the comp's sticky header sits under the top bar
   if (app.nuAsk && app.nuAskShown !== app.nuAsk && typeof nuAskBox === 'function') { app.nuAskShown = app.nuAsk; const id = app.nuAsk; setTimeout(() => nuAskBox(J, id), 0); }
   wbFit(); document.querySelectorAll('table.grid').forEach(t => { const h = t.querySelector('thead th'); if (h) t.style.setProperty('--labw', h.offsetWidth + 'px'); });   // every grid (workbook, final): the Subject column sticks right after the line names
@@ -977,24 +978,24 @@ async function snapPick() { const L = (await snapIdx()).sort((a, b) => b.at - a.
   const jobs = []; for (const x of L.slice(0, 60)) { const r = await DB.get('kv', x.key); if (r && r.v) { const j = r.v; j.updated = x.at; j.name = j.name + (x.why ? ' (' + x.why + ')' : ''); jobs.push(j); } }
   const z = new Map([['comp-genie.json', new TextEncoder().encode(JSON.stringify({ app: 'comp-genie', saved: new Date().toISOString(), jobs }))]]); backupPick(z, 'earlier versions kept in this browser'); }
 
-/* her numbered path (Oct 21 2026): the hub's ① Documents ② Engagement letter ③ Scope of work, then here ④–⑯ in the order she works,
+/* her numbered path (Oct 21 2026): the hub's ① Documents ② Engagement letter ③ Scope of work, then here numbered by her tentacles (Oct 22 2026): 2 Subject … 9 Exhibits,
    each with a green ✓ when complete and a "still to do" line */
 function pathSteps(J) { const U = usedComps(J), G = G0(J), R = R0(J), o = (app.orders || []).find(x => x.id === J.orderId) || null; const T = f => { try { return f(); } catch (e) { return false; } };
   const conf = U.filter(c => c.confirmed).length; const costOn = J.costOn ?? (R.sowCost === 'true' || (!R.sowCost && o && o.apCost)); const incOn = J.incomeOn ?? (R.sowIncome === 'true' || (!R.sowIncome && !!(o && (o.apIncome || o.rent))));
   return [
-    { n: '4', k: 'insp', l: 'Inspection', sub: 'iPad data, photos, sketch', st: 'setup', sel: '#subjCard', done: T(() => !!J.subject.insp), todo: 'drop your iPad Workfile package' },
-    { n: '5', k: 'setup', l: 'Assignment, scope and site', sub: 'scope · EA/HC · H&BU · site · certifications', st: 'setup', sel: '#setupCard', done: T(() => !precheckGrid(J).some(x => x.sev === 'Must fix' && (preGo0(J, x) || {}).label === 'Report details' && !rptLateMsg(x.msg))), todo: 'answer the questions in Assignment, scope and site' },
-    { n: '6', k: 'market', l: 'Market', sub: 'macro → micro', href: o ? `../appraisal-assistant/?order=${encodeURIComponent(o.id)}&tab=market` : null, done: T(() => !!(o && o.market && (o.market.uad || o.market.charts || o.market.micro))), todo: 'the order’s Market tab' },
-    { n: '7', k: 'sel', l: 'Comp selection', sub: `${J.comps.length} considered · ${U.length} used`, st: 'micro', sel: '#compsCard', done: U.length >= 3, todo: 'pick at least 3 comps for the grid' },
-    { n: '8', k: 'data', l: 'Comp data', sub: `${conf} of ${U.length} confirmed`, st: 'workbook', sel: '#wbStrip', done: U.length > 0 && conf === U.length, todo: `confirm ${U.length - conf} comp${U.length - conf === 1 ? '' : 's'}` },
-    { n: '9', k: 'adj', l: 'Adjustments', sub: 'the grid', st: 'workbook', sel: '#gridCard', done: !blank(G.value), todo: 'adjust, then type your indicated value' },
-    { n: '10', k: 'sup', l: 'Adjustment support', sub: 'sensitivity · grouped sales · cost', st: 'workbook', sel: '#supCard', done: T(() => !!(app.sens && app.sens.job === J.id) || Object.keys(G.rateFrom || {}).length > 0), todo: 'run the sensitivity / grouped sales' },
-    { n: '11', k: 'sca', l: 'Sales comparison comment', sub: 'analysis and comment', st: 'workbook', sel: 'textarea[data-gnote]', done: String(G.note || '').trim().length > 40, todo: 'write the sales comparison comment' },
-    { n: '12', k: 'cost', l: 'Cost approach', sub: costOn ? 'land · cost new · depreciation' : 'not developed', st: 'cost', sel: '#costCard', done: T(() => !costOn || !!(costCalc(J) || {}).ind), todo: 'finish the cost approach' },
-    { n: '13', k: 'inc', l: 'Income approach', sub: incOn ? 'rent survey · GRM' : 'not developed (only with a rent survey)', st: 'income', sel: '#incomeCard', done: T(() => !incOn || !!(incomeCalc(J) || {}).value), todo: 'finish the income approach' },
-    { n: '14', k: 'rec', l: 'Reconciliation', sub: 'value from each approach', st: 'final', sel: '#reportCard', done: !blank(rptOpinion(J)) && !!String(R.reconNote || '').trim(), todo: 'opinion of value and the reconciliation comment' },
-    { n: '15', k: 'exh', l: 'Exhibits and photos', sub: 'maps · photos', st: 'final', sel: '#mapCard', done: T(() => U.length > 0 && U.every(c => c.front)), todo: 'a front photo for each comp' },
-    { n: '16', k: 'out', l: 'Review and export', sub: 'review genie · pre-check · SFREP', st: 'final', sel: '#reviewCard', done: !!J.exportedAt, todo: 'run the pre-check and export to SFREP' }]; }
+    { n: '2', k: 'insp', l: 'Inspection', sub: 'iPad data, photos, sketch', st: 'setup', sel: '#subjCard', done: T(() => !!J.subject.insp), todo: 'drop your iPad Workfile package' },
+    { n: '2', k: 'setup', l: 'Subject details', sub: 'scope · EA/HC · H&BU · site · certifications', st: 'setup', sel: '#setupCard', done: T(() => !precheckGrid(J).some(x => x.sev === 'Must fix' && (preGo0(J, x) || {}).label === 'Report details' && !rptLateMsg(x.msg))), todo: 'answer the questions in Assignment, scope and site' },
+    { n: '3', k: 'market', l: 'Market', sub: 'macro → micro', href: o ? `../appraisal-assistant/?order=${encodeURIComponent(o.id)}&tab=market` : null, done: T(() => !!(o && o.market && (o.market.uad || o.market.charts || o.market.micro))), todo: 'the order’s Market tab' },
+    { n: '3', k: 'sel', l: 'Comp selection', sub: `${J.comps.length} considered · ${U.length} used`, st: 'micro', sel: '#compsCard', done: U.length >= 3, todo: 'pick at least 3 comps for the grid' },
+    { n: '4', k: 'data', l: 'Comp data', sub: `${conf} of ${U.length} confirmed`, st: 'workbook', sel: '#wbStrip', done: U.length > 0 && conf === U.length, todo: `confirm ${U.length - conf} comp${U.length - conf === 1 ? '' : 's'}` },
+    { n: '4', k: 'adj', l: 'Adjustments', sub: 'the grid', st: 'workbook', sel: '#gridCard', done: !blank(G.value), todo: 'adjust, then type your indicated value' },
+    { n: '4', k: 'sup', l: 'Adjustment support', sub: 'sensitivity · grouped sales · cost', st: 'workbook', sel: '#supCard', done: T(() => !!(app.sens && app.sens.job === J.id) || Object.keys(G.rateFrom || {}).length > 0), todo: 'run the sensitivity / grouped sales' },
+    { n: '4', k: 'sca', l: 'Sales comparison comment', sub: 'analysis and comment', st: 'workbook', sel: 'textarea[data-gnote]', done: String(G.note || '').trim().length > 40, todo: 'write the sales comparison comment' },
+    { n: '5', k: 'cost', l: 'Cost approach', sub: costOn ? 'land · cost new · depreciation' : 'not developed', st: 'cost', sel: '#costCard', done: T(() => !costOn || !!(costCalc(J) || {}).ind), todo: 'finish the cost approach' },
+    { n: '6', k: 'inc', l: 'Income approach', sub: incOn ? 'rent survey · GRM' : 'not developed (only with a rent survey)', st: 'income', sel: '#incomeCard', done: T(() => !incOn || !!(incomeCalc(J) || {}).value), todo: 'finish the income approach' },
+    { n: '7', k: 'rec', l: 'Reconciliation', sub: 'value from each approach', st: 'recon', sel: '#reportCard', done: !blank(rptOpinion(J)) && !!String(R.reconNote || '').trim(), todo: 'opinion of value and the reconciliation comment' },
+    { n: '8', k: 'out', l: 'Review and export', sub: 'review genie · pre-check · SFREP', st: 'final', sel: '#reviewCard', done: !!J.exportedAt, todo: 'run the pre-check and export to SFREP' },
+    { n: '9', k: 'exh', l: 'Exhibits and photos', sub: 'maps · photos', st: 'exhibits', sel: '#mapCard', done: T(() => U.length > 0 && U.every(c => c.front)), todo: 'a front photo for each comp' }]; }
 function stageBarHTML(J) { const st = J.stage || (J.comps.some(c => c.use) ? 'workbook' : 'micro'); const P = pathSteps(J); const cur = app.pathAt && P.find(x => x.k === app.pathAt && x.st === st) ? app.pathAt : (P.find(x => x.st === st) || {}).k;
   const left = P.filter(x => !x.done);
   return `<nav class="steps path">${P.map(x => x.href ? `<a class="stepb${x.done ? ' done' : ''}" href="${x.href}" target="_top" title="${esc(x.sub)} – in the Appraisal Assistant"><b><span class="pn">${x.n}</span>${x.l}${x.done ? '<i class="pck">✓</i>' : ''}</b><small>${esc(x.sub)}</small></a>`
