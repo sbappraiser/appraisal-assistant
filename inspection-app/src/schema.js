@@ -498,6 +498,9 @@ const SECTIONS = [
       { k: 'newCon', l: 'New construction', t: 'yn', req: true, uad: 'NewConstructionIndicator' },
       { k: 'native', l: 'Property on Native American lands', t: 'yn', req: true, uad: 'NativeAmericanLandsIndicator' },
       { k: 'mixed', l: 'Any non-residential use (home business, farm, etc.)?', t: 'yn', show: d => d.siteCommon !== true, req: d => d.siteCommon !== true, uad: 'PropertyMixedUsageIndicator' },
+      { k: 'mixedResid', l: 'Is it still primarily residential?', t: 'yn', show: d => d.mixed === true, req: d => d.mixed === true, uad: 'PropertyPrimarilyResidentialUseIndicator', fid: '4.015' },
+      { k: 'mixedUse', l: 'Kind of non-residential use', t: 'one', o: opts(['Agricultural','Agricultural'],['Commercial','Commercial'],['Industrial','Industrial'],['Other','Other']), show: d => d.mixed === true, req: d => d.mixed === true, uad: 'NonResidentialUseType', fid: '4.017' },
+      { k: 'mixedMod', l: 'Was the home modified for that use?', t: 'yn', show: d => d.mixed === true, req: d => d.mixed === true, uad: 'NonResidentialModificationIndicator', fid: '4.018' },
       { k: 'mixedDesc', l: 'Describe non-residential use / modification', t: 'note', lim: 1250, show: d => d.siteCommon !== true && d.mixed === true, req: d => d.siteCommon !== true && d.mixed === true, uad: 'NonResidentialUseDescription', fid: '4.019' },
       { k: 'specialTax', l: 'Special tax assessments (Mello-Roos, CFD, assessment district bonds)', t: 'yn', req: true, uad: 'SpecialTaxAssessmentsIndicator', help: 'Check the tax bill / CRS report for direct assessments.' },
       { k: 'specialTaxDesc', l: 'Special tax notes (district, annual amount, payoff year)', t: 'note', show: d => d.specialTax === true },
@@ -602,6 +605,7 @@ const SECTIONS = [
       { k: 'design', l: 'Design (style)', t: 'one', req: true, o: U('ArchitecturalDesignCategoryType'), uad: 'ArchitecturalDesignCategoryType' },
       { k: 'stories', l: 'Floors in building', t: 'count', req: true, uad: 'StoriesCount', fid: '8.003' },
       { k: 'constr', l: 'Construction method', t: 'one', req: true, o: U('ConstructionMethodType'), uad: 'ConstructionMethodType' },
+      { k: 'factoryCert', l: 'Factory-built certification label examined?', t: 'yn', show: d => ['Modular','OnFrameModular'].includes(d.constr), req: d => ['Modular','OnFrameModular'].includes(d.constr), uad: 'FactoryBuiltCertificationExaminedIndicator', fid: '8.014' },
       { k: 'yearBuilt', l: 'Year built', t: 'year', req: true, uad: 'PropertyStructureBuiltYear', help: 'Filled from the CRS report when loaded' },
       { k: 'yearEst', l: 'Year built is estimated', t: 'yn', uad: 'PropertyStructureBuiltYearEstimatedIndicator' },
       { k: 'frontElev', l: 'Front door elevation', t: 'one', req: true, o: order(UN('FrontDoorApproximateElevationRangeType'), ['GroundLevel','UpToOneFoot','OneToTwoFeet','TwoToThreeFeet','ThreeToFourFeet','FourToFiveFeet','FiveToSixFeet','SixToSevenFeet','SevenToEightFeet','EightToNineFeet','NineToTenFeet','TenOrMoreFeet']), uad: 'FrontDoorApproximateElevationRangeType' },
@@ -712,10 +716,13 @@ const SECTIONS = [
       { k: 'inflDesc', l: 'Site influence comment', t: 'note', lim: 180, req: d => d.inflImpact && d.inflImpact !== 'Neutral', uad: 'SiteInfluenceDescription', fid: '4.029' },
       { k: 'water', l: 'Body of water', t: 'one', o: U('BodyOfWaterType').filter(x => !['Bay','Canal','Cove','Gulf','River','Sound'].includes(x[0])), show: d => (d.influences || []).includes('BodyOfWater'), req: d => (d.influences || []).includes('BodyOfWater'), uad: 'BodyOfWaterType' },
       { k: 'waterPrivate', l: 'Private water access', t: 'yn', show: d => (d.influences || []).includes('BodyOfWater'), req: d => (d.influences || []).includes('BodyOfWater'), uad: 'PrivateAccessIndicator' },
+      { k: 'waterName', l: 'Name of the body of water', t: 'text', lim: 45, show: d => d.waterPrivate === true, help: 'e.g. Pacific Ocean, Lake Cachuma', uad: 'BodyOfWaterName', fid: '4.035' },
+      { k: 'waterDesc', l: 'Body of water comment', t: 'note', lim: 180, show: d => (d.influences || []).includes('BodyOfWater'), req: d => (d.influences || []).includes('BodyOfWater') && ['Adverse','Beneficial'].includes(d.inflImpact), uad: 'BodyOfWaterDescription', fid: '4.029' },
       { k: 'waterMeasure', t: 'info', l: 'Measure it: SFREP requires the water frontage length. Enter it in SFREP.', show: d => d.waterPrivate === true },
       { k: 'waterRights', l: 'Waterfront access rights', t: 'one', o: U('WaterAccessRightType'), show: d => d.waterPrivate === true, req: d => d.waterPrivate === true },
       { k: 'waterDepth', l: 'Access depth', t: 'one', o: U('WaterAccessDepthType'), show: d => d.waterPrivate === true, req: d => d.waterPrivate === true },
       { k: 'waterFeat', l: 'Permanent waterfront features', t: 'multi', o: noneFirst(UN('WaterfrontFeatureType')), show: d => d.waterPrivate === true, req: d => d.waterPrivate === true },
+      { k: 'waterBuild', l: 'Right to build waterfront features (dock, pier)?', t: 'yn', show: d => (d.waterFeat || []).includes('None'), req: d => (d.waterFeat || []).includes('None'), uad: 'WaterfrontDevelopmentRightsIndicator', fid: '4.033' },
       { k: 'photoWater', l: 'Water frontage', t: 'photo', cat: 'WaterFrontage', show: d => d.waterPrivate === true, req: d => d.waterPrivate === true },
       { k: 'envCond', l: 'Apparent environmental conditions', t: 'multi', req: true, o: noneFirst(UN('EnvironmentalConditionType')), uad: 'EnvironmentalConditionType', fid: '4.027' },
       { k: 'envProx', l: 'Environmental condition proximity', t: 'one', o: opts(['Onsite','On Site'],['Bordering','Bordering'],['Offsite','Off Site']), show: d => (d.envCond || []).some(x => x !== 'None'), req: d => (d.envCond || []).some(x => x !== 'None'), uad: 'EnvironmentalConditionProximityType' },
@@ -737,13 +744,18 @@ const SECTIONS = [
       { k: 'hazardOther', l: 'Other hazard zone', t: 'text', show: d => (d.hazard || []).includes('Other'), req: d => (d.hazard || []).includes('Other') },
       { k: 'fire', l: 'Fire hazard zone', t: 'multi', req: true, o: opts('No Fire Hazard Zone','Very High Fire Hazard Severity Zone','High Fire Hazard Severity Zone','Moderate Fire Hazard Severity Zone','Defensible Space Maintained','Brush Clearance Needed','Other') },
       { k: 'elec', l: 'Electricity', t: 'one', req: true, o: opts(['Public','Public'],['NonPublic','Private']), uad: 'SiteUtilityOwnershipType' },
+      { k: 'elecSrc', l: 'Private electricity source', t: 'one', o: opts(['Solar','Solar'],['PermanentGenerator','Permanent generator'],['BatteryStorage','Battery storage'],['Wind','Wind'],['Other','Other']), show: d => d.elec === 'NonPublic', req: d => d.elec === 'NonPublic', uad: 'ElectricitySourceType', fid: '4.072' },
+      { k: 'elecShared', l: 'Is the private electricity shared with another property?', t: 'yn', show: d => d.elec === 'NonPublic', req: d => d.elec === 'NonPublic', fid: '4.072' },
       { k: 'gas', l: 'Gas', t: 'one', req: true, o: opts(['Public','Public'],['NonPublic','Private (propane)'],['None','None']), uad: 'SiteUtilityOwnershipType' },
+      { k: 'gasShared', l: 'Is the private gas (propane) shared with another property?', t: 'yn', show: d => d.gas === 'NonPublic', req: d => d.gas === 'NonPublic', fid: '4.072' },
       { k: 'waterUtil', l: 'Water', t: 'one', req: true, o: opts(['Public','Public'],['NonPublic','Private'],['Both','Public and Private']), uad: 'SiteUtilityOwnershipType' },
       { k: 'waterSrc', l: 'Private water source', t: 'one', o: U('WaterSourceType'), show: d => ['NonPublic','Both'].includes(d.waterUtil), req: d => ['NonPublic','Both'].includes(d.waterUtil), uad: 'WaterSourceType' },
       { k: 'well', l: 'Well use', t: 'one', o: opts('Domestic','Irrigation Only','Domestic and Irrigation','Unknown'), show: d => d.waterSrc === 'Well' },
       { k: 'wellShared', l: 'Well', t: 'one', o: opts('Private','Shared','Unknown'), show: d => d.waterSrc === 'Well' },
+      { k: 'waterShared', l: 'Is the private water shared with another property?', t: 'yn', show: d => ['NonPublic','Both'].includes(d.waterUtil) && d.waterSrc !== 'Well', req: d => ['NonPublic','Both'].includes(d.waterUtil) && d.waterSrc !== 'Well', fid: '4.072' },
       { k: 'sewer', l: 'Sanitary sewer', t: 'one', req: true, o: opts(['Public','Public'],['NonPublic','Private']), uad: 'SiteUtilityOwnershipType' },
       { k: 'sewerType', l: 'Private wastewater system', t: 'one', o: opts(['Septic','Septic'],['Cesspool','Cesspool'],'Alternative / Engineered Septic','Holding Tank',['Other','Other']), show: d => d.sewer === 'NonPublic', req: d => d.sewer === 'NonPublic', uad: 'SewerSystemType' },
+      { k: 'sewerShared', l: 'Is the private sewer (septic) shared with another property?', t: 'yn', show: d => d.sewer === 'NonPublic', req: d => d.sewer === 'NonPublic', fid: '4.072' },
       { k: 'utilImpact', l: 'Private utility impact', t: 'one', o: UN('ValueMarketabilityImpactType'), show: d => [d.elec, d.gas, d.waterUtil, d.sewer].some(x => x === 'NonPublic' || x === 'Both'), req: d => [d.elec, d.gas, d.waterUtil, d.sewer].some(x => x === 'NonPublic' || x === 'Both') },
       { k: 'utilDesc', l: 'Private utility comment', t: 'note', lim: 150, show: d => [d.elec, d.gas, d.waterUtil, d.sewer].some(x => x === 'NonPublic' || x === 'Both'), req: d => d.utilImpact === 'Adverse', uad: 'SiteUtilityDescription', fid: '4.074' },
       { k: 'broadband', l: 'Broadband internet available', t: 'yn', req: true, uad: 'BroadbandInternetAvailableIndicator', fid: '4.067' },
@@ -869,6 +881,7 @@ const SECTIONS = [
   { id: 'systems', title: 'Systems', groups: [
     { id: 'hvac', title: 'Heating & cooling', fields: [
       { k: 'heat', l: 'Heating system', t: 'multi', req: true, o: [['None','None'], ...U('HeatingSystemType').filter(x => x[0] !== 'Other'), ['Heat Pump','Heat Pump'], ['Other','Other']], uad: 'HeatingSystemType' },
+      { k: 'noHeatTypical', l: 'No heating system – is that typical for this market?', t: 'yn', show: d => (d.heat || []).includes('None'), req: d => (d.heat || []).includes('None'), uad: 'LackOfHeatingSystemTypicalToMarketIndicator', fid: '8.050' },
       { k: 'heatFuel', l: 'Heating fuel', t: 'multi', req: d => (d.heat || []).some(x => x !== 'None'), o: U('HeatingFuelType').filter(x => !['Coal','Oil'].includes(x[0])), uad: 'HeatingFuelType' },
       { k: 'heatBelow', l: 'Core heating system below grade', t: 'yn', req: true, uad: 'CoreHeatingSystemBelowGradeIndicator' },
       { k: 'cool', l: 'Cooling', t: 'multi', req: true, o: opts('None',['Centralized','Central Air'],['Individual','Individual Units'],'Heat Pump','Mini Split','Evaporative','Whole House Fan',['Other','Other']), uad: 'CoolingSystemType' },
@@ -1024,6 +1037,25 @@ function unitList(ins, key) {
   ['rooms', 'bedrooms', 'baths', 'kitchens'].forEach(l => (ins.lists[l] || []).forEach(it => (it[key] || []).forEach(v => s.add(v))));
   return [...s];
 }
+
+/* "Other – describe" (her rule Oct 22 2026: every required UAD field is covered): wherever a drop-down sent to UAD has an "Other" choice and no
+   describe box of its own, a describe box appears when Other is picked – its limit is Fannie Mae's (A-1) – and the export puts it in <Field>OtherDescription */
+const OTHER_LEN = {"PrimaryOccupationType":50,"DataSourceType":66,"CarStorageType":45,"ImprovedSurfaceMaterialType":12,"DisasterMitigationFeatureType":33,"RestrictionType":45,"EasementType":45,"EncroachmentType":45,"RenewableEnergyComponentOwnershipType":60,"RenewableEnergyComponentType":60,"EnvironmentalConditionType":45,"FunctionalIssueType":33,"AssociationChargeIncludesUtilityType":33,"ConvertedAreaOriginalUseType":33,"OutbuildingType":21,"RoomType":33,"ManufacturedHomeFinancingProgramEligibilityType":45,"ManufacturedHomeModificationType":33,"SkirtingMaterialType":33,"UtilityType":28,"AccessibilityFeatureType":33,"FlooringType":36,"ImprovementComponentType":36,"CeilingStyleType":36,"BelowGradeExteriorAccessType":36,"ViewType":27,"ArchitecturalDesignCategoryType":33,"StructuralDesignType":33,"ConstructionMethodType":33,"WallMaterialType":36,"FoundationMaterialType":36,"FoundationType":36,"RoofMaterialType":36,"CoolingSystemType":19,"HeatingFuelType":31,"HeatingSystemType":19,"MechanicalSystemType":33,"ListingType":45,"ParcelSeparatorType":33,"ParcelDescriptionClassificationType":60,"AmenityOwnershipType":33,"AmenityType":33,"AmortizationType":36,"ProjectComponentCategoryType":45,"ProjectConversionOriginalUseType":45,"AmenityMaterialType":45,"SwimmingPoolFeatureType":45,"DefectComponentLabelType":62,"DefectItemLocationType":31,"NativeAmericanLandsType":33,"PropertyEstateType":33,"NonResidentialUseType":33,"PropertyPartialInterestType":33,"AdditionalRentalIncomeType":45,"SaleType":33,"OwnershipTransferAmountNotAvailableReasonType":66,"HazardZoneType":45,"StreetAccessType":12,"PropertyPrimaryEntryExitMethodType":33,"SiteDrainageReasonType":33,"SiteFeatureType":45,"TopographyType":33,"SpecialAirportHazardZoneType":72,"BodyOfWaterType":21,"WaterAccessDepthType":21,"WaterAccessRightType":45,"WaterfrontFeatureType":33,"SiteInfluenceType":45,"ElectricitySourceType":28,"SewerSystemType":28,"WaterSourceType":28,"WaterWellType":28,"ViewRangeType":9,"SiteZoningComplianceIllegalReasonType":33,"MortgageType":21,"ReasonPropertyNotUsedType":27,"CostMethodType":33,"DepreciationMethodType":33,"SiteValuationMethodType":33,"ReplacementOrReproductionCostAreaType":40,"ValuationApproachExclusionReasonType":225,"ValuationAssignmentType":33,"MeasurementStandardPublisherType":50,"PartyRoleType":50,"AppraiserDesignationType":50,"AppraiserLicenseType":33};
+const hasOther = v => Array.isArray(v) ? v.includes('Other') : v === 'Other';
+function addOtherBoxes(fields) { for (let i = fields.length - 1; i >= 0; i--) { const f = fields[i];
+    if (!f || !f.uad || !['one', 'multi'].includes(f.t) || !Array.isArray(f.o) || !f.o.some(x => x[0] === 'Other') || /OtherDescription$/.test(f.uad)) continue;
+    if (fields.some(g => g && (g.k === f.k + 'Other' || g.k === f.k + 'Oth'))) continue;
+    const base = f.uad.replace(/Type$/, 'Type'); const lim = OTHER_LEN[f.uad] || 33;
+    const shown = (d, ins) => (f.show ? f.show(d, ins) : true) && hasOther(d[f.k]);
+    fields.splice(i + 1, 0, { k: f.k + 'Oth', l: (f.l || 'Other') + ' – describe Other', t: 'text', lim, otherOf: f.k, show: shown, req: shown, uad: base + 'OtherDescription', help: `Fannie Mae needs a few words when you pick Other (${lim} characters)` }); } }
+SECTIONS.forEach(sec => (sec.groups || []).forEach(g => addOtherBoxes(g.fields)));
+Object.keys(LISTS).forEach(k => LISTS[k].fields && addOtherBoxes(LISTS[k].fields));
+/* the describe words for each UAD field name, for the export (a list's items: the first one filled) */
+function otherWords(ins) { const W = {}; const take = (f, fields, d) => { if (!f.uad || !d) return; const box = fields.find(g => g && (g.k === f.k + 'Oth' || g.k === f.k + 'Other')); const v = box && d[box.k]; if (v && !W[f.uad]) W[f.uad] = String(v).slice(0, OTHER_LEN[f.uad] || 33); };
+  SECTIONS.forEach(sec => (sec.groups || []).forEach(g => g.fields.forEach(f => take(f, g.fields, (ins.data || {})[sec.id]))));
+  Object.keys(LISTS).forEach(k => (ins.lists[k] || []).forEach(it => (LISTS[k].fields || []).forEach(f => take(f, LISTS[k].fields, it))));
+  const st = ((ins.data || {}).site || {}).sewerType; if (st && !['Septic', 'Cesspool', 'Other'].includes(st) && !W.SewerSystemType) W.SewerSystemType = ({ 'Alternative / Engineered Septic': 'Engineered septic system' }[st] || st).slice(0, OTHER_LEN.SewerSystemType || 33);   // her named kinds go out as Other + the name
+  return W; }
 
 /* UAD commentary targets: generated summaries flow into these */
 const COMMENT_TARGETS = [
