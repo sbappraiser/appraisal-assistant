@@ -239,7 +239,7 @@ function renderDocs() {
   $('#docCount').textContent = list.length ? list.length + ' file' + (list.length > 1 ? 's' : '') : '';
   box.querySelectorAll('[data-dopen]').forEach(b => b.onclick = () => openDoc(b.dataset.dopen));
   box.querySelectorAll('[data-dread]').forEach(b => b.onclick = () => { saveLetter(true, true); openReader(b.dataset.dread); });
-  if (typeof renderFacts === 'function') renderFacts(); if (typeof renderPermBatch === 'function') renderPermBatch();
+  if (typeof renderFacts === 'function') renderFacts(); if (typeof renderPermBatch === 'function') renderPermBatch(); if (typeof renderCtBatch === 'function') renderCtBatch();
   box.querySelectorAll('[data-dkind]').forEach(b => b.onclick = e => { e.stopPropagation(); kindPop(b); });
   box.querySelectorAll('[data-dpage]').forEach(i => i.onchange = async () => { cur = readForm(); const m = cur.docs.find(d => d.id === i.dataset.dpage); m.page = Math.max(1, Math.min(m.pages || 1, parseInt(i.value, 10) || 1)); const f = await docFile(m.id); await readDoc(m, f); renderDocs(); saveLetter(true); toast('Floor plan page ' + m.page + ' will go to the iPad'); });
   box.querySelectorAll('[data-ddel]').forEach(b => b.onclick = () => {

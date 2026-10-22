@@ -457,6 +457,7 @@ nav.t1sub button[aria-current="true"] { border-color: #1f3a68; color: #1f3a68; f
       <p class="help pre" id="docStatus"></p>
       <div id="docList"></div>
       <div id="permBatch"></div>
+      <div id="ctBatch"></div>
       <div class="searchrow"><label>Search every document, sticky note and accepted entry in this order<input id="docSearch" type="search" placeholder="for example: easement, rent, credit, Mello-Roos"></label><button type="button" class="btn" id="docSearchBtn">Search</button></div>
       <div id="docHits"></div>
       <div id="stickyList" class="facts-box"></div>
@@ -676,6 +677,12 @@ nav.t1sub button[aria-current="true"] { border-color: #1f3a68; color: #1f3a68; f
       <li>Check the <b>UAD 3.6 sales contract</b> boxes. <b>20.011 Sales contract analysis</b> is drafted from your entries; edit, <b>Copy</b>, paste into SFREP.</li>
       <li><b>20.011 Sales contract analysis</b> starts as a draft in your own layout (ANALYSIS OF THE SALES CONTRACT): document and page count, price and acceptance date, seller and signer, contingencies, close of escrow, personal property included and <b>excluded</b> (new checklist line), leaseback, 1031, buyer's broker, credits, "All other terms … fairly typical", no counter offers, and your furnishings paragraph when furnishings transfer. [Brackets] are for you – arm's length, seller and signer names, effect on price. <b>Redo</b> rebuilds it from the facts you accepted.</li>
       </ol></details>
+    <details><summary>Contract packet: read the contract, counter offers and addenda together</summary><ol>
+      <li>Drop every file of the purchase packet in <b>Documents</b> – the purchase contract, each seller and buyer counter offer, each addendum, a leaseback. Each is filed by kind; fix a kind with its drop-down.</li>
+      <li>Under the document list, the <b>Contract packet</b> box lists them. On an order with <b>AI use</b> Yes or Redacted, click <b>Read the contract packet together with Claude</b>. You first see what will be sent, file by file; click <b>Send … pages to Claude</b>.</li>
+      <li>All the files go in one request, so Claude can follow the negotiation: a table of each document (date, who, price, what it changes, who signed, pages), <b>The negotiation</b> step by step, the <b>Final terms</b> (final price from the last counter both sides signed, the acceptance date = the last signature, close of escrow, credits, personal property, contingencies …) with file and page, <b>To check</b>, and a draft <b>20.011</b>.</li>
+      <li>Nothing goes into the report by itself: <b>Accept</b> each final term (edit it first if needed) – it fills the UAD 3.6 sales contract boxes and the 20.011 draft, like an accepted entry. <b>Use these parts</b> builds “I received a 5-page document which contains a 3-page purchase contract, a seller counter offer, and a buyer counter offer” with the page count of all the files together. <b>Use as 20.011</b> puts Claude's draft in the Sales contract analysis box (open the purchase contract with Read to edit it).</li>
+      <li>Add a file later? The box says it is new – click <b>Read the packet again</b>.</li></ol></details>
     <details><summary>Client requirements from the client's letter</summary><ol>
       <li>Drop the client's engagement letter or order in <b>Documents</b> (or in the New order step 2 box). It is read on this computer, with no AI.</li>
       <li>On the order page, scroll to <b>Client requirements</b>. Each thing the letter asks for is listed by kind – before you accept, inspection, photos, comparables, approaches to value, report and addenda, comments to include, before you deliver, delivery and invoice – with the page it came from. Click <b>p. 3</b> to open the letter at that page.</li>

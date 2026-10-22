@@ -324,7 +324,7 @@ function partsSentence(parts, total) {
   return `I received a ${total ? total + '-page ' : ''}document which contains ${list}.`;
 }
 function contractDraft(docId) {   // her model "ANALYSIS OF THE SALES CONTRACT" (Oct 18 2026) – [brackets] are for her
-  const rv = cur.review[docId], total = RD.pdf ? RD.pdf.numPages : null; const v = k => fval(docId, k).join('; ');
+  const rv = cur.review[docId], total = rv.packetTotal || (RD.pdf ? RD.pdf.numPages : null);   /* the whole packet's pages when she used the packet's parts */ const v = k => fval(docId, k).join('; ');
   const parts = rv.parts || []; const out = ['ANALYSIS OF THE SALES CONTRACT', '[Arm\'s length sale.]'];
   const ps = partsSentence(parts, total); out.push(ps ? ps.replace(/^I received a /, 'The client uploaded a ') : `The client uploaded a ${total ? total + '-page ' : ''}document which contains [the purchase contract].`);
   if (v('price')) out.push(`The final negotiated sales price is ${v('price')}${v('acceptDate') ? ', with an acceptance date of ' + v('acceptDate') : ''}.`); else if (v('acceptDate')) out.push(`The acceptance date is ${v('acceptDate')}.`);
@@ -419,7 +419,7 @@ function rdExtras(meta) {
     return `<div class="rdx"><h4>Parts of this ${RD.pdf ? RD.pdf.numPages + '-page ' : ''}document</h4>
       ${rv.parts.map((x, i) => `<div class="row"><select data-pk="${i}">${PART_KINDS.map(k => `<option${x.kind === k ? ' selected' : ''}>${k}</option>`).join('')}</select><input data-pp="${i}" value="${h(x.pages)}" placeholder="pages, e.g. 1-17" size="8"><button type="button" class="lnk" data-pdel="${i}">remove</button></div>`).join('')}
       <div class="row"><button type="button" class="btn ghost small" id="rdPartAdd">+ Add a part (starting on page ${RD.page})</button></div>
-      <p class="help">${h(partsSentence(rv.parts, RD.pdf ? RD.pdf.numPages : null)) || 'Add each part (purchase agreement, counters, addenda, lease, 1031 agreement, disclosures) to build the sentence for the report.'}</p></div>
+      <p class="help">${h(partsSentence(rv.parts, rv.packetTotal || (RD.pdf ? RD.pdf.numPages : null))) || 'Add each part (purchase agreement, counters, addenda, lease, 1031 agreement, disclosures) to build the sentence for the report.'}</p></div>
     <div class="rdx"><h4>UAD 3.6 sales contract</h4><table class="facts uadm">
       <tr><th>20.004 Contract price</th><td><input data-uad="price" value="${h(U.price ?? (fval(RD.id, 'price')[0] || ''))}"></td></tr>
       <tr><th>20.005 Contract date</th><td><input data-uad="cdate" value="${h(U.cdate ?? (fval(RD.id, 'acceptDate')[0] || ''))}" placeholder="MM/DD/YYYY"></td></tr>

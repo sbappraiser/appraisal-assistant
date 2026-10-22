@@ -534,6 +534,7 @@ nav.tabs button[aria-selected="true"] { background: var(--look-navy) !important;
       <p class="help pre" id="docStatus"></p>
       <div id="docList"></div>
       <div id="permBatch"></div>
+      <div id="ctBatch"></div>
       <div class="searchrow"><label>Search every document, sticky note and accepted entry in this order<input id="docSearch" type="search" placeholder="for example: easement, rent, credit, Mello-Roos"></label><button type="button" class="btn" id="docSearchBtn">Search</button></div>
       <div id="docHits"></div>
       <div id="stickyList" class="facts-box"></div>
@@ -753,6 +754,12 @@ nav.tabs button[aria-selected="true"] { background: var(--look-navy) !important;
       <li>Check the <b>UAD 3.6 sales contract</b> boxes. <b>20.011 Sales contract analysis</b> is drafted from your entries; edit, <b>Copy</b>, paste into SFREP.</li>
       <li><b>20.011 Sales contract analysis</b> starts as a draft in your own layout (ANALYSIS OF THE SALES CONTRACT): document and page count, price and acceptance date, seller and signer, contingencies, close of escrow, personal property included and <b>excluded</b> (new checklist line), leaseback, 1031, buyer's broker, credits, "All other terms … fairly typical", no counter offers, and your furnishings paragraph when furnishings transfer. [Brackets] are for you – arm's length, seller and signer names, effect on price. <b>Redo</b> rebuilds it from the facts you accepted.</li>
       </ol></details>
+    <details><summary>Contract packet: read the contract, counter offers and addenda together</summary><ol>
+      <li>Drop every file of the purchase packet in <b>Documents</b> – the purchase contract, each seller and buyer counter offer, each addendum, a leaseback. Each is filed by kind; fix a kind with its drop-down.</li>
+      <li>Under the document list, the <b>Contract packet</b> box lists them. On an order with <b>AI use</b> Yes or Redacted, click <b>Read the contract packet together with Claude</b>. You first see what will be sent, file by file; click <b>Send … pages to Claude</b>.</li>
+      <li>All the files go in one request, so Claude can follow the negotiation: a table of each document (date, who, price, what it changes, who signed, pages), <b>The negotiation</b> step by step, the <b>Final terms</b> (final price from the last counter both sides signed, the acceptance date = the last signature, close of escrow, credits, personal property, contingencies …) with file and page, <b>To check</b>, and a draft <b>20.011</b>.</li>
+      <li>Nothing goes into the report by itself: <b>Accept</b> each final term (edit it first if needed) – it fills the UAD 3.6 sales contract boxes and the 20.011 draft, like an accepted entry. <b>Use these parts</b> builds “I received a 5-page document which contains a 3-page purchase contract, a seller counter offer, and a buyer counter offer” with the page count of all the files together. <b>Use as 20.011</b> puts Claude's draft in the Sales contract analysis box (open the purchase contract with Read to edit it).</li>
+      <li>Add a file later? The box says it is new – click <b>Read the packet again</b>.</li></ol></details>
     <details><summary>Client requirements from the client's letter</summary><ol>
       <li>Drop the client's engagement letter or order in <b>Documents</b> (or in the New order step 2 box). It is read on this computer, with no AI.</li>
       <li>On the order page, scroll to <b>Client requirements</b>. Each thing the letter asks for is listed by kind – before you accept, inspection, photos, comparables, approaches to value, report and addenda, comments to include, before you deliver, delivery and invoice – with the page it came from. Click <b>p. 3</b> to open the letter at that page.</li>
@@ -1132,7 +1139,7 @@ nav.tabs button[aria-selected="true"] { background: var(--look-navy) !important;
 </div>
 <div id="toast" role="status" hidden></div>
 <script>
-const BUILD='o1-1022-1938';
+const BUILD='o1-1022-1943';
 const G = (() => {
 /* ---------------- small helpers ---------------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -2554,7 +2561,7 @@ function renderDocs() {
   $('#docCount').textContent = list.length ? list.length + ' file' + (list.length > 1 ? 's' : '') : '';
   box.querySelectorAll('[data-dopen]').forEach(b => b.onclick = () => openDoc(b.dataset.dopen));
   box.querySelectorAll('[data-dread]').forEach(b => b.onclick = () => { saveLetter(true, true); openReader(b.dataset.dread); });
-  if (typeof renderFacts === 'function') renderFacts(); if (typeof renderPermBatch === 'function') renderPermBatch();
+  if (typeof renderFacts === 'function') renderFacts(); if (typeof renderPermBatch === 'function') renderPermBatch(); if (typeof renderCtBatch === 'function') renderCtBatch();
   box.querySelectorAll('[data-dkind]').forEach(b => b.onclick = e => { e.stopPropagation(); kindPop(b); });
   box.querySelectorAll('[data-dpage]').forEach(i => i.onchange = async () => { cur = readForm(); const m = cur.docs.find(d => d.id === i.dataset.dpage); m.page = Math.max(1, Math.min(m.pages || 1, parseInt(i.value, 10) || 1)); const f = await docFile(m.id); await readDoc(m, f); renderDocs(); saveLetter(true); toast('Floor plan page ' + m.page + ' will go to the iPad'); });
   box.querySelectorAll('[data-ddel]').forEach(b => b.onclick = () => {
@@ -3761,7 +3768,7 @@ function partsSentence(parts, total) {
   return `I received a ${total ? total + '-page ' : ''}document which contains ${list}.`;
 }
 function contractDraft(docId) {   // her model "ANALYSIS OF THE SALES CONTRACT" (Oct 18 2026) – [brackets] are for her
-  const rv = cur.review[docId], total = RD.pdf ? RD.pdf.numPages : null; const v = k => fval(docId, k).join('; ');
+  const rv = cur.review[docId], total = rv.packetTotal || (RD.pdf ? RD.pdf.numPages : null);   /* the whole packet's pages when she used the packet's parts */ const v = k => fval(docId, k).join('; ');
   const parts = rv.parts || []; const out = ['ANALYSIS OF THE SALES CONTRACT', '[Arm\'s length sale.]'];
   const ps = partsSentence(parts, total); out.push(ps ? ps.replace(/^I received a /, 'The client uploaded a ') : `The client uploaded a ${total ? total + '-page ' : ''}document which contains [the purchase contract].`);
   if (v('price')) out.push(`The final negotiated sales price is ${v('price')}${v('acceptDate') ? ', with an acceptance date of ' + v('acceptDate') : ''}.`); else if (v('acceptDate')) out.push(`The acceptance date is ${v('acceptDate')}.`);
@@ -3856,7 +3863,7 @@ function rdExtras(meta) {
     return `<div class="rdx"><h4>Parts of this ${RD.pdf ? RD.pdf.numPages + '-page ' : ''}document</h4>
       ${rv.parts.map((x, i) => `<div class="row"><select data-pk="${i}">${PART_KINDS.map(k => `<option${x.kind === k ? ' selected' : ''}>${k}</option>`).join('')}</select><input data-pp="${i}" value="${h(x.pages)}" placeholder="pages, e.g. 1-17" size="8"><button type="button" class="lnk" data-pdel="${i}">remove</button></div>`).join('')}
       <div class="row"><button type="button" class="btn ghost small" id="rdPartAdd">+ Add a part (starting on page ${RD.page})</button></div>
-      <p class="help">${h(partsSentence(rv.parts, RD.pdf ? RD.pdf.numPages : null)) || 'Add each part (purchase agreement, counters, addenda, lease, 1031 agreement, disclosures) to build the sentence for the report.'}</p></div>
+      <p class="help">${h(partsSentence(rv.parts, rv.packetTotal || (RD.pdf ? RD.pdf.numPages : null))) || 'Add each part (purchase agreement, counters, addenda, lease, 1031 agreement, disclosures) to build the sentence for the report.'}</p></div>
     <div class="rdx"><h4>UAD 3.6 sales contract</h4><table class="facts uadm">
       <tr><th>20.004 Contract price</th><td><input data-uad="price" value="${h(U.price ?? (fval(RD.id, 'price')[0] || ''))}"></td></tr>
       <tr><th>20.005 Contract date</th><td><input data-uad="cdate" value="${h(U.cdate ?? (fval(RD.id, 'acceptDate')[0] || ''))}" placeholder="MM/DD/YYYY"></td></tr>
@@ -4058,9 +4065,9 @@ async function pbPageJpeg(pdf, n) {
   const cv = document.createElement('canvas'); cv.width = Math.round(vp.width); cv.height = Math.round(vp.height); const g = cv.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, cv.width, cv.height);
   await pg.render({ canvasContext: g, viewport: vp }).promise; return cv;
 }
-async function pbMakePlan() {   // what would be sent, file by file
+async function pbMakePlan(docsIn) {   // what would be sent, file by file (the permit files, or the contract packet's files)
   const red = cur.aiUse === 'Redacted'; const files = [];
-  const docs = pbDocs(); const redactedCopies = docs.filter(d => /- REDACTED\.pdf$/i.test(d.name)).map(d => d.name.replace(/ - REDACTED\.pdf$/i, '').toLowerCase());
+  const docs = docsIn || pbDocs(); const redactedCopies = docs.filter(d => /- REDACTED\.pdf$/i.test(d.name)).map(d => d.name.replace(/ - REDACTED\.pdf$/i, '').toLowerCase());
   for (const d of docs) {
     const base = d.name.replace(/\.pdf$/i, '').toLowerCase(); if (!/- REDACTED\.pdf$/i.test(d.name) && redactedCopies.includes(base)) { files.push({ d, skip: 'a redacted copy is sent instead' }); continue; }
     const r = await docPages(d.id); if (!r) { files.push({ d, skip: 'not stored' }); continue; }
@@ -4085,9 +4092,9 @@ function pbSubjectText() {
 const PB_SHAPE = `{"permits":[{"number":"permit or case number","agency":"City of …, County of Santa Barbara, …","kind":"Building|Electrical|Plumbing|Mechanical|Grading|Demolition|Solar|Pool/spa|ADU|Planning/zoning|Code enforcement|Fire|Other","work":"short description of the work","sqft":"square feet added or converted, if stated, else empty","applied":"YYYY-MM-DD or empty","issued":"YYYY-MM-DD or empty","finaled":"YYYY-MM-DD or empty","status":"Finaled|Issued – no final|Expired|Withdrawn/void|Applied only|Unknown","file":"file name","page":1,"quote":"the words you read it from"}],"flags":[{"text":"what the appraiser should look at","file":"file name","page":1}],"comment":"a short factual permit-history paragraph for the appraisal (under 1,000 characters)"}`;
 const PB_RULES = `Rules: report only what the documents say – never guess a date, status or size. Treat the same permit number in several files as ONE permit and combine what each file says. Sort the permits oldest first. A permit with an issue date but no final inspection is "Issued – no final". Flags: permits never finaled or expired; living area added or converted (garage, ADU, addition) and how it compares with the public-record living area; code-enforcement cases; work for a different address or parcel; anything that conflicts between files. The comment follows the appraiser's own style (her example: "According to the County permit history, the current owner completed a garage re-roof in 2025 (25CNP-00019), an interior remodel and a bathroom upgrade in 2010 (10BDP-01201, 10PLM-00088), permitted the rear storage shed in 2009 (09EXE-00405), and completed an addition and remodel in 2008 (08BDP-01440). The owner reported recent upgrades include: ___ (based on interview). The permit history also reflects that a prior owner completed a kitchen remodel in 2005 (05BDP-00837) and a main house re-roof in 2003 (03CNP-00167)."): plain words, one sentence for the current owner's work newest first, then the owner-interview sentence with the blank ___ left for her, then a sentence for prior owners' work newest first. Tell current from prior owners by the owner name and sale date in the public-record facts and the names in the case titles; if you cannot tell, say "the permit history reflects". Use the short permit number in brackets (drop the OOOOO- filler). Describe each item by what was done (garage re-roof, bathroom upgrade), not by case type; a Closed case is described as completed. Leave out enforcement cases, open questions, missing finals and square-footage comparisons – those belong in flags, not the comment. Facts only, no value opinion.`;
 
-async function pbClaude(content, maxTokens) {
+async function pbClaude(content, maxTokens, system) {
   const res = await fetch('https://api.anthropic.com/v1/messages', { method: 'POST', headers: { 'content-type': 'application/json', 'x-api-key': aiKey(), 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-    body: JSON.stringify({ model: aiModel(), max_tokens: maxTokens || 8000, system: 'You read building permit records for a residential appraiser in California and report exactly what they say, with file names and page numbers. Reply with JSON only.', messages: [{ role: 'user', content }] }) });
+    body: JSON.stringify({ model: aiModel(), max_tokens: maxTokens || 8000, system: system || 'You read building permit records for a residential appraiser in California and report exactly what they say, with file names and page numbers. Reply with JSON only.', messages: [{ role: 'user', content }] }) });
   const j = await res.json(); if (!res.ok) throw new Error((j.error && j.error.message) || 'Claude answered with an error (' + res.status + ')');
   const txt = (j.content || []).filter(c => c.type === 'text').map(c => c.text).join(''); return JSON.parse(txt.slice(txt.indexOf('{'), txt.lastIndexOf('}') + 1));
 }
@@ -4179,6 +4186,133 @@ async function droppedFiles(dt) {
   const out = []; const walk = async (e, path) => { if (e.isFile) { const f = await new Promise((ok, no) => e.file(ok, no)); f._dir = path; out.push(f); return; }
     const rd = e.createReader(); let batch; do { batch = await new Promise((ok, no) => rd.readEntries(ok, no)); for (const c of batch) await walk(c, path + '/' + e.name); } while (batch.length); };
   for (const e of ents) await walk(e, ''); return out.filter(f => !/^\./.test(f.name) && !/^(thumbs\.db|desktop\.ini)$/i.test(f.name));
+}
+
+/* =====================================================================
+   Read the whole contract packet together with Claude (her request, Oct 22 2026)
+   "It would need to read them all together to follow the negotiations, final sales price, final signature,
+   combined page count over 3 documents."
+   Every Purchase contract / Counter offer / Addendum / Leaseback document in the order goes in ONE request
+   (the same plan, redaction and picture rules as the permit reader – pbMakePlan / pbClaude in permitsai.js).
+   Result: cur.contractPacket {at, model, files, mode, docs[], steps[], final{}, flags[], summary, totalPages}.
+   Nothing goes into the report by itself: she clicks Accept on each final term (it becomes an accepted fact
+   on the purchase contract, like any other), "Use these parts" for the parts sentence, and "Use as 20.011".
+   ===================================================================== */
+const CB_TYPES = ['contract', 'counter', 'addendum', 'leaseback'];
+const CB = { plan: null, busy: false, show: true };
+const cbDocs = () => ((cur && cur.docs) || []).filter(d => CB_TYPES.includes(d.type));
+const cbMain = () => { const L = cbDocs(); return L.find(d => d.type === 'contract') || L[0] || null; };
+const CB_KIND = { contract: 'Purchase agreement', counter: 'Seller counter offer', addendum: 'Addendum', leaseback: 'Lease agreement' };
+const CB_FINAL = [['price', 'Final negotiated sales price'], ['acceptDate', 'Acceptance date (last signature)'], ['coe', 'Close of escrow'], ['credits', 'Credits / concessions to the buyer'],
+  ['personal', 'Personal property included'], ['excluded', 'Excluded items'], ['leaseback', 'Leaseback / rent-back'], ['loanCont', 'Loan contingency'], ['apprCont', 'Appraisal contingency'],
+  ['buyerBroker', 'Buyer’s broker: who pays, % or amount'], ['exch1031', '1031 exchange'], ['entity', 'Signing for an entity'], ['special', 'Court-ordered, estate, trust or atypical terms'],
+  ['written', 'Terms written in'], ['addenda', 'Counters and addenda – summary']];
+const CB_SHAPE = `{"documents":[{"file":"file name","firstPage":1,"lastPage":17,"kind":"Purchase agreement|Seller counter offer|Buyer counter offer|Addendum|Lease agreement|1031 exchange agreement|Agent/broker disclosures|Other disclosures|Other","number":"e.g. SCO #1, BCO #1, Addendum #2 or empty","date":"YYYY-MM-DD or empty","from":"Buyer|Seller|Both|","price":"price stated in it, or empty","changes":"what it changes, short","signedBy":"Buyer|Seller|Both|Not signed","signedDates":"the signature dates as written","accepted":"Yes|No|Not stated"}],
+"steps":[{"date":"YYYY-MM-DD or as written","who":"Buyer|Seller","what":"offer / counter / acceptance / addendum – short","price":"","file":"","page":1}],
+"final":{"price":{"v":"","file":"","page":1},"acceptDate":{"v":"","file":"","page":1},"coe":{"v":"","file":"","page":1},"credits":{"v":"","file":"","page":1},"personal":{"v":"","file":"","page":1},"excluded":{"v":"","file":"","page":1},"leaseback":{"v":"","file":"","page":1},"loanCont":{"v":"Yes – … / No","file":"","page":1},"apprCont":{"v":"","file":"","page":1},"buyerBroker":{"v":"","file":"","page":1},"exch1031":{"v":"","file":"","page":1},"entity":{"v":"","file":"","page":1},"special":{"v":"","file":"","page":1},"written":{"v":"","file":"","page":1},"addenda":{"v":"one sentence: each counter and addendum in order and what it changed","file":"","page":1}},
+"totalPages":0,"flags":[{"text":"","file":"","page":1}],"summary":""}`;
+const CB_RULES = `Rules: read every file together as ONE purchase packet and follow the negotiation in date order: the offer, each seller and buyer counter offer, each addendum, and which one was finally accepted and signed by both sides.
+- The final negotiated price is the price in the last document both sides signed (a later counter replaces an earlier price). Say which file and page.
+- The acceptance date is the date of the LAST signature that made the agreement binding (the final acceptance), not the offer date.
+- Count the pages of every file; totalPages is the sum. List the documents in the packet in order, with their first and last page in their own file.
+- Report only what the pages say – never guess. Leave a value empty when it is not stated. Money as $1,234,000. Dates as YYYY-MM-DD when the date is clear.
+- Flags: anything the appraiser must check – a counter not signed by both sides, price or terms that conflict between documents, missing pages or signatures, seller credits, personal property, leaseback, non-arm's-length signs, entity or trust signers, a different property address.
+- summary: a draft for the appraiser in this layout, plain sentences, about 120–220 words: "ANALYSIS OF THE SALES CONTRACT" then "The client uploaded a [N]-page document which contains a purchase contract, [n] seller counter offers, [n] buyer counter offers and [n] addendums." Then the negotiation in one or two sentences, the final negotiated sales price and acceptance date, contingencies, close of escrow, personal property, credits, leaseback and other terms, and end with "All other terms appear to be fairly typical." Use [brackets] for anything the appraiser must fill in.`;
+
+async function cbSend() {
+  if (CB.busy) return; CB.busy = true; const btn = $('#cbGo'); const say = t => { if (btn) btn.textContent = t; };
+  try {
+    const plan = CB.plan; const pdfjs = await loadPdfJs(); const pics = [];
+    for (const f of plan) { if (f.skip || !(f.imgs || []).length) continue; const rec = await ODB.get('docs', f.d.id); const pdf = await pdfjs.getDocument({ data: new Uint8Array(await rec.blob.arrayBuffer()), isEvalSupported: false, wasmUrl: './wasm/', standardFontDataUrl: './standard_fonts/' }).promise;
+      for (const n of f.imgs) { say(`Preparing pictures… ${pics.length + 1}`); const cv = await pbPageJpeg(pdf, n); pics.push({ file: f.d.name, n, data: cv.toDataURL('image/jpeg', 0.72).split(',')[1] }); } }
+    const texts = []; let t0 = ''; for (const f of plan) { if (f.skip) continue; t0 += `\n##### FILE: ${f.d.name} (${f.pages || '?'} pages; filed as ${DOC_LABEL[f.d.type] || f.d.type}) #####`; for (const p of f.text) { const block = `\n=== ${f.d.name} – page ${p.n} ===\n${p.t}`; if (t0.length + block.length > PB_MAX_TEXT && t0) { texts.push(t0); t0 = ''; } t0 += block; } } if (t0) texts.push(t0);
+    const rounds = []; const n = Math.max(1, Math.ceil(pics.length / PB_MAX_IMG), texts.length);
+    for (let i = 0; i < n; i++) rounds.push({ text: texts[i] || '', pics: pics.slice(i * PB_MAX_IMG, (i + 1) * PB_MAX_IMG) });
+    const f0 = readForm(); const subj = `Subject property: ${f0.address || '(address not entered)'}${f0.apn ? ' · APN ' + f0.apn : ''}. Files in the packet: ${plan.filter(f => !f.skip).map(f => `${f.d.name} (${f.pages || '?'} pages)`).join('; ')}.`;
+    const sys = 'You read California residential purchase contract packets (C.A.R. RPA, counter offers, addenda) for a residential appraiser and report exactly what they say, with file names and page numbers. Reply with JSON only.';
+    const results = [];
+    for (let i = 0; i < rounds.length; i++) { const R = rounds[i]; say(rounds.length > 1 ? `Claude is reading part ${i + 1} of ${rounds.length}…` : 'Claude is reading the whole packet…');
+      const content = [{ type: 'text', text: subj }];
+      if (R.text) content.push({ type: 'text', text: 'Contract packet (readable pages):' + R.text });
+      R.pics.forEach(p => { content.push({ type: 'text', text: `=== ${p.file} – page ${p.n} (scanned picture) ===` }); content.push({ type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: p.data } }); });
+      content.push({ type: 'text', text: `${rounds.length > 1 ? `This is part ${i + 1} of ${rounds.length} of the packet. ` : 'These are all the files of the purchase packet. '}\n${CB_RULES}\nAnswer with JSON only, in this form: ${CB_SHAPE}` });
+      results.push(await pbClaude(content, 8000, sys)); }
+    let out = results[0] || {};
+    if (results.length > 1) { say('Claude is putting the parts together…');
+      out = await pbClaude([{ type: 'text', text: `${subj}\n\nThe packet was read in ${results.length} parts. Here is what each part found:\n${results.map((r, i) => `--- part ${i + 1} ---\n${JSON.stringify(r)}`).join('\n')}\n\nMerge them into one answer for the whole packet.\n${CB_RULES}\nAnswer with JSON only, in this form: ${CB_SHAPE}` }], 8000, sys); }
+    const sentFiles = plan.filter(f => !f.skip && ((f.text || []).length || (f.imgs || []).length)).map(f => f.d.name);
+    const pagesSum = plan.filter(f => !f.skip).reduce((a, f) => a + (f.pages || 0), 0);
+    cur.contractPacket = { at: new Date().toISOString(), model: aiModel(), files: sentFiles, mode: cur.aiUse === 'Redacted' ? 'redacted' : 'full', rounds: rounds.length,
+      docs: (out.documents || []).filter(x => x && (x.file || x.kind)), steps: (out.steps || []).filter(x => x && x.what), final: out.final || {}, flags: (out.flags || []).filter(x => x && x.text),
+      summary: String(out.summary || ''), totalPages: pagesSum || +out.totalPages || null, used: {} };
+    (cur.aiLog = cur.aiLog || []).push({ at: cur.contractPacket.at, doc: 'Contract packet (' + sentFiles.length + ' files)', pages: [], mode: cur.contractPacket.mode, model: aiModel(), items: cur.contractPacket.docs.length });
+    CB.plan = null; CB.show = true; saveLetter(true, true); renderDocs();
+    toast(`Claude read the contract packet together: ${sentFiles.length} files, ${cur.contractPacket.totalPages || '?'} pages`, 6000);
+  } catch (e) { console.error(e); toast('Not sent or not read: ' + (e.message || e), 7000); say('Try again'); }
+  CB.busy = false;
+}
+
+/* her click: one final term → an accepted fact on the purchase contract (fills the UAD 3.6 sales contract boxes and the 20.011 draft) */
+function cbAccept(key, value) {
+  const P = cur.contractPacket, m = cbMain(); if (!m || !value) return; const F = P.final[key] || {}; const C = checkFor('contract');
+  cur.facts = (cur.facts || []).filter(f => !(f.docId === m.id && f.key === key && f.by === 'packet'));
+  const f = { id: uid(), docId: m.id, doc: m.name, type: 'contract', key, label: (C.items.find(x => x[0] === key) || [, key])[1], value, page: F.page || null, by: 'packet', from: F.file || '', at: new Date().toISOString() };
+  cur.facts.push(f); markFilled(f, 'contract', key, value); P.used[key] = value; saveLetter(true, true);
+}
+function cbUseParts() {
+  const P = cur.contractPacket, m = cbMain(); if (!m) return; cur.review = cur.review || {}; const rv = cur.review[m.id] = cur.review[m.id] || { sugg: [] };
+  const kinds = new Set(PART_KINDS); rv.parts = (P.docs || []).map(d => ({ kind: kinds.has(d.kind) ? d.kind : 'Other', pages: d.firstPage && d.lastPage ? `${d.firstPage}-${d.lastPage}` : '', file: d.file || '' }));
+  rv.packetTotal = P.totalPages || null; saveLetter(true, true);
+  toast(partsSentence(rv.parts, rv.packetTotal) || 'Parts saved on the purchase contract', 8000);
+}
+
+function cbHTML(P) {
+  const d = x => x ? h(/^\d{4}-\d\d-\d\d$/.test(x) && G.showDate ? G.showDate(x) : x) : '';
+  const src = o => o && o.file ? `<small class="muted">${h(o.file)}${o.page ? ', p. ' + h(o.page) : ''}</small>` : '';
+  const m = cbMain(); const rv = m && cur.review && cur.review[m.id];
+  const ps = partsSentence((P.docs || []).map(x => ({ kind: PART_KINDS.includes(x.kind) ? x.kind : 'Other', pages: x.firstPage && x.lastPage ? `${x.firstPage}-${x.lastPage}` : '' })), P.totalPages);
+  return `<h4>Contract packet <span class="opt">read together by Claude ${h(new Date(P.at).toLocaleDateString())} – ${P.files.length} file${P.files.length === 1 ? '' : 's'}, ${P.totalPages || '?'} pages${P.mode === 'redacted' ? ' (redacted)' : ''} – check it against the documents</span></h4>
+    <div class="tableWrap"><table class="facts cbt"><tr><th>Document</th><th>Date</th><th>From</th><th>Price</th><th>What it changes</th><th>Signed</th><th>Pages</th></tr>
+    ${(P.docs || []).map(x => `<tr class="${/not signed/i.test(x.signedBy || '') || /^No$/i.test(x.accepted || '') ? 'warnRow' : ''}"><td><b>${h(x.kind || '')}</b>${x.number ? ' ' + h(x.number) : ''}<br><small class="muted">${h(x.file || '')}</small></td><td>${d(x.date)}</td><td>${h(x.from || '')}</td><td>${h(x.price || '')}</td><td>${h(x.changes || '')}</td><td>${h(x.signedBy || '')}${x.signedDates ? '<br><small>' + h(x.signedDates) + '</small>' : ''}</td><td>${x.firstPage ? h(x.firstPage) + '–' + h(x.lastPage || '') : ''}</td></tr>`).join('')}</table></div>
+    <p class="help">${h(ps)} <button type="button" class="btn ghost small" id="cbParts">Use these parts</button>${rv && rv.packetTotal ? ' <span class="chip ok">✓ parts used on the purchase contract</span>' : ''}</p>
+    ${(P.steps || []).length ? `<h4>The negotiation</h4><ol class="cbsteps">${P.steps.map(s => `<li><b>${d(s.date)}</b> ${h(s.who || '')}: ${h(s.what || '')}${s.price ? ' – ' + h(s.price) : ''} ${src(s)}</li>`).join('')}</ol>` : ''}
+    <h4>Final terms <span class="opt">Accept puts it on the purchase contract (UAD 3.6 sales contract boxes and the 20.011 draft) – edit first if needed</span></h4>
+    <table class="facts cbfinal">${CB_FINAL.map(([k, l]) => { const o = P.final[k] || {}; const v = String(o.v || '').trim(); if (!v) return ''; const used = P.used && P.used[k];
+      return `<tr><th>${h(l)}</th><td><input data-cbv="${k}" value="${h(used || v)}"> ${src(o)}</td><td>${used ? '<span class="chip ok">✓ accepted</span>' : ''}<button type="button" class="btn small" data-cbacc="${k}">${used ? 'Accept again' : 'Accept'}</button></td></tr>`; }).join('')}</table>
+    ${P.flags.length ? `<h4>To check</h4><ul>${P.flags.map(f => `<li>${h(f.text)} ${src(f)}</li>`).join('')}</ul>` : ''}
+    ${P.summary ? `<label>Draft 20.011 Sales contract analysis <span class="opt">Claude's wording – read and edit it; ${P.summary.length.toLocaleString()} of 5,000 characters</span><textarea id="cbSum" rows="7">${h(P.summary)}</textarea></label>
+      <div class="row"><button type="button" class="btn small" id="cbUseSum">Use as 20.011</button><button type="button" class="btn ghost small" id="cbCopy">Copy</button><button type="button" class="btn ghost small" id="cbHide">Hide</button></div>` : '<div class="row"><button type="button" class="btn ghost small" id="cbHide">Hide</button></div>'}`;
+}
+async function renderCtBatch() {
+  const box = $('#ctBatch'); if (!box || !cur) return; const docs = cbDocs(); const P = cur.contractPacket;
+  if (!docs.length && !P) { box.innerHTML = ''; return; }
+  const ai = cur.aiUse, ok = ai === 'Yes' || ai === 'Redacted', key = aiKey();
+  const fresh = docs.filter(d => !(P && (P.files || []).includes(d.name)));
+  let html = `<div class="permbatch"><b>Contract packet: ${docs.length} file${docs.length === 1 ? '' : 's'}</b> (${docs.map(d => h(DOC_LABEL[d.type] || d.type)).join(', ')}). `
+    + (P ? `<span class="chip ok">✓ read together · ${h(new Date(P.at).toLocaleDateString())}</span>` : '') + (P && fresh.length ? `<span class="chip warn">${fresh.length} new file${fresh.length === 1 ? '' : 's'} not read yet – read the packet again</span>` : '') + ' ';
+  if (!docs.length) html += '';
+  else if (!ok) html += `To have Claude read the contract, counters and addenda together (negotiation, final price, last signature, total pages), set <b>AI use</b> on this order to Yes or Redacted (it is <b>${h(ai || 'not set')}</b>). Each file can still be read on its own with <b>Read</b>.`;
+  else if (!key) html += 'Claude can read them together, but no Claude API key is saved yet: <b>Settings → Claude</b>.';
+  else html += `<button type="button" class="btn small" id="cbPlan">${P ? 'Read the packet again' : 'Read the contract packet together with Claude'}</button> <span class="help">one request with the contract, every counter offer and addendum, so Claude can follow the negotiation</span>`;
+  if (P && !CB.show) html += ` <button type="button" class="btn ghost small" id="cbShow">Show the contract packet</button>`;
+  html += '</div>';
+  if (CB.plan) { const L = CB.plan; const nT = L.reduce((a, f) => a + ((f.text || []).length), 0), nI = L.reduce((a, f) => a + ((f.imgs || []).length), 0), nH = L.reduce((a, f) => a + ((f.held || []).length), 0);
+    html += `<div class="rdsendbar"><b>This is what goes to Claude${ai === 'Redacted' ? ' (redacted)' : ''}:</b>
+      <table class="facts"><tr><th>File</th><th>Pages</th><th>As text</th><th>As pictures</th><th>Not sent</th></tr>${L.map(f => `<tr><td>${h(f.d.name)}</td><td>${f.pages || ''}</td><td>${f.skip ? '' : (f.text || []).length}</td><td>${f.skip ? '' : (f.imgs || []).length}</td><td>${f.skip ? h(f.skip) : (f.held || []).length ? 'scanned p. ' + f.held.join(', ') : ''}</td></tr>`).join('')}</table>
+      ${nH ? `<p class="help"><b>${nH} scanned page${nH === 1 ? ' is' : 's are'} not sent</b>: on a Redacted order only the "- REDACTED" copy of a scanned file can go. C.A.R. forms often print as scrambled text – those pages are read best as pictures on a Yes order.</p>` : ''}
+      <div class="row">${nT + nI ? `<button type="button" class="btn primary" id="cbGo">Send ${nT + nI} page${nT + nI === 1 ? '' : 's'} to Claude</button>` : '<span class="help">Nothing can be sent.</span>'}<button type="button" class="btn ghost" id="cbCancel">Cancel</button></div></div>`; }
+  if (P && CB.show) html += cbHTML(P);
+  box.innerHTML = html;
+  const pl = $('#cbPlan'); if (pl) pl.onclick = async () => { pl.disabled = true; pl.textContent = 'Looking at the files…'; try { saveLetter(true, true); CB.plan = await pbMakePlan(cbDocs()); } catch (e) { console.error(e); toast('Could not open the contract files: ' + (e.message || e)); } renderCtBatch(); };
+  const go = $('#cbGo'); if (go) go.onclick = () => cbSend();
+  const cc = $('#cbCancel'); if (cc) cc.onclick = () => { CB.plan = null; renderCtBatch(); };
+  const sh = $('#cbShow'); if (sh) sh.onclick = () => { CB.show = true; renderCtBatch(); };
+  const hd = $('#cbHide'); if (hd) hd.onclick = () => { CB.show = false; renderCtBatch(); };
+  const pa = $('#cbParts'); if (pa) pa.onclick = () => { cbUseParts(); renderCtBatch(); };
+  box.querySelectorAll('[data-cbacc]').forEach(b => b.onclick = () => { const k = b.dataset.cbacc; const v = box.querySelector(`[data-cbv="${k}"]`).value.trim(); if (!v) { toast('Nothing to accept'); return; } cbAccept(k, v); renderFacts(); renderCtBatch(); toast('Accepted on the purchase contract'); });
+  const sm = $('#cbSum'); if (sm) sm.onchange = () => { cur.contractPacket.summary = sm.value; saveLetter(true, true); };
+  const us = $('#cbUseSum'); if (us) us.onclick = () => { cur.uad = cur.uad || {}; if (String(cur.uad.cmt || '').trim() && !confirm('Replace the 20.011 Sales contract analysis you already have with this draft?')) return; cur.uad.cmt = $('#cbSum').value; saveLetter(true, true); toast('It is the 20.011 Sales contract analysis now (open the purchase contract with Read to see or edit it)', 7000); };
+  const cp = $('#cbCopy'); if (cp) cp.onclick = async () => { try { await navigator.clipboard.writeText($('#cbSum').value); toast('Copied'); } catch (e) { toast('Could not copy'); } };
 }
 
 /* =====================================================================
