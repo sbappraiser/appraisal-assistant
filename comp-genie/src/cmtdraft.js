@@ -22,9 +22,11 @@ function cmtDraft(J, k) { const S = subjFacts(J), F = reportFrom(J), o = orderOf
       : `According to ${src}, there were no sales or transfers of the subject in the three years before the effective date${eff ? ' of ' + d(eff) : ''}.`;
     t += o.listing === 'listed' ? ` The subject is currently listed for sale [MLS #, list price, days on market].` : o.listing === 'contract' ? ` The subject is under contract; the contract is analyzed in the Sales Contract section.` : o.listing === 'notListed' ? ' The subject is not currently listed for sale and was not listed in the past 12 months [confirm in the MLS].' : '';
     return t; }
-  if (k === 'cCompPrior') { const U = usedComps(J); if (!U.length) return '';
-    const parts = U.map(c => { const P = priorSales(c).filter(s => s.monthsBefore > 0 && s.monthsBefore <= 12); return `Comp ${c.use} (${compTitle(c)}): ${P.length ? P.map(s => `prior ${s.type === 'Sale' ? 'sale' : 'transfer'} ${d(s.date)}${s.price ? ' for ' + money(s.price) : ''}`).join('; ') + ' [explain]' : 'no prior sales or transfers in the 12 months before its sale'}.`; });
-    return `The comparable sales were researched in the MLS, public records (CRS Data) and the recorded deeds (CORT) for sales and transfers in the 12 months before each sale. ${parts.join(' ')}`; }
+  if (k === 'cCompPrior') { const U = usedComps(J); if (!U.length) return '';   // her wording (Oct 22 2026): one sentence for all, then only the comps that did transfer
+    const hits = U.map(c => [c, priorSales(c).filter(s => s.monthsBefore > 0 && s.monthsBefore <= 12)]).filter(([, P]) => P.length);
+    if (!hits.length) return 'According to CRS Data, the comparable sales have not transferred within the 12 months prior to their sale dates, other than the sales reported in this appraisal.';
+    const one = ([c, P]) => `Comp ${c.use} (${compTitle(c)}) ${P.map(s => `${s.type === 'Sale' ? 'sold' : 'transferred'} ${d(s.date)}${s.price ? ' for ' + money(s.price) : ''}`).join(' and ')} [explain – e.g. flip after renovation, non-arm's length transfer]`;
+    return `According to CRS Data, the comparable sales have not transferred within the 12 months prior to their sale dates, other than the sales reported in this appraisal, except: ${hits.map(one).join('; ')}.`; }
   if (k === 'cSite') { const sf = num(S.site), us = num(S.usable); const zone = F.zone, zd = F.zoneDesc;
     const bits = [sf ? `The site is ${int(sf)} sq ft (${(sf / 43560).toFixed(2)} acre)${us ? `, with about ${(+us).toFixed(2)} acre usable` : ''}` : 'The site is [size]',
       S.topo ? `topography is ${String(S.topo).toLowerCase()}` : '', cmtView(S.view), S.loc ? `the location is ${[...new Set(String(S.loc).split(/;\s*/).filter(Boolean))].map(x => x.replace(/^(\w+):\s*(.*)$/, (m0, i, w) => `${w.toLowerCase()} (${i.toLowerCase()})`)).join(', ')}` : ''].filter(Boolean);
