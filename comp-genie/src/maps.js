@@ -307,11 +307,10 @@ async function makeFloodMap(J) {
 
 /* ---- wildfire map (her ask Oct 22 2026): CAL FIRE / OSFM Fire Hazard Severity Zones ---- */
 const FHSZ_HOST = 'https://services1.arcgis.com/jUJYIo9tSA7EHvfZ/ArcGIS/rest/services/';
-const FHSZ_SRC = [   // tried in order; the first that answers for each area wins
+const FHSZ_SRC = [   // CAL FIRE's public layers only (no sign-in layers), tried in order; the first that answers for each area wins
   { ra: 'SRA', url: FHSZ_HOST + 'FHSZSRA_23_3/FeatureServer/0', map: 'SRA map effective April 1, 2024' },
   { ra: 'LRA', url: FHSZ_HOST + 'FHSALRA25_v1_All/FeatureServer/0', map: 'LRA map dated March 24, 2025' },
   { ra: 'LRA', url: FHSZ_HOST + 'FHSZLRA25_v1_All/FeatureServer/0', map: 'LRA map dated March 24, 2025' },
-  { ra: '', url: FHSZ_HOST + 'FHSZ_SRA_LRA_Combined/FeatureServer/0', map: 'CAL FIRE combined SRA / LRA map' },
 ];
 const FHSZ_VIEW = { SRA: 'https://experience.arcgis.com/experience/5065c998b4b0462f9ec3c6c226c610a9', LRA: 'https://experience.arcgis.com/experience/6a9cb66bb1824cd98756812af41292a0' };
 const FHSZ_COL = { 'Very High': ['rgba(220,30,30,.42)', '#b00000'], High: ['rgba(255,140,0,.42)', '#c96000'], Moderate: ['rgba(255,220,0,.42)', '#a08a00'] };
