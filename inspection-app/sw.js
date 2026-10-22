@@ -1,7 +1,7 @@
 // Offline cache: the app works with no signal once it has been opened once.
 // Pages: saved copy first (instant), refreshed in the background.
 // Everything else: saved copy first, refreshed in the background.
-const CACHE = 'uad-inspect-6x-1022-1619';  // only ever touches caches whose name starts with uad-inspect-
+const CACHE = 'uad-inspect-6x-1022-1621';  // only ever touches caches whose name starts with uad-inspect-
 const FILES = ['./', './index.html', './sketch.html', './manifest.json', './icon-192.png', './icon-512.png', './pdf.min.mjs', './pdf.worker.min.mjs'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES.map(f => new Request(f, { cache: 'reload' })))).then(() => self.skipWaiting())); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k.startsWith('uad-inspect-') && k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim())); });

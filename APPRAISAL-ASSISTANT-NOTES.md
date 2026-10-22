@@ -914,3 +914,5 @@ Decisions (her, Oct 19–20): "Exterior of dwelling" instead of left/right/side 
 
 - iPad 6x-1022-1614: drawing row ⬠ Close (skClose, needs 3+ points) · ✓ Save (skSaveD → sendNow) · 🛑 Stop · ↶ Undo · ⌒ Curve · ⌖ Center, smaller icon buttons; cornersHere includes other levels on the page (snapping, long-press start); blue corner dots drawn while starting an area (and faint when idle) – her new-level report. st252.
 - iPad 6x-1022-1618 (her level 2 trouble + 'nothing to undo'): openLevel (tap the active level chip) → Delete level and everything on it (pushUndo); empty-level ctx hint; ☰ Clone on an empty level asks for the source level; undo/redo stacks saved to DB sketches 'undo:<id>' (last 30) and reloaded with the sketch. st253.
+- iPad 6x-1022-1621 (her: how do I accept the angled line?): dial button renamed green ✓ Draw this wall (.dlgo); the preview end shows a green ✓ – one tap on it (within 34 px) draws the wall; preview label says 'tap ✓ to draw'. st254.
+

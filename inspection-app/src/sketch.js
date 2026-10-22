@@ -417,7 +417,7 @@ function draw() {
   });
   if (SK.dial && curArea() && curArea().pts.length) { const last = curArea().pts[curArea().pts.length - 1]; const L = parseFloat(SK.entry) || 6; const t = SK.dial.ang * Math.PI / 180;
     const [X1, Y1] = toScr(last), [X2, Y2] = toScr([last[0] + Math.cos(t) * L, last[1] - Math.sin(t) * L]); ctx.setLineDash([10, 6]); ctx.strokeStyle = '#ff7a00'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(X1, Y1); ctx.lineTo(X2, Y2); ctx.stroke(); ctx.setLineDash([]);
-    ctx.fillStyle = '#c75b00'; ctx.font = '700 14px system-ui'; ctx.textAlign = 'left'; ctx.fillText((parseFloat(SK.entry) ? L.toFixed(1) + "' @ " : '') + SK.dial.ang.toFixed(1) + '°', X2 + 8, Y2 - 8); }
+    ctx.fillStyle = '#c75b00'; ctx.font = '700 14px system-ui'; ctx.textAlign = 'left'; ctx.fillText((parseFloat(SK.entry) ? L.toFixed(1) + "' @ " : '') + SK.dial.ang.toFixed(1) + '°' + (parseFloat(SK.entry) ? '  – tap ✓ to draw' : ''), X2 + 8, Y2 - 8); if (parseFloat(SK.entry)) { ctx.beginPath(); ctx.arc(X2, Y2, 11, 0, 7); ctx.fillStyle = '#1e7a3c'; ctx.fill(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke(); ctx.fillStyle = '#fff'; ctx.font = '700 14px system-ui'; ctx.textAlign = 'center'; ctx.fillText('✓', X2, Y2 + 5); } }
   SK._dots = SK.mode === 'draw' || SK.mode === 'iwall' ? alignDots() : []; if (!SK.dragPrev) SK._dotsDrag = SK._dots;
   SK._dots.forEach(d => { const [X, Y] = toScr(d.pt); const [FX, FY] = toScr(d.from);
     ctx.setLineDash([3, 5]); ctx.strokeStyle = 'rgba(30,110,220,.35)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(FX, FY); ctx.lineTo(X, Y); ctx.stroke(); ctx.setLineDash([]);
@@ -653,6 +653,9 @@ function onDown(e) {
   const pen = e.pointerType === 'pen';
   // drawing: press on the orange pen point (or anywhere with the Pencil) and drag to draw a wall
   const cur = curArea();
+  if (SK.mode === 'draw' && cur && SK.dial && parseFloat(SK.entry) > 0) {   // her Oct 22: tap the end of the orange preview to accept the angled wall
+    const L = parseFloat(SK.entry), t = SK.dial.ang * Math.PI / 180, last = cur.pts[cur.pts.length - 1]; const [X2, Y2] = toScr([last[0] + Math.cos(t) * L, last[1] - Math.sin(t) * L]);
+    if (Math.hypot(e.offsetX - X2, e.offsetY - Y2) < 34) { addWall(Math.cos(t), -Math.sin(t)); return; } }
   if (SK.mode === 'draw' && cur) { const dot = hitDot(e.offsetX, e.offsetY); const st = cur.pts[0]; const [SX, SY] = toScr(st);
     if (dot) { gest = { type: 'dottap', pt: dot.pt, x: e.offsetX, y: e.offsetY, moved: false, v: { ...SK.view } }; return; }
     if (cur.pts.length >= 3 && Math.hypot(e.offsetX - SX, e.offsetY - SY) < 22) { gest = { type: 'dottap', pt: st, x: e.offsetX, y: e.offsetY, moved: false, v: { ...SK.view } }; return; }
@@ -876,7 +879,7 @@ function skTray() { if (SK.tray === undefined) { let v = null; try { v = localSt
 function setTray(t) { SK.tray = t; try { localStorage.setItem('skTray', t); } catch (e) {} }
 function openHelp() { openSheet(`<h3>How to use the sketch</h3><div class="calc">
   <p><b>Tools at the bottom.</b> When you are not drawing: ＋ New area, Aa Label, ◫ Symbol, ◜ Door, ┼ Interior wall, ⟳ Rotate, ⌖ Center and ↶ Undo. Press <b>＋</b>, pick the area type and tap where it starts – the drawing pad comes up: keypad, arrows (∠ Angle opens the angle circle), ⬠ Close (closes the area), ✓ Save (saves the sketch and totals to the inspection), 🛑 Stop (leaves the area open), ↶ Undo, ⌒ Curve and ⌖ Center. Close or Stop brings back the main bar.</p>
-  <p><b>Drawing walls:</b> + New area, tap where it starts (or press and hold a corner and drag), type a length and tap an arrow. ∠ Angle opens the angle circle. Tap the green start to close. ⌫ removes the last digit, then the last wall. ↶ Undo undoes the last step (↷ Redo is in ☰).</p>
+  <p><b>Drawing walls:</b> + New area, tap where it starts (or press and hold a corner and drag), type a length and tap an arrow. ∠ Angle opens the angle circle: type the length, turn the circle (or tap a turn), then tap <b>✓ Draw this wall</b> – or tap the green ✓ at the end of the orange line. Tap the green start to close. ⌫ removes the last digit, then the last wall. ↶ Undo undoes the last step (↷ Redo is in ☰).</p>
   <p><b>Changing things:</b> tap a wall to change its length or curve it; tap an area to change its type (Properties), turn, copy or delete it; drag a label to move it; tap empty space for the cursor. Drag an area, label or symbol to move it.</p>
   <p><b>Moving around:</b> two fingers to zoom and move. ◎ centers on what you are working on. Blue dots line up with other corners (☰ › Line-up dots).</p>
   <p><b>☰ menu:</b> save to the inspection, redo, add a level or page, copy this level to another level (a second story you can still change), text size, underlay, versions.</p>
@@ -946,7 +949,7 @@ function renderPanel() {
       <div class="entry" id="skEntry">${ent ? esc(ent) + ' ft' : 'length'}</div>
       ${['7','8','9','4','5','6','1','2','3','.','0'].map(k => `<button class="key" data-k="${k}">${k}</button>`).join('')}<button class="key bs" id="skBs" title="Backspace: the last digit, then the last wall">⌫</button>
     </div>
-    ${SK.dial ? `<div class="dialbox"><div class="dltop">${dialSvg()}<div class="dlside"><div class="dlread" id="dlRead"></div><button class="btn primary" id="dlDraw">Draw wall</button><button class="btn" id="dlClose">Arrows</button></div></div>
+    ${SK.dial ? `<div class="dialbox"><div class="dltop">${dialSvg()}<div class="dlside"><div class="dlread" id="dlRead"></div><button class="btn primary dlgo" id="dlDraw">✓ Draw this wall</button><button class="btn" id="dlClose">Arrows</button></div></div>
       <div class="dlrow"><button class="btn sm" data-dstep="-1">−1°</button><button class="btn sm" data-dstep="-0.5">−½°</button><button class="btn sm" data-dstep="0.5">+½°</button><button class="btn sm" data-dstep="1">+1°</button></div>
       <div class="dlrow turns"><span class="help" title="Turn left from the last wall">⟲</span><button class="btn sm" data-dturn="22.5">22.5</button><button class="btn sm" data-dturn="45">45</button><button class="btn sm" data-dturn="90">90</button><span class="help" title="Turn right from the last wall">⟳</span><button class="btn sm" data-dturn="-22.5">22.5</button><button class="btn sm" data-dturn="-45">45</button><button class="btn sm" data-dturn="-90">90</button></div></div>` : `<div class="arrows">
       ${[['↖', -1, -1], ['↑', 0, -1], ['↗', 1, -1], ['←', -1, 0], ['ang'], ['→', 1, 0], ['↙', -1, 1], ['↓', 0, 1], ['↘', 1, 1]].map(x => x[0] === 'ang' ? `<button class="key arr angle" id="skAngle">∠ Angle</button>` : `<button class="key arr" data-dx="${x[1]}" data-dy="${x[2]}">${x[0]}</button>`).join('')}
