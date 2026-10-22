@@ -472,7 +472,7 @@ async function ordersBlock(all) {
       <div class="row">${ins ? `<button class="btn primary" data-open="${ins.id}">Open inspection</button>` : `<button class="btn primary" data-ostart="${esc(o.id)}">Start inspection</button>`}</div></div>`; };
   return `<section class="orders-home"><div class="row" style="align-items:center;justify-content:space-between"><h2>Active orders${rec ? ` <small>from ${esc(new Date(rec.made).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }))}</small>` : ''}</h2>
     <span class="row"><label class="btn" style="position:relative;overflow:hidden">${rec ? 'Get the newer orders file' : 'Get orders (Active Orders file)'}<input id="ordersFile" type="file" style="position:absolute;inset:0;opacity:0"></label>${rec ? '<button class="btn" data-oclear>Clear</button>' : ''}</span></div>
-    ${list.length ? `<div class="cards">${list.map(card).join('')}</div>` : `<p class="help">On the computer, press <b>Send active orders to the iPad</b> in the Appraisal Assistant and save the file to OneDrive or iCloud Drive. Then tap <b>Get orders</b> here and pick “Active Orders.json” in Files.</p>`}</section>`;
+    ${list.length ? `<div class="cards">${list.map(card).join('')}</div>` : `<p class="help">On the computer, press <b data-keep>Send active orders to the iPad</b> in the Appraisal Assistant (the same file works on the iPhone) and save the file to OneDrive or iCloud Drive. Then tap <b>Get orders</b> here and pick “Active Orders.json” in Files.</p>`}</section>`;
 }
 async function clearOrders() {
   const all = (await DB.all('sketches')) || [];

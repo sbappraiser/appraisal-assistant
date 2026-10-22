@@ -710,6 +710,7 @@ async function ingestInspection(files, name) {
     newCon: (D.property || {}).newCon ?? '', zoneComp: (D.site || {}).zoneComp || '',  accessRaw: (D.street || {}).primaryAccess || '',
     primaryAccess: (() => { const v = (D.street || {}).primaryAccess; const o = typeof PICK !== 'undefined' && PICK.primaryAccess.opts.find(x => x[0] === v); return o ? o[1].replace(/ \(.*\)$/, '') : (v || ''); })(),
     siteChar: ((D.site || {}).siteFeat || []).map(v => { const o = typeof PICK !== 'undefined' && PICK.siteChar.opts.find(x => x[0] === v); return o ? o[1].replace(/ \(.*\)$/, '') : v; }).join('; '),
+    fire: ((D.site || {}).fire || []).join('; '),
     hazard: ((D.site || {}).hazard || []).map(v => v === 'None' ? 'None' : v === 'FEMASpecialFloodHazardArea' ? 'FEMA special flood hazard area' : 'Other: ' + (v === 'Other' ? (D.site.hazardOther || 'Other') : v)).join('; '),
     sk: { gar: (T.gar || []).map(x => ({ name: x.name, sf: x.sf })), adu: (T.adu || []).map(x => ({ name: x.name, sf: x.sf })), ob: (T.ob || []).map(x => ({ name: x.name, sf: x.sf })), agNon: T.agNon || 0, bgNon: T.bgNon || 0 } };
   if (!s.addr && D.property.addr) s.addr = D.property.addr;

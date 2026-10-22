@@ -60,6 +60,7 @@ function precheckGrid(J) { if (!RC) return rcRun(() => precheckGrid(J));
   if (!String(G.note || '').trim()) out.push({ sev: 'Check', msg: 'The sales comparison comment is empty.' });
   if (String(G.note || '').length > 10000) out.push({ sev: 'Must fix', msg: `The sales comparison comment is ${G.note.length.toLocaleString()} characters – UAD 3.6 allows 10,000; only the first 10,000 are sent. Move the standard rate paragraphs to a general commentary section.` });
   if (!J.subject.eff) out.push({ sev: 'Must fix', msg: 'No effective date on the assignment.' });
+  if (typeof fireCheck === 'function') { const fc = fireCheck(J); if (fc) out.push({ sev: 'Check', msg: fc }); }
   { const R = (J.report || {}), rn = typeof rv === 'function' ? rv(J, 'rightsNot') : R.rightsNot;
     if (R.allRights === 'false' && !String(rn || '').trim()) out.push({ sev: 'Must fix', msg: 'You answered No to "All rights included in the appraisal?" – describe the rights not included (report section, 540 characters).' });
     if (R.allRights === 'false' && R.rightsType === 'Other' && !String(R.rightsOther || '').trim()) out.push({ sev: 'Must fix', msg: 'Kind of rights not included is Other – describe it (33 characters) in the report section.' });
