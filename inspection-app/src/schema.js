@@ -1072,7 +1072,7 @@ const COMMENT_TARGETS = [
   { id: 'functional', title: 'Functional Obsolescence Commentary', fid: '11.001', lim: 5000, uad: 'FunctionalIssueDescription' },
   { id: 'vehicle', title: 'Vehicle Storage Commentary', fid: '13.010', lim: 5000, uad: 'ValuationCommentText' },
   { id: 'amenities', title: 'Subject Property Amenities Commentary', fid: '14.011', lim: 5000, uad: 'ValuationCommentText' },
-  { id: 'assignment', title: 'Assignment Information and Scope of Work Commentary', fid: '2.061', lim: 2500, uad: 'ValuationCommentText' },
+  { id: 'assignment', title: 'Assignment Information and Scope of Work Commentary', fid: '2.061', lim: 5000, uad: 'ValuationCommentText' },
   { id: 'project', title: 'Project Commentary (condo / co-op / PUD)', fid: '18.0xx', lim: 2500, uad: 'ValuationCommentText' },
   { id: 'qc', title: 'Reconciliation of Overall Quality and Condition', fid: '15.010', lim: 5000, uad: 'ValuationCommentText' },
 ];
