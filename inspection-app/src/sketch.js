@@ -417,7 +417,7 @@ function draw() {
   if (SK.dial && curArea() && curArea().pts.length) { const last = curArea().pts[curArea().pts.length - 1]; const L = parseFloat(SK.entry) || 6; const t = SK.dial.ang * Math.PI / 180;
     const [X1, Y1] = toScr(last), [X2, Y2] = toScr([last[0] + Math.cos(t) * L, last[1] - Math.sin(t) * L]); ctx.setLineDash([10, 6]); ctx.strokeStyle = '#ff7a00'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(X1, Y1); ctx.lineTo(X2, Y2); ctx.stroke(); ctx.setLineDash([]);
     ctx.fillStyle = '#c75b00'; ctx.font = '700 14px system-ui'; ctx.textAlign = 'left'; ctx.fillText((parseFloat(SK.entry) ? L.toFixed(1) + "' @ " : '') + SK.dial.ang.toFixed(1) + '°', X2 + 8, Y2 - 8); }
-  SK._dots = SK.mode === 'draw' ? alignDots() : []; if (!SK.dragPrev) SK._dotsDrag = SK._dots;
+  SK._dots = SK.mode === 'draw' || SK.mode === 'iwall' ? alignDots() : []; if (!SK.dragPrev) SK._dotsDrag = SK._dots;
   SK._dots.forEach(d => { const [X, Y] = toScr(d.pt); const [FX, FY] = toScr(d.from);
     ctx.setLineDash([3, 5]); ctx.strokeStyle = 'rgba(30,110,220,.35)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(FX, FY); ctx.lineTo(X, Y); ctx.stroke(); ctx.setLineDash([]);
     ctx.fillStyle = d.closes ? '#0fa84a' : '#1e6edc'; ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(X, Y, 8, 0, 7); ctx.fill(); ctx.stroke();
@@ -496,19 +496,20 @@ function centreNow() {   // her ask (Oct 22): center what you are drawing, else 
   fitView(); draw();
 }
 /* alignment dots: from the pen point, the places (right / left / up / down) where the next wall lines up with another corner */
-function alignDots() {
-  const a = curArea(); if (!a || !a.pts.length || SK.showDots === false) return [];
-  const pen = a.pts[a.pts.length - 1], start = a.pts[0];
-  const src = [...SK.sk.areas.filter(x => here(x)).flatMap(x => x.pts), ...SK.sk.areas.filter(x => PG(x) === SK.pg && x.level !== SK.level).flatMap(x => x.pts)]; // other floors help stack levels
+function alignDots() {   // also for interior walls (her ask, Oct 22: the dots should always be there)
+  if (SK.showDots === false) return [];
+  const iw = SK.mode === 'iwall' && SK.iw && SK.iw.start; const a = iw ? null : curArea(); if (!iw && (!a || !a.pts.length)) return [];
+  const pen = iw ? SK.iw.start : a.pts[a.pts.length - 1], start = iw ? [1e9, 1e9] : a.pts[0];
+  const src = [...SK.sk.areas.filter(x => here(x)).flatMap(x => x.pts), ...SK.sk.areas.filter(x => PG(x) === SK.pg && x.level !== SK.level).flatMap(x => x.pts), ...IW().filter(w => here(w)).flatMap(w => [w.a, w.b])]; // other floors help stack levels
   const key = v => Math.round(v * 20) / 20;
   const xs = new Map(), ys = new Map(); src.forEach(p => { if (!xs.has(key(p[0]))) xs.set(key(p[0]), p); if (!ys.has(key(p[1]))) ys.set(key(p[1]), p); });
   const out = []; const W = cv.clientWidth, H = cv.clientHeight; const vis = pt => { const [X, Y] = toScr(pt); return X > -10 && Y > -10 && X < W + 10 && Y < H + 10; };
   [[1, 0], [-1, 0]].forEach(([d]) => { [...xs.entries()].map(([x, from]) => ({ pt: [x, pen[1]], L: (x - pen[0]) * d, from })).filter(o => o.L > 0.05).sort((p, q) => p.L - q.L).slice(0, 8).forEach(o => vis(o.pt) && out.push(o)); });
   [[0, 1], [0, -1]].forEach(([, d]) => { [...ys.entries()].map(([y, from]) => ({ pt: [pen[0], y], L: (y - pen[1]) * d, from })).filter(o => o.L > 0.05).sort((p, q) => p.L - q.L).slice(0, 8).forEach(o => vis(o.pt) && out.push(o)); });
   // the green start point is always a target when it lines up, so the last wall closes the area
-  const prev = a.pts.length > 1 ? a.pts[a.pts.length - 2] : null; const back = prev ? [(prev[0] - pen[0]) / (wallLen(prev, pen) || 1), (prev[1] - pen[1]) / (wallLen(prev, pen) || 1)] : null;
+  const prev = iw ? (SK.iw.prev || null) : a.pts.length > 1 ? a.pts[a.pts.length - 2] : null; const back = prev ? [(prev[0] - pen[0]) / (wallLen(prev, pen) || 1), (prev[1] - pen[1]) / (wallLen(prev, pen) || 1)] : null;
   const fwd = o => { if (!back) return true; const d = [(o.pt[0] - pen[0]) / o.L, (o.pt[1] - pen[1]) / o.L]; return d[0] * back[0] + d[1] * back[1] < 0.99; }; // no dots back along the wall just drawn
-  return out.filter(fwd).map(o => ({ ...o, closes: Math.hypot(o.pt[0] - start[0], o.pt[1] - start[1]) < 0.06 && a.pts.length >= 3 }));
+  return out.filter(fwd).map(o => ({ ...o, closes: !iw && Math.hypot(o.pt[0] - start[0], o.pt[1] - start[1]) < 0.06 && a.pts.length >= 3 }));
 }
 function hitDot(px, py) { return (SK._dots || []).find(d => { const [X, Y] = toScr(d.pt); return Math.hypot(X - px, Y - py) < 22; }) || null; }
 function dragEnd(from, ft) { // where a dragged wall ends: line-up dots, corners, then 45° directions, lengths to 0.1 ft
@@ -726,7 +727,7 @@ function tapAt(ft) {
   if (SK.mode === 'start') { setCursor(snapPoint(ft)); draw(); renderPanel(); return; }
   if (SK.mode === 'label') { placeLabel(SK.pendingLabel.text, SK.pendingLabel.room, ft); return; }
   if (SK.mode === 'symbol') { placeSymbol(SK.pendingSym, ft); return; }
-  if (SK.mode === 'iwall') { const r = iwSnap(ft, SK.iw && SK.iw.start); if (!SK.iw.start) SK.iw.start = r.p; else if (addIWall(SK.iw.start, r.p)) SK.iw.start = r.p; draw(); renderPanel(); return; }
+  if (SK.mode === 'iwall') { const [sx, sy] = toScr(ft); const dot = SK.iw.start ? hitDot(sx, sy) : null; const r = dot ? { p: [r3(dot.pt[0]), r3(dot.pt[1])] } : iwSnap(ft, SK.iw && SK.iw.start); if (!SK.iw.start) SK.iw.start = r.p; else { const from = SK.iw.start; if (addIWall(from, r.p)) { SK.iw.prev = from; SK.iw.start = r.p; } } draw(); renderPanel(); return; }
   if (SK.mode === 'uscale') { if (!SK.us.a) { SK.us.a = ft; draw(); renderPanel(); return; } const a = SK.us.a, b = ft, u = ulHere(); SK.us = { a: null };
     askNumber('How long is that, in feet?', 'The real length between the two points you tapped: the scale bar, or a dimension printed on the plan.', '', v => { if (u) ulScale(u, a, b, v); SK.mode = 'select'; renderPanel(); toast('Scale set – trace over the plan'); }); return; }
   if (SK.mode === 'umove') return;
@@ -948,7 +949,7 @@ function renderPanel() {
   el.querySelectorAll('[data-k]').forEach(b => b.addEventListener('pointerdown', e => { e.preventDefault(); const k = b.dataset.k;
     b.classList.add('hit'); setTimeout(() => b.classList.remove('hit'), 120);
     if (k === '.' && SK.entry.includes('.')) return; if (SK.entry.includes('.') && SK.entry.split('.')[1].length >= 1) return toast('Lengths are to 0.1 ft'); SK.entry += k; showEntry(); }));
-  el.querySelectorAll('[data-dx]').forEach(b => b.onclick = () => { if (SK.mode === 'iwall') { const L = parseFloat(SK.entry); if (!SK.iw.start) return toast('Tap where the wall starts first'); if (!(L > 0)) return toast('Type the length first'); const dx = +b.dataset.dx, dy = +b.dataset.dy, n = Math.hypot(dx, dy); const e = [SK.iw.start[0] + dx / n * L, SK.iw.start[1] + dy / n * L]; if (addIWall(SK.iw.start, e)) SK.iw.start = [r3(e[0]), r3(e[1])]; SK.entry = ''; draw(); renderPanel(); return; } addWall(+b.dataset.dx, +b.dataset.dy); });
+  el.querySelectorAll('[data-dx]').forEach(b => b.onclick = () => { if (SK.mode === 'iwall') { const L = parseFloat(SK.entry); if (!SK.iw.start) return toast('Tap where the wall starts first'); if (!(L > 0)) return toast('Type the length first'); const dx = +b.dataset.dx, dy = +b.dataset.dy, n = Math.hypot(dx, dy); const e = [SK.iw.start[0] + dx / n * L, SK.iw.start[1] + dy / n * L]; if (addIWall(SK.iw.start, e)) { SK.iw.prev = SK.iw.start; SK.iw.start = [r3(e[0]), r3(e[1])]; } SK.entry = ''; draw(); renderPanel(); return; } addWall(+b.dataset.dx, +b.dataset.dy); });
   on('skBs', backspace);
   on('skAngle', () => { if (!curArea()) return toast('Start an area first'); const ld = lastDir(); SK.dial = { ang: SK.lastAngle ?? (ld ?? 0) }; renderPanel(); });
   on('skNew', openDefs); on('skClose', closeArea); on('skDone', () => finishArea(false)); on('skLabel', () => openLabels()); on('skFit', () => { fitView(); draw(); }); on('skCenter', centreNow);
