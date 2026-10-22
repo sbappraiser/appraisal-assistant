@@ -653,7 +653,7 @@ nav.tabs button[aria-selected="true"] { background: var(--look-navy) !important;
       <li><b>Additional appraiser certifications</b> (e.g. your Appraisal Institute ones): 8 Review and wrap-up › Prior services and certifications › answer Yes. One certification per box (up to 6, 360 characters each – SFREP numbers each one). <b>Use my usual certifications</b> fills them; after you edit them, <b>Save these as my usual</b> and they are the ones used next time.</li>
       <li><b>Extraordinary assumptions and hypothetical conditions</b> have no separate SFREP field: your wording goes in Additional Scope of Work, and the <b>Market value condition</b> (As is / Subject to repair / Subject to inspection / Subject to completion per plans) tells Fannie Mae one was used. The pre-check warns when they don't agree – e.g. an extraordinary assumption with "As is".</li>
       <li>SFREP has three scope of work places: the <b>Scope of Work</b> paragraph is printed by Fannie Mae and cannot be changed; <b>Additional Scope of Work</b> is the order's Scope of work box (what you did beyond the standard) together with your extraordinary assumptions and hypothetical conditions – 2,500 characters for all three; <b>Assignment Information and Scope of Work Commentary</b> (e.g. your inspection-limits paragraph) is the last box under Assignment in 2 Subject › Subject details.</li>
-      <li>In the Comp genie, each line of a red <b>“answers still needed”</b> list is a link: click it to go to that box. Legal description: <b>Import the deed (PDF)</b> beside the box reads the legal description (and an EXCEPTING/RESERVING clause, e.g. mineral rights, into Rights not included). A scanned deed with no text needs Acrobat › Scan &amp; OCR › Recognize text first. Check the result – scanned text can misread a character (e.g. “S00 FEET” for 500).</li>
+      <li>In the Comp genie, each line of a red <b>“answers still needed”</b> list is a link: click it to go to that box. Legal description: <b>Import the deed (PDF)</b> beside the box reads the legal description (and an EXCEPTING/RESERVING clause, e.g. mineral rights, into Rights not included). A scanned deed with no text needs Acrobat › Scan &amp; OCR › Recognize text first. Check the result – scanned text can misread a character (e.g. “S00 FEET” for 500). What came from the order (the deed or title report you accepted, the CRS report, your iPad) now shows in the box as normal text with “Filled in from the order” under it – it is what goes in the report; type over it to change it. A note that the APN was redacted is left out of the legal description.</li>
       <li>Each comment box shows how many characters you have used of what SFREP allows (e.g. 412 / 5,000) as you type; it turns red at the limit.</li>
       <li><b>Market commentary</b> (what the numbers don't show) is on the order's <b>Market</b> tab under the Price Trend commentary, with your other market answers. <b>Additional client-requested conditions</b> are in <b>1 Intake</b> (Assignment and scope); 7 Reconciliation uses them unless you change them there.</li>
       <li>Exposure time: the days-on-market table in Reconciliation now shows each comp's list price, sale price and sale-to-list ratio, and how many sold over the list price.</li>
@@ -1130,7 +1130,7 @@ nav.tabs button[aria-selected="true"] { background: var(--look-navy) !important;
 </div>
 <div id="toast" role="status" hidden></div>
 <script>
-const BUILD='o1-1022-1909';
+const BUILD='o1-1022-1934';
 const G = (() => {
 /* ---------------- small helpers ---------------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -3780,7 +3780,7 @@ function markFilled(f, type, key, v) {   // what an accepted entry filled in on 
 }
 function factToOrder(key, v) {   // an accepted legal description goes into the order's Legal description box (the Comp genie and SFREP use it)
   if (!v) return;
-  if (key === 'legal') { const el = $('#f_legal'); if (!el) return; el.value = String(v).replace(/\bS(\d{2})(?= (?:FEET|FT)\b)/gi, '5$1'); /* a scan's "S00 FEET" is 500 feet */ cur = readForm(); toast('Legal description is on the order now'); return 'Legal description'; }
+  if (key === 'legal') { const el = $('#f_legal'); if (!el) return; el.value = String(v).replace(/\bS(\d{2})(?= (?:FEET|FT)\b)/gi, '5$1').replace(/\s*[^.]*\bredact[^.]*\.?/gi, '').trim();   /* a note about redaction is not part of the legal description */ /* a scan's "S00 FEET" is 500 feet */ cur = readForm(); toast('Legal description is on the order now'); return 'Legal description'; }
   if (key === 'reserve') { const el = $('#f_rightsNot'); if (!el) return; const t = rightsNotText(v);
     el.value = el.value.trim() && !el.value.includes(t) ? (el.value.trim() + ' ' + t).slice(0, 540) : t; cur = readForm(); toast('Added to "Rights not appraised" on the order. You decide in the Comp genie whether all rights are included.'); return 'Rights not appraised'; }
 }

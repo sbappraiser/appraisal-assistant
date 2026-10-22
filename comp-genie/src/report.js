@@ -93,7 +93,7 @@ function priorHits(J, eff0) {
 }
 function reportHTML(J, part) {   // part: 'early' (Assignment, scope and site – right after the inspection) | 'late' (value and reconciliation) | all
   const R = R0(J), F = reportFrom(J), G = G0(J), H = RE(J).hbu, RX = RE(J);
-  const inp = (k, ph, w) => `<input class="txt" data-rpt="${k}" value="${esc(R[k] ?? '')}" placeholder="${esc(F[k] || ph || '')}"${w ? ` style="width:${w}"` : ''}>`;
+  const inp = (k, ph, w) => `<input class="txt" data-rpt="${k}" value="${esc(blank(R[k]) ? (F[k] ?? '') : R[k])}" placeholder="${esc(ph || '')}"${w ? ` style="width:${w}"` : ''}>`;   /* her ask (Oct 22 2026): what comes from the order shows as real text, not grey */
   const sel = (k, list, def, note = 'from the order') => `<select data-rpt="${k}"><option value="">${def ? esc((list.find(x => x[0] === def) || [, ''])[1]) + ' (' + note + ')' : '—'}</option>${list.map(([v, l]) => `<option value="${v}"${R[k] === v ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select>`;
   const yn = (k, def) => `<select data-rpt="${k}"><option value="">${def === true ? 'Yes' : def === false ? 'No' : '—'}${def !== undefined ? ' (usual)' : ''}</option><option value="true"${R[k] === 'true' ? ' selected' : ''}>Yes</option><option value="false"${R[k] === 'false' ? ' selected' : ''}>No</option></select>`;
   /* drop-downs straight from Fannie Mae's A-1 list (her rule Oct 22 2026), less any choice hidden in Settings */
@@ -128,7 +128,7 @@ function reportHTML(J, part) {   // part: 'early' (Assignment, scope and site �
 `}
       ${cmtBoxHTML(J, 'cAssign')}</section>
     <section><h3>Legal and rights</h3>
-      <div class="fld"><span>Legal description <label class="btn sm">Import the deed (PDF)<input type="file" accept=".pdf" data-act="deed" hidden></label></span><textarea class="txt" rows="${Math.min(8, 2 + Math.round(String(R.legal || '').length / 140))}" data-rpt="legal" placeholder="${esc(F.legal || 'From the deed, the CRS report or the preliminary title report')}">${esc(R.legal || '')}</textarea></div>
+      <div class="fld"><span>Legal description <label class="btn sm">Import the deed (PDF)<input type="file" accept=".pdf" data-act="deed" hidden></label></span><textarea class="txt" rows="${Math.min(8, 2 + Math.round(String(R.legal || '').length / 140))}" data-rpt="legal" placeholder="From the deed, the CRS report or the preliminary title report">${esc(R.legal || F.legal || '')}</textarea>${blank(R.legal) && F.legal ? '<small class="muted">Filled in from the order (deed / title report / CRS) – edit it here if needed.</small>' : ''}</div>
       <label class="fld"><span>Number of parcels</span>${inp('parcels', '1', '5em')}</label>
       <label class="fld"><span>All rights included in the appraisal?</span>${yn('allRights', true)}</label>
       <label class="fld"><span>Rights not included <small class="muted">(only sent when the answer above is No; 540 characters)</small></span><textarea class="txt" rows="2" maxlength="540" data-rpt="rightsNot" placeholder="${esc(F.rightsNot || 'e.g. Oil, gas and mineral rights below 500 feet, reserved in a prior deed')}">${esc(R.rightsNot || '')}</textarea>${F.rightsNot && R.allRights !== 'false' ? '<small class="muted">The order has a reservation from the deed. If those rights are not part of what you appraised, answer No above.</small>' : ''}</label>
