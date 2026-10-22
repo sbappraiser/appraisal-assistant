@@ -408,6 +408,7 @@ nav.tabs button[aria-selected="true"] { background: var(--look-navy) !important;
           <label class="check"><input type="radio" name="aiUse" id="ai_red" value="Redacted">Yes – only with confidential information removed</label>
           <label class="check"><input type="radio" name="aiUse" id="ai_no" value="No">No AI on this job</label></div>
         <p class="help" id="aiNote">Not decided yet.</p>
+        <label class="check" id="aiPubWrap"><input type="checkbox" id="f_aiPublic"> Public records may go to Claude as they are – County / City permit files and the County permit history (not CRS or MLS data, not the client's or the parties' documents)</label>
       </div>
       <div class="grid2">
         <label>Date of agreement<input id="f_agreeDate" type="date"></label>
@@ -765,6 +766,7 @@ nav.tabs button[aria-selected="true"] { background: var(--look-navy) !important;
     <details><summary>Redacting pages: page size</summary><ol>
       <li>On the redaction pages, <b>Page size: − / ＋</b> makes the pages smaller or bigger; <b>One page across</b> shows one page at a time, as wide as the screen. You can also hold <b>Ctrl</b> and turn the mouse wheel (or pinch on a touchpad) over a page – only the pages change, not the heading.</li>
       <li><b>What is blacked out by itself</b> (on this computer, before anything is sent): names on the order, the CRS owner and recent buyers/sellers, MLS agents and offices, names you typed in <b>Also remove these names</b>; emails, phone numbers, loan/escrow/file numbers, DocuSign IDs; names typed after Buyer, Seller, Agent, Broker, Brokerage Firm, By, Escrow …; on C.A.R. forms every typed-in entry that looks like a name or company; the space next to “Initials” and above “Signature”; signature pictures (DocuSign, eSign, scanned signatures) drawn on a Buyer / Seller / Signature line or next to a typed name or date; the DocuSigned-by box and its ID. Prices, dates, percents and the subject's address (even split over pieces, or under a DocuSign envelope ID) are left readable. <b>Scanned pages</b> (most County permit files) are read on this computer first with an open-source text reader (Tesseract) – the pages never leave your computer, only the reader program is downloaded the first time – and the same rules black out owner, agent, contractor and applicant names, phone numbers and any address that is not the subject's. Still check every page – handwriting and faint scans need your own boxes.</li>
+      <li><b>Public records may go to Claude as they are</b> (tick box under AI use on the order): County / City permit files and the County permit history are public records, so when you tick it they go to Claude without redaction even on a Redacted order – scans as pictures. CRS and MLS data, the client's letter and the parties' documents (contract, title, disclosures) still follow the order's AI setting. Check the client's AI terms first: a few forbid sending anything about the assignment.</li>
       <li><b>Permit records on a Redacted order:</b> in the Permit records box click <b>Redact all the permit files, then read them with Claude</b> – every page on one screen, blacked out by itself; check and add boxes, then <b>Send</b>. Claude builds one permit timeline from the redacted pictures.</li>
       <li><b>Redacted order + contract packet:</b> in the Contract packet box click <b>Redact the whole packet, then read it with Claude</b>. Every page of every file is on one screen, already blacked out by itself; drag to add boxes (Undo last box works across the files), then <b>Send these … redacted pages to Claude</b> – only those pictures go, no text. <b>Also save redacted copies</b> keeps a “- REDACTED” PDF of each file in Documents. The page on the left of a document's reader is your original – it stays on your computer.</li>
       <li><b>Repeated entries</b> from reading the same document several times: open the document with <b>Read</b> and click <b>Clear all … accepted entries on this document</b> (asks first; what they filled in on the order stays). <b>Reject the … suggestions not decided yet</b> clears the waiting ones. The same entry is no longer added twice.</li>
@@ -1156,7 +1158,7 @@ nav.tabs button[aria-selected="true"] { background: var(--look-navy) !important;
 </div>
 <div id="toast" role="status" hidden></div>
 <script>
-const BUILD='o1-1022-2116';
+const BUILD='o1-1022-2126';
 const G = (() => {
 /* ---------------- small helpers ---------------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -4179,7 +4181,8 @@ async function pbPageJpeg(pdf, n) {
   await pg.render({ canvasContext: g, viewport: vp }).promise; return cv;
 }
 async function pbMakePlan(docsIn) {   // what would be sent, file by file (the permit files, or the contract packet's files)
-  const red = cur.aiUse === 'Redacted'; const files = [];
+  const pubOk = !docsIn && cur.aiPublic;   /* her rule (Oct 22 2026): public permit records may go as they are when she ticks it on the order */
+  const red = cur.aiUse === 'Redacted' && !pubOk; const files = [];
   const docs = docsIn || pbDocs(); const redactedCopies = docs.filter(d => /- REDACTED\.pdf$/i.test(d.name)).map(d => d.name.replace(/ - REDACTED\.pdf$/i, '').toLowerCase());
   for (const d of docs) {
     const base = d.name.replace(/\.pdf$/i, '').toLowerCase(); if (!/- REDACTED\.pdf$/i.test(d.name) && redactedCopies.includes(base)) { files.push({ d, skip: 'a redacted copy is sent instead' }); continue; }
@@ -4233,7 +4236,7 @@ async function pbSend(pre) {   // pre = { plan, pics } from the one-screen redac
     if (results.length > 1) { say('Claude is putting the parts together…');
       out = await pbClaude([{ type: 'text', text: `${subj}\n\nThe permit records for this property were read in ${results.length} parts. Here is what each part found:\n${results.map((r, i) => `--- part ${i + 1} ---\n${JSON.stringify(r)}`).join('\n')}\n\nMerge them into one timeline (the same permit number is one permit).\n${PB_RULES}\nAnswer with JSON only, in this form: ${PB_SHAPE}` }]); }
     const sentFiles = plan.filter(f => !f.skip && ((f.text || []).length || (f.imgs || []).length || f.imgImage)).map(f => f.d.name);
-    cur.permitTimeline = { at: new Date().toISOString(), model: aiModel(), files: sentFiles, rounds: rounds.length, mode: cur.aiUse === 'Redacted' ? 'redacted' : 'full',
+    cur.permitTimeline = { at: new Date().toISOString(), model: aiModel(), files: sentFiles, rounds: rounds.length, mode: cur.aiUse === 'Redacted' && !(pre ? false : cur.aiPublic) ? 'redacted' : cur.aiUse === 'Redacted' ? 'public records as they are' : 'full',
       permits: (out.permits || []).filter(x => x && (x.work || x.number)), flags: (out.flags || []).filter(x => x && x.text), comment: String(out.comment || '') };
     (cur.aiLog = cur.aiLog || []).push({ at: cur.permitTimeline.at, doc: 'All permit records (' + sentFiles.length + ' files)', pages: [], mode: cur.permitTimeline.mode, model: aiModel(), items: cur.permitTimeline.permits.length });
     PB.plan = null; PB.show = true; if (pre && typeof cbRedClose === 'function') cbRedClose(); saveLetter(true, true); renderDocs();
@@ -4266,13 +4269,13 @@ async function renderPermBatch() {
   if (!docs.length) html += '';
   else if (!ok) html += `To have Claude read them all together and build one timeline, set <b>AI use</b> on this order to Yes or Redacted (it is <b>${h(ai || 'not set')}</b>).`;
   else if (!key) html += 'Claude can read them all together, but no Claude API key is saved yet: <b>Standard wording → AI settings</b>.';
-  else if (ai === 'Redacted') html += `<button type="button" class="btn small" id="pbRed">${T ? 'Redact and read all the permits again' : 'Redact all the permit files, then read them with Claude'}</button> <span class="help">every page on one screen – names, phones and other addresses are blacked out by themselves (scans are read on this computer first); check them, then only the pictures go</span>`;
+  else if (ai === 'Redacted' && !cur.aiPublic) html += `<button type="button" class="btn small" id="pbRed">${T ? 'Redact and read all the permits again' : 'Redact all the permit files, then read them with Claude'}</button> <span class="help">every page on one screen – names, phones and other addresses are blacked out by themselves (scans are read on this computer first); check them, then only the pictures go</span>`;
   else html += `<button type="button" class="btn small" id="pbPlan">${T ? 'Read all the permits again' : 'Read all the permits together with Claude'}</button> <span class="help">one request with every permit file, so Claude can build one timeline${T ? '' : ''}</span>`;
   if (T && !PB.show) html += ` <button type="button" class="btn ghost small" id="pbShow">Show the permit timeline (${T.permits.length})</button>`;
   html += '</div>';
   if (PB.plan) { const P = PB.plan; const nT = P.reduce((a, f) => a + ((f.text || []).length), 0), nI = P.reduce((a, f) => a + ((f.imgs || []).length) + (f.imgImage ? 1 : 0), 0), nH = P.reduce((a, f) => a + ((f.held || []).length), 0);
     const rounds = Math.max(1, Math.ceil(nI / PB_MAX_IMG));
-    html += `<div class="rdsendbar"><b>This is what goes to Claude${ai === 'Redacted' ? ' (redacted)' : ''}:</b>
+    html += `<div class="rdsendbar"><b>This is what goes to Claude${ai === 'Redacted' ? (cur.aiPublic ? ' (public records, as they are – you ticked that on the order)' : ' (redacted)') : ''}:</b>
       <table class="facts"><tr><th>File</th><th>Pages</th><th>As text</th><th>As pictures</th><th>Not sent</th></tr>${P.map(f => `<tr><td>${h(f.d.name)}</td><td>${f.pages || ''}</td><td>${f.skip ? '' : (f.text || []).length}</td><td>${f.skip ? '' : (f.imgs || []).length + (f.imgImage ? 1 : 0)}</td><td>${f.skip ? h(f.skip) : (f.held || []).length ? 'scanned p. ' + f.held.join(', ') : ''}</td></tr>`).join('')}</table>
       <p class="help">Also sent: the address, APN and the public-record facts (year built, living area, beds/baths, lot, zoning) so Claude can compare, and the County permit list if you uploaded it.${ai === 'Redacted' ? ' Names, phone numbers, emails and file/loan numbers are removed from the text first.' : ''}${nH ? ` <b>${nH} scanned page${nH === 1 ? ' is' : 's are'} not sent</b>: on a Redacted order the words on a scan cannot be found to black them out. Open that file, click <b>Read › Redacted copy</b>, black out the names, save the copy, then come back here – the copy is sent instead.` : ''}${rounds > 1 ? ` There are ${nI} pictures, so Claude reads them in ${rounds} parts and then puts the parts together.` : ''}</p>
       <div id="pbThumbs" class="rdthumbs"></div>
@@ -5489,7 +5492,7 @@ function readForm() {
   f.clients = [];
   for (let i = 0; i < clientCount; i++) { const c = {}; CLIENT_KEYS.forEach(k => { c[k] = $(`#c${i}_${k}`).value; }); f.clients.push(c); }
   { const pk = $('#f_accessRelPick'); if (pk) f.accessRel = pk.value === 'Other' ? $('#f_accessRel').value : pk.value.toLowerCase(); }
-  const r = document.querySelector('input[name=aiUse]:checked'); f.aiUse = r ? r.value : '';
+  const r = document.querySelector('input[name=aiUse]:checked'); f.aiUse = r ? r.value : ''; const ap = document.getElementById('f_aiPublic'); f.aiPublic = !!(ap && ap.checked);
   f.ai = f.aiUse !== 'No';
   f.aiText = aiText || AI_DEFAULT;
   return f;
@@ -5502,7 +5505,7 @@ function writeForm(f) {
   { const pk = $('#f_accessRelPick'), rel = String(f.accessRel || '').trim(); const std = ['owner', 'agent', 'tenant']; if (pk) { pk.value = !rel ? '' : std.includes(rel.toLowerCase()) ? rel[0].toUpperCase() + rel.slice(1).toLowerCase() : 'Other'; $('#f_accessRel').hidden = pk.value !== 'Other'; } }
   clientCount = Math.max(1, Math.min(3, (f.clients || []).length || 1));
   renderClients(f.clients || [{}]);
-  document.querySelectorAll('input[name=aiUse]').forEach(r => { r.checked = r.value === f.aiUse; });
+  document.querySelectorAll('input[name=aiUse]').forEach(r => { r.checked = r.value === f.aiUse; }); { const ap = document.getElementById('f_aiPublic'); if (ap) ap.checked = !!f.aiPublic; }
   renderScan(f.orderDoc);
   renderDocs(); renderSubject(); renderLinks(); renderReqs(); renderBooks();
   syncVisibility();
@@ -6057,6 +6060,7 @@ function oRender(f) { oSetup(); if (!f) return; const P = $('#panel-letter'); co
     $('#oaClient').onclick = () => { cur.noLetterAsk = true; A.dataset.on = ''; update(); toast('Drop the client’s letter in Documents when it comes'); };
     $('#oaNone').onclick = () => { cur.noLetterAsk = true; A.dataset.on = ''; update(); }; }
   if (!ask) A.dataset.on = ''; }
+document.addEventListener('change', e => { if (e.target && e.target.id === 'f_aiPublic' && typeof cur !== 'undefined' && cur) { cur = readForm(); saveLetter(true, true); if (typeof PB !== 'undefined') PB.plan = null; if (typeof renderPermBatch === 'function') renderPermBatch(); } });
 
 /* =====================================================================
    The octopus (her structure, Oct 22 2026; map: "The Octopus – where everything lives").

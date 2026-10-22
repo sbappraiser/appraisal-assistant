@@ -32,7 +32,7 @@ function readForm() {
   f.clients = [];
   for (let i = 0; i < clientCount; i++) { const c = {}; CLIENT_KEYS.forEach(k => { c[k] = $(`#c${i}_${k}`).value; }); f.clients.push(c); }
   { const pk = $('#f_accessRelPick'); if (pk) f.accessRel = pk.value === 'Other' ? $('#f_accessRel').value : pk.value.toLowerCase(); }
-  const r = document.querySelector('input[name=aiUse]:checked'); f.aiUse = r ? r.value : '';
+  const r = document.querySelector('input[name=aiUse]:checked'); f.aiUse = r ? r.value : ''; const ap = document.getElementById('f_aiPublic'); f.aiPublic = !!(ap && ap.checked);
   f.ai = f.aiUse !== 'No';
   f.aiText = aiText || AI_DEFAULT;
   return f;
@@ -45,7 +45,7 @@ function writeForm(f) {
   { const pk = $('#f_accessRelPick'), rel = String(f.accessRel || '').trim(); const std = ['owner', 'agent', 'tenant']; if (pk) { pk.value = !rel ? '' : std.includes(rel.toLowerCase()) ? rel[0].toUpperCase() + rel.slice(1).toLowerCase() : 'Other'; $('#f_accessRel').hidden = pk.value !== 'Other'; } }
   clientCount = Math.max(1, Math.min(3, (f.clients || []).length || 1));
   renderClients(f.clients || [{}]);
-  document.querySelectorAll('input[name=aiUse]').forEach(r => { r.checked = r.value === f.aiUse; });
+  document.querySelectorAll('input[name=aiUse]').forEach(r => { r.checked = r.value === f.aiUse; }); { const ap = document.getElementById('f_aiPublic'); if (ap) ap.checked = !!f.aiPublic; }
   renderScan(f.orderDoc);
   renderDocs(); renderSubject(); renderLinks(); renderReqs(); renderBooks();
   syncVisibility();
@@ -600,3 +600,4 @@ function oRender(f) { oSetup(); if (!f) return; const P = $('#panel-letter'); co
     $('#oaClient').onclick = () => { cur.noLetterAsk = true; A.dataset.on = ''; update(); toast('Drop the client’s letter in Documents when it comes'); };
     $('#oaNone').onclick = () => { cur.noLetterAsk = true; A.dataset.on = ''; update(); }; }
   if (!ask) A.dataset.on = ''; }
+document.addEventListener('change', e => { if (e.target && e.target.id === 'f_aiPublic' && typeof cur !== 'undefined' && cur) { cur = readForm(); saveLetter(true, true); if (typeof PB !== 'undefined') PB.plan = null; if (typeof renderPermBatch === 'function') renderPermBatch(); } });

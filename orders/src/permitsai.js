@@ -25,7 +25,8 @@ async function pbPageJpeg(pdf, n) {
   await pg.render({ canvasContext: g, viewport: vp }).promise; return cv;
 }
 async function pbMakePlan(docsIn) {   // what would be sent, file by file (the permit files, or the contract packet's files)
-  const red = cur.aiUse === 'Redacted'; const files = [];
+  const pubOk = !docsIn && cur.aiPublic;   /* her rule (Oct 22 2026): public permit records may go as they are when she ticks it on the order */
+  const red = cur.aiUse === 'Redacted' && !pubOk; const files = [];
   const docs = docsIn || pbDocs(); const redactedCopies = docs.filter(d => /- REDACTED\.pdf$/i.test(d.name)).map(d => d.name.replace(/ - REDACTED\.pdf$/i, '').toLowerCase());
   for (const d of docs) {
     const base = d.name.replace(/\.pdf$/i, '').toLowerCase(); if (!/- REDACTED\.pdf$/i.test(d.name) && redactedCopies.includes(base)) { files.push({ d, skip: 'a redacted copy is sent instead' }); continue; }
@@ -79,7 +80,7 @@ async function pbSend(pre) {   // pre = { plan, pics } from the one-screen redac
     if (results.length > 1) { say('Claude is putting the parts together…');
       out = await pbClaude([{ type: 'text', text: `${subj}\n\nThe permit records for this property were read in ${results.length} parts. Here is what each part found:\n${results.map((r, i) => `--- part ${i + 1} ---\n${JSON.stringify(r)}`).join('\n')}\n\nMerge them into one timeline (the same permit number is one permit).\n${PB_RULES}\nAnswer with JSON only, in this form: ${PB_SHAPE}` }]); }
     const sentFiles = plan.filter(f => !f.skip && ((f.text || []).length || (f.imgs || []).length || f.imgImage)).map(f => f.d.name);
-    cur.permitTimeline = { at: new Date().toISOString(), model: aiModel(), files: sentFiles, rounds: rounds.length, mode: cur.aiUse === 'Redacted' ? 'redacted' : 'full',
+    cur.permitTimeline = { at: new Date().toISOString(), model: aiModel(), files: sentFiles, rounds: rounds.length, mode: cur.aiUse === 'Redacted' && !(pre ? false : cur.aiPublic) ? 'redacted' : cur.aiUse === 'Redacted' ? 'public records as they are' : 'full',
       permits: (out.permits || []).filter(x => x && (x.work || x.number)), flags: (out.flags || []).filter(x => x && x.text), comment: String(out.comment || '') };
     (cur.aiLog = cur.aiLog || []).push({ at: cur.permitTimeline.at, doc: 'All permit records (' + sentFiles.length + ' files)', pages: [], mode: cur.permitTimeline.mode, model: aiModel(), items: cur.permitTimeline.permits.length });
     PB.plan = null; PB.show = true; if (pre && typeof cbRedClose === 'function') cbRedClose(); saveLetter(true, true); renderDocs();
@@ -112,13 +113,13 @@ async function renderPermBatch() {
   if (!docs.length) html += '';
   else if (!ok) html += `To have Claude read them all together and build one timeline, set <b>AI use</b> on this order to Yes or Redacted (it is <b>${h(ai || 'not set')}</b>).`;
   else if (!key) html += 'Claude can read them all together, but no Claude API key is saved yet: <b>Standard wording → AI settings</b>.';
-  else if (ai === 'Redacted') html += `<button type="button" class="btn small" id="pbRed">${T ? 'Redact and read all the permits again' : 'Redact all the permit files, then read them with Claude'}</button> <span class="help">every page on one screen – names, phones and other addresses are blacked out by themselves (scans are read on this computer first); check them, then only the pictures go</span>`;
+  else if (ai === 'Redacted' && !cur.aiPublic) html += `<button type="button" class="btn small" id="pbRed">${T ? 'Redact and read all the permits again' : 'Redact all the permit files, then read them with Claude'}</button> <span class="help">every page on one screen – names, phones and other addresses are blacked out by themselves (scans are read on this computer first); check them, then only the pictures go</span>`;
   else html += `<button type="button" class="btn small" id="pbPlan">${T ? 'Read all the permits again' : 'Read all the permits together with Claude'}</button> <span class="help">one request with every permit file, so Claude can build one timeline${T ? '' : ''}</span>`;
   if (T && !PB.show) html += ` <button type="button" class="btn ghost small" id="pbShow">Show the permit timeline (${T.permits.length})</button>`;
   html += '</div>';
   if (PB.plan) { const P = PB.plan; const nT = P.reduce((a, f) => a + ((f.text || []).length), 0), nI = P.reduce((a, f) => a + ((f.imgs || []).length) + (f.imgImage ? 1 : 0), 0), nH = P.reduce((a, f) => a + ((f.held || []).length), 0);
     const rounds = Math.max(1, Math.ceil(nI / PB_MAX_IMG));
-    html += `<div class="rdsendbar"><b>This is what goes to Claude${ai === 'Redacted' ? ' (redacted)' : ''}:</b>
+    html += `<div class="rdsendbar"><b>This is what goes to Claude${ai === 'Redacted' ? (cur.aiPublic ? ' (public records, as they are – you ticked that on the order)' : ' (redacted)') : ''}:</b>
       <table class="facts"><tr><th>File</th><th>Pages</th><th>As text</th><th>As pictures</th><th>Not sent</th></tr>${P.map(f => `<tr><td>${h(f.d.name)}</td><td>${f.pages || ''}</td><td>${f.skip ? '' : (f.text || []).length}</td><td>${f.skip ? '' : (f.imgs || []).length + (f.imgImage ? 1 : 0)}</td><td>${f.skip ? h(f.skip) : (f.held || []).length ? 'scanned p. ' + f.held.join(', ') : ''}</td></tr>`).join('')}</table>
       <p class="help">Also sent: the address, APN and the public-record facts (year built, living area, beds/baths, lot, zoning) so Claude can compare, and the County permit list if you uploaded it.${ai === 'Redacted' ? ' Names, phone numbers, emails and file/loan numbers are removed from the text first.' : ''}${nH ? ` <b>${nH} scanned page${nH === 1 ? ' is' : 's are'} not sent</b>: on a Redacted order the words on a scan cannot be found to black them out. Open that file, click <b>Read › Redacted copy</b>, black out the names, save the copy, then come back here – the copy is sent instead.` : ''}${rounds > 1 ? ` There are ${nI} pictures, so Claude reads them in ${rounds} parts and then puts the parts together.` : ''}</p>
       <div id="pbThumbs" class="rdthumbs"></div>
