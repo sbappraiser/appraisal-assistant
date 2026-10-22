@@ -200,21 +200,58 @@ function sensitiveTerms() {
   [f.borrower, f.owner, f.decedent, f.accessName, f.lenderCo, f.amcCo, f.fileNo, f.loanNo, f.amcRef].forEach(add);
   (cur.facts || []).filter(x => ['buyers', 'sellers', 'vesting'].includes(x.key)).forEach(x => add(x.value));
   String(RD.extra || '').split(',').forEach(add);
+  const c = cur.crs || {}; [c.owner, c.owner2, c.mailName].forEach(add); (c.sales || []).slice(0, 4).forEach(x => { add(x.buyer); add(x.seller); add(x.names); });
+  (cur.listings || []).forEach(x => { [x.listAgent, x.listOffice, x.sellAgent, x.sellOffice, x.agent, x.office].forEach(add); });
+  (cur.facts || []).filter(x => ['entity', 'buyerBroker'].includes(x.key)).forEach(x => String(x.value).replace(/\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)+/g, m => { add(m); return m; }));
   return words;
 }
+/* her ask (Oct 22 2026): "the autoredact misses a lot" – more found by itself, all on this computer:
+   names typed after Buyer / Seller / Agent / Broker / By … labels; on C.A.R. forms (form wording scrambled) every typed-in entry that
+   looks like a name or company; signature and initials areas next to their labels. Prices, dates, percents and the subject's own
+   address are put back afterwards so the contract can still be read. */
+const RD_LABEL = /^(buyers?|sellers?|buyer'?s? (brokerage firm|agent|broker)|seller'?s? (brokerage firm|agent|broker)|listing (agent|broker|firm)|selling (agent|broker|firm)|agent|broker(age)?( firm)?|by|escrow (holder|officer)|print(ed)? name|name|assignee|trustee|loan officer|attorney|notary|witness|company|firm)\s*:?$/i;
+const RD_LABEL_END = /\b(buyer|seller|agent|broker|brokerage firm|escrow holder|escrow officer|print(ed)? name|trustee|assignee)\s*:\s*$/i;
+const RD_SIGN = /signature|\(sign\)|^sign here|initials/i;
+const RD_KEEP = new Set(['yes', 'no', 'n/a', 'na', 'none', 'cash', 'conventional', 'fha', 'va', 'usda', 'seller', 'buyer', 'both', 'as-is', 'as is', 'days', 'calendar', 'business', 'california', 'ca', 'all', 'other', 'see', 'attached', 'addendum', 'counter', 'offer', 'county', 'city', 'escrow', 'title', 'loan', 'appraisal', 'contingency', 'waived', 'removed', 'included', 'excluded', 'refrigerator', 'washer', 'dryer', 'stove', 'oven', 'microwave', 'dishwasher', 'spa', 'hot tub', 'pool', 'solar', 'furniture', 'furnishings']);
+const RD_MONTHS = /^(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)/i;
+const rdCleanItem = t => { t = String(t || ''); return t.length >= 3 && (t.match(/[A-Za-z]{2,}/g) || []).join('').length / t.replace(/\s/g, '').length > 0.6; };
+function rdLooksLikeName(t, subjWords) { t = String(t || '').trim(); if (t.length < 3 || t.length > 70 || /[\d$%]/.test(t)) return false;
+  const ws = t.split(/\s+/).filter(Boolean); if (ws.length > 7) return false; if (RD_KEEP.has(t.toLowerCase())) return false;
+  if (ws.every(w => RD_KEEP.has(w.toLowerCase().replace(/[.,;:]+$/, '')) || RD_MONTHS.test(w) || subjWords.has(w.toLowerCase().replace(/[.,;:]+$/, '')))) return false;
+  return /^[A-Z]/.test(ws[0]) && ws.filter(w => /^[A-Z]/.test(w)).length >= Math.ceil(ws.length / 2); }
+const RD_PUTBACK = /\$\s?[\d,]+(?:\.\d\d)?|\b\d{1,2}\/\d{1,2}\/\d{2,4}\b|\b\d{1,3}(?:\.\d+)?\s?%|\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+\d{1,2},?\s+\d{4}\b/gi;
 const PATTERN = /[\w.+-]+@[\w-]+\.[\w.]+|\(?\b\d{3}\)?[\s.-]?\d{3}[\s.-]\d{4}\b|\b[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}\b|\b\d{2,4}-\d{5,}\b|\b(?:loan|case|escrow|order|file|account|acct)\s*(?:no\.?|number|#)?:?\s*[\w-]*\d[\w-]{3,}/gi;
 async function redactPage(n, redact) { // → canvas with the page painted, sensitive parts blacked out in the pixels
   const pg = await RD.pdf.getPage(n); const vp0 = pg.getViewport({ scale: 1 }); const sc = Math.min(2, 1600 / Math.max(vp0.width, vp0.height)); const vp = pg.getViewport({ scale: sc });
   const cv = document.createElement('canvas'); cv.width = Math.round(vp.width); cv.height = Math.round(vp.height); const g = cv.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, cv.width, cv.height);
   await pg.render({ canvasContext: g, viewport: vp }).promise; let hits = 0;
+  let orig = null; if (redact) { orig = document.createElement('canvas'); orig.width = cv.width; orig.height = cv.height; orig.getContext('2d').drawImage(cv, 0, 0); }
   if (redact) { const terms = sensitiveTerms(); const tc = await pg.getTextContent(); g.fillStyle = '#000';
     tc.items.forEach(it => { const s = it.str; if (!s.trim()) return; const per = it.width / Math.max(1, s.length); const [x, y] = vp.convertToViewportPoint(it.transform[4], it.transform[5]); const hgt = Math.max(8, Math.abs(it.transform[3]) * sc);
       const spans = []; s.replace(PATTERN, (m, off) => { spans.push([off, m.length]); return m; });
       s.replace(/[A-Za-z0-9@.'’-]{3,}/g, (w, off) => { if (terms.has(w.replace(/[.'’]+$/, '').toLowerCase())) spans.push([off, w.length]); return w; });
-      spans.forEach(([o, l]) => { g.fillRect(x + (o - 1) * per * sc - 2, y - hgt - 1, (l + 2) * per * sc + 4, hgt * 1.3 + 2); hits++; }); }); }
+      spans.forEach(([o, l]) => { g.fillRect(x + (o - 1) * per * sc - 2, y - hgt - 1, (l + 2) * per * sc + 4, hgt * 1.3 + 2); hits++; }); });
+    hits += rdMore(g, cv, vp, sc, tc, orig); }
   (RD.boxes[n] || []).forEach(b => { const X = b.x * cv.width, Y = b.y * cv.height, W = Math.max(2, b.w * cv.width), H = Math.max(2, b.h * cv.height);
     if (b.mode === 'blur') { pixelate(g, X, Y, W, H); } else { g.fillStyle = '#000'; g.fillRect(X, Y, W, H); } hits++; });
   return { cv, hits };
+}
+function rdMore(g, cv, vp, sc, tc, orig) {
+  const f = readForm(); const subj = new Set(String([f.address, f.city, f.county, 'Santa Barbara', 'Montecito', 'Goleta', 'Carpinteria', 'Summerland'].join(' ')).toLowerCase().split(/[\s,]+/).filter(w => w.length > 1));
+  const I = tc.items.filter(it => it.str && it.str.trim()).map(it => { const [x, y] = vp.convertToViewportPoint(it.transform[4], it.transform[5]); const h = Math.max(8, Math.abs(it.transform[3]) * sc); return { s: it.str, x, y, w: Math.max(4, it.width * sc), h }; });
+  const all = I.map(i => i.s).join(' '); const scrambled = all.length > 200 && (all.match(/[A-Za-z]{3,}/g) || []).join('').length / all.length < 0.25;
+  let n = 0; const box = (X, Y, W, H) => { g.fillStyle = '#000'; g.fillRect(X, Y, W, H); n++; };
+  const black = it => box(it.x - 2, it.y - it.h - 1, it.w + 4, it.h * 1.3 + 2);
+  I.forEach((it, k) => {
+    if (scrambled) { if (rdCleanItem(it.s) && rdLooksLikeName(it.s, subj)) black(it); return; }   // C.A.R.: the typed-in names
+    const lab = RD_LABEL.test(it.s.trim()) || RD_LABEL_END.test(it.s);
+    if (lab) I.filter(o => o !== it && Math.abs(o.y - it.y) < it.h * 0.6 && o.x > it.x + it.w - 2 && o.x < it.x + it.w + 320 * sc).forEach(o => { if (rdLooksLikeName(o.s, subj)) black(o); });
+    if (RD_LABEL_END.test(it.s)) { const m = it.s.match(/:\s*(.+)$/); if (m && rdLooksLikeName(m[1], subj)) black(it); }
+    if (RD_SIGN.test(it.s)) { if (/initials/i.test(it.s)) box(it.x + it.w, it.y - it.h * 1.2, 150 * sc, it.h * 1.8); else box(it.x - 4, it.y - it.h - 34 * sc, Math.max(it.w, 210 * sc), 34 * sc); }
+  });
+  /* prices, dates and percents stay readable */
+  if (orig) I.forEach(it => { const mm = it.s.match(RD_PUTBACK) || []; if (!mm.length || mm.join('').length < it.s.trim().length * 0.5) return; const X = Math.max(0, it.x - 2), Y = Math.max(0, it.y - it.h - 1), W = Math.min(cv.width - X, it.w + 4), H = Math.min(cv.height - Y, it.h * 1.3 + 2); if (W > 0 && H > 0) g.drawImage(orig, X, Y, W, H, X, Y, W, H); });
+  RD_PUTBACK.lastIndex = 0; return n;
 }
 function scanNote() {   // a scanned page: offer Claude right here when this order allows it, else say what to change
   const ai = cur.aiUse, ok = ai === 'Yes' || ai === 'Redacted', key = aiKey();

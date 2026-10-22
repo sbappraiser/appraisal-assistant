@@ -123,7 +123,8 @@ async function renderCtBatch() {
   html += '</div>';
   if (CB.plan) { const L = CB.plan; const nT = L.reduce((a, f) => a + ((f.text || []).length), 0), nI = L.reduce((a, f) => a + ((f.imgs || []).length), 0), nH = L.reduce((a, f) => a + ((f.held || []).length), 0);
     html += `<div class="rdsendbar"><b>This is what goes to Claude${ai === 'Redacted' ? ' (redacted)' : ''}:</b>
-      <table class="facts"><tr><th>File</th><th>Pages</th><th>As text</th><th>As pictures</th><th>Not sent</th></tr>${L.map(f => `<tr><td>${h(f.d.name)}</td><td>${f.pages || ''}</td><td>${f.skip ? '' : (f.text || []).length}</td><td>${f.skip ? '' : (f.imgs || []).length}</td><td>${f.skip ? h(f.skip) : (f.held || []).length ? 'scanned p. ' + f.held.join(', ') : ''}</td></tr>`).join('')}</table>
+      <table class="facts"><tr><th>File</th><th>Pages</th><th>As text</th><th>As pictures</th><th>Not sent</th></tr>${L.map(f => `<tr><td>${h(f.d.name)}</td><td>${f.pages || ''}</td><td>${f.skip ? '' : (f.text || []).length}</td><td>${f.skip ? '' : (f.imgs || []).length}</td><td>${f.skip ? h(f.skip) : (f.held || []).length ? 'scanned p. ' + f.held.join(', ') : ''}${f.noPics ? `<div class="warnTxt">Only its text can go – on C.A.R. forms that is scrambled, and check boxes and signatures cannot be seen. <button type="button" class="btn small" data-cbcopy="${f.d.id}">Make a redacted copy</button></div>` : ''}</td></tr>`).join('')}</table>
+      ${L.some(f => f.noPics) ? `<p class="help"><b>Redacted order:</b> Claude can only look at the pages of a file you saved as a redacted copy (“… - REDACTED.pdf”). Click <b>Make a redacted copy</b> for each file, check the black boxes, click <b>Save redacted PDF</b>, then come back and click <b>Read the packet again</b> – the copies go as pictures instead of the originals.</p>` : ''}
       ${nH ? `<p class="help"><b>${nH} scanned page${nH === 1 ? ' is' : 's are'} not sent</b>: on a Redacted order only the "- REDACTED" copy of a scanned file can go. C.A.R. forms often print as scrambled text – those pages are read best as pictures on a Yes order.</p>` : ''}
       <div class="row">${nT + nI ? `<button type="button" class="btn primary" id="cbGo">Send ${nT + nI} page${nT + nI === 1 ? '' : 's'} to Claude</button>` : '<span class="help">Nothing can be sent.</span>'}<button type="button" class="btn ghost" id="cbCancel">Cancel</button></div></div>`; }
   if (CB.err) html += `<p class="help warnTxt"><b>The last try did not work:</b> ${h(CB.err)}</p>`;
@@ -131,9 +132,11 @@ async function renderCtBatch() {
   box.innerHTML = html;
   const pl = $('#cbPlan'); if (pl) pl.onclick = async () => { pl.disabled = true; pl.textContent = 'Looking at the files…'; try { saveLetter(true, true); CB.plan = await pbMakePlan(cbDocs());
     /* her ask (Oct 22 2026): check boxes (items included, contingencies) are not in the text – every page that may be sent also goes as a picture */
-    CB.plan.forEach(f => { if (f.skip || !f.text) return; const red = cur.aiUse === 'Redacted' && !/- REDACTED\.pdf$/i.test(f.d.name); if (red) return;
+    CB.plan.forEach(f => { if (f.skip || !f.text) return; const red = cur.aiUse === 'Redacted' && !/- REDACTED\.pdf$/i.test(f.d.name); if (red) { f.noPics = true; return; }
       const all = new Set([...(f.imgs || []), ...f.text.map(p => p.n)]); f.imgs = [...all].sort((a, b) => a - b); }); } catch (e) { console.error(e); toast('Could not open the contract files: ' + (e.message || e)); } renderCtBatch(); };
   const go = $('#cbGo'); if (go) go.onclick = () => cbSend();
+  box.querySelectorAll('[data-cbcopy]').forEach(b => b.onclick = async () => { CB.plan = null; await openReader(b.dataset.cbcopy); for (let i = 0; i < 40 && !RD.pdf; i++) await new Promise(r => setTimeout(r, 150)); if (!RD.pdf) return;
+    RD.prepMode = 'copy'; RD.prepFrom = 1; RD.prepTo = RD.pdf.numPages; rdPrepare(); });
   const cc = $('#cbCancel'); if (cc) cc.onclick = () => { CB.plan = null; renderCtBatch(); };
   const sh = $('#cbShow'); if (sh) sh.onclick = () => { CB.show = true; renderCtBatch(); };
   const hd = $('#cbHide'); if (hd) hd.onclick = () => { CB.show = false; renderCtBatch(); };
