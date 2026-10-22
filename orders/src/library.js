@@ -8,10 +8,10 @@
    ===================================================================== */
 const LIB_ORDER = '__library__';
 const LIB_KINDS = [['f1', 'Fannie Mae F-1 – URAR reference guide'], ['a1', 'Fannie Mae A-1 – UAD 3.6 fields and choices'], ['d1', 'Fannie Mae D-1 – sample reports'], ['faq', 'UAD 3.6 FAQs and announcements'],
-  ['uad26', 'UAD 2.6 guidelines'], ['sg', 'Fannie Mae Selling Guide'], ['uspap', 'USPAP'], ['ao', 'USPAP FAQs and Advisory Opinions'], ['client', 'Client guidelines'], ['other', 'Other']];
+  ['uad26', 'UAD 2.6 guidelines'], ['sg', 'Fannie Mae Selling Guide'], ['uspap', 'USPAP'], ['ao', 'USPAP FAQs and Advisory Opinions'], ['client', 'Client guidelines'], ['local', 'Community plans and zoning (county / city)'], ['other', 'Other']];
 const libKindOf = n => { n = String(n || '').toLowerCase();
   return /\bf-?1\b|urar.*(reference|guide)/.test(n) ? 'f1' : /\ba-?1\b|delivery spec|appendix a/.test(n) ? 'a1' : /\bd-?1\b|sample/.test(n) ? 'd1' : /faq|announcement/.test(n) && /uad/.test(n) ? 'faq'
-    : /2\.6|uad[-_ ]?26|appendix d/.test(n) ? 'uad26' : /selling guide|\bb4-/.test(n) ? 'sg' : /advisory|\bao-?\d/.test(n) ? 'ao' : /uspap/.test(n) ? 'uspap' : /guideline|requirement|lender|amc/.test(n) ? 'client' : 'other'; };
+    : /2\.6|uad[-_ ]?26|appendix d/.test(n) ? 'uad26' : /selling guide|\bb4-/.test(n) ? 'sg' : /advisory|\bao-?\d/.test(n) ? 'ao' : /uspap/.test(n) ? 'uspap' : /guideline|requirement|lender|amc/.test(n) ? 'client' : /plan\b|zoning|ordinance|overlay|land use|municipal code|county code|\bcode\b|design guidelines|specific plan|general plan|coastal/.test(n) ? 'local' : 'other'; };
 const LIB = { list: [], q: '', hits: null, busy: '' };
 async function libLoad() { const r = await ODB.get('kv', 'lib:index'); LIB.list = (r && r.v) || []; }
 async function libSave() { await ODB.put('kv', { id: 'lib:index', v: LIB.list }); }
@@ -47,7 +47,7 @@ async function libOpen(id, page) { const rec = await ODB.get('docs', id); if (!r
 function libRender() { const box = $('#libBody'); if (!box) return;
   const kinds = Object.fromEntries(LIB_KINDS); const W = LIB.q.toLowerCase().split(/\s+/).filter(w => w.length > 1);
   const mark = s => { let x = h(s); W.forEach(w => { x = x.replace(new RegExp('(' + w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi'), '<mark>$1</mark>'); }); return x; };
-  box.innerHTML = `<label class="libdrop" id="libDrop"><input type="file" id="libFile" multiple accept=".pdf,.docx,.txt,.csv,.xlsx" hidden><b>Drop documents here, or click to choose them</b><span>PDF, Word, Excel or text – F-1, A-1, D-1, UAD 2.6 guidelines, USPAP, Selling Guide, client guidelines</span></label>
+  box.innerHTML = `<label class="libdrop" id="libDrop"><input type="file" id="libFile" multiple accept=".pdf,.docx,.txt,.csv,.xlsx" hidden><b>Drop documents here, or click to choose them</b><span>PDF, Word, Excel or text – F-1, A-1, D-1, UAD 2.6 guidelines, USPAP, Selling Guide, client guidelines, community plans and zoning</span></label>
     ${LIB.busy ? `<p class="help">${h(LIB.busy)}</p>` : ''}
     ${LIB.list.length ? `<div class="row libsearch"><input id="libQ" type="search" placeholder="Search every document, e.g. view range, extraordinary assumption, ANSI" value="${h(LIB.q)}"><button type="button" class="btn primary" id="libGo">Search</button></div>` : ''}
     ${LIB.hits ? `<h3>${LIB.hits.length ? LIB.hits.length + (LIB.hits.length === 80 ? '+' : '') + ' pages found' : 'Nothing found – try fewer or other words'}</h3>${LIB.hits.map(x => `<div class="libhit"><button type="button" class="linkbtn" data-libopen="${x.id}" data-libpage="${x.page}"><b>${h(x.name)}</b> – ${/\.xlsx$/i.test(x.name) ? 'rows, part ' + x.page : 'page ' + x.page}</button> <small class="muted">${h(kinds[x.kind] || '')}</small><div>${mark(x.snip)}</div></div>`).join('')}` : ''}
