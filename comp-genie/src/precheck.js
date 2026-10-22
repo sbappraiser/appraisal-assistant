@@ -71,6 +71,17 @@ function precheckGrid(J) { if (!RC) return rcRun(() => precheckGrid(J));
     if (blank(String(R.reconNote || '').trim())) out.push({ sev: 'Must fix', msg: 'Reconciliation comment is blank (Report details › Value and reconciliation) – 3.6 requires it (Reconciliation of Market Value).' });
     const RX = typeof RE === 'function' ? RE(J) : R;
     if (sowLen(RX) > 2500) out.push({ sev: 'Must fix', msg: `Additional scope of work is ${sowLen(RX).toLocaleString()} characters – 3.6 allows 2,500 for the scope, extraordinary assumptions and hypothetical conditions together (Report details).` });
+    { const zc = R.zoneComp || F.zoneComp || '';   // tentacle 2 office fields (Oct 22 2026)
+      if (/LegalNonConforming|Illegal/.test(zc) && !String(R.zoneCompDesc || '').trim()) out.push({ sev: 'Must fix', msg: `Zoning compliance is ${zc === 'Illegal' ? 'illegal' : 'legal non-conforming'} – describe it (Report details › Site).` });
+      if (zc === 'LegalNonConforming' && !R.zoneRebuild) out.push({ sev: 'Must fix', msg: 'Legal non-conforming: answer whether it could be rebuilt to its current density and use (Report details › Site).' });
+      if (zc === 'Illegal' && !R.zoneIllegal) out.push({ sev: 'Must fix', msg: 'Zoning is illegal: choose why (Report details › Site).' });
+      if (R.ease === 'true' && (!R.easeType || !R.easeImpact)) out.push({ sev: 'Must fix', msg: 'Easement: choose its kind and its effect on value (Report details › Site).' });
+      if (R.encr === 'true' && (!R.encrType || !R.encrDir || !R.encrImpact)) out.push({ sev: 'Must fix', msg: 'Encroachment: choose what encroaches, the direction and the effect on value (Report details › Site).' });
+      if (/Adverse|Beneficial/.test((R.ease === 'true' && R.easeImpact) || '') && !String(R.easeDesc || '').trim()) out.push({ sev: 'Must fix', msg: 'Easement with an effect on value – describe it (Report details › Site).' });
+      if (/Adverse|Beneficial/.test((R.encr === 'true' && R.encrImpact) || '') && !String(R.encrDesc || '').trim()) out.push({ sev: 'Must fix', msg: 'Encroachment with an effect on value – describe it (Report details › Site).' });
+      if ((R.listedYear || F.listedYear) === 'true' || R.listedYear === 'true') { const miss = [['lstStatus', 'status'], ['lstStart', 'start date'], ['lstOrig', 'starting list price']].filter(([k]) => !String(R[k] || '').trim()).map(x => x[1]); if (miss.length) out.push({ sev: 'Must fix', msg: `The subject was listed in the past year – fill in its ${miss.join(', ')} (Report details › Contract and history).` }); }
+      if (F.contract && F.contract.arms === 'false' && !String(R.nonArmsNote || '').trim()) out.push({ sev: 'Must fix', msg: 'The contract is not arm’s length – explain it (Report details › Contract and history).' });
+      if ((R.vcond || 'AsIs') !== 'AsIs' && !R.asIsCond) out.push({ sev: 'Must fix', msg: 'The value is subject to a condition – give the condition rating as the property is today (Report details › Approaches, assumptions and conditions).' }); }
     if (R.addlCert === 'true' && !certList(R).length) out.push({ sev: 'Must fix', msg: 'Additional appraiser certifications is Yes but none are typed (Report details › Prior services and certifications) – type them, or answer No.' });
     certList(R).forEach((t, i) => { if (t.length > CERT_MAX) out.push({ sev: 'Must fix', msg: `Additional certification ${i + 1} is ${t.length} characters – 3.6 allows ${CERT_MAX} each (Report details › Prior services and certifications); split it into two.` }); });
     { const vc = R.vcond || 'AsIs', ea = String(RX.eaNote || '').trim(), hc = String(RX.hcNote || '').trim();
@@ -149,7 +160,7 @@ async function precheckRun(J, wantExport) {
 }
 
 /* her ask (Oct 21 2026): each pre-check line takes her to the place to fix it – the step, then the box (scrolled to and outlined) */
-function preGo(J, x) { const g = preGo0(J, x); if (g && g.label === 'Report details' && typeof rptLateMsg === 'function' && !rptLateMsg(String(x.msg || ''))) { g.stage = 'setup'; g.label = 'Subject details'; } else if (g && g.label === 'Report details' && g.stage === 'final') g.stage = 'recon'; return g; }
+function preGo(J, x) { const g = preGo0(J, x); if (g && g.label === 'Report details' && typeof rptPartOf === 'function') { const pt = rptPartOf(String(x.msg || '')); g.stage = RPT_STAGE[pt]; g.label = { early: 'Subject details', comps: 'Comparable transfer history', late: 'Reconciliation', certs: 'Prior services and certifications' }[pt]; } return g; }
 function preGo0(J, x) { const m = String(x.msg || ''); const byUse = n => usedComps(J).find(c => +c.use === +n);
   let r;
   if ((r = m.match(/^Comp (\d+): Construction method/))) { const c = byUse(r[1]); if (c) return { stage: 'workbook', sel: `[data-gfact="${c.id}|constr"]`, label: 'comp ' + c.use + ' construction method' }; }
@@ -176,6 +187,7 @@ function preGo0(J, x) { const m = String(x.msg || ''); const byUse = n => usedCo
   if (/Opinion of market value/i.test(m)) return { stage: 'final', text: 'Opinion of market value', label: 'Report details' };
   if ((r = m.match(/^Comp (\d+): Construction method/))) { const c = byUse(r[1]); if (c) return { stage: 'workbook', sel: `[data-gfact="${c.id}|constr"]`, label: 'comp ' + c.use + ' construction method' }; }
   if (/exposure time/i.test(m)) return { stage: 'final', text: 'Value and reconciliation', label: 'Report details' };
+  if ((r = m.match(/\(Report details › ([^)]+)\)/)) && /^(Site|Legal and rights|Contract and history|Approaches, assumptions and conditions)/.test(r[1])) return { stage: 'final', text: r[1].replace(/ – .*$/, '').trim(), label: 'Report details' };   // tentacle 2 sections (Oct 22 2026)
   if (/Workfile package/i.test(m)) return { stage: 'setup', sel: '#subjCard', label: '④ Inspection' };
   if (/effective date/i.test(m)) return { stage: 'setup', sel: '[data-subj="eff"]', label: 'Subject card' };
   if (/COST_APPROACH|REPLACEMENT_REPRODUCTION|IMPROVEMENT_COST|SiteEstimated|Cost approach/i.test(m)) return { stage: 'cost', sel: '#costCard', label: 'Cost approach' };
@@ -189,7 +201,7 @@ function preJump(J, x) { const g = x && preGo(J, x); if (!g) return;
   setTimeout(() => { let t = null;
     if (g.comp) t = document.querySelector(`#gridCard thead th[data-wbcol="${g.comp}"]`);
     if (!t && g.sel) t = document.querySelector(g.sel); if (t && g.up && t.closest(g.up)) t = t.closest(g.up);
-    if (!t && g.text) t = [...document.querySelectorAll(':is(#setupCard,#reportCard) :is(h3, summary, label, span)')].find(e => e.textContent.trim().startsWith(g.text));
+    if (!t && g.text) t = [...document.querySelectorAll(':is(#setupCard,#reportCard,#compHistCard,#certCard) :is(h3, summary, label, span)')].find(e => e.textContent.trim().startsWith(g.text));
     if (!t) return; const d = t.closest('details'); if (d) d.open = true;
     if (g.comp && typeof wbReveal === 'function') { try { wbReveal(t); } catch (er) {} }   /* slide the grid sideways to that comp */
     t.scrollIntoView({ behavior: 'smooth', block: 'center' }); t.classList.add('goflash'); setTimeout(() => t.classList.remove('goflash'), 2600);

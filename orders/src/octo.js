@@ -42,6 +42,7 @@ document.addEventListener('click', e => {
     if (t === 'new') { if (typeof startNewOrder === 'function') startNewOrder(); OCTO.t = 1; octoMark(); return; }
     if (t === 'letter' && !octoHasOrder()) { showTab('saved'); octoMark(); return; }
     showTab(t); if (t === 'settings' || t === 'claude') octoSettings(); octoMark(); return; }
+  const tg = e.target.closest && e.target.closest('[data-tent-go]'); if (tg) { octoGo(tg.dataset.tentGo); return; }
   const m = e.target.closest && e.target.closest('[data-octogo]'); if (m) octoGo(3, m.dataset.octogo);
 });
 window.addEventListener('message', e => { if (e.origin !== location.origin || !e.data || e.data.type !== 'aa-path') return; OCTO.steps = { order: e.data.order, list: e.data.steps || [] }; octoMark(); });

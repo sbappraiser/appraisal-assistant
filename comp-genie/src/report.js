@@ -56,7 +56,7 @@ function reportFrom(J) {
     client: c0.company || c0.name || '', clientAddr1: c0.addr1 || '', clientAddr2: c0.addr2 || '',
     lender: o.lenderDiff ? (o.lenderCo || '') : '', lenderAddr1: o.lenderDiff ? o.lenderAddr1 || '' : '', lenderAddr2: o.lenderDiff ? o.lenderAddr2 || '' : '',
     amc: o.amcUsed ? (o.amcCo || '') : '', amcAddr1: o.amcUsed ? o.amcAddr1 || '' : '', amcAddr2: o.amcUsed ? o.amcAddr2 || '' : '',
-    insp: I.inspType || 'InteriorAndExterior', market: (o.market && o.market.uad) || null, contract: o.uad || null, hasOrder: !!o.id,
+    insp: I.inspType || 'InteriorAndExterior', market: (o.market && o.market.uad) || null, contract: o.uad || null, hasOrder: !!o.id, zoneComp: I.zoneComp || '', accessRaw: I.accessRaw || '',
     sowCost: o.id ? !!o.apCost : undefined, sowIncome: o.id ? !!o.apIncome : undefined, sowRent: o.id ? !!o.rent : undefined, sowAddlUser: o.id ? !!String(o.otherUsers || '').trim() : undefined,
     /* her Order › Scope of work tab (Oct 21 2026): highest and best use, added scope, extraordinary assumptions, hypothetical conditions */
     hbu: { legal: !!o.hbuLegal, phys: !!o.hbuPhys, fin: !!o.hbuFin, max: !!o.hbuMax }, hbuPresent: o.hbuPresent || '', hbuNote: o.hbuNote || '', sowNote: o.sowNote || '', eaNote: o.ea || '', hcNote: o.hc || '', addlCond: o.addlCond || '', addlCondText: o.addlCondText || '',
@@ -96,6 +96,10 @@ function reportHTML(J, part) {   // part: 'early' (Assignment, scope and site �
   const inp = (k, ph, w) => `<input class="txt" data-rpt="${k}" value="${esc(R[k] ?? '')}" placeholder="${esc(F[k] || ph || '')}"${w ? ` style="width:${w}"` : ''}>`;
   const sel = (k, list, def, note = 'from the order') => `<select data-rpt="${k}"><option value="">${def ? esc((list.find(x => x[0] === def) || [, ''])[1]) + ' (' + note + ')' : '—'}</option>${list.map(([v, l]) => `<option value="${v}"${R[k] === v ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select>`;
   const yn = (k, def) => `<select data-rpt="${k}"><option value="">${def === true ? 'Yes' : def === false ? 'No' : '—'}${def !== undefined ? ' (usual)' : ''}</option><option value="true"${R[k] === 'true' ? ' selected' : ''}>Yes</option><option value="false"${R[k] === 'false' ? ' selected' : ''}>No</option></select>`;
+  /* drop-downs straight from Fannie Mae's A-1 list (her rule Oct 22 2026), less any choice hidden in Settings */
+  const selA = (k, key, def, note = 'usual') => { const L = a1Opts(key); if (R[k] && !L.some(x => x[0] === R[k])) L.push([R[k], a1Label(R[k])]); return sel(k, L, def, note); };   // a hidden choice already chosen stays
+  const ta = (k, max, ph, rows = 2) => `<textarea class="txt" rows="${rows}" maxlength="${max}" data-rpt="${k}" placeholder="${esc(ph || '')}">${esc(R[k] || '')}</textarea>`;
+  const fx = (l, body, note) => `<label class="fld"><span>${l}${note ? ` <small class="muted">${note}</small>` : ''}</span>${body}</label>`;
   const M = F.market;
   /* her ask (Oct 21 2026): she did not see this was hers to fill in – a clear banner with what is still missing (from the pre-check), bigger type */
   const need = typeof precheckGrid === 'function' ? precheckGrid(J).filter(x => x.sev === 'Must fix' && typeof preGo === 'function' && (preGo0(J, x) || {}).label === 'Report details') : [];
@@ -105,8 +109,12 @@ function reportHTML(J, part) {   // part: 'early' (Assignment, scope and site �
   ${clientNeedsHTML(J)}
   <p class="help">${F.hasOrder ? 'Grey entries come from the order in the Appraisal Assistant, your inspection or the CRS report. Type over any of them.' : 'This assignment is not linked to an order, so nothing is filled from the Appraisal Assistant. Open it from the order (Comp genie button on the order page) to fill the assignment, client and market.'}</p>
   <div class="rptgrid">
-    <section><h3>Assignment</h3>
-      <label class="fld"><span>Assignment reason</span>${sel('assign', ASSIGN, F.assign)}</label>
+    <section><h3>Assignment <small>from 1 Intake</small></h3>
+      ${F.hasOrder ? `<table class="mini rptfrom">${[['Client', rv(J, 'client')], ['Lender', rv(J, 'lender')], ['AMC', rv(J, 'amc')], ['File number', rv(J, 'fileNo')], ['Assignment reason', (ASSIGN.find(x => x[0] === rv(J, 'assign')) || [, rv(J, 'assign')])[1]]].map(([l, v]) => `<tr><th>${l}</th><td>${v ? esc(v) : '<span class="muted">—</span>'}</td></tr>`).join('')}</table>
+      <p class="help">These live in <b>1 Intake</b> (the order). Change them there; they come here by themselves.</p>
+      <label class="fld"><span>Effective date</span>${inp('eff', 'YYYY-MM-DD')}</label>
+      <label class="fld"><span>Measurement standard (your sketch)</span>${sel('measStd', [['AmericanNationalStandardsInstitute', 'ANSI Z765'], ['AmericanMeasurementStandard', 'American Measurement Standard'], ['Other', 'Other']], 'AmericanNationalStandardsInstitute', 'usual')}</label>`
+      : `      <label class="fld"><span>Assignment reason</span>${sel('assign', ASSIGN, F.assign)}</label>
       ${rv(J, 'assign') === 'Other' ? `<label class="fld"><span>Other reason</span>${inp('assignOther', 'e.g. Estate settlement')}</label>` : ''}
       <label class="fld"><span>Property valuation method</span>${sel('vmethod', VMETHOD, 'TraditionalAppraisal', 'usual')}</label>
       <label class="fld"><span>Measurement standard (your sketch)</span>${sel('measStd', [['AmericanNationalStandardsInstitute', 'ANSI Z765'], ['AmericanMeasurementStandard', 'American Measurement Standard'], ['Other', 'Other']], 'AmericanNationalStandardsInstitute', 'usual')}</label>
@@ -117,36 +125,58 @@ function reportHTML(J, part) {   // part: 'early' (Assignment, scope and site �
       <label class="fld"><span>Client address</span>${inp('clientAddr1', 'Street')} ${inp('clientAddr2', 'City, ST ZIP')}</label>
       <label class="fld"><span>Lender (if not the client)</span>${inp('lender')}</label>
       <label class="fld"><span>AMC</span>${inp('amc')}</label>
+`}
       ${cmtBoxHTML(J, 'cAssign')}</section>
+    <section><h3>Legal and rights</h3>
+      <div class="fld"><span>Legal description <label class="btn sm">Import the deed (PDF)<input type="file" accept=".pdf" data-act="deed" hidden></label></span><textarea class="txt" rows="${Math.min(8, 2 + Math.round(String(R.legal || '').length / 140))}" data-rpt="legal" placeholder="${esc(F.legal || 'From the deed, the CRS report or the preliminary title report')}">${esc(R.legal || '')}</textarea></div>
+      <label class="fld"><span>Number of parcels</span>${inp('parcels', '1', '5em')}</label>
+      <label class="fld"><span>All rights included in the appraisal?</span>${yn('allRights', true)}</label>
+      <label class="fld"><span>Rights not included <small class="muted">(only sent when the answer above is No; 540 characters)</small></span><textarea class="txt" rows="2" maxlength="540" data-rpt="rightsNot" placeholder="${esc(F.rightsNot || 'e.g. Oil, gas and mineral rights below 500 feet, reserved in a prior deed')}">${esc(R.rightsNot || '')}</textarea>${F.rightsNot && R.allRights !== 'false' ? '<small class="muted">The order has a reservation from the deed. If those rights are not part of what you appraised, answer No above.</small>' : ''}</label>
+      ${R.allRights === 'false' ? `<label class="fld"><span>Kind of rights not included</span>${sel('rightsType', RIGHTS_TYPES, rightsGuess(rv(J, 'rightsNot')), 'from the description')}</label>${R.rightsType === 'Other' ? `<label class="fld"><span>Describe (33 characters)</span>${inp('rightsOther', 'e.g. Geothermal rights')}</label>` : ''}` : ''}
+      ${rv(J, 'allRights') !== 'false' ? fx('Mineral rights leased?', yn('minLeased', false), 'only asked when the mineral rights are part of what you appraise') : ''}
+      ${fx('Construction stage', selA('constr', 'PROPERTY_DETAIL/ConstructionStatusType', 'Complete'))}</section>
+    <section><h3>Site</h3>
+      <label class="fld"><span>Zoning code</span>${inp('zone', 'e.g. E-3', '8em')}</label>
+      <label class="fld"><span>Zoning description</span>${inp('zoneDesc', 'e.g. One-family residential, 7,000 sq. ft. minimum lot')}<small class="muted">Kept for this code, so you type it once.</small></label>
+      ${fx('Zoning compliance', selA('zoneComp', 'SITE_ZONING_DETAIL/SiteZoningComplianceType', F.zoneComp || '', F.zoneComp ? 'from your inspection' : 'usual'))}
+      ${/LegalNonConforming|Illegal/.test(rv(J, 'zoneComp') || '') ? fx('Zoning compliance – describe', ta('zoneCompDesc', 246, 'e.g. The lot is smaller than the 7,000 sq ft minimum of the zone.'), '246 characters') : ''}
+      ${rv(J, 'zoneComp') === 'LegalNonConforming' ? fx('Could it be rebuilt to its current density and use?', yn('zoneRebuild')) : ''}
+      ${rv(J, 'zoneComp') === 'Illegal' ? fx('Why it is illegal', selA('zoneIllegal', 'ZONING_ILLEGAL_REASON/SiteZoningComplianceIllegalReasonType', '')) + (R.zoneIllegal === 'Other' ? fx('Describe', inp('zoneIllegalOther', '33 characters')) : '') : ''}
+      ${fx('Site dimensions', inp('siteDim', 'e.g. 60 x 130 (from the plat map)'), '66 characters')}
+      ${num(rv(J, 'parcels')) > 1 ? fx('Are the parcels next to each other?', yn('parcelsContig')) + (R.parcelsContig === 'false' ? fx('What separates them', selA('parcelSep', 'NON_CONTIGUOUS_PARCEL_SEPARATOR/ParcelSeparatorType', '')) + (R.parcelSep === 'Other' ? fx('Describe', inp('parcelSepOther', '33 characters')) : '') : '') : ''}
+      ${!F.accessRaw || F.accessRaw === 'PrivateStreet' ? fx('Private street maintenance agreement known?', yn('privMaint'), 'only when the access is a private street') : ''}
+      ${fx('Easement that affects the property?', yn('ease', false))}
+      ${R.ease === 'true' ? fx('Kind of easement', selA('easeType', 'EASEMENT/EasementType', '')) + (R.easeType === 'Other' ? fx('Describe', inp('easeTypeOther', '45 characters')) : '') + fx('Effect on value or marketability', selA('easeImpact', 'EASEMENT/ValueMarketabilityImpactType', '')) + fx('Easement – describe', ta('easeDesc', 140, 'e.g. 10 ft utility easement along the rear lot line'), '140 characters') : ''}
+      ${fx('Encroachment?', yn('encr', false))}
+      ${R.encr === 'true' ? fx('What encroaches', selA('encrType', 'ENCROACHMENT/EncroachmentType', '')) + (R.encrType === 'Other' ? fx('Describe', inp('encrTypeOther', '45 characters')) : '') + fx('Direction', selA('encrDir', 'ENCROACHMENT/EncroachmentDirectionType', '')) + fx('Effect on value or marketability', selA('encrImpact', 'ENCROACHMENT/ValueMarketabilityImpactType', '')) + fx('Encroachment – describe', ta('encrDesc', 140, 'e.g. The neighbor’s fence is about 2 ft onto the subject site'), '140 characters') : ''}
+      ${CMT_TIP}${cmtBoxHTML(J, 'cSite')}</section>
+    <section><h3>Improvements</h3>
+      <p class="help">The rooms, finishes, quality, condition, defects and photos come from your inspection. Add here only what those fields cannot show.</p>
+      ${cmtBoxHTML(J, 'cSubject')}</section>
+    <section><h3>Contract and history</h3>
+      ${F.contract && F.contract.arms === 'false' || R.nonArmsNote ? fx('Not an arm’s-length sale – explain', ta('nonArmsNote', 1250, 'e.g. The buyer is the seller’s daughter; the price was set by the family.'), '1,250 characters') : ''}
+      <label class="fld"><span>Subject listed for sale in the past year?</span>${yn('listedYear', F.listedYear)}</label>
+      ${rv(J, 'listedYear') === 'true' || RX.listedYear === 'true' ? fx('Listing type', selA('lstType', 'LISTING_INFORMATION_DETAIL/ListingType', 'MLS')) + (R.lstType === 'Other' ? fx('Describe', inp('lstTypeOther', '45 characters')) : '') + fx('Status', selA('lstStatus', 'LISTING_INFORMATION_DETAIL/ListingStatusType', '')) + fx('Listing number (MLS #)', inp('lstId')) + fx('Start date', inp('lstStart', 'YYYY-MM-DD')) + fx('End date', inp('lstEnd', 'YYYY-MM-DD'), 'blank while still listed') + fx('Starting list price', inp('lstOrig', '$')) + fx('Final or current list price', inp('lstFinal', '$')) + fx('Days on market', inp('lstDom', '', '6em')) + fx('Total days on market (all listings)', inp('lstCdom', '', '6em')) : ''}
+      ${cmtBoxHTML(J, 'cSubjPrior')}</section>
     <section><h3>Highest and best use</h3>
       ${HBU_TESTS.map(([k, l]) => `<label class="check"><input type="checkbox" data-hbu="${k}" ${H[k] ? 'checked' : ''}>${l}</label>`).join('')}
       <label class="fld"><span>Is the highest and best use as improved the present use?</span>${yn('hbuPresent', F.hbuPresent === 'true' ? true : F.hbuPresent === 'false' ? false : undefined)}</label>
       <div class="row"><button class="btn small" data-act="hbu-all">All four tests met · present use</button><button class="btn ghost small" data-act="hbu-draft">Draft the comment</button></div>
       <label class="fld"><span>Highest and best use comment ${cmtCount(String(R.hbuNote || ''), 4000)}</span><textarea class="txt" rows="4" maxlength="4000" data-rpt="hbuNote" placeholder="${esc(F.hbuNote ? 'From the order’s Scope of work: ' + F.hbuNote : 'Your comment')}">${esc(R.hbuNote || '')}</textarea></label></section>
-    <section><h3>Scope of work <small>UAD 3.6 – every answer is required</small></h3>
+    <section><h3>Approaches, assumptions and conditions <small>UAD 3.6 – every answer is required</small></h3>
       <label class="fld"><span>Cost approach developed?</span>${yn('sowCost', F.sowCost)}</label>
       <label class="fld"><span>Income approach developed?</span>${yn('sowIncome', F.sowIncome)}</label>
       <label class="fld"><span>Rent schedule (1007) included?</span>${yn('sowRent', F.sowRent)}</label>
       <label class="fld"><span>Government agency appraisal (FHA, VA, USDA)?</span>${yn('sowGov', false)}${R.sowGov === 'true' ? ` ${sel('govType', [['FHA', 'FHA'], ['VA', 'VA'], ['USDA', 'USDA']], '')}` : ''}</label>
       <label class="fld"><span>Intended users besides the client?</span>${yn('sowAddlUser', F.sowAddlUser)}</label>
       <label class="fld"><span>Additional scope of work?</span>${yn('sowAddlScope', sowAny(RX) ? true : false)}</label>
-      <label class="fld"><span>Additional client-requested conditions? <small class="muted">(from the order – e.g. a value under a marketing-time limit)</small></span>${yn('addlCond', F.addlCond === 'true' ? true : false)}</label>
-      ${RX.addlCond === 'true' ? `<label class="fld"><span>Describe them <small class="muted">(2,500 characters)</small></span><textarea class="txt" rows="2" maxlength="2500" data-rpt="addlCondText" placeholder="${esc(F.addlCondText ? 'From the order: ' + F.addlCondText : 'The conditions the client asked for')}">${esc(R.addlCondText || '')}</textarea></label>` : ''}
-      <label class="fld"><span>Scope of work – what you did beyond the standard <small class="muted">(shares 2,500 characters with the two boxes below)</small></span><textarea class="txt" rows="3" maxlength="2500" data-rpt="sowNote" placeholder="${esc(F.sowNote ? 'From the order’s Scope of work: ' + F.sowNote : 'e.g. Exterior photos of the comps were taken from the street; the subject\'s permits were reviewed at the County.')}">${esc(R.sowNote || '')}</textarea></label></section>
-    <section><h3>Extraordinary assumptions and hypothetical conditions <small>go to SFREP in Additional Scope of Work</small></h3>
+      <label class="fld"><span>Scope of work – what you did beyond the standard <small class="muted">(shares 2,500 characters with the two boxes below)</small></span><textarea class="txt" rows="3" maxlength="2500" data-rpt="sowNote" placeholder="${esc(F.sowNote ? 'From the order’s Scope of work: ' + F.sowNote : 'e.g. Exterior photos of the comps were taken from the street; the subject\'s permits were reviewed at the County.')}">${esc(R.sowNote || '')}</textarea></label>
       <label class="fld"><span>Extraordinary assumptions</span><textarea class="txt" rows="3" maxlength="2500" data-rpt="eaNote" placeholder="${esc(F.eaNote ? 'From the order’s Scope of work: ' + F.eaNote : 'e.g. The owner-reported permits for the 2010 remodel are assumed accurate; if not, the value could change.')}">${esc(R.eaNote || '')}</textarea></label>
       <label class="fld"><span>Hypothetical conditions</span><textarea class="txt" rows="3" maxlength="2500" data-rpt="hcNote" placeholder="${esc(F.hcNote ? 'From the order’s Scope of work: ' + F.hcNote : 'e.g. As if the repairs listed in the Unit Interior section were completed as of the effective date.')}">${esc(R.hcNote || '')}</textarea></label>
-      <p class="help">${sowLen(RX).toLocaleString()} of 2,500 characters used (all three boxes together). A value <i>subject to</i> repairs or completion: choose it in Market value condition under Value and reconciliation.</p></section>
-    <section><h3>Subject and site</h3>
-      <div class="fld"><span>Legal description <label class="btn sm">Import the deed (PDF)<input type="file" accept=".pdf" data-act="deed" hidden></label></span><textarea class="txt" rows="${Math.min(8, 2 + Math.round(String(R.legal || '').length / 140))}" data-rpt="legal" placeholder="${esc(F.legal || 'From the deed, the CRS report or the preliminary title report')}">${esc(R.legal || '')}</textarea></div>
-      <label class="fld"><span>Number of parcels</span>${inp('parcels', '1', '5em')}</label>
-      <label class="fld"><span>All rights included in the appraisal?</span>${yn('allRights', true)}</label>
-      <label class="fld"><span>Rights not included <small class="muted">(only sent when the answer above is No; 540 characters)</small></span><textarea class="txt" rows="2" maxlength="540" data-rpt="rightsNot" placeholder="${esc(F.rightsNot || 'e.g. Oil, gas and mineral rights below 500 feet, reserved in a prior deed')}">${esc(R.rightsNot || '')}</textarea>${F.rightsNot && R.allRights !== 'false' ? '<small class="muted">The order has a reservation from the deed. If those rights are not part of what you appraised, answer No above.</small>' : ''}</label>
-      ${R.allRights === 'false' ? `<label class="fld"><span>Kind of rights not included</span>${sel('rightsType', RIGHTS_TYPES, rightsGuess(rv(J, 'rightsNot')), 'from the description')}</label>${R.rightsType === 'Other' ? `<label class="fld"><span>Describe (33 characters)</span>${inp('rightsOther', 'e.g. Geothermal rights')}</label>` : ''}` : ''}
-      <label class="fld"><span>Zoning code</span>${inp('zone', 'e.g. E-3', '8em')}</label>
-      <label class="fld"><span>Zoning description</span>${inp('zoneDesc', 'e.g. One-family residential, 7,000 sq. ft. minimum lot')}<small class="muted">Kept for this code, so you type it once.</small></label>
-      ${CMT_TIP}${cmtBoxHTML(J, 'cSite')}${cmtBoxHTML(J, 'cSubject')}</section>
-    <section><h3>Prior sale and transfer history</h3>${cmtBoxHTML(J, 'cSubjPrior')}${cmtBoxHTML(J, 'cCompPrior')}</section>
+      <p class="help">${sowLen(RX).toLocaleString()} of 2,500 characters used (all three boxes together). Choose as is or subject to just below.</p>
+      <label class="fld"><span>Market value condition – as is or subject to</span>${sel('vcond', VCOND, 'AsIs', 'usual')}</label>
+      ${(R.vcond || 'AsIs') !== 'AsIs' ? fx('Condition rating as it is today', selA('asIsCond', 'VALUATION_RECONCILIATION_SUMMARY_DETAIL/PropertyAsIsConditionRatingCode', '')) : ''}</section>
+    <section><h3>Comparable transfer history</h3>${cmtBoxHTML(J, 'cCompPrior')}</section>
     <section><h3>Prior services and certifications</h3>
       <label class="fld"><span>Prior services: have you performed any services on this property in the three years before accepting the assignment?</span>${yn('priorSvc')}</label>
       ${F.priorHits.length ? `<p class="help warnTxt">Your records show: ${F.priorHits.map(esc).join(' · ')}</p>` : '<p class="help">Nothing in your archive or your orders for this address in the three years before the effective date.</p>'}
@@ -154,11 +184,12 @@ function reportHTML(J, part) {   // part: 'early' (Assignment, scope and site �
       <label class="fld"><span>Additional appraiser certifications? <small class="muted">e.g. your Appraisal Institute certifications</small></span>${yn('addlCert', false)}</label>
       ${certHTML(R)}
       <label class="fld"><span>Is this a reconsideration of value?</span>${yn('reconsider', false)}</label>
-      <label class="fld"><span>Subject listed for sale in the past year?</span>${yn('listedYear', F.listedYear)}</label></section>
+    </section>
     <section><h3>Value and reconciliation</h3>
       ${rptIndHTML(J)}
       <label class="fld"><span>Opinion of market value</span>${inp('opinion', !blank(G.value) ? money(Math.round(num(G.value))) + ' (sales comparison)' : '$')}</label>
-      <label class="fld"><span>Market value condition</span>${sel('vcond', VCOND, 'AsIs', 'usual')}</label>
+      <label class="fld"><span>Additional client-requested conditions? <small class="muted">(from the order – e.g. a value under a marketing-time limit)</small></span>${yn('addlCond', F.addlCond === 'true' ? true : false)}</label>
+      ${RX.addlCond === 'true' ? `<label class="fld"><span>Describe them <small class="muted">(2,500 characters)</small></span><textarea class="txt" rows="2" maxlength="2500" data-rpt="addlCondText" placeholder="${esc(F.addlCondText ? 'From the order: ' + F.addlCondText : 'The conditions the client asked for')}">${esc(R.addlCondText || '')}</textarea></label>` : ''}
       <label class="fld"><span>Reasonable exposure time (days)</span>${inp('expLow', 'from', '6em')} to ${inp('expHigh', 'to', '6em')}</label>
       ${expHelpHTML(J)}
       ${['Income', 'Cost'].map(A => { const off = R['sow' + A] === 'false' || (blank(R['sow' + A]) && F['sow' + A] === false); if (!off) return ''; const k = 'excl' + A;
@@ -186,8 +217,8 @@ document.addEventListener('change', e => {
   const t = e.target; if (!app.job) return; const R = R0(app.job);
   if (t.dataset.rpt) { const k = t.dataset.rpt, v = t.value.trim(); if (v === '') delete R[k]; else R[k] = k === 'zone' ? v.toUpperCase() : t.tagName === 'TEXTAREA' ? t.value : v;
     if (k === 'zoneDesc' && v) { const code = rv(app.job, 'zone').toUpperCase(); if (code) { zoneTable()[code] = v; DB.put('kv', { id: 'zoneDesc', v: app.zoneDesc }); } }
-    save(); if (['assign', 'zone', 'allRights', 'rightsType', 'sowGov', 'addlCond', 'sowIncome', 'sowCost', 'exclIncome', 'exclCost', 'sowNote', 'eaNote', 'hcNote', 'addlCert'].includes(k) || /^cert\d$/.test(k)) rptRedraw();
-    else [['#setupCard', 'early'], ['#reportCard', 'late']].forEach(([id, pt]) => { const b = document.querySelector(id + ' .rptneed'); if (b) { const d = document.createElement('div'); d.innerHTML = reportHTML(app.job, pt); const nb = d.querySelector('.rptneed'); if (nb) b.replaceWith(nb); } });   /* the 'still needed' list follows her answers */
+    save(); if (['assign', 'zone', 'allRights', 'rightsType', 'sowGov', 'addlCond', 'sowIncome', 'sowCost', 'exclIncome', 'exclCost', 'sowNote', 'eaNote', 'hcNote', 'addlCert', 'zoneComp', 'zoneIllegal', 'parcels', 'parcelsContig', 'parcelSep', 'ease', 'easeType', 'encr', 'encrType', 'listedYear', 'lstType', 'vcond', 'allRights'].includes(k) || /^cert\d$/.test(k)) rptRedraw();
+    else [['#setupCard', 'early'], ['#compHistCard', 'comps'], ['#reportCard', 'late'], ['#certCard', 'certs']].forEach(([id, pt]) => { const b = document.querySelector(id + ' .rptneed'); if (b) { const d = document.createElement('div'); d.innerHTML = reportHTML(app.job, pt); const nb = d.querySelector('.rptneed'); if (nb) b.replaceWith(nb); } });   /* the 'still needed' list follows her answers */
     return; }
   if (t.dataset.hbu) { R.hbu[t.dataset.hbu] = t.checked; save(); }
 });
@@ -274,6 +305,7 @@ function writeReportXML(doc, NS, J, SUBJ, VA, SVC) {
   const zone = rv(J, 'zone'), zd = rv(J, 'zoneDesc');
   if (zone || zd) { const z = path(SITE, 'SITE_ZONING', 'SITE_ZONING_DETAIL'); set(z, 'SiteZoningClassificationDescription', zd && zd.slice(0, 100)); set(z, 'SiteZoningClassificationIdentifier', zone); }
   set(path(SUBJ, 'SALES_CONTRACTS', 'SALES_CONTRACT', 'SALES_CONTRACT_DETAIL'), 'AllPropertyRightsAppraisedIndicator', tf('allRights', 'true'));
+  t2XML(J, R, SUBJ, VR, child, add, set, path, doc, NS);   // tentacle 2 office fields (Oct 22 2026)
   if (tf('allRights', 'true') === 'false') { const rn = rv(J, 'rightsNot'); if (rn) set(sow, 'PropertyRightsNotAppraisedDescription', String(rn).slice(0, 540));
     const ty = R.rightsType || rightsGuess(rn); if (ty) { const ri = add(path(SUBJ, 'REAL_PROPERTY_INTERESTS'), 'REAL_PROPERTY_INTEREST');
       set(ri, 'AppraisedIndicator', 'false'); set(ri, 'PropertyPartialInterestType', ty); if (ty === 'Other') set(ri, 'PropertyPartialInterestTypeOtherDescription', String(R.rightsOther || '').slice(0, 33) || null); } }
@@ -325,18 +357,25 @@ function writeReportXML(doc, NS, J, SUBJ, VA, SVC) {
 /* Report details in two places (her ask Oct 22 2026: assignment, scope, EA/HC, H&BU, subject and site, prior services "much earlier in the assignment";
    site questions and comments together): 'early' = card #setupCard right after the inspection (step 5), 'late' = value, reconciliation, transfer history
    and the market status in Review and export */
-const RPT_EARLY = ['Assignment', 'Scope of work', 'Extraordinary assumptions and hypothetical conditions', 'Highest and best use', 'Subject and site', 'Prior services and certifications', 'Market'];
-const RPT_LATE = ['Prior sale and transfer history', 'Value and reconciliation'];
-const rptLateMsg = m => /opinion of market value|reconciliation|exposure time|market value condition|transfer|client-requested/i.test(m);
+/* the report details by tentacle (her octopus, Oct 22 2026) */
+const RPT_PARTS = { early: ['Assignment', 'Legal and rights', 'Site', 'Improvements', 'Contract and history', 'Highest and best use', 'Approaches, assumptions and conditions'],
+  comps: ['Comparable transfer history'], late: ['Value and reconciliation'], certs: ['Prior services and certifications'] };
+const RPT_EARLY = RPT_PARTS.early, RPT_LATE = RPT_PARTS.late;
+const RPT_STAGE = { early: 'setup', comps: 'workbook', late: 'recon', certs: 'final' };
+/* which part a "still needed" message belongs to */
+const rptPartOf = m => /prior services|certification|reconsideration/i.test(m) ? 'certs' : /comparable sales.*transfer|comparables' transfer/i.test(m) ? 'comps' : /opinion of market value|reconciliation comment|exposure time|client-requested|approach not developed/i.test(m) ? 'late' : 'early';
+const rptLateMsg = m => rptPartOf(m) !== 'early';
 function rptPart(J, html, part) {
   const a = html.indexOf('<div class="rptgrid">'); const body = html.slice(a + '<div class="rptgrid">'.length, html.lastIndexOf('</div>'));
   const secs = body.split(/(?=<section><h3>)/).filter(x => x.startsWith('<section><h3>')).map(x => [x.match(/^<section><h3>([^<]*)/)[1].trim(), x.trim()]);
-  const L = (part === 'early' ? RPT_EARLY : RPT_LATE).map(t => (secs.find(([n]) => n === t) || [])[1]).filter(Boolean);
-  const need = typeof precheckGrid === 'function' ? precheckGrid(J).filter(x => x.sev === 'Must fix' && typeof preGo === 'function' && (preGo0(J, x) || {}).label === 'Report details' && (part === 'late') === rptLateMsg(x.msg)) : [];
+  const L = (RPT_PARTS[part] || []).map(t => (secs.find(([n]) => n === t) || [])[1]).filter(Boolean);
+  const need = typeof precheckGrid === 'function' ? precheckGrid(J).filter(x => x.sev === 'Must fix' && typeof preGo === 'function' && (preGo0(J, x) || {}).label === 'Report details' && rptPartOf(x.msg) === part) : [];
   const banner = `<div class="rptneed ${need.length ? 'warn' : 'done'}">${need.length ? `<b>${need.length} answer${need.length > 1 ? 's' : ''} still needed here:</b><ul>${need.map(x => `<li><a href="#" class="rptgo" data-rptgo="${esc(x.msg)}" title="Go there">${esc(x.msg.replace(/\s*\(Report details[^)]*\)\.?/, ''))}</a></li>`).join('')}</ul>` : '<b>✓ Everything needed here is answered.</b>'}
     <span class="rptkey"><span class="k own">your entry</span> <span class="k sug">suggested – type over it or leave it</span></span></div>`;
   const F = reportFrom(J);
   return (part === 'early' ? `<h2>Assignment, scope and site <small>– answer these early; they go to SFREP when you export</small></h2>${banner}${clientNeedsHTML(J)}<p class="help">${F.hasOrder ? 'Suggested entries come from the order, your inspection or the CRS report. Type over any of them.' : 'This assignment is not linked to an order, so nothing is filled from the Appraisal Assistant. Open it from the order (Comp genie button on the order page) to fill the assignment, client and market.'}</p>`
+    : part === 'comps' ? `<h2>Comparable transfer history</h2>`
+    : part === 'certs' ? `<h2>Prior services and certifications</h2>${banner}`
     : `<h2>Reconciliation <small>– after the sales comparison, cost and income approaches</small></h2>${banner}`) + `<div class="rptgrid rptbands">${L.join('\n')}</div>`; }
 /* the value of each approach, filled in from its own section (her ask Oct 22 2026) */
 function rptIndications(J) { const G = G0(J), R = R0(J), o = (app.orders || []).find(x => x.id === J.orderId) || null; const T = f => { try { return f(); } catch (e) { return null; } };
@@ -347,7 +386,7 @@ const rptOpinion = J => { const v = num(String(R0(J).opinion || '').replace(/[$,
 function rptIndHTML(J) { const L = rptIndications(J);
   return `<table class="mini rptind"><tr><th colspan="2">Indicated value by</th></tr>${L.map(([n, v, on]) => `<tr><th>${n} approach</th><td>${!on ? '<span class="muted">not developed</span>' : v ? '<b>' + money(Math.round(v)) + '</b>' : '<span class="warnTxt">not finished yet</span>'}</td></tr>`).join('')}</table>
     <p class="help">Filled in from each approach. The opinion of value below starts as the sales comparison value – type your reconciled value over it.</p>`; }
-function rptRedraw() { const J = app.job; if (!J) return; const a = $('#setupCard'), b = $('#reportCard'); if (a && a.innerHTML) a.innerHTML = reportHTML(J, 'early'); if (b && b.innerHTML) b.innerHTML = reportHTML(J, 'late'); }
+function rptRedraw() { const J = app.job; if (!J) return; [['#setupCard', 'early'], ['#compHistCard', 'comps'], ['#reportCard', 'late'], ['#certCard', 'certs']].forEach(([id, pt]) => { const c = $(id); if (c && c.innerHTML) c.innerHTML = reportHTML(J, pt); }); }
 
 /* her ask Oct 22 2026: "click here, it takes me to where the legal description goes, then I can import the deed" – reads the legal description
    (and any reservation, e.g. mineral rights) from a deed PDF with text; a scan has no text (Acrobat › Scan & OCR › Recognize text first, or the order's Documents › Read with Claude) */
@@ -365,3 +404,54 @@ document.addEventListener('change', async e => { const t = e.target; if (!t || t
     toast(`Legal description filled from ${f.name}${D.reserve ? ' – the deed also has a reservation; it is in “Rights not included” (answer “All rights included?” No if those rights are not appraised)' : ''}`, 8000);
     setTimeout(() => { const b = document.querySelector('textarea[data-rpt="legal"]'); if (b) { b.scrollIntoView({ block: 'center' }); b.classList.add('goflash'); } }, 150); }
   catch (er) { console.error(er); toast('Could not read that PDF: ' + (er.message || er), 7000); } });
+
+/* ---------- tentacle 2 office fields (her ask Oct 22 2026: every required UAD field, drop-downs from A-1) ---------- */
+const A1_LABEL = { LegalNonConforming: 'Legal non-conforming', NoZoning: 'No zoning', IngressOrEgress: 'Ingress or egress', BorderingPropertyEncroachingOnSubjectProperty: 'A neighbor encroaches on the subject', SubjectPropertyEncroachingOnBorderingProperty: 'The subject encroaches on a neighbor', ForSaleByOwner: 'For sale by owner', OffMarket: 'Off market', SettledSale: 'Sold (settled)', UnderConstruction: 'Under construction', OtherParcel: 'Another parcel', BodyOfWater: 'Body of water', AccessoryDwellingUnit: 'Accessory dwelling unit', DevelopmentStandards: 'Development standards', ExcessiveUnits: 'Too many units', LotSize: 'Lot size', ManufacturedHome: 'Manufactured home' };
+const a1Label = v => A1_LABEL[v] || String(v).replace(/([a-z])([A-Z])/g, '$1 $2').replace(/^./, c => c.toUpperCase()).replace(/ ([A-Z])(?=[a-z])/g, m => m.toLowerCase());
+/* choices she never uses are hidden (Settings › My drop-down lists, kept in this browser): "PARENT/Field=Value" */
+const a1Hidden = () => { try { return JSON.parse(localStorage.getItem('genie.hideOpts') || '[]'); } catch (e) { return []; } };
+const A1_USED = new Set();
+function a1Opts(key) { A1_USED.add(key); const H = a1Hidden(); return ((typeof A1 !== 'undefined' && A1[key] && A1[key].e) || []).filter(v => !H.includes(key + '=' + v)).map(v => [v, a1Label(v)]); }
+function t2XML(J, R, SUBJ, VR, child, add, set, path, doc, NS) { const v = k => String(R[k] ?? '').trim(); const X = RE(J);
+  const SITE = child(SUBJ, 'SITE');
+  if (v('siteDim')) set(child(SITE, 'SITE_SIZE_LAYOUT'), 'SiteDimensionsDescription', v('siteDim').slice(0, 66));
+  if (num(rv(J, 'parcels')) > 1 && v('parcelsContig')) { set(child(SITE, 'SITE_SIZE_LAYOUT'), 'ParcelsContiguousIndicator', v('parcelsContig'));
+    if (v('parcelsContig') === 'false' && v('parcelSep')) { const ps = path(SUBJ, 'PARCEL_SUMMARY', 'NON_CONTIGUOUS_PARCEL_SEPARATORS', 'NON_CONTIGUOUS_PARCEL_SEPARATOR'); set(ps, 'ParcelSeparatorType', v('parcelSep')); if (v('parcelSep') === 'Other') set(ps, 'ParcelSeparatorTypeOtherDescription', v('parcelSepOther').slice(0, 33)); } }
+  const zc = v('zoneComp'); if (zc) set(path(SITE, 'SITE_ZONING', 'SITE_ZONING_DETAIL'), 'SiteZoningComplianceType', zc);   // her answer here wins over the iPad's
+  const zcNow = zc || rv(J, 'zoneComp') || '';
+  if (/LegalNonConforming|Illegal/.test(zcNow) && v('zoneCompDesc')) set(path(SITE, 'SITE_ZONING', 'SITE_ZONING_DETAIL'), 'SiteZoningComplianceDescription', v('zoneCompDesc').slice(0, 246));
+  if (zcNow === 'LegalNonConforming' && v('zoneRebuild')) set(path(SITE, 'SITE_ZONING', 'SITE_ZONING_DETAIL'), 'ZoningPermitRebuildToCurrentDensityIndicator', v('zoneRebuild'));
+  if (zcNow === 'Illegal' && v('zoneIllegal')) { const zi = path(SITE, 'SITE_ZONING', 'ZONING_ILLEGAL_REASONS', 'ZONING_ILLEGAL_REASON'); set(zi, 'SiteZoningComplianceIllegalReasonType', v('zoneIllegal')); if (v('zoneIllegal') === 'Other') set(zi, 'SiteZoningComplianceIllegalReasonTypeOtherDescription', v('zoneIllegalOther').slice(0, 33)); }
+  if (v('privMaint')) set(path(SITE, 'PROPERTY_ACCESS', 'PROPERTY_ACCESS_DETAIL'), 'PrivateStreetMaintenanceAgreementExistIndicator', v('privMaint'));
+  const enc = (kind, fill) => { const ens = child(SUBJ, 'ENCUMBRANCES'); let en = [...ens.children].find(e => [...e.getElementsByTagNameNS(NS, 'EncumbranceType')].some(t => t.textContent === kind));
+    if (!en) { en = add(ens, 'ENCUMBRANCE'); set(child(en, 'ENCUMBRANCE_DETAIL'), 'EncumbranceType', kind); } fill(en); };
+  if (v('ease') === 'true' && v('easeType')) enc('Easement', en => { const e = path(en, 'EASEMENTS', 'EASEMENT'); set(e, 'EasementType', v('easeType')); if (v('easeType') === 'Other') set(e, 'EasementTypeOtherDescription', v('easeTypeOther').slice(0, 45));
+    if (v('easeImpact')) set(e, 'ValueMarketabilityImpactType', v('easeImpact')); if (v('easeDesc')) set(e, 'EasementDescription', v('easeDesc').slice(0, 140)); });
+  if (v('encr') === 'true' && v('encrType')) enc('Encroachment', en => { const e = path(en, 'ENCROACHMENTS', 'ENCROACHMENT'); set(e, 'EncroachmentType', v('encrType')); if (v('encrType') === 'Other') set(e, 'EncroachmentTypeOtherDescription', v('encrTypeOther').slice(0, 45));
+    if (v('encrDir')) set(e, 'EncroachmentDirectionType', v('encrDir')); if (v('encrImpact')) set(e, 'ValueMarketabilityImpactType', v('encrImpact')); if (v('encrDesc')) set(e, 'EncroachmentDescription', v('encrDesc').slice(0, 140)); });
+  const PD = child(SUBJ, 'PROPERTY_DETAIL');
+  set(PD, 'ConstructionStatusType', v('constr') || 'Complete');
+  if (rv(J, 'allRights') !== 'false') set(PD, 'MineralRightsLeasedIndicator', v('minLeased') || 'false');
+  if (v('nonArmsNote')) set(path(SUBJ, 'SALES_CONTRACTS', 'SALES_CONTRACT', 'SALES_CONTRACT_DETAIL'), 'NonArmsLengthCommentText', v('nonArmsNote').slice(0, 1250));
+  if ((v('listedYear') || X.listedYear) === 'true') { const LD = path(SUBJ, 'LISTING_INFORMATIONS', 'LISTING_INFORMATION', 'LISTING_INFORMATION_DETAIL'); const d = k => { const x = isoDate(v(k)); return x || null; }, amt = k => { const n = num(v(k).replace(/[$,\s]/g, '')); return blank(n) ? null : Math.round(n); };
+    set(LD, 'ListingType', v('lstType') || 'MLS'); if (v('lstType') === 'Other') set(LD, 'ListingTypeOtherDescription', v('lstTypeOther').slice(0, 45)); set(LD, 'ListingStatusType', v('lstStatus') || null); set(LD, 'ListingIdentifier', v('lstId').slice(0, 45) || null);
+    set(LD, 'ListingStartDate', d('lstStart')); set(LD, 'ListingEndDate', d('lstEnd')); set(LD, 'InitialListPriceAmount', amt('lstOrig')); set(LD, 'FinalListPriceAmount', amt('lstFinal')); if (v('lstDom') !== '') set(LD, 'DaysOnMarketCount', num(v('lstDom')));
+    if (v('lstCdom') !== '') set(child(SUBJ, 'LISTING_INFORMATION_SUMMARY'), 'CumulativeDaysOnMarketCount', num(v('lstCdom'))); }
+  if ((R.vcond || 'AsIs') !== 'AsIs' && v('asIsCond')) set(path(VR, 'VALUATION_RECONCILIATION', 'VALUATION_RECONCILIATION_SUMMARY', 'VALUATION_RECONCILIATION_SUMMARY_DETAIL'), 'PropertyAsIsConditionRatingCode', v('asIsCond'));
+}
+
+/* Settings › My drop-down lists: each list the octopus shows from A-1, with every choice ticked = shown (her ask Oct 22 2026) */
+const A1_NAMES = { 'SITE_ZONING_DETAIL/SiteZoningComplianceType': 'Zoning compliance', 'ZONING_ILLEGAL_REASON/SiteZoningComplianceIllegalReasonType': 'Why zoning is illegal', 'NON_CONTIGUOUS_PARCEL_SEPARATOR/ParcelSeparatorType': 'What separates the parcels',
+  'EASEMENT/EasementType': 'Kind of easement', 'EASEMENT/ValueMarketabilityImpactType': 'Easement – effect on value', 'ENCROACHMENT/EncroachmentType': 'What encroaches', 'ENCROACHMENT/EncroachmentDirectionType': 'Encroachment direction',
+  'ENCROACHMENT/ValueMarketabilityImpactType': 'Encroachment – effect on value', 'PROPERTY_DETAIL/ConstructionStatusType': 'Construction stage', 'LISTING_INFORMATION_DETAIL/ListingType': 'Listing type', 'LISTING_INFORMATION_DETAIL/ListingStatusType': 'Listing status',
+  'VALUATION_RECONCILIATION_SUMMARY_DETAIL/PropertyAsIsConditionRatingCode': 'Condition rating as it is today' };
+function optsPopup() { const H = new Set(a1Hidden()); const keys = [...new Set([...Object.keys(A1_NAMES), ...A1_USED])].filter(k => typeof A1 !== 'undefined' && A1[k] && A1[k].e);
+  const bg = document.createElement('div'); bg.className = 'cpk'; bg.id = 'optsPop';
+  bg.innerHTML = `<div class="cpkbox" role="dialog"><div class="row"><b>My drop-down lists</b><span class="grow"></span><button class="btn sm primary" data-opts="save">Save</button><button class="btn sm" data-opts="close">Close</button></div>
+    <p class="help">Every choice comes from Fannie Mae's A-1 list. Untick the ones that never apply to your work and they stop showing in that drop-down (an answer already chosen stays). Tick them again any time.</p>
+    ${keys.map(k => `<fieldset class="optset"><legend>${esc(A1_NAMES[k] || k)}</legend>${A1[k].e.map(v => `<label class="check"><input type="checkbox" data-optk="${esc(k + '=' + v)}" ${H.has(k + '=' + v) ? '' : 'checked'}> ${esc(a1Label(v))}</label>`).join('')}</fieldset>`).join('')}</div>`;
+  document.body.appendChild(bg); }
+document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('[data-act="set-opts"],[data-opts]'); if (!b) return;
+  if (b.dataset.act === 'set-opts') { optsPopup(); return; }
+  const m = document.getElementById('optsPop'); if (b.dataset.opts === 'save' && m) { const hide = [...m.querySelectorAll('[data-optk]')].filter(x => !x.checked).map(x => x.dataset.optk); try { localStorage.setItem('genie.hideOpts', JSON.stringify(hide)); } catch (er) {} toast(hide.length + ' choice' + (hide.length === 1 ? '' : 's') + ' hidden'); rptRedraw(); }
+  if (m) m.remove(); });

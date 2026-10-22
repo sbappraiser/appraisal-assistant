@@ -583,11 +583,11 @@ function oSetup() { if (oSetup.done) return; oSetup.done = true;
   ['#f_ea', '#f_hc'].forEach(id => { const el = $(id); const lab = el && el.closest('label'); if (lab) $('#scopeEaHc').appendChild(lab); });
   document.querySelectorAll('#panel-letter [data-otab]').forEach(b => b.onclick = () => { OTAB = b.dataset.otab; if (cur) cur.otab = OTAB; oRender(cur); window.scrollTo({ top: 0 }); });
   $('#oNext').onclick = () => { window.GENIE_GO = 'insp'; const t = document.querySelector('nav.tabs [data-tab="genie"]'); if (t) t.click(); };
-  $('#hbuAll').onclick = () => { ['Legal', 'Phys', 'Fin', 'Max'].forEach(k => { $('#f_hbu' + k).checked = true; }); $('#f_hbuPresent').value = 'true'; update(); };
+  if ($('#hbuAll')) $('#hbuAll').onclick = () => { ['Legal', 'Phys', 'Fin', 'Max'].forEach(k => { $('#f_hbu' + k).checked = true; }); $('#f_hbuPresent').value = 'true'; update(); };
   ['#f_hbuLegal', '#f_hbuPhys', '#f_hbuFin', '#f_hbuMax', '#f_hbuPresent', '#f_hbuNote', '#f_sowNote', '#f_addlCond', '#f_addlCondText'].forEach(id => { const el = $(id); if (el) { el.addEventListener('input', update); el.addEventListener('change', update); } }); }
 function oDone(f) { const D = f.docs || [], has = t => D.some(d => d.type === t);
   return { docs: D.length > 0, letter: has('clientLetter') || has('myLetter') || !!f.letterMade || ['Sent', 'Signed'].includes(f.status),
-    scope: !!(f.apSales || f.apCost || f.apIncome) && ((f.hbuLegal && f.hbuPhys && f.hbuFin && f.hbuMax) || !!String(f.hbuNote || '').trim()) }; }
+    scope: !!(f.apSales || f.apCost || f.apIncome) }; }   // highest and best use moved to 2 Subject (Oct 22 2026)
 function oRender(f) { oSetup(); if (!f) return; const P = $('#panel-letter'); const ok = oDone(f);
   const tab = OTAB && f.otab === OTAB ? OTAB : (f.otab || (!ok.docs || !ok.letter ? 'docs' : !ok.scope ? 'scope' : 'docs')); OTAB = tab; P.dataset.otab = tab;
   P.querySelectorAll('.otabs [data-otab]').forEach(b => { b.setAttribute('aria-selected', b.dataset.otab === tab ? 'true' : 'false'); b.querySelector('.ock').textContent = ok[b.dataset.otab] ? '✓' : ''; });

@@ -402,6 +402,8 @@ function renderPage() {
       <label class="check"><input type="checkbox" data-wbon="1" ${typeof WB !== 'undefined' && WB.on ? 'checked' : ''}> Workbook view (only the lines you adjust)</label>
       <label>Open the grid <select data-gview="1"><option value="page" ${document.body.classList.contains('gridbox') ? '' : 'selected'}>on the page</option><option value="box" ${document.body.classList.contains('gridbox') ? 'selected' : ''}>in its own box (two scroll bars)</option></select></label>
       <button class="btn sm" data-act="set-lines">Pick the grid lines this report needs…</button>
+      <b>Drop-down lists</b>
+      <button class="btn sm" data-act="set-opts">My drop-down lists – hide choices I never use…</button>
       <button class="btn sm" data-act="starts-edit">Edit my starting points (rates)…</button>
       <b>Your data</b>
       <a class="btn sm" href="?view=db" target="genie-dbs">My databases – what each holds, safety, undo ↗</a>
@@ -449,7 +451,9 @@ function renderPage() {
   <section class="card st st-workbook st-final" id="nuCard">${ON('workbook', 'final') ? notUsedHTML(J) : ''}</section>
   <section class="card st st-workbook" id="timeCard">${ON('workbook') ? timeHTML(J) : ''}</section>
   <section class="card st st-workbook" id="supCard">${ON('workbook') ? supHTML(J) : ''}</section>
+  <section class="card st st-workbook" id="compHistCard">${ON('workbook') ? reportHTML(J, 'comps') : ''}</section>
   <section class="card st st-recon" id="reportCard">${ON('recon') ? reportHTML(J, 'late') : ''}</section>
+  <section class="card st st-final" id="certCard">${ON('final') ? reportHTML(J, 'certs') : ''}</section>
   <section class="card st st-final" id="reviewCard">${ON('final') ? reviewHTML(J) : ''}</section>
   <section class="card st st-final" id="preCard">${ON('final') ? precheckHTML(J) : ''}</section>
   <section class="card st st-final" id="exportCard"><h2>Export</h2>${ON('final') ? exportHTML(J) : ''}</section>
@@ -984,7 +988,7 @@ function pathSteps(J) { const U = usedComps(J), G = G0(J), R = R0(J), o = (app.o
   const conf = U.filter(c => c.confirmed).length; const costOn = J.costOn ?? (R.sowCost === 'true' || (!R.sowCost && o && o.apCost)); const incOn = J.incomeOn ?? (R.sowIncome === 'true' || (!R.sowIncome && !!(o && (o.apIncome || o.rent))));
   return [
     { n: '2', k: 'insp', l: 'Inspection', sub: 'iPad data, photos, sketch', st: 'setup', sel: '#subjCard', done: T(() => !!J.subject.insp), todo: 'drop your iPad Workfile package' },
-    { n: '2', k: 'setup', l: 'Subject details', sub: 'scope · EA/HC · H&BU · site · certifications', st: 'setup', sel: '#setupCard', done: T(() => !precheckGrid(J).some(x => x.sev === 'Must fix' && (preGo0(J, x) || {}).label === 'Report details' && !rptLateMsg(x.msg))), todo: 'answer the questions in Assignment, scope and site' },
+    { n: '2', k: 'setup', l: 'Subject details', sub: 'legal · site · contract · H&BU · approaches · EA/HC', st: 'setup', sel: '#setupCard', done: T(() => !precheckGrid(J).some(x => x.sev === 'Must fix' && (preGo0(J, x) || {}).label === 'Report details' && !rptLateMsg(x.msg))), todo: 'answer the questions in Assignment, scope and site' },
     { n: '3', k: 'market', l: 'Market', sub: 'macro → micro', href: o ? `../appraisal-assistant/?order=${encodeURIComponent(o.id)}&tab=market` : null, done: T(() => !!(o && o.market && (o.market.uad || o.market.charts || o.market.micro))), todo: 'the order’s Market tab' },
     { n: '3', k: 'sel', l: 'Comp selection', sub: `${J.comps.length} considered · ${U.length} used`, st: 'micro', sel: '#compsCard', done: U.length >= 3, todo: 'pick at least 3 comps for the grid' },
     { n: '4', k: 'data', l: 'Comp data', sub: `${conf} of ${U.length} confirmed`, st: 'workbook', sel: '#wbStrip', done: U.length > 0 && conf === U.length, todo: `confirm ${U.length - conf} comp${U.length - conf === 1 ? '' : 's'}` },
