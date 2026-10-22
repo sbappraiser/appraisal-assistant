@@ -245,7 +245,7 @@ function disagree(c, k) {
 function compTitle(c) { const a = V(c, 'addr') || c.label || '(no address)'; const u = V(c, 'unit'); return a + (u ? ' #' + u : ''); }
 
 /* ---------------- sale and listing history ---------------- */
-function priorSales(c) {
+function priorSales(c, all) {   // all: also the ones after this sale (laterSales)
   const out = []; const sale = currentSale(c);
   const add = s => { if (!s || !s.date) return; out.push(s); };
   (c.mlsOther || []).filter(o => o.saleDate && o.salePrice).forEach(o => add({ date: o.saleDate, price: o.salePrice, src: 'MLS ' + o.mls, type: 'Sale' }));   // an earlier MLS sale of the same house (micro or macro search)
@@ -265,8 +265,11 @@ function priorSales(c) {
     if (dup) { if (!dup.src.includes(s.src)) dup.src += '; ' + s.src; if (!dup.price && s.price) dup.price = s.price; } else kept.push({ ...s });
   });
   if (sale && sale.date) kept.forEach(s => { s.monthsBefore = monthsBetween(s.date, sale.date); });
+  if (all) return kept;
   return kept.filter(s => !sale || !sale.date || s.monthsBefore > 0 || s.date <= sale.date);
 }
+/* sales or transfers of a comp AFTER the sale used in the grid (her ask Oct 22 2026: a resale before the effective date belongs in the transfer history comment) */
+function laterSales(c, eff) { const sale = currentSale(c); if (!sale || !sale.date) return []; return priorSales(c, true).filter(s => s.date > sale.date && (!eff || s.date <= eff)); }
 function compFlags(c, job) { return rcMemo('compFlags', c.id, () => compFlags0(c, job)); }
 function compFlags0(c, job) {
   const F = []; const sale = currentSale(c); const yb = V(c, 'yearBuilt'); const price = V(c, 'salePrice');
@@ -275,6 +278,7 @@ function compFlags0(c, job) {
   else if (/Pending|Under Contract|Contingent/i.test(st)) F.push({ sev: 'info', t: 'Pending sale – contract price may be unknown' });
   else if (/Expired|Withdrawn|Cancel/i.test(st)) F.push({ sev: 'warn', t: st + ' listing (did not sell)' });
   const st2 = V(c, 'saleType'); if (st2 && !/ArmLth|Listing/i.test(st2)) F.push({ sev: 'warn', t: 'Sale type: ' + (SALE_TYPE_TEXT[st2] || st2) + (c.src.mls && c.src.mls.saleTypeNote ? ' (' + c.src.mls.saleTypeNote + ')' : '') });
+  laterSales(c).forEach(s => F.push({ sev: 'warn', t: `${s.type === 'Sale' ? 'Sold' : 'Transferred'} again after this sale: ${showDate(s.date)}${s.price ? ' ' + money(s.price) : ''} – mention it in the comparables' transfer history comment (Draft it adds it), and consider the newer sale` }));
   const PS = priorSales(c); const before = yb ? PS.filter(s => s.price && s.date && +s.date.slice(0, 4) < +yb) : [];
   if (before.length) F.push({ sev: 'info', t: `Sold before the house was built (${yb}): ${before.slice(0, 3).map(s => showDate(s.date) + ' ' + money(s.price)).join(', ')}${before.length > 3 ? ' …' : ''} – land or teardown ${before.length > 1 ? 'sales, not resales' : 'sale, not a resale'}` });
   PS.forEach(s => {
