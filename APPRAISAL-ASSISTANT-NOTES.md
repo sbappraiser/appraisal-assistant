@@ -916,3 +916,4 @@ Decisions (her, Oct 19–20): "Exterior of dwelling" instead of left/right/side 
 - iPad 6x-1022-1618 (her level 2 trouble + 'nothing to undo'): openLevel (tap the active level chip) → Delete level and everything on it (pushUndo); empty-level ctx hint; ☰ Clone on an empty level asks for the source level; undo/redo stacks saved to DB sketches 'undo:<id>' (last 30) and reloaded with the sketch. st253.
 - iPad 6x-1022-1621 (her: how do I accept the angled line?): dial button renamed green ✓ Draw this wall (.dlgo); the preview end shows a green ✓ – one tap on it (within 34 px) draws the wall; preview label says 'tap ✓ to draw'. st254.
 
+- iPad 6x-1022-1630 (her iPad screenshots): cursor drawn as an orange select dot unless SK.mode === 'start' (red crosshair); addWall in start mode with a cursor calls placeStart first (length + arrow starts the area); other-level outlines show grey wall lengths (view scale ≥ 6). st256.

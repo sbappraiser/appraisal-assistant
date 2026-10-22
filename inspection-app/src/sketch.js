@@ -396,7 +396,9 @@ function draw() {
   const C = computeAreas();
   // other levels as faint outlines for lining up floors
   SK.sk.areas.filter(a => PG(a) === SK.pg && a.level !== SK.level && a.pts.length > 1).forEach(a => { ctx.strokeStyle = 'rgba(70,80,120,.55)'; ctx.lineWidth = 1.6; pathOf(a); ctx.stroke();
-    if (a.closed && a.pts.length > 2) { const sh = shape(a); const [X, Y] = toScr([Math.min(...sh.map(q => q[0])), Math.min(...sh.map(q => q[1]))]); ctx.fillStyle = 'rgba(70,80,120,.75)'; ctx.font = `700 ${11 * TS()}px system-ui,sans-serif`; ctx.textAlign = 'left'; ctx.fillText(LEVEL_NAME(a.level), X + 5, Y + 14 * TS()); } });
+    if (a.closed && a.pts.length > 2) { const sh = shape(a); const [X, Y] = toScr([Math.min(...sh.map(q => q[0])), Math.min(...sh.map(q => q[1]))]); ctx.fillStyle = 'rgba(70,80,120,.75)'; ctx.font = `700 ${11 * TS()}px system-ui,sans-serif`; ctx.textAlign = 'left'; ctx.fillText(LEVEL_NAME(a.level), X + 5, Y + 14 * TS()); }
+    if (SK.view.s >= 6) { const c0 = centroid(shape(a)); ctx.font = `600 ${11 * DS()}px system-ui,sans-serif`; ctx.textAlign = 'center'; walls(a).forEach(([i, p, q]) => { const L = wallLen(p, q); if (L < 2) return; const m = [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2]; const nx = -(q[1] - p[1]) / L, ny = (q[0] - p[0]) / L; const out = ((m[0] + nx) - c0[0]) ** 2 + ((m[1] + ny) - c0[1]) ** 2 > (m[0] - c0[0]) ** 2 + (m[1] - c0[1]) ** 2 ? 1 : -1;
+      const [X, Y] = toScr([m[0] + nx * out * 14 / SK.view.s, m[1] + ny * out * 14 / SK.view.s]); const t = r1(L).toFixed(1) + "'"; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(255,255,255,.9)'; ctx.strokeText(t, X, Y + 4); ctx.fillStyle = 'rgba(70,80,120,.8)'; ctx.fillText(t, X, Y + 4); }); } });   // her Oct 22: see the floor below's wall lengths
   const mine = SK.sk.areas.filter(a => here(a));
   // fills (largest first so inner areas show on top)
   [...mine].filter(a => a.closed).sort((a, b) => polyArea(shape(b)) - polyArea(shape(a))).forEach(a => { const f = FILL(a); if (!f) return; ctx.fillStyle = f; pathOf(a); ctx.fill(); });
@@ -428,7 +430,8 @@ function draw() {
   if (SK.dragPrev) { const d = SK.dragPrev; const [X1, Y1] = toScr(d.from), [X2, Y2] = toScr(d.pt); ctx.strokeStyle = '#ff7a00'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(X1, Y1); ctx.lineTo(X2, Y2); ctx.stroke();
     const L = wallLen(d.from, d.pt); ctx.font = '700 20px system-ui'; ctx.textAlign = 'left'; const t = `${r1(L).toFixed(1)}'${d.snap === 'corner' ? ' → corner' : d.snap === 'dot' ? ' · on dot' : d.snap === 'align' ? ' · lined up' : d.snap === '45' ? ' · ' + Math.round(d.ang) + '°' : ''}`; const w = ctx.measureText(t).width;
     ctx.fillStyle = 'rgba(255,255,255,.9)'; ctx.fillRect(X2 + 12, Y2 - 34, w + 12, 28); ctx.fillStyle = '#c75b00'; ctx.fillText(t, X2 + 18, Y2 - 13); }
-  if (SK.cursor) { const [X, Y] = toScr(SK.cursor); ctx.strokeStyle = '#d00'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(X - 16, Y); ctx.lineTo(X + 16, Y); ctx.moveTo(X, Y - 16); ctx.lineTo(X, Y + 16); ctx.stroke(); ctx.beginPath(); ctx.arc(X, Y, 8, 0, 7); ctx.stroke(); }
+  if (SK.cursor && SK.mode !== 'start') { const [X, Y] = toScr(SK.cursor); ctx.beginPath(); ctx.arc(X, Y, 9, 0, 7); ctx.fillStyle = 'rgba(255,122,0,.35)'; ctx.fill(); ctx.lineWidth = 2.5; ctx.strokeStyle = '#ff7a00'; ctx.stroke(); ctx.beginPath(); ctx.arc(X, Y, 3, 0, 7); ctx.fillStyle = '#ff7a00'; ctx.fill(); }
+  else if (SK.cursor) { const [X, Y] = toScr(SK.cursor); ctx.strokeStyle = '#d00'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(X - 16, Y); ctx.lineTo(X + 16, Y); ctx.moveTo(X, Y - 16); ctx.lineTo(X, Y + 16); ctx.stroke(); ctx.beginPath(); ctx.arc(X, Y, 8, 0, 7); ctx.stroke(); }
   drawIWalls(ctx, toScr, s, IW().filter(w => here(w)), SK.sel && SK.sel.type === 'iwall' ? SK.sel.id : null);
   if (SK.sel && SK.sel.type === 'iwall') { const w = IW().find(x => x.id === SK.sel.id); if (w) { const [X1, Y1] = toScr(w.a), [X2, Y2] = toScr(w.b); ctx.font = '700 14px system-ui'; ctx.fillStyle = '#c75b00'; ctx.textAlign = 'center'; ctx.fillText(r1(wallLen(w.a, w.b)).toFixed(1) + "'", (X1 + X2) / 2, (Y1 + Y2) / 2 - 8); } }
   if (SK.mode === 'iwall' && SK.iw && SK.iw.start) { const [X, Y] = toScr(SK.iw.start); ctx.fillStyle = '#ff7a00'; ctx.beginPath(); ctx.arc(X, Y, 7, 0, 7); ctx.fill(); }
@@ -538,7 +541,8 @@ function addWallTo(pt) {
   markDirty(); draw(); renderPanel();
 }
 function addWall(dx, dy) {
-  const a = curArea(); if (!a) return toast('Tap “New area” first');
+  if (!curArea() && SK.mode === 'start' && SK.cursor) { if (!(parseFloat(SK.entry) > 0)) return toast('Type the wall length first'); const e = SK.entry; placeStart(SK.cursor, true); SK.entry = e; }   // her Oct 22: start at the cursor without a separate Start here
+  const a = curArea(); if (!a) return toast(SK.mode === 'start' ? 'Tap the sketch to drop the start point first' : 'Tap “New area” first');
   const L = parseFloat(SK.entry); if (!(L > 0)) return toast('Type the wall length first');
   const len = Math.hypot(dx, dy); const last = a.pts[a.pts.length - 1];
   pushUndo(); const add = SK.insideOn ? 2 * wallT() : 0; if (add) { a.inside = a.inside || {}; a.inside[a.pts.length - 1] = true; }
