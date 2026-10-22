@@ -871,6 +871,16 @@ function openHelp() { openSheet(`<h3>How to use the sketch</h3><div class="calc"
   <p><b>Moving around:</b> two fingers to zoom and move. ◎ centers on what you are working on. Blue dots line up with other corners (☰ › Line-up dots).</p>
   <p><b>☰ menu:</b> save to the inspection, redo, add a level or page, copy this level to another level (a second story you can still change), text size, underlay, versions.</p>
   <p class="help">While you draw an area, the level buttons and address hide to give you more room.</p></div><div class="row"><button class="btn" data-close>Close</button></div>`); }
+function iwToArea(id) {   // her Oct 22 sketch: the outline was drawn as interior walls – turn the connected walls into an area and keep going
+  const near = (p, q) => Math.hypot(p[0] - q[0], p[1] - q[1]) < 0.06; const all = IW().filter(here); const w0 = all.find(x => x.id === id); if (!w0) return;
+  const used = new Set([w0]); let pts = [w0.a, w0.b]; let grew = true;
+  while (grew) { grew = false; for (const x of all) { if (used.has(x)) continue; const head = pts[0], tail = pts[pts.length - 1];
+      if (near(x.a, tail)) { pts.push(x.b); } else if (near(x.b, tail)) { pts.push(x.a); } else if (near(x.a, head)) { pts.unshift(x.b); } else if (near(x.b, head)) { pts.unshift(x.a); } else continue; used.add(x); grew = true; } }
+  const closed = pts.length > 3 && near(pts[0], pts[pts.length - 1]); if (closed) pts.pop();
+  const def = (SK.lastDef && defOf(SK.lastDef).id) || ([...DEFAULT_DEFS, ...(SK.lib.defs || [])].find(d => d.bucket === 'LIV') || DEFAULT_DEFS[0]).id;
+  pushUndo(); SK.sk.iwalls = IW().filter(x => !used.has(x)); const a = { id: uid(), def, level: SK.level, pg: SK.pg, pts: pts.map(p => [r3(p[0]), r3(p[1])]), closed };
+  SK.sk.areas.push(a); SK.sel = null; SK.mode = closed ? 'select' : 'draw'; SK.drawId = closed ? null : a.id; markDirty(); draw(); renderPanel(); centreNow();
+  toast(closed ? `${used.size} walls made into a ${defOf(def).name} – tap it › Properties to change the type` : `${used.size} walls are now a ${defOf(def).name} – keep drawing from the orange point and tap the green start to close it (tap the area later › Properties to change the type)`, 9000); }
 function renderPanel() {
   const el = document.getElementById('skPanel'); if (!el) return;
   const a = curArea(); const sel = SK.sel;
@@ -903,7 +913,7 @@ function renderPanel() {
       ${y.type === 'door' || y.type === 'entry' ? '<button class="btn sm" id="syHinge">⇄ Hinge side</button><button class="btn sm" id="sySwing">⇅ Swing in / out</button>' : y.type === 'dbldoor' ? '<button class="btn sm" id="sySwing">⇅ Swing in / out</button>' : ''}
       <button class="btn sm danger" id="skDel">Delete</button><div class="nmpos"><b>Turn</b> ${rotBar('s' + y.id)}</div><span class="help">Drag it to move it.</span></div>`; }
   else if (sel && sel.type === 'iwall') { const w = IW().find(x => x.id === sel.id); const L = w ? r1(wallLen(w.a, w.b)) : 0;
-    ctxHtml = `<div class="ctx"><b>Interior wall: ${L.toFixed(1)} ft</b> <label class="inl">New length <input id="iwLen" class="txt num" inputmode="decimal" value="${L.toFixed(1)}"></label><button class="btn primary sm" id="iwSet">Apply</button><button class="btn sm danger" id="skDel">Delete</button><span class="help">Interior walls never change the square footage.</span></div>`; }
+    ctxHtml = `<div class="ctx"><b>Interior wall: ${L.toFixed(1)} ft</b> <label class="inl">New length <input id="iwLen" class="txt num" inputmode="decimal" value="${L.toFixed(1)}"></label><button class="btn primary sm" id="iwSet">Apply</button><button class="btn sm primary" id="iwMore">✎ Keep drawing from here</button><button class="btn sm" id="iwArea">⬠ Make these walls an area</button><button class="btn sm danger" id="skDel">Delete</button><span class="help">Interior walls never change the square footage – the outline of a room or the house is an area.</span></div>`; }
   else if (sel && sel.type === 'label') { const l = SK.sk.labels.find(x => x.id === sel.id);
     const lk = l.room && l.room.id && ((SK.ins.lists || {})[l.room.list] || []).find(x => x.id === l.room.id);
     ctxHtml = `<div class="ctx"><b>${esc(l.text)}</b> · ${l.room ? (l.room.gone ? 'room was removed on the Interior tab' : lk ? 'linked to ' + esc(itemName(l.room.list, lk)) + ' on the Interior tab' : esc(roomWord(l.room)) + ' – added to the Interior tab when saved') : 'label only'} <button class="btn sm" id="skLblEdit">Change</button><button class="btn sm danger" id="skDel">Delete</button><span class="help">Drag it to move it.</span></div>`; }
@@ -978,6 +988,10 @@ function renderPanel() {
   on('skDoor', () => openSymbols(null, true));
   on('skIWall', () => { if (curArea()) return toast('Close or stop the current area first'); SK.mode = SK.mode === 'iwall' ? 'select' : 'iwall'; SK.iw = { start: SK.cursor ? [...SK.cursor] : null }; SK.sel = null; SK.cursor = null; draw(); renderPanel(); });
   on('iwDone', () => { SK.mode = 'select'; SK.iw = null; draw(); renderPanel(); }); on('iwBreak', () => { SK.iw.start = null; draw(); renderPanel(); });
+  on('iwMore', () => { const w = IW().find(x => x.id === sel.id); if (!w) return; const near = (p, q) => Math.hypot(p[0] - q[0], p[1] - q[1]) < 0.06; const others = IW().filter(x => x !== w && here(x));
+    const free = !others.some(x => near(x.a, w.b) || near(x.b, w.b)) ? w.b : !others.some(x => near(x.a, w.a) || near(x.b, w.a)) ? w.a : w.b;   // the open end
+    SK.mode = 'iwall'; SK.iw = { start: [...free], prev: free === w.b ? w.a : w.b }; SK.sel = null; draw(); renderPanel(); centreNow(); toast('Keep drawing from the orange point – type a length and tap an arrow, or tap a blue dot'); });
+  on('iwArea', () => iwToArea(sel.id));
   on('iwSet', () => { const w = IW().find(x => x.id === sel.id); const v = parseFloat(document.getElementById('iwLen').value); const L = wallLen(w.a, w.b); if (!(v > 0.2) || !L) return; pushUndo(); w.b = [r3(w.a[0] + (w.b[0] - w.a[0]) * v / L), r3(w.a[1] + (w.b[1] - w.a[1]) * v / L)]; markDirty(); draw(); renderPanel(); });
   if (sel && sel.type === 'symbol') { const y = SK.sk.symbols.find(x => x.id === sel.id); const setSz = (k, v) => { if (!(v > 0.4)) return; pushUndo(); y[k] = Math.round(v * 10) / 10; if (y.type === 'spiral') y.h = y.w; if (y.type === 'door' || y.type === 'entry') y.h = y.w; if (y.type === 'dbldoor') y.h = y.w / 2; markDirty(); draw(); renderPanel(); };
     on('syHinge', () => { pushUndo(); y.flip = !y.flip; markDirty(); draw(); }); on('sySwing', () => { pushUndo(); flipSwing(y); markDirty(); draw(); });
