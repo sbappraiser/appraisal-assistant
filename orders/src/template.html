@@ -247,7 +247,12 @@ nav.octo button.cg { border-bottom: 4px solid #b9a3e0; }
 nav.t1sub { padding-left: 10px; }
 nav.t1sub button { font: inherit; font-size: 14px; border: 1px solid var(--line); background: #fff; border-radius: 8px; padding: 4px 10px; cursor: pointer; }
 nav.t1sub button[aria-current="true"] { border-color: #1f3a68; color: #1f3a68; font-weight: 700; background: #eef4ff; }
-.setcard { margin-top: 14px; } .liblinks { font-size: 16px; line-height: 1.8; }
+.setcard { margin-top: 14px; }
+.libdrop { display: flex; flex-direction: column; gap: 4px; align-items: center; justify-content: center; border: 2.5px dashed #1f3a68; border-radius: 14px; padding: 26px; background: #f4f7fb; cursor: pointer; text-align: center; margin: 8px 0 14px; }
+.libdrop b { font-size: 18px; color: #1f3a68; } .libdrop span { color: #556; } .libdrop.over { background: #e3ecfa; }
+.libsearch { display: flex; gap: 8px; margin: 6px 0 10px; } .libsearch input { flex: 1; font-size: 16px; }
+.libhit { border-top: 1px solid var(--line); padding: 8px 0; } .libhit div { font-size: 14px; line-height: 1.45; margin-top: 3px; } .libhit mark { background: #fff1a8; }
+.libtab select { max-width: 330px; }
 .mkocto { display: flex; gap: 10px; align-items: center; margin: 0 0 10px; }
 </style>
 </head>
@@ -506,8 +511,8 @@ nav.t1sub button[aria-current="true"] { border-color: #1f3a68; color: #1f3a68; f
   <div class="hmpanel" id="bkAll"></div>
 </section>
 <section class="panel" id="panel-library" hidden>
-  <div class="listHead"><div><h2>Library</h2><p class="help">Your reference documents, searchable, in one place. Coming next in the build: Fannie Mae's UAD 3.6 guidance (F-1 URAR guide, A-1 fields and choices, D-1 samples, FAQs) and the UAD 2.6 guidelines; Selling Guide and other rules; USPAP with its FAQs and Advisory Opinions (your own purchased copy – it is copyrighted); your clients' guidelines. Each question's ⓘ will open the matching F-1 line.</p></div></div>
-  <ul class="liblinks"><li><a href="https://singlefamily.fanniemae.com" target="_blank" rel="noopener">Fannie Mae Single-Family</a> – UAD 3.6, the Selling Guide</li><li><a href="https://appraisalfoundation.org" target="_blank" rel="noopener">The Appraisal Foundation</a> – USPAP</li></ul>
+  <div class="listHead"><div><h2>Library</h2><p class="help">Your reference documents in one place, searchable: Fannie Mae's UAD 3.6 guidance (F-1, A-1, D-1, FAQs), the UAD 2.6 guidelines, the Selling Guide, USPAP with its FAQs and Advisory Opinions, and your clients' guidelines.</p></div></div>
+  <div id="libBody"></div>
 </section>
 <section class="panel" id="panel-claude" hidden>
   <div class="listHead"><div><h2>Claude</h2><p class="help">Claude helps in every tentacle. Where you will find it:</p></div></div>
@@ -527,6 +532,7 @@ nav.t1sub button[aria-current="true"] { border-color: #1f3a68; color: #1f3a68; f
     <details open><summary>The octopus – how the Appraisal Assistant is laid out</summary><ol>
       <li><b>Top right, always there:</b> Home · Library · Comments (your comment library) · Database center · Settings (data folder, password lock, Claude) · Help.</li>
       <li><b>The blue bar is the open order, tentacle by tentacle,</b> in the order you work: <b>1 Intake</b> (this order's documents, engagement letter, assignment and scope; also All orders, New order, Clients, Bookkeeping, Letter templates) · <b>2 Subject</b> (inspection and subject details) · <b>3 Market</b> (market tab, then comp selection) · <b>4 Sales comparison</b> (comp data, grid, support, comment) · <b>5 Cost</b> · <b>6 Income</b> (only when you develop it) · <b>7 Reconciliation</b> · <b>8 Review and wrap-up</b> (review genie, pre-check, SFREP export) · <b>9 Exhibits</b> (maps, photos).</li>
+      <li><b>Library</b> (Head › Library): drag your documents onto the dashed box, or click it and choose them – PDF, Word, Excel or text (F-1, A-1, D-1, UAD 2.6 guidelines, USPAP, Selling Guide, client guidelines). Each is read once and kept on this computer, backed up with your documents. Type words in Search to find every page that has them; click a result to open the PDF at that page. Change "What it is" if the guess is wrong. A scan with no text shows a warning – run Acrobat › Scan &amp; OCR › Recognize text and add it again.</li>
       <li><b>The Comp genie</b> is the help for the four tentacles that use data, databases and comparables – 3 Market, 4 Sales comparison, 5 Cost, 6 Income (purple underline). 2 Subject, 7 Reconciliation, 8 Review and wrap-up and 9 Exhibits are tentacles of the Appraisal Assistant. The <b>Head</b> (top right) holds the tools for every section: Library, Common responses, Databases, Claude, Settings, Help.</li>
       <li>A green ✓ on a tentacle means everything in it is done. Tentacles 2 and 4–9 open inside this window; their numbered steps underneath carry the same tentacle number.</li>
       <li>Click a tentacle with no order open and it asks you to open one first (1 Intake › All orders, or New order).</li>
