@@ -9,6 +9,7 @@
    on the purchase contract, like any other), "Use these parts" for the parts sentence, and "Use as 20.011".
    ===================================================================== */
 const CB_TYPES = ['contract', 'counter', 'addendum', 'leaseback'];
+const CB_ST = [['open', 'Still to check'], ['ok', 'Checked – fine'], ['asked', 'Asked the agent / escrow'], ['report', 'Addressed in the report'], ['na', 'Not an issue']];
 const CB = { plan: null, busy: false, show: true };
 const cbDocs = () => ((cur && cur.docs) || []).filter(d => CB_TYPES.includes(d.type));
 const cbMain = () => { const L = cbDocs(); return L.find(d => d.type === 'contract') || L[0] || null; };
@@ -104,7 +105,9 @@ function cbHTML(P) {
     <table class="facts cbfinal">${CB_FINAL.map(([k, l]) => { const o = P.final[k] || {}; const v = String(o.v || '').trim(); if (!v) return ''; const used = P.used && P.used[k];
       const rep = P.replaced && P.replaced[k] ? `<br><small class="muted">replaced what you had accepted before: ${h(P.replaced[k].join('; '))}</small>` : '';
       return `<tr><th>${h(l)}</th><td>${(used || v).length > 60 ? `<textarea data-cbv="${k}" rows="${Math.min(6, 1 + Math.ceil((used || v).length / 70))}">${h(used || v)}</textarea>` : `<input data-cbv="${k}" value="${h(used || v)}">`} ${src(o)}${rep}</td><td>${used ? '<span class="chip ok">✓ accepted</span>' : ''}<button type="button" class="btn small" data-cbacc="${k}">${used ? 'Accept again' : 'Accept'}</button></td></tr>`; }).join('')}</table>
-    ${P.flags.length ? `<h4>To check</h4><ul>${P.flags.map(f => `<li>${h(f.text)} ${src(f)}</li>`).join('')}</ul>` : ''}
+    ${P.flags.length ? `<h4>To check <span class="opt">answer each one – your notes stay with the order; “Add to 20.011” puts your answer at the end of the draft below</span></h4><ol class="cbflags">${P.flags.map((f, i) => { const a = (P.answers || {})[i] || {};
+      return `<li class="${a.st && a.st !== 'open' ? 'done' : ''}"><div>${h(f.text)} ${src(f)}</div><div class="row"><select data-cbst="${i}">${CB_ST.map(([k, l]) => `<option value="${k}" ${(a.st || 'open') === k ? 'selected' : ''}>${l}</option>`).join('')}</select>
+        <textarea data-cbans="${i}" rows="2" placeholder="Your answer or what you found (for example: verified with the listing agent – COE is 21 days; seller rent-back is free, no RLAS)">${h(a.t || '')}</textarea><button type="button" class="btn ghost small" data-cbadd="${i}">Add to 20.011</button></div></li>`; }).join('')}</ol>` : ''}
     ${P.summary ? `<label>Draft 20.011 Sales contract analysis <span class="opt">Claude's wording – read and edit it; ${P.summary.length.toLocaleString()} of 5,000 characters</span><textarea id="cbSum" rows="7">${h(P.summary)}</textarea></label>
       <div class="row"><button type="button" class="btn small" id="cbUseSum">Use as 20.011</button><button type="button" class="btn ghost small" id="cbCopy">Copy</button><button type="button" class="btn ghost small" id="cbHide">Hide</button></div>` : '<div class="row"><button type="button" class="btn ghost small" id="cbHide">Hide</button></div>'}`;
 }
@@ -112,8 +115,10 @@ async function renderCtBatch() {
   const box = $('#ctBatch'); if (!box || !cur) return; const docs = cbDocs(); const P = cur.contractPacket;
   if (!docs.length && !P) { box.innerHTML = ''; return; }
   const ai = cur.aiUse, ok = ai === 'Yes' || ai === 'Redacted', key = aiKey();
-  const fresh = docs.filter(d => !(P && (P.files || []).includes(d.name)));
-  let html = `<div class="permbatch"><b>Contract packet: ${docs.length} file${docs.length === 1 ? '' : 's'}</b> (${docs.map(d => h(DOC_LABEL[d.type] || d.type)).join(', ')}). `
+  const base = n => String(n || '').replace(/ - REDACTED\.pdf$/i, '.pdf').toLowerCase(); const sent = new Set(((P && P.files) || []).map(base));
+  const fresh = [...new Map(docs.filter(d => !sent.has(base(d.name))).map(d => [base(d.name), d])).values()];
+  const uniq = [...new Map(docs.map(d => [base(d.name), d])).values()];
+  let html = `<div class="permbatch"><b>Contract packet: ${uniq.length} file${uniq.length === 1 ? '' : 's'}</b> (${uniq.map(d => h(DOC_LABEL[d.type] || d.type)).join(', ')}${docs.length > uniq.length ? ' – with your redacted copies' : ''}). `
     + (P ? `<span class="chip ok">✓ read together · ${h(new Date(P.at).toLocaleDateString())}</span>` : '') + (P && fresh.length ? `<span class="chip warn">${fresh.length} new file${fresh.length === 1 ? '' : 's'} not read yet – read the packet again</span>` : '') + ' ';
   if (!docs.length) html += '';
   else if (!ok) html += `To have Claude read the contract, counters and addenda together (negotiation, final price, last signature, total pages), set <b>AI use</b> on this order to Yes or Redacted (it is <b>${h(ai || 'not set')}</b>). Each file can still be read on its own with <b>Read</b>.`;
@@ -144,6 +149,11 @@ async function renderCtBatch() {
   const hd = $('#cbHide'); if (hd) hd.onclick = () => { CB.show = false; renderCtBatch(); };
   const pa = $('#cbParts'); if (pa) pa.onclick = () => { cbUseParts(); renderCtBatch(); };
   box.querySelectorAll('[data-cbacc]').forEach(b => b.onclick = () => { const k = b.dataset.cbacc; const v = box.querySelector(`[data-cbv="${k}"]`).value.trim(); if (!v) { toast('Nothing to accept'); return; } cbAccept(k, v); renderFacts(); renderCtBatch(); toast('Accepted on the purchase contract'); });
+  const ans = i => { const P2 = cur.contractPacket; P2.answers = P2.answers || {}; return P2.answers[i] = P2.answers[i] || {}; };
+  box.querySelectorAll('[data-cbst]').forEach(e => e.onchange = () => { ans(e.dataset.cbst).st = e.value; saveLetter(true, true); e.closest('li').classList.toggle('done', e.value !== 'open'); });
+  box.querySelectorAll('[data-cbans]').forEach(e => e.onchange = () => { ans(e.dataset.cbans).t = e.value; saveLetter(true, true); });
+  box.querySelectorAll('[data-cbadd]').forEach(b => b.onclick = () => { const i = b.dataset.cbadd; const t = box.querySelector(`[data-cbans="${i}"]`).value.trim(); if (!t) { toast('Type your answer first'); return; }
+    const sm2 = $('#cbSum'); if (sm2) { sm2.value = sm2.value.trim() + (sm2.value.trim() ? ' ' : '') + t; cur.contractPacket.summary = sm2.value; } ans(i).t = t; if ((ans(i).st || 'open') === 'open') ans(i).st = 'report'; saveLetter(true, true); renderCtBatch(); toast('Added to the end of the draft – click “Use as 20.011” when the draft is ready'); });
   const sm = $('#cbSum'); if (sm) sm.onchange = () => { cur.contractPacket.summary = sm.value; saveLetter(true, true); };
   const us = $('#cbUseSum'); if (us) us.onclick = () => { cur.uad = cur.uad || {}; if (String(cur.uad.cmt || '').trim() && !confirm('Replace the 20.011 Sales contract analysis you already have with this draft?')) return; cur.uad.cmt = $('#cbSum').value; saveLetter(true, true); toast('It is the 20.011 Sales contract analysis now (open the purchase contract with Read to see or edit it)', 7000); };
   const cp = $('#cbCopy'); if (cp) cp.onclick = async () => { try { await navigator.clipboard.writeText($('#cbSum').value); toast('Copied'); } catch (e) { toast('Could not copy'); } };

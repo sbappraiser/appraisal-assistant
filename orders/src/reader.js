@@ -269,7 +269,7 @@ async function rdMore(g, cv, vp, sc, tc, orig, pg) {
         const xs = pts.map(p => p[0]), ys = pts.map(p => p[1]); pics.push({ x: Math.min(...xs), y: Math.min(...ys), w: Math.max(...xs) - Math.min(...xs), h: Math.max(...ys) - Math.min(...ys) }); } });
     const near = (p, it) => Math.abs((p.y + p.h / 2) - (it.y - it.h / 2)) < Math.max(p.h, it.h) * 1.6 + 6 * sc;
     const anchors = I.filter(it => /^(buyers?|sellers?|buyer'?s? signature|seller'?s? signature|signature|initials?|by|date)\s*:?$/i.test(it.s.trim()) || /\b\d{1,2}\/\d{1,2}\/\d{2,4}\b/.test(it.s) || (rdCleanItem(it.s) && rdLooksLikeName(it.s, subj)));
-    pics.forEach(p => { if (p.w < 6 || p.h < 4 || p.w > cv.width * 0.6 || p.h > cv.height * 0.12) return; if (anchors.some(it => near(p, it))) box(p.x - 3, p.y - 3, p.w + 6, p.h + 6); }); } catch (e) { console.warn('pictures on the page', e); }
+    pics.forEach(p => { if (Math.max(p.w, p.h) < 16 * sc || p.w < 6 || p.h < 4 || p.w > cv.width * 0.6 || p.h > cv.height * 0.12) return; if (anchors.some(it => near(p, it))) box(p.x - 3, p.y - 3, p.w + 6, p.h + 6); }); } catch (e) { console.warn('pictures on the page', e); }
   /* prices, dates, percents and the subject's own address stay readable (her ask Oct 22 2026: half of the address kept getting covered) */
   const am = String(f.address || '').match(/^\s*(\d+[A-Za-z]?)\s+([A-Za-z]+)/); const zip = (String(f.address || '') + ' ' + String(f.zip || '')).match(/\b(9\d{4})\b/); const city = String(f.city || '').trim().toLowerCase();
   const isAddr = t => { const l = String(t).toLowerCase(); return !!((am && am[2].length > 3 && l.includes(am[2].toLowerCase())) || (zip && l.includes(zip[1])) || (city.length > 3 && l.includes(city) && /\b(ca|california)\b/.test(l))); };
