@@ -657,6 +657,7 @@ nav.tabs button[aria-selected="true"] { background: var(--look-navy) !important;
       <li><b>Extraordinary assumptions and hypothetical conditions</b> have no separate SFREP field: your wording goes in Additional Scope of Work, and the <b>Market value condition</b> (As is / Subject to repair / Subject to inspection / Subject to completion per plans) tells Fannie Mae one was used. The pre-check warns when they don't agree – e.g. an extraordinary assumption with "As is".</li>
       <li>SFREP has three scope of work places: the <b>Scope of Work</b> paragraph is printed by Fannie Mae and cannot be changed; <b>Additional Scope of Work</b> is the order's Scope of work box (what you did beyond the standard) together with your extraordinary assumptions and hypothetical conditions – 2,500 characters for all three; <b>Assignment Information and Scope of Work Commentary</b> (e.g. your inspection-limits paragraph) is the last box under Assignment in the Comp genie's Report details.</li>
       <li>The Comp genie's path now runs: ④ Inspection → ⑤ <b>Assignment, scope and site</b> (assignment, scope of work, client-requested conditions, extraordinary assumptions and hypothetical conditions, highest and best use, subject and site with the site and subject comments, prior services and certifications) → ⑥ Market → comps, grid and support → ⑫ Cost → ⑬ Income (its own page; only when you develop it, e.g. with a rent survey – answer Yes to "Income approach developed?") → ⑭ <b>Reconciliation</b> (the transfer-history analyses, each approach's indicated value filled in, the opinion of value – it starts as the sales comparison value until you type yours – exposure time and the reconciliation comment) → ⑮ Exhibits → ⑯ Review and export.</li>
+      <li>In the Comp genie, each line of a red <b>“answers still needed”</b> list is a link: click it to go to that box. Legal description: <b>Import the deed (PDF)</b> beside the box reads the legal description (and an EXCEPTING/RESERVING clause, e.g. mineral rights, into Rights not included). A scanned deed with no text needs Acrobat › Scan &amp; OCR › Recognize text first. Check the result – scanned text can misread a character (e.g. “S00 FEET” for 500).</li>
       <li>Each comment box shows how many characters you have used of what SFREP allows (e.g. 412 / 5,000) as you type; it turns red at the limit.</li>
       <li><b>Market commentary</b> (what the numbers don't show) is on the order's <b>Market</b> tab under the Price Trend commentary, with your other market answers. <b>Additional client-requested conditions</b> are on the order's <b>③ Scope of work</b> tab; the Comp genie uses them unless you change them there.</li>
       <li>Exposure time: the days-on-market table in Reconciliation now shows each comp's list price, sale price and sale-to-list ratio, and how many sold over the list price.</li>
@@ -977,7 +978,7 @@ nav.tabs button[aria-selected="true"] { background: var(--look-navy) !important;
 </div>
 <div id="toast" role="status" hidden></div>
 <script>
-const BUILD='o1-1022-0200';
+const BUILD='o1-1022-0204';
 const G = (() => {
 /* ---------------- small helpers ---------------- */
 const $ = (s, r = document) => r.querySelector(s);

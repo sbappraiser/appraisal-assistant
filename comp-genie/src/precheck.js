@@ -172,7 +172,7 @@ function preGo0(J, x) { const m = String(x.msg || ''); const byUse = n => usedCo
   if (/^The client (asks|says)/i.test(m)) return { stage: 'final', text: 'Scope of work', label: 'Report details' };
   if (/Reconciliation comment is blank/i.test(m)) return { stage: 'final', text: 'Reconciliation comment', label: 'Report details' };
   if (/Additional scope of work is Yes/i.test(m)) return { stage: 'final', text: 'Additional scope of work – text', label: 'Report details' };
-  if (/Legal description is blank/i.test(m)) return { stage: 'final', text: 'Legal description', label: 'Report details' };
+  if (/Legal description is blank/i.test(m)) return { stage: 'final', sel: 'textarea[data-rpt="legal"]', up: 'label', text: 'Legal description', label: 'Report details' };
   if (/Opinion of market value/i.test(m)) return { stage: 'final', text: 'Opinion of market value', label: 'Report details' };
   if ((r = m.match(/^Comp (\d+): Construction method/))) { const c = byUse(r[1]); if (c) return { stage: 'workbook', sel: `[data-gfact="${c.id}|constr"]`, label: 'comp ' + c.use + ' construction method' }; }
   if (/exposure time/i.test(m)) return { stage: 'final', text: 'Value and reconciliation', label: 'Report details' };
@@ -181,14 +181,16 @@ function preGo0(J, x) { const m = String(x.msg || ''); const byUse = n => usedCo
   if (/COST_APPROACH|REPLACEMENT_REPRODUCTION|IMPROVEMENT_COST|SiteEstimated|Cost approach/i.test(m)) return { stage: 'cost', sel: '#costCard', label: 'Cost approach' };
   if (/^Subject ·/.test(m)) return { stage: 'final', sel: '#reportCard', label: 'Report details (or fix it on the iPad)' };
   return null; }
-document.addEventListener('click', e => { const el = e.target.closest && e.target.closest('[data-prego]'); if (!el || !app.job || e.target.closest('input,label,button')) return;
-  const J = app.job, x = ((app.pre || {}).items || [])[+el.dataset.prego]; const g = x && preGo(J, x); if (!g) return;
+document.addEventListener('click', e => { const el = e.target.closest && e.target.closest('[data-prego],[data-rptgo]'); if (!el || !app.job || e.target.closest('input,label,button')) return; e.preventDefault();
+  const J = app.job, x = el.dataset.rptgo !== undefined ? { msg: el.dataset.rptgo } : ((app.pre || {}).items || [])[+el.dataset.prego]; preJump(J, x); });
+/* go to the field a pre-check item is about (also the "still needed" lists in Assignment, scope and site and in Reconciliation – her ask Oct 22 2026) */
+function preJump(J, x) { const g = x && preGo(J, x); if (!g) return;
   J.stage = g.stage; if (g.comp) WB.cur = g.comp; if (g.show && !lineOn(g.show, J)) { const G = G0(J); G.lines = G.lines || {}; G.lines[g.show] = true; }   /* the line it points to may be hidden – show it */ save(); render.top = true; render();
   setTimeout(() => { let t = null;
     if (g.comp) t = document.querySelector(`#gridCard thead th[data-wbcol="${g.comp}"]`);
     if (!t && g.sel) t = document.querySelector(g.sel); if (t && g.up && t.closest(g.up)) t = t.closest(g.up);
-    if (!t && g.text) t = [...document.querySelectorAll('#reportCard h3, #reportCard summary, #reportCard label, #reportCard span')].find(e => e.textContent.trim().startsWith(g.text));
+    if (!t && g.text) t = [...document.querySelectorAll(':is(#setupCard,#reportCard) :is(h3, summary, label, span)')].find(e => e.textContent.trim().startsWith(g.text));
     if (!t) return; const d = t.closest('details'); if (d) d.open = true;
     if (g.comp && typeof wbReveal === 'function') { try { wbReveal(t); } catch (er) {} }   /* slide the grid sideways to that comp */
     t.scrollIntoView({ behavior: 'smooth', block: 'center' }); t.classList.add('goflash'); setTimeout(() => t.classList.remove('goflash'), 2600);
-    const f = t.matches('input,select,textarea') ? t : t.querySelector && t.querySelector('input,select,textarea'); if (f && !g.comp) setTimeout(() => f.focus({ preventScroll: true }), 500); }, 120); });
+    const f = t.matches('input,select,textarea') ? t : t.querySelector && t.querySelector('input,select,textarea'); if (f && !g.comp) setTimeout(() => f.focus({ preventScroll: true }), 500); }, 120); }

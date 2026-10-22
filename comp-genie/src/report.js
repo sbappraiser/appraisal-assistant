@@ -138,7 +138,7 @@ function reportHTML(J, part) {   // part: 'early' (Assignment, scope and site �
       <label class="fld"><span>Hypothetical conditions</span><textarea class="txt" rows="3" maxlength="2500" data-rpt="hcNote" placeholder="${esc(F.hcNote ? 'From the order’s Scope of work: ' + F.hcNote : 'e.g. As if the repairs listed in the Unit Interior section were completed as of the effective date.')}">${esc(R.hcNote || '')}</textarea></label>
       <p class="help">${sowLen(RX).toLocaleString()} of 2,500 characters used (all three boxes together). A value <i>subject to</i> repairs or completion: choose it in Market value condition under Value and reconciliation.</p></section>
     <section><h3>Subject and site</h3>
-      <label class="fld"><span>Legal description</span><textarea class="txt" rows="2" data-rpt="legal" placeholder="${esc(F.legal || 'From the CRS report or the preliminary title report')}">${esc(R.legal || '')}</textarea></label>
+      <div class="fld"><span>Legal description <label class="btn sm">Import the deed (PDF)<input type="file" accept=".pdf" data-act="deed" hidden></label></span><textarea class="txt" rows="${Math.min(8, 2 + Math.round(String(R.legal || '').length / 140))}" data-rpt="legal" placeholder="${esc(F.legal || 'From the deed, the CRS report or the preliminary title report')}">${esc(R.legal || '')}</textarea></div>
       <label class="fld"><span>Number of parcels</span>${inp('parcels', '1', '5em')}</label>
       <label class="fld"><span>All rights included in the appraisal?</span>${yn('allRights', true)}</label>
       <label class="fld"><span>Rights not included <small class="muted">(only sent when the answer above is No; 540 characters)</small></span><textarea class="txt" rows="2" maxlength="540" data-rpt="rightsNot" placeholder="${esc(F.rightsNot || 'e.g. Oil, gas and mineral rights below 500 feet, reserved in a prior deed')}">${esc(R.rightsNot || '')}</textarea>${F.rightsNot && R.allRights !== 'false' ? '<small class="muted">The order has a reservation from the deed. If those rights are not part of what you appraised, answer No above.</small>' : ''}</label>
@@ -333,7 +333,7 @@ function rptPart(J, html, part) {
   const secs = body.split(/(?=<section><h3>)/).filter(x => x.startsWith('<section><h3>')).map(x => [x.match(/^<section><h3>([^<]*)/)[1].trim(), x.trim()]);
   const L = (part === 'early' ? RPT_EARLY : RPT_LATE).map(t => (secs.find(([n]) => n === t) || [])[1]).filter(Boolean);
   const need = typeof precheckGrid === 'function' ? precheckGrid(J).filter(x => x.sev === 'Must fix' && typeof preGo === 'function' && (preGo0(J, x) || {}).label === 'Report details' && (part === 'late') === rptLateMsg(x.msg)) : [];
-  const banner = `<div class="rptneed ${need.length ? 'warn' : 'done'}">${need.length ? `<b>${need.length} answer${need.length > 1 ? 's' : ''} still needed here:</b><ul>${need.map(x => `<li>${esc(x.msg.replace(/\s*\(Report details[^)]*\)\.?/, ''))}</li>`).join('')}</ul>` : '<b>✓ Everything needed here is answered.</b>'}
+  const banner = `<div class="rptneed ${need.length ? 'warn' : 'done'}">${need.length ? `<b>${need.length} answer${need.length > 1 ? 's' : ''} still needed here:</b><ul>${need.map(x => `<li><a href="#" class="rptgo" data-rptgo="${esc(x.msg)}" title="Go there">${esc(x.msg.replace(/\s*\(Report details[^)]*\)\.?/, ''))}</a></li>`).join('')}</ul>` : '<b>✓ Everything needed here is answered.</b>'}
     <span class="rptkey"><span class="k own">your entry</span> <span class="k sug">suggested – type over it or leave it</span></span></div>`;
   const F = reportFrom(J);
   return (part === 'early' ? `<h2>Assignment, scope and site <small>– answer these early; they go to SFREP when you export</small></h2>${banner}${clientNeedsHTML(J)}<p class="help">${F.hasOrder ? 'Suggested entries come from the order, your inspection or the CRS report. Type over any of them.' : 'This assignment is not linked to an order, so nothing is filled from the Appraisal Assistant. Open it from the order (Comp genie button on the order page) to fill the assignment, client and market.'}</p>`
@@ -348,3 +348,20 @@ function rptIndHTML(J) { const L = rptIndications(J);
   return `<table class="mini rptind"><tr><th colspan="2">Indicated value by</th></tr>${L.map(([n, v, on]) => `<tr><th>${n} approach</th><td>${!on ? '<span class="muted">not developed</span>' : v ? '<b>' + money(Math.round(v)) + '</b>' : '<span class="warnTxt">not finished yet</span>'}</td></tr>`).join('')}</table>
     <p class="help">Filled in from each approach. The opinion of value below starts as the sales comparison value – type your reconciled value over it.</p>`; }
 function rptRedraw() { const J = app.job; if (!J) return; const a = $('#setupCard'), b = $('#reportCard'); if (a && a.innerHTML) a.innerHTML = reportHTML(J, 'early'); if (b && b.innerHTML) b.innerHTML = reportHTML(J, 'late'); }
+
+/* her ask Oct 22 2026: "click here, it takes me to where the legal description goes, then I can import the deed" – reads the legal description
+   (and any reservation, e.g. mineral rights) from a deed PDF with text; a scan has no text (Acrobat › Scan & OCR › Recognize text first, or the order's Documents › Read with Claude) */
+function deedRead(pages) { const out = {}; pages.forEach(t => { const T = String(t || '').replace(/ \| /g, ' ').replace(/[ \t]+/g, ' ');
+    if (!out.legal) { const m = T.match(/(?:following described real property|real property (?:in|situated in|located in)[^:]{0,160}?described as follows|LEGAL DESCRIPTION)[^:]{0,200}?:\s*([\s\S]{40,4000}?)(?=\n\s*\(?signature|\n\s*Dated|\n\s*MAIL TAX|\n\s*IN WITNESS|\n\s*Commonly known|\n\s*APN|\n\s*A\.?P\.?N|\n\s*Assessor'?s Parcel|$)/i); if (m) out.legal = m[1].replace(/\s*\n\s*/g, ' ').replace(/\s{2,}/g, ' ').trim(); }
+    if (!out.reserve) { const x = T.match(/((?:EXCEPTING|RESERVING) THEREFROM[\s\S]{20,600}?\.(?=\s|$))/i); if (x) out.reserve = x[1].replace(/\s+/g, ' ').trim(); } });
+  return out; }
+document.addEventListener('change', async e => { const t = e.target; if (!t || t.dataset.act !== 'deed' || !t.files[0] || !app.job) return; const f = t.files[0]; t.value = '';
+  try { toast('Reading the deed…'); const L = await pdfLines(f); const pages = []; L.forEach((ln, i) => { const p = (L.pageOf && L.pageOf[i]) || 1; pages[p - 1] = (pages[p - 1] || '') + ln + '\n'; });
+    if (!pages.join('').trim()) { toast('That deed is a scan with no text. In Acrobat use Scan & OCR › Recognize text, or put it in the order’s ① Documents and use Read with Claude.', 9000); return; }
+    const D = deedRead(pages); const R = R0(app.job);
+    if (!D.legal) { toast('No legal description found in that PDF – look for “described as follows” and copy it into the box.', 8000); return; }
+    if (R.legal && R.legal.trim() && !confirm('Replace the legal description in the box with the one from the deed?')) return;
+    R.legal = D.legal; if (D.reserve && blank(R.rightsNot)) R.rightsNot = D.reserve.slice(0, 540); save(); rptRedraw();
+    toast(`Legal description filled from ${f.name}${D.reserve ? ' – the deed also has a reservation; it is in “Rights not included” (answer “All rights included?” No if those rights are not appraised)' : ''}`, 8000);
+    setTimeout(() => { const b = document.querySelector('textarea[data-rpt="legal"]'); if (b) { b.scrollIntoView({ block: 'center' }); b.classList.add('goflash'); } }, 150); }
+  catch (er) { console.error(er); toast('Could not read that PDF: ' + (er.message || er), 7000); } });
