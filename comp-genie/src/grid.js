@@ -27,6 +27,7 @@ const ADJ_ROWS = [
   ['cdom', 'Cumulative days on market', 'Sales and listing', null],
   ['lastRed', 'Last price reduction', 'Sales and listing', null],
   ['overList', 'Sold over list price', 'Sales and listing', null],
+  ['sameBuilder', 'Same builder as subject (new construction)', 'Sales and listing', null],   // F-1 22.01.47: required for every comp when the subject is new construction (Oct 21 2026)
   ['project', 'Project name', 'Project (HOA)', null],
   ['hoa', 'HOA fee ($ / month)', 'Project (HOA)', null],
   ['hoaAmen', 'HOA amenities (common area)', 'Project (HOA)', 'ProjectInformation'],
@@ -319,6 +320,7 @@ function lineOn(id, J) { const G = G0(J); if (GRID_KEEP.has(id)) return true; if
   if (/^cx_/.test(id)) return true;
   if (id === 'hazard') return [subjFacts(J), ...usedComps(J).map(c => compFacts(c, J))].some(F => F.hazard && !/^none$/i.test(String(F.hazard).trim()));   // F-1: shows when the subject or any comp is in a hazard zone
   if (id === 'xferTerms') return usedComps(J).some(c => { const t = compFacts(c, J).xferTerms; return t && !/typically/i.test(t); });   // shows itself when a comp is REO, estate, short sale …
+  if (id === 'sameBuilder') return /^(y|true)/i.test(String((J.subject.insp || {}).newCon || ''));   // on by itself when the iPad says New construction: Yes
   if (id === 'carport') return [subjFacts(J), ...usedComps(J).map(c => compFacts(c, J))].some(F => +F.carport > 0);
   if (id === 'bsmtUnf') return [subjFacts(J), ...usedComps(J).map(c => compFacts(c, J))].some(F => +F.bsmtUnf > 0);
   return GRID_BASE.has(id); }
@@ -705,7 +707,7 @@ async function ingestInspection(files, name) {
     topo: (D.site.topo || []).join(', '), energy: (D.systems.renew || []).filter(x => x !== 'None').map(x => x === 'Solar' ? ({ Owned: 'Solar (owned)', Leased: 'Solar (leased)', PowerPurchaseAgreement: 'Solar (power purchase agreement)' })[D.systems.solarOwn] || 'Solar (ownership not known)' : x === 'WindTurbine' ? 'Wind turbine' : x).join('; ') || ((D.systems.renew || []).includes('None') ? 'None' : ''),
     pool: (L.waterFeatures || []).map(w => w.type).filter(Boolean).join(', ') || 'None', courts: (D.amenities.rec || []).filter(x => /court/i.test(x)).join(', '), porch: (L.outdoorLiving || []).map(o => o.type).filter(Boolean).join(', '),
     adu: [...(L.adus || []).map(a => a.ident || 'ADU'), ...(L.outbuildings || []).filter(o => o.real !== false).map(o => o.label || o.type)].filter(Boolean).join(', '), hasXml: !!xmlName,
-    zoneComp: (D.site || {}).zoneComp || '', accessRaw: (D.street || {}).primaryAccess || '',
+    newCon: (D.property || {}).newCon ?? '', zoneComp: (D.site || {}).zoneComp || '',  accessRaw: (D.street || {}).primaryAccess || '',
     primaryAccess: (() => { const v = (D.street || {}).primaryAccess; const o = typeof PICK !== 'undefined' && PICK.primaryAccess.opts.find(x => x[0] === v); return o ? o[1].replace(/ \(.*\)$/, '') : (v || ''); })(),
     siteChar: ((D.site || {}).siteFeat || []).map(v => { const o = typeof PICK !== 'undefined' && PICK.siteChar.opts.find(x => x[0] === v); return o ? o[1].replace(/ \(.*\)$/, '') : v; }).join('; '),
     hazard: ((D.site || {}).hazard || []).map(v => v === 'None' ? 'None' : v === 'FEMASpecialFloodHazardArea' ? 'FEMA special flood hazard area' : 'Other: ' + (v === 'Other' ? (D.site.hazardOther || 'Other') : v)).join('; '),
