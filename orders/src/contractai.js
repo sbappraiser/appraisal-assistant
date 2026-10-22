@@ -65,7 +65,10 @@ async function cbSend() {
 /* her click: one final term → an accepted fact on the purchase contract (fills the UAD 3.6 sales contract boxes and the 20.011 draft) */
 function cbAccept(key, value) {
   const P = cur.contractPacket, m = cbMain(); if (!m || !value) return; const F = P.final[key] || {}; const C = checkFor('contract');
-  cur.facts = (cur.facts || []).filter(f => !(f.docId === m.id && f.key === key && f.by === 'packet'));
+  /* her packet answer replaces what was accepted for this line from reading the contract alone (e.g. the offer price) */
+  const old = (cur.facts || []).filter(f => f.docId === m.id && f.key === key); cur.facts = (cur.facts || []).filter(f => !old.includes(f));
+  P.replaced = P.replaced || {}; const was = old.filter(f => f.by !== 'packet' && f.value !== value).map(f => f.value); if (was.length) P.replaced[key] = was;
+  const U = cur.uad = cur.uad || {}; ({ price: ['price'], acceptDate: ['cdate'], personal: ['pp'], credits: ['conc', 'concAmt'] }[key] || []).forEach(k => { delete U[k]; });
   const f = { id: uid(), docId: m.id, doc: m.name, type: 'contract', key, label: (C.items.find(x => x[0] === key) || [, key])[1], value, page: F.page || null, by: 'packet', from: F.file || '', at: new Date().toISOString() };
   cur.facts.push(f); markFilled(f, 'contract', key, value); P.used[key] = value; saveLetter(true, true);
 }
@@ -88,7 +91,8 @@ function cbHTML(P) {
     ${(P.steps || []).length ? `<h4>The negotiation</h4><ol class="cbsteps">${P.steps.map(s => `<li><b>${d(s.date)}</b> ${h(s.who || '')}: ${h(s.what || '')}${s.price ? ' – ' + h(s.price) : ''} ${src(s)}</li>`).join('')}</ol>` : ''}
     <h4>Final terms <span class="opt">Accept puts it on the purchase contract (UAD 3.6 sales contract boxes and the 20.011 draft) – edit first if needed</span></h4>
     <table class="facts cbfinal">${CB_FINAL.map(([k, l]) => { const o = P.final[k] || {}; const v = String(o.v || '').trim(); if (!v) return ''; const used = P.used && P.used[k];
-      return `<tr><th>${h(l)}</th><td><input data-cbv="${k}" value="${h(used || v)}"> ${src(o)}</td><td>${used ? '<span class="chip ok">✓ accepted</span>' : ''}<button type="button" class="btn small" data-cbacc="${k}">${used ? 'Accept again' : 'Accept'}</button></td></tr>`; }).join('')}</table>
+      const rep = P.replaced && P.replaced[k] ? `<br><small class="muted">replaced what you had accepted before: ${h(P.replaced[k].join('; '))}</small>` : '';
+      return `<tr><th>${h(l)}</th><td><input data-cbv="${k}" value="${h(used || v)}"> ${src(o)}${rep}</td><td>${used ? '<span class="chip ok">✓ accepted</span>' : ''}<button type="button" class="btn small" data-cbacc="${k}">${used ? 'Accept again' : 'Accept'}</button></td></tr>`; }).join('')}</table>
     ${P.flags.length ? `<h4>To check</h4><ul>${P.flags.map(f => `<li>${h(f.text)} ${src(f)}</li>`).join('')}</ul>` : ''}
     ${P.summary ? `<label>Draft 20.011 Sales contract analysis <span class="opt">Claude's wording – read and edit it; ${P.summary.length.toLocaleString()} of 5,000 characters</span><textarea id="cbSum" rows="7">${h(P.summary)}</textarea></label>
       <div class="row"><button type="button" class="btn small" id="cbUseSum">Use as 20.011</button><button type="button" class="btn ghost small" id="cbCopy">Copy</button><button type="button" class="btn ghost small" id="cbHide">Hide</button></div>` : '<div class="row"><button type="button" class="btn ghost small" id="cbHide">Hide</button></div>'}`;
