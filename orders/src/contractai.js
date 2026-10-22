@@ -30,13 +30,23 @@ const CB_RULES = `Rules: read every file together as ONE purchase packet and fol
 - Flags: anything the appraiser must check – a counter not signed by both sides, price or terms that conflict between documents, missing pages or signatures, seller credits, personal property, leaseback, non-arm's-length signs, entity or trust signers, a different property address.
 - summary: a draft for the appraiser in this layout, plain sentences, about 120–220 words: "ANALYSIS OF THE SALES CONTRACT" then "The client uploaded a [N]-page document which contains a purchase contract, [n] seller counter offers, [n] buyer counter offers and [n] addendums." Then the negotiation in one or two sentences, the final negotiated sales price and acceptance date, contingencies, close of escrow, personal property, credits, leaseback and other terms, and end with "All other terms appear to be fairly typical." Use [brackets] for anything the appraiser must fill in.`;
 
+const cbScrambled = t => { t = String(t || ''); return t.length > 200 && (t.match(/[A-Za-z]{3,}/g) || []).join('').length / t.length < 0.25; };   // C.A.R. form fonts print as scrambled text
+async function cbClaude(content, system) {
+  const call = async (c, max) => { const res = await fetch('https://api.anthropic.com/v1/messages', { method: 'POST', headers: { 'content-type': 'application/json', 'x-api-key': aiKey(), 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+      body: JSON.stringify({ model: aiModel(), max_tokens: max, system, messages: [{ role: 'user', content: c }] }) });
+    let j = null; try { j = await res.json(); } catch (e) {} if (!res.ok) throw new Error((j && j.error && j.error.message) || 'Claude answered with an error (' + res.status + (res.status === 413 ? ' – too many pages at once' : '') + ')');
+    return { txt: (j.content || []).filter(x => x.type === 'text').map(x => x.text).join(''), cut: j.stop_reason === 'max_tokens' }; };
+  const parse = t => JSON.parse(t.slice(t.indexOf('{'), t.lastIndexOf('}') + 1));
+  let r = await call(content, 16000); try { if (!r.cut) return parse(r.txt); } catch (e) {}
+  r = await call([...content, { type: 'text', text: 'Your last answer was too long and was cut off. Answer again with shorter "changes" and "what" text and a summary under 200 words. JSON only.' }], 16000);
+  try { return parse(r.txt); } catch (e) { throw new Error('Claude’s answer could not be read (it was cut off or not in the expected form). Try again; if it happens again, tell Claude in the chat.'); } }
 async function cbSend() {
   if (CB.busy) return; CB.busy = true; const btn = $('#cbGo'); const say = t => { if (btn) btn.textContent = t; };
   try {
     const plan = CB.plan; const pdfjs = await loadPdfJs(); const pics = [];
     for (const f of plan) { if (f.skip || !(f.imgs || []).length) continue; const rec = await ODB.get('docs', f.d.id); const pdf = await pdfjs.getDocument({ data: new Uint8Array(await rec.blob.arrayBuffer()), isEvalSupported: false, wasmUrl: './wasm/', standardFontDataUrl: './standard_fonts/' }).promise;
       for (const n of f.imgs) { say(`Preparing pictures… ${pics.length + 1}`); const cv = await pbPageJpeg(pdf, n); pics.push({ file: f.d.name, n, data: cv.toDataURL('image/jpeg', 0.72).split(',')[1] }); } }
-    const texts = []; let t0 = ''; for (const f of plan) { if (f.skip) continue; t0 += `\n##### FILE: ${f.d.name} (${f.pages || '?'} pages; filed as ${DOC_LABEL[f.d.type] || f.d.type}) #####`; for (const p of f.text) { const block = `\n=== ${f.d.name} – page ${p.n} ===\n${p.t}`; if (t0.length + block.length > PB_MAX_TEXT && t0) { texts.push(t0); t0 = ''; } t0 += block; } } if (t0) texts.push(t0);
+    const texts = []; let t0 = ''; for (const f of plan) { if (f.skip) continue; t0 += `\n##### FILE: ${f.d.name} (${f.pages || '?'} pages; filed as ${DOC_LABEL[f.d.type] || f.d.type}) #####`; for (const p of f.text) { if (cbScrambled(p.t) && (f.imgs || []).includes(p.n)) continue; const block = `\n=== ${f.d.name} – page ${p.n} ===\n${p.t}`; if (t0.length + block.length > PB_MAX_TEXT && t0) { texts.push(t0); t0 = ''; } t0 += block; } } if (t0) texts.push(t0);
     const rounds = []; const n = Math.max(1, Math.ceil(pics.length / PB_MAX_IMG), texts.length);
     for (let i = 0; i < n; i++) rounds.push({ text: texts[i] || '', pics: pics.slice(i * PB_MAX_IMG, (i + 1) * PB_MAX_IMG) });
     const f0 = readForm(); const subj = `Subject property: ${f0.address || '(address not entered)'}${f0.apn ? ' · APN ' + f0.apn : ''}. Files in the packet: ${plan.filter(f => !f.skip).map(f => `${f.d.name} (${f.pages || '?'} pages)`).join('; ')}.`;
@@ -47,19 +57,19 @@ async function cbSend() {
       if (R.text) content.push({ type: 'text', text: 'Contract packet (readable pages):' + R.text });
       R.pics.forEach(p => { content.push({ type: 'text', text: `=== ${p.file} – page ${p.n} (scanned picture) ===` }); content.push({ type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: p.data } }); });
       content.push({ type: 'text', text: `${rounds.length > 1 ? `This is part ${i + 1} of ${rounds.length} of the packet. ` : 'These are all the files of the purchase packet. '}\n${CB_RULES}\nAnswer with JSON only, in this form: ${CB_SHAPE}` });
-      results.push(await pbClaude(content, 8000, sys)); }
+      results.push(await cbClaude(content, sys)); }
     let out = results[0] || {};
     if (results.length > 1) { say('Claude is putting the parts together…');
-      out = await pbClaude([{ type: 'text', text: `${subj}\n\nThe packet was read in ${results.length} parts. Here is what each part found:\n${results.map((r, i) => `--- part ${i + 1} ---\n${JSON.stringify(r)}`).join('\n')}\n\nMerge them into one answer for the whole packet.\n${CB_RULES}\nAnswer with JSON only, in this form: ${CB_SHAPE}` }], 8000, sys); }
+      out = await pbClaude([{ type: 'text', text: `${subj}\n\nThe packet was read in ${results.length} parts. Here is what each part found:\n${results.map((r, i) => `--- part ${i + 1} ---\n${JSON.stringify(r)}`).join('\n')}\n\nMerge them into one answer for the whole packet.\n${CB_RULES}\nAnswer with JSON only, in this form: ${CB_SHAPE}` }], sys); }
     const sentFiles = plan.filter(f => !f.skip && ((f.text || []).length || (f.imgs || []).length)).map(f => f.d.name);
     const pagesSum = plan.filter(f => !f.skip).reduce((a, f) => a + (f.pages || 0), 0);
     cur.contractPacket = { at: new Date().toISOString(), model: aiModel(), files: sentFiles, mode: cur.aiUse === 'Redacted' ? 'redacted' : 'full', rounds: rounds.length,
       docs: (out.documents || []).filter(x => x && (x.file || x.kind)), steps: (out.steps || []).filter(x => x && x.what), final: out.final || {}, flags: (out.flags || []).filter(x => x && x.text),
       summary: String(out.summary || ''), totalPages: pagesSum || +out.totalPages || null, used: {} };
     (cur.aiLog = cur.aiLog || []).push({ at: cur.contractPacket.at, doc: 'Contract packet (' + sentFiles.length + ' files)', pages: [], mode: cur.contractPacket.mode, model: aiModel(), items: cur.contractPacket.docs.length });
-    CB.plan = null; CB.show = true; saveLetter(true, true); renderDocs();
+    CB.plan = null; CB.show = true; CB.err = ''; saveLetter(true, true); renderDocs();
     toast(`Claude read the contract packet together: ${sentFiles.length} files, ${cur.contractPacket.totalPages || '?'} pages`, 6000);
-  } catch (e) { console.error(e); toast('Not sent or not read: ' + (e.message || e), 7000); say('Try again'); }
+  } catch (e) { console.error(e); CB.err = String(e.message || e); toast('Not sent or not read: ' + CB.err, 9000); say('Try again'); renderCtBatch(); }
   CB.busy = false;
 }
 
@@ -116,6 +126,7 @@ async function renderCtBatch() {
       <table class="facts"><tr><th>File</th><th>Pages</th><th>As text</th><th>As pictures</th><th>Not sent</th></tr>${L.map(f => `<tr><td>${h(f.d.name)}</td><td>${f.pages || ''}</td><td>${f.skip ? '' : (f.text || []).length}</td><td>${f.skip ? '' : (f.imgs || []).length}</td><td>${f.skip ? h(f.skip) : (f.held || []).length ? 'scanned p. ' + f.held.join(', ') : ''}</td></tr>`).join('')}</table>
       ${nH ? `<p class="help"><b>${nH} scanned page${nH === 1 ? ' is' : 's are'} not sent</b>: on a Redacted order only the "- REDACTED" copy of a scanned file can go. C.A.R. forms often print as scrambled text – those pages are read best as pictures on a Yes order.</p>` : ''}
       <div class="row">${nT + nI ? `<button type="button" class="btn primary" id="cbGo">Send ${nT + nI} page${nT + nI === 1 ? '' : 's'} to Claude</button>` : '<span class="help">Nothing can be sent.</span>'}<button type="button" class="btn ghost" id="cbCancel">Cancel</button></div></div>`; }
+  if (CB.err) html += `<p class="help warnTxt"><b>The last try did not work:</b> ${h(CB.err)}</p>`;
   if (P && CB.show) html += cbHTML(P);
   box.innerHTML = html;
   const pl = $('#cbPlan'); if (pl) pl.onclick = async () => { pl.disabled = true; pl.textContent = 'Looking at the files…'; try { saveLetter(true, true); CB.plan = await pbMakePlan(cbDocs());
