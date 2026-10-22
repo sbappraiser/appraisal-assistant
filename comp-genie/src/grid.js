@@ -83,6 +83,13 @@ const ADJ_ROWS = [
   ['extC', 'Exterior condition', 'Dwelling', null],
   ['intQ', 'Interior quality', 'Dwelling', null],
   ['intC', 'Interior condition', 'Dwelling', null],
+  /* quality and condition details (F-1 22.08 / 22.09, A-1 CR "when the row is included"): optional lines, off until she ticks them; support for the ratings, never adjusted (Oct 21 2026) */
+  ['kitQ', 'Kitchen – quality summary', 'Dwelling', null], ['kitUpd', 'Kitchen – update status', 'Dwelling', null],
+  ['bathQ', 'Bathrooms – quality summary', 'Dwelling', null], ['bathUpd', 'Bathrooms – update status', 'Dwelling', null],
+  ['floorQ', 'Flooring – quality summary', 'Dwelling', null], ['floorUpd', 'Flooring – update status', 'Dwelling', null],
+  ['wallQ', 'Walls and ceiling – quality summary', 'Dwelling', null], ['wallCnd', 'Walls and ceiling – condition', 'Dwelling', null],
+  ['winQ', 'Windows – quality summary', 'Dwelling', null], ['winCnd', 'Windows – condition', 'Dwelling', null],
+  ['extWallCnd', 'Exterior walls and trim – condition', 'Dwelling', null], ['fndCnd', 'Foundation – condition', 'Dwelling', null], ['roofCnd', 'Roof – condition', 'Dwelling', null],
   ['func', 'Functional utility (functional issues)', 'Dwelling', 'FunctionalIssues'],
   ['porch', 'Porch / patio / deck', 'Amenities', 'OutdoorLivingAmenity'],
   ['pool', 'Water features (pool / spa / pond / lake)', 'Amenities', 'WaterFeaturesAmenity', ['pool', 'spa', 'pond', 'lake']],
@@ -196,7 +203,9 @@ RATES.cpSpace = ['$ per carport space', 'carport space difference × rate'];
 RATES.unitPos = ['$ corner / end unit over interior', 'a corner or end unit is one step above an interior unit'];
 /* ---- property type of the grid (her request, Oct 19 2026): condo and PUD lines; info lines she checks before UAD 3.6 is filled ---- */
 /* her ask (Oct 20 2026): short notes under the line names – the full wording is in the ⓘ guidance */
-const GRID_NOTE = { extQ: 'blank = overall quality', extC: 'blank = overall condition', intQ: 'blank = overall quality', intC: 'blank = overall condition', overList: 'your check only (not sent)', origList: 'your check only (not sent)', listDate: 'your check only (not sent)', cdom: 'your check only (not sent)',
+const QCD_IDS = ['kitQ', 'kitUpd', 'bathQ', 'bathUpd', 'floorQ', 'floorUpd', 'wallQ', 'wallCnd', 'winQ', 'winCnd', 'extWallCnd', 'fndCnd', 'roofCnd'];
+const QCD_SUM = ['kitQ', 'bathQ', 'floorQ', 'wallQ', 'winQ'];   // short text, up to 70 characters
+const GRID_NOTE = { kitQ: 'short, e.g. Mid grade quality', bathQ: 'short, e.g. Mid grade finishes', floorQ: 'short, e.g. Hardwood and tile', wallQ: 'short, e.g. Standard 8-9 ft ceilings', winQ: 'short, e.g. Dual pane vinyl', extQ: 'blank = overall quality', extC: 'blank = overall condition', intQ: 'blank = overall quality', intC: 'blank = overall condition', overList: 'your check only (not sent)', origList: 'your check only (not sent)', listDate: 'your check only (not sent)', cdom: 'your check only (not sent)',
   lastRed: 'your check only (not sent) · from the MLS History', nbhd: 'same as the 2.6 neighborhood', loc: '▾ pick each influence and its impact' };
 const GRID_INFO = { overList: 'not in UAD 3.6 – for your check · amount and % over the final list price, with days on market', origList: 'not in UAD 3.6 – for your check', listDate: 'not in UAD 3.6 – for your check', lastRed: 'not in UAD 3.6 – for your exposure time · from the MLS printout History · days to pending below the date', cdom: 'not in UAD 3.6 – for your check', status: 'UAD 3.6', listPrice: 'UAD 3.6', dom: 'UAD 3.6', project: 'UAD 3.6', hoa: 'UAD 3.6 (monthly fee)', nbhd: 'UAD 3.6 Neighborhood Name – the same field as the 2.6 neighborhood', loc: 'UAD SiteInfluence – ▾ pick: busy roadway, school, park, commercial, water … each with its impact (flood zone, easement, private road have their own lines)' };
 const STRUCTURES = ['Low-rise', 'Mid-rise', 'High-rise', 'Townhouse / rowhouse', 'Semi-detached'];
@@ -316,7 +325,7 @@ function lineOn(id, J) { const G = G0(J); if (GRID_KEEP.has(id)) return true; if
 function gridLinesHTML(J) {
   const G = G0(J); const rows = adjRows(J).filter(r => rowShownMode(r, J)); let sec = ''; const on = rows.filter(r => lineOn(r[0], J)).length;
   const items = rows.map(r => { const head = r[2] !== sec ? `</div><div class="glsec"><b>${esc(r[2])}</b>` : ''; sec = r[2]; const lock = GRID_KEEP.has(r[0]);
-    const uad = r[3] === 'OTHER' ? `your own line – SFREP “Add Other” named “${esc(r[5])}”` : r[3] ? 'UAD ' + esc(r[3]) : 'information only (not a UAD adjustment line)';
+    const uad = QCD_IDS.includes(r[0]) ? 'UAD quality and condition detail (F-1 22.08 / 22.09) – supports the ratings, not adjusted; once ticked, the subject and every comp need an entry' : r[3] === 'OTHER' ? `your own line – SFREP “Add Other” named “${esc(r[5])}”` : r[3] ? 'UAD ' + esc(r[3]) : 'information only (not a UAD adjustment line)';
     return head + `<label class="check gl" title="${uad}"><input type="checkbox" data-gline="${r[0]}" ${lineOn(r[0], J) ? 'checked' : ''} ${lock ? 'disabled' : ''}> ${GRID_KEEP.has(r[0]) ? REQ_STAR : ''}${esc(r[1])}${/^cx_/.test(r[0]) ? ` <button type="button" class="lnk" data-glinedel="${r[0]}" title="Delete this line">✕</button>` : ''}<small>${r[3] === 'OTHER' ? 'your own line' : r[3] ? esc(r[3]) : 'info only'}</small>${GRID_EX[r[0]] || r[0] === 'usable' || r[0] === 'land' ? `<i class="glex">e.g. ${esc(GRID_EX[r[0]] || '')}</i>` : ''}</label>`; }).join('');
   return `<details class="glines"${app.glOpen ? ' open' : ''}><summary data-act="glopen">⚙ Grid lines – pick the lines this report needs <small>(${on} of ${rows.length} shown)</small></summary>
     <p class="help">Every UAD 3.6 adjustment line is here, under the UAD name it goes to in SFREP. Tick the ones this report needs; the rest stay hidden (and add nothing to the totals). Lines the 3.6 grid always shows (Appendix F-1) are always ticked: sale price, data source, proximity, list price, status, transfer terms, concessions, contract and sale dates, days on market, attached/detached, location, view, year built, heating, bedrooms, baths, living area, below grade finished and unfinished, quality, condition and vehicle storage.</p>

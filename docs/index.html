@@ -618,6 +618,13 @@ nav.tabs button[aria-selected="true"] { background: var(--look-navy) !important;
       <li><b>8 Review and wrap-up:</b> prior services and certifications, reconsideration of value (who asked, the result, its date and your comment) and the revision history (one row per change after delivery), then the review genie, the pre-check, the SFREP export and the final grid.</li>
       <li>From the order: your fee goes into SFREP's Appraiser Fee, and the order's Other intended users go into the report when you answer Yes to intended users besides the client.</li>
       <li>Being built next: the remaining Market, Sales comparison, Cost and Income fields. The plan is your doc “The Octopus – where everything lives”.</li></ol></details>
+    <details><summary>Quality and condition details on the grid (4 Sales comparison)</summary><ol>
+      <li>Fannie Mae's 3.6 grid can show short quality and condition lines under the ratings: kitchen, bathrooms, flooring, walls and ceiling and windows (a few words each), their update status, and the condition of the exterior walls and trim, foundation, roof and windows. They support your Q and C ratings; nothing is adjusted on them.</li>
+      <li>They are optional and off until you want them: on the grid page, open <b>⚙ Grid lines</b> and tick the ones you want under Dwelling. <b>Save as my default</b> if you want them on every report.</li>
+      <li>Once a line is ticked, Fannie Mae requires an entry for every comp. Type the summary (up to 70 characters, e.g. “Mid grade quality”), or use <b>▾ pick</b> for an update status or condition (Not updated, Partially updated, Fully updated · New or like new, Typical wear and tear …). For a roof you could not see, pick <b>Unobservable</b>.</li>
+      <li>Type the subject's summaries in the subject column too (Fannie Mae does not fill them from the inspection). Leave a subject status blank to keep the one from your iPad inspection.</li>
+      <li>The pre-check lists any ticked line left blank, a summary over 70 characters, or a status that is not one of the 3.6 choices.</li>
+      <li>Condos and PUDs: “Same project as subject” is sent for each comp, worked out from the project names on your grid.</li></ol></details>
     <details><summary>Databases (the Database center)</summary><ol>
       <li>Click <b>Databases</b> on the top row. You see each database (CORT weekly closings, your sales archive, land sales, cost figures and the rest), with how many records it holds.</li>
       <li><b>Look inside</b> opens a database to read only: type in the search box (an address, APN or street), click a column heading to sort, and <b>Download CSV</b> to open it in Excel. Nothing can be changed from this window.</li>
@@ -1038,7 +1045,7 @@ nav.tabs button[aria-selected="true"] { background: var(--look-navy) !important;
 </div>
 <div id="toast" role="status" hidden></div>
 <script>
-const BUILD='o1-1022-0602';
+const BUILD='o1-1022-0609';
 const G = (() => {
 /* ---------------- small helpers ---------------- */
 const $ = (s, r = document) => r.querySelector(s);

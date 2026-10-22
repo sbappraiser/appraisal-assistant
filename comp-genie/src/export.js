@@ -130,6 +130,8 @@ function buildCompXML(PROPS, RELS, DSS, c, n, job) {
       if (wall.length) { const C = X(SC, 'STRUCTURE_COMPONENT'); const EW = X(C, 'EXTERIOR_WALLS'); wall.forEach(w => { const e = X(EW, 'EXTERIOR_WALL'); XV(e, 'WallMaterialType', w.t); if (w.t === 'Other') XV(e, 'WallMaterialTypeOtherDescription', w.o); }); XV(X(C, 'STRUCTURE_COMPONENT_DETAIL'), 'ImprovementComponentType', 'ExteriorWallsAndTrim'); }
       if (roof.length) { const C = X(SC, 'STRUCTURE_COMPONENT'); const RM = X(X(C, 'ROOF'), 'ROOF_MATERIALS'); roof.forEach(w => { const e = X(RM, 'ROOF_MATERIAL'); XV(e, 'RoofMaterialType', w.t); if (w.t === 'Other') XV(e, 'RoofMaterialTypeOtherDescription', w.o); }); XV(X(C, 'STRUCTURE_COMPONENT_DETAIL'), 'ImprovementComponentType', 'Roof'); } } }
   { const sd = X(st, 'STRUCTURE_DETAIL'); if (mode !== 'condo') { const R = compQC(CF); XV(sd, 'ExteriorConditionRatingCode', R.extC); XV(sd, 'ExteriorQualityRatingCode', R.extQ); } XV(sd, 'LivingUnitCount', 1); if (stru === 'RowhouseTownhouse' && !blank(CF.unitPos)) XV(sd, 'RowhouseTownhouseEndUnitIndicator', /end|corner/i.test(CF.unitPos) ? 'true' : 'false'); if (!blank(CF.levels)) XV(sd, 'StoriesCount', CF.levels); }
+  qcdCompXML(job, CF, pu, ud, st);   // her optional quality and condition detail lines (F-1 22.08 / 22.09)
+  if (mode !== 'house' && !blank(CF.project)) { const sp = subjFacts(job).project, nm = v => String(v || '').toLowerCase().replace(/[^a-z0-9]/g, ''); if (!blank(sp)) XV(cd, 'SameProjectAsSubjectIndicator', nm(sp) === nm(CF.project) ? 'true' : 'false'); }   // F-1 22.02.06: worked out from the two project names on her grid
   const heats = CFx.heat && typeof PICK !== 'undefined' && pkParse(PICK.heat, CFx.heat).ok ? pkParse(PICK.heat, CFx.heat).vals.filter(v => v !== 'None') : uadHeat(g('heatCool')); if (heats.length || cool) { const sy = X(imp, 'SYSTEM');
     if (cool && cool.exists) { const ce = X(X(sy, 'COOLING_SYSTEMS'), 'COOLING_SYSTEM'); XV(ce, 'CoolingSystemType', cool.type); if (cool.type === 'Other') XV(ce, 'CoolingSystemTypeOtherDescription', ((typeof PICK !== 'undefined' && pkParse(PICK.cool, CFx.cool).other) || 'Other').slice(0, 19)); }
     if (heats.length) { const hs = X(sy, 'HEATING_SYSTEMS'); heats.forEach(h => { const e = X(hs, 'HEATING_SYSTEM'); XV(e, 'HeatingFuelType', uadFuel(g('heatCool')) || null); XV(e, 'HeatingSystemType', h); if (h === 'Other') XV(e, 'HeatingSystemTypeOtherDescription', ((CFx.heat && typeof PICK !== 'undefined' && pkParse(PICK.heat, CFx.heat).other) || 'Wall heater').slice(0, 19)); }); } }
@@ -214,6 +216,22 @@ function buildCompXML(PROPS, RELS, DSS, c, n, job) {
 }
 /* A-1: DataSourceName is required (33 characters) */
 /* a comp's interior / exterior quality and condition (A-1 1800.0157 / .0158 / .0185 / .0186): her own entry on the grid line, else the overall rating */
+/* quality and condition details for a comp (Oct 21 2026): only the lines she ticked; text up to 70 characters, statuses from the ▾ lists */
+function qcdPick(id, v) { if (blank(v)) return null; const r = pkParse(PICK[id], String(v)); return r.ok ? r.vals[0] : null; }
+function qcdCompXML(J, F, pu, ud, st) { const on = new Set(QCD_IDS.filter(id => lineOn(id, J))); if (!on.size) return;
+  const t = id => on.has(id) && !blank(F[id]) && String(F[id]).trim() ? String(F[id]).trim().slice(0, 70) : null, p = id => on.has(id) ? qcdPick(id, F[id]) : null;
+  if (t('kitQ') || p('kitUpd')) { const d = X(X(X(pu, 'ROOMS'), 'ROOM'), 'ROOM_DETAIL'); XV(d, 'RoomQualitySummaryDescription', t('kitQ')); XV(d, 'RoomType', 'Kitchen'); XV(d, 'RoomUpdateStatusType', p('kitUpd')); }
+  XV(ud, 'OverallBathroomsQualityDescription', t('bathQ')); XV(ud, 'OverallBathroomsUpdateStatusType', p('bathUpd'));
+  let IC = null; const ic = () => IC || (IC = X(pu, 'INTERIOR_COMPONENTS'));
+  if (t('floorQ') || p('floorUpd')) { const d = X(X(ic(), 'INTERIOR_COMPONENT'), 'INTERIOR_COMPONENT_DETAIL'); XV(d, 'ImprovementComponentQualitySummaryDescription', t('floorQ')); XV(d, 'ImprovementComponentType', 'Flooring'); XV(d, 'OverallFlooringUpdateStatusType', p('floorUpd')); }
+  if (t('wallQ') || p('wallCnd')) { const d = X(X(ic(), 'INTERIOR_COMPONENT'), 'INTERIOR_COMPONENT_DETAIL'); XV(d, 'ImprovementComponentConditionStatusType', p('wallCnd')); XV(d, 'ImprovementComponentQualitySummaryDescription', t('wallQ')); XV(d, 'ImprovementComponentType', 'WallsAndCeiling'); }
+  const SC = () => st.kids.find(k => k.tag === 'STRUCTURE_COMPONENTS') || X(st, 'STRUCTURE_COMPONENTS');
+  const comp = type => { const S = SC(); let c = S.kids.find(k => k.kids.some(d => d.tag === 'STRUCTURE_COMPONENT_DETAIL' && d.kids.some(x => x.tag === 'ImprovementComponentType' && x.text === type)));
+    if (!c) { c = X(S, 'STRUCTURE_COMPONENT'); XV(X(c, 'STRUCTURE_COMPONENT_DETAIL'), 'ImprovementComponentType', type); } return { c, d: c.kids.find(k => k.tag === 'STRUCTURE_COMPONENT_DETAIL') }; };
+  if (p('extWallCnd')) XV(comp('ExteriorWallsAndTrim').d, 'ImprovementComponentConditionStatusType', p('extWallCnd'));
+  if (p('fndCnd')) XV(comp('Foundation').d, 'ImprovementComponentConditionStatusType', p('fndCnd'));
+  if (p('roofCnd')) { const R = comp('Roof'); const rf = R.c.kids.find(k => k.tag === 'ROOF') || X(R.c, 'ROOF'); XV(X(rf, 'ROOF_DETAIL'), 'RoofObservableIndicator', p('roofCnd') === 'Unobservable' ? 'false' : 'true'); if (p('roofCnd') !== 'Unobservable') XV(R.d, 'ImprovementComponentConditionStatusType', p('roofCnd')); }
+  if (t('winQ') || p('winCnd')) { const W = comp('Windows'); XV(W.d, 'ImprovementComponentConditionStatusType', p('winCnd')); XV(W.d, 'ImprovementComponentQualitySummaryDescription', t('winQ')); } }
 function compQC(F) { const r = (v, L) => { const m = String(v || '').match(L === 'Q' ? /Q[1-6]/i : /C[1-6]/i); return m ? m[0].toUpperCase() : null; };
   return { intQ: r(F.intQ, 'Q') || r(F.q, 'Q'), intC: r(F.intC, 'C') || r(F.c, 'C'), extQ: r(F.extQ, 'Q') || r(F.q, 'Q'), extC: r(F.extC, 'C') || r(F.c, 'C') }; }
 const aduUnitId = (n, k) => `Comp${n} ADU${k > 1 ? ' ' + k : ''}`;   // D-1 SF3: "Comp1 Primary" / "Comp1 ADU"

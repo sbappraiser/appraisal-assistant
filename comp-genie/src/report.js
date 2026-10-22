@@ -311,6 +311,7 @@ function writeReportXML(doc, NS, J, SUBJ, VA, SVC) {
   if (zone || zd) { const z = path(SITE, 'SITE_ZONING', 'SITE_ZONING_DETAIL'); set(z, 'SiteZoningClassificationDescription', zd && zd.slice(0, 100)); set(z, 'SiteZoningClassificationIdentifier', zone); }
   set(path(SUBJ, 'SALES_CONTRACTS', 'SALES_CONTRACT', 'SALES_CONTRACT_DETAIL'), 'AllPropertyRightsAppraisedIndicator', tf('allRights', 'true'));
   t2XML(J, R, SUBJ, VR, child, add, set, path, doc, NS);   // tentacle 2 office fields (Oct 22 2026)
+  qcdSubjXML(J, SUBJ, child, add, set, path);   // the subject's quality and condition detail lines from the grid (Oct 21 2026)
   t78XML(J, R, VR, SVC, child, add, set, path);   // tentacles 7 and 8 (Oct 22 2026)
   if (tf('allRights', 'true') === 'false') { const rn = rv(J, 'rightsNot'); if (rn) set(sow, 'PropertyRightsNotAppraisedDescription', String(rn).slice(0, 540));
     const ty = R.rightsType || rightsGuess(rn); if (ty) { const ri = add(path(SUBJ, 'REAL_PROPERTY_INTERESTS'), 'REAL_PROPERTY_INTEREST');
@@ -419,6 +420,26 @@ const a1Label = v => A1_LABEL[v] || String(v).replace(/([a-z])([A-Z])/g, '$1 $2'
 const a1Hidden = () => { try { return JSON.parse(localStorage.getItem('genie.hideOpts') || '[]'); } catch (e) { return []; } };
 const A1_USED = new Set();
 function a1Opts(key) { A1_USED.add(key); const H = a1Hidden(); return ((typeof A1 !== 'undefined' && A1[key] && A1[key].e) || []).filter(v => !H.includes(key + '=' + v)).map(v => [v, a1Label(v)]); }
+/* the subject's entries on her quality and condition detail lines: the summaries are typed only here (F-1: they do not come from the inspection);
+   a status she typed on the grid replaces the iPad's, a blank one leaves the iPad's answer */
+function qcdSubjXML(J, SUBJ, child, add, set, path) { const on = QCD_IDS.filter(id => lineOn(id, J)); if (!on.length) return; const F = subjFacts(J);
+  const t = id => on.includes(id) && !blank(F[id]) && String(F[id]).trim() ? String(F[id]).trim().slice(0, 70) : null, p = id => on.includes(id) ? qcdPick(id, F[id]) : null;
+  const kid = (el, tag) => [...el.children].filter(k => k.localName === tag), val = (el, tag) => { const k = kid(el, tag)[0]; return k ? k.textContent : ''; };
+  const IMS = kid(SUBJ, 'IMPROVEMENTS')[0]; if (!IMS) return;
+  const dw = kid(IMS, 'IMPROVEMENT').find(i => kid(i, 'IMPROVEMENT_DETAIL').some(d => val(d, 'ImprovementType') === 'Dwelling')) || kid(IMS, 'IMPROVEMENT')[0]; if (!dw) return;
+  const pu = (kid(dw, 'PROPERTY_UNITS')[0] ? kid(kid(dw, 'PROPERTY_UNITS')[0], 'PROPERTY_UNIT') : []).find(u => !kid(u, 'PROPERTY_UNIT_DETAIL').some(d => val(d, 'AccessoryDwellingUnitIndicator') === 'true'));
+  if (pu) { const ud = child(pu, 'PROPERTY_UNIT_DETAIL'); set(ud, 'OverallBathroomsQualityDescription', t('bathQ')); set(ud, 'OverallBathroomsUpdateStatusType', p('bathUpd'));
+    if (t('kitQ') || p('kitUpd')) { const RM = child(pu, 'ROOMS'); let rd = kid(RM, 'ROOM').map(r => kid(r, 'ROOM_DETAIL')[0]).find(d => d && val(d, 'RoomType') === 'Kitchen'); if (!rd) { rd = child(add(RM, 'ROOM'), 'ROOM_DETAIL'); set(rd, 'RoomType', 'Kitchen'); } set(rd, 'RoomQualitySummaryDescription', t('kitQ')); set(rd, 'RoomUpdateStatusType', p('kitUpd')); }
+    const icDet = type => { const IC = child(pu, 'INTERIOR_COMPONENTS'); let d = kid(IC, 'INTERIOR_COMPONENT').map(c => kid(c, 'INTERIOR_COMPONENT_DETAIL')[0]).find(d => d && val(d, 'ImprovementComponentType') === type);
+      if (!d) { const c = kid(IC, 'INTERIOR_COMPONENT').find(c => type === 'Flooring' && kid(c, 'FLOOR_COVERINGS').length) || add(IC, 'INTERIOR_COMPONENT'); d = child(c, 'INTERIOR_COMPONENT_DETAIL'); set(d, 'ImprovementComponentType', type); } return d; };
+    if (t('floorQ') || p('floorUpd')) { const d = icDet('Flooring'); set(d, 'ImprovementComponentQualitySummaryDescription', t('floorQ')); set(d, 'OverallFlooringUpdateStatusType', p('floorUpd')); }
+    if (t('wallQ') || p('wallCnd')) { const d = icDet('WallsAndCeiling'); set(d, 'ImprovementComponentQualitySummaryDescription', t('wallQ')); set(d, 'ImprovementComponentConditionStatusType', p('wallCnd')); } }
+  const scDet = type => { const SC = path(dw, 'STRUCTURE', 'STRUCTURE_COMPONENTS'); let d = kid(SC, 'STRUCTURE_COMPONENT').map(c => kid(c, 'STRUCTURE_COMPONENT_DETAIL')[0]).find(d => d && val(d, 'ImprovementComponentType') === type);
+    if (!d) { d = child(add(SC, 'STRUCTURE_COMPONENT'), 'STRUCTURE_COMPONENT_DETAIL'); set(d, 'ImprovementComponentType', type); } return d; };
+  if (t('winQ') || p('winCnd')) { const d = scDet('Windows'); set(d, 'ImprovementComponentQualitySummaryDescription', t('winQ')); set(d, 'ImprovementComponentConditionStatusType', p('winCnd')); }
+  if (p('extWallCnd')) set(scDet('ExteriorWallsAndTrim'), 'ImprovementComponentConditionStatusType', p('extWallCnd'));
+  if (p('fndCnd')) set(scDet('Foundation'), 'ImprovementComponentConditionStatusType', p('fndCnd'));
+  if (p('roofCnd')) { const d = scDet('Roof'); const rd = path(d.parentNode, 'ROOF', 'ROOF_DETAIL'); set(rd, 'RoofObservableIndicator', p('roofCnd') === 'Unobservable' ? 'false' : 'true'); if (p('roofCnd') !== 'Unobservable') set(d, 'ImprovementComponentConditionStatusType', p('roofCnd')); } }
 function t2XML(J, R, SUBJ, VR, child, add, set, path, doc, NS) { const v = k => String(R[k] ?? '').trim(); const X = RE(J);
   const SITE = child(SUBJ, 'SITE');
   if (v('siteDim')) set(child(SITE, 'SITE_SIZE_LAYOUT'), 'SiteDimensionsDescription', v('siteDim').slice(0, 66));

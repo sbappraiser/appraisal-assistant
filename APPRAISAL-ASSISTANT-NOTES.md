@@ -839,3 +839,10 @@ Decisions (her, Oct 19–20): "Exterior of dwelling" instead of left/right/side 
 - Integrity check: duplicates, records missing APN/sale date/price, one APN with more than one address (reports only; fixes nothing).
 - dbview.js is titled "Database center"; the results window after a Cancel says "Not changed" instead of "could not read". Hub Help: "Databases (the Database center)". Tested st218 (200 → modal → Cancel 200 → OK 220; viewer; integrity).
 - Her rule (Oct 21 2026): in the ACI archive a property used only as a comparable has no APN; a subject does. The integrity check asks for an APN only on archive records with record_role "subject". (Matching comps to CORT already works by APN or address.)
+
+## Tentacle 4 fields, part 1 – Oct 21 2026
+- Comp quality and condition detail lines (F-1 22.08 / 22.09, A-1 CR "when the row is included in the grid"): kitQ, kitUpd, bathQ, bathUpd, floorQ, floorUpd, wallQ, wallCnd, winQ, winCnd, extWallCnd, fndCnd, roofCnd (grid.js ADJ_ROWS after intC, QCD_IDS / QCD_SUM; PICK lists from A-1 in pickers.js). Off by default (⚙ Grid lines). Not adjustable.
+- export.js qcdCompXML writes ROOM_DETAIL (Kitchen), PROPERTY_UNIT_DETAIL bathrooms, INTERIOR_COMPONENT Flooring / WallsAndCeiling, STRUCTURE_COMPONENT ExteriorWallsAndTrim / Foundation / Roof (+ RoofObservableIndicator; "Unobservable" = false) / Windows. report.js qcdSubjXML writes the subject's summaries into the iPad file (statuses typed on the grid replace the iPad's; blank keeps them). precheck.js qcdCheck.
+- SameProjectAsSubjectIndicator for condo/PUD comps from the project names.
+- Tested st220 (comp nodes, subject on the Berkeley full report, xml check clean, pre-check items).
+- Still to do in 4: Same builder (new construction only), green certification names/ratings for comps, the comp "Other – describe" fields, price per bedroom/unit (2–4 units only).

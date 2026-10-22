@@ -119,8 +119,10 @@ function precheckGrid(J) { if (!RC) return rcRun(() => precheckGrid(J));
     { const E = String(C.energy || '').trim(); if (!E) out.push({ sev: 'Must fix', msg: `Comp ${c.use}: Energy efficient features is blank – 3.6 asks Yes / No for renewable energy, efficiency rating and green certification on every comp (A-1 1800.0106-0108). ▾ pick None, or what it has.` }); }
     ['extQ', 'extC', 'intQ', 'intC'].forEach(k => { const v = String(C[k] || '').trim(); if (v && !(k.endsWith('Q') ? /^Q[1-6]$/i : /^C[1-6]$/i).test(v)) out.push({ sev: 'Must fix', msg: `Comp ${c.use}: ${{ extQ: 'exterior quality', extC: 'exterior condition', intQ: 'interior quality', intC: 'interior condition' }[k]} "${v}" is not a UAD rating (${k.endsWith('Q') ? 'Q1–Q6' : 'C1–C6'}) – or leave it blank to send the overall rating.` }); });
     if (blank(C.usable) && !blank(S.usable)) out.push({ sev: 'Check', msg: `Comp ${c.use}: usable lot area is blank – measure it.` });
+    qcdCheck(J, C, 'Comp ' + c.use, out);   // her quality and condition detail lines (F-1 22.08 / 22.09)
     if (!G.weights[c.id]) out.push({ sev: 'Check', msg: `Comp ${c.use}: no weight chosen for reconciliation.` }); });
   ['q', 'c'].forEach(k => { if (S[k] && !/^[QC][1-6]$/i.test(String(S[k]).trim())) out.push({ sev: 'Must fix', msg: `Subject ${k === 'q' ? 'quality' : 'condition'} "${S[k]}" is not a whole UAD rating.` }); });
+  qcdCheck(J, S, 'Subject', out, true);
   const open = gridReview(J).filter(f => !f.ok); if (open.length) out.push({ sev: 'Check', msg: `${open.length} grid review flag${open.length === 1 ? ' is' : 's are'} not marked OK yet.`, hint: open.slice(0, 3).map(f => f.msg).join(' · ') + (open.length > 3 ? ' …' : '') });
   J.comps.filter(c => c.notUsed && !c.use && c.notUsed.report && !(c.notUsed.reasons || []).length).forEach(c => out.push({ sev: 'Must fix', msg: `Considered, not used: ${compTitle(c)} has no reason chosen.` }));
   return out;
@@ -211,3 +213,11 @@ function preJump(J, x) { const g = x && preGo(J, x); if (!g) return;
     if (g.comp && typeof wbReveal === 'function') { try { wbReveal(t); } catch (er) {} }   /* slide the grid sideways to that comp */
     t.scrollIntoView({ behavior: 'smooth', block: 'center' }); t.classList.add('goflash'); setTimeout(() => t.classList.remove('goflash'), 2600);
     const f = t.matches('input,select,textarea') ? t : t.querySelector && t.querySelector('input,select,textarea'); if (f && !g.comp) setTimeout(() => f.focus({ preventScroll: true }), 500); }, 120); }
+
+/* a ticked quality and condition detail line needs an entry for the subject and every comp (A-1: required when the row is included);
+   the subject's statuses can come from the iPad, so a blank subject status is only a Check */
+function qcdCheck(J, F, who, out, subj) { if (typeof QCD_IDS === 'undefined') return; const name = id => (ADJ_ROWS.find(r => r[0] === id) || [])[1] || id;
+  QCD_IDS.filter(id => lineOn(id, J)).forEach(id => { const v = String(F[id] ?? '').trim(); const sum = QCD_SUM.includes(id);
+    if (!v) { if (subj && !sum) return; out.push({ sev: 'Must fix', msg: `${who}: ${name(id)} is blank – the line is ticked on your grid, so 3.6 needs an entry${sum ? ' (a few words, up to 70 characters)' : ' (▾ pick it)'}, or untick the line under ⚙ Grid lines.` }); return; }
+    if (sum && v.length > 70) out.push({ sev: 'Check', msg: `${who}: ${name(id)} is ${v.length} characters – 3.6 allows 70; the rest is cut off.` });
+    if (!sum && !qcdPick(id, v)) out.push({ sev: 'Must fix', msg: `${who}: ${name(id)} "${v}" is not one of the 3.6 answers – ▾ pick it.` }); }); }
