@@ -387,7 +387,7 @@ function rptPart(J, html, part) {
     : `<h2>Reconciliation <small>– after the sales comparison, cost and income approaches</small></h2>${banner}`) + `<div class="rptgrid rptbands">${L.join('\n')}</div>`; }
 /* the value of each approach, filled in from its own section (her ask Oct 22 2026) */
 function rptIndications(J) { const G = G0(J), R = R0(J), o = (app.orders || []).find(x => x.id === J.orderId) || null; const T = f => { try { return f(); } catch (e) { return null; } };
-  const costOn = J.costOn ?? (R.sowCost === 'true' || (!R.sowCost && !!(o && o.apCost))); const incOn = J.incomeOn ?? (R.sowIncome === 'true' || (!R.sowIncome && !!(o && (o.apIncome || o.rent))));
+  const costOn = J.costOn ?? (R.sowCost === 'true' || (!R.sowCost && !!(o && o.apCost))); const incOn = J.incomeOn ?? (R.sowIncome === 'true' || (!R.sowIncome && !!(o && o.apIncome)));
   const sca = num(G.value), cost = costOn ? T(() => num(costJob(J).value) || costCalc(J).rounded) : null, inc = incOn ? T(() => { const v = num(incomeJob(J).value); if (v) return v; const X = incomeCalc(J); return X.ind ? Math.round(X.ind / 1000) * 1000 : null; }) : null;
   return [['Sales comparison', sca, true], ['Cost', cost, costOn], ['Income', inc, incOn]]; }
 const rptOpinion = J => { const v = num(String(R0(J).opinion || '').replace(/[$,\s]/g, '')); return !blank(v) ? v : (num(G0(J).value) || null); };   // her typed value, else the sales comparison value

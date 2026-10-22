@@ -127,6 +127,7 @@ function precheckGrid(J) { if (!RC) return rcRun(() => precheckGrid(J));
   qcdCheck(J, S, 'Subject', out, true);
   const open = gridReview(J).filter(f => !f.ok); if (open.length) out.push({ sev: 'Check', msg: `${open.length} grid review flag${open.length === 1 ? ' is' : 's are'} not marked OK yet.`, hint: open.slice(0, 3).map(f => f.msg).join(' · ') + (open.length > 3 ? ' …' : '') });
   J.comps.filter(c => c.notUsed && !c.use && c.notUsed.report && !(c.notUsed.reasons || []).length).forEach(c => out.push({ sev: 'Must fix', msg: `Considered, not used: ${compTitle(c)} has no reason chosen.` }));
+  if (typeof rsCheck === 'function') out.push(...rsCheck(J));   // tentacle 6: rent schedule and GRM comparables (Oct 21 2026)
   return out;
 }
 /* her revision log – reviewer requests that become checks */

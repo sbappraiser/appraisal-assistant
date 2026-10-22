@@ -629,6 +629,14 @@ nav.tabs button[aria-selected="true"] { background: var(--look-navy) !important;
       <li><b>New construction:</b> when your iPad inspection says the subject is new construction, a <b>Same builder as subject</b> line appears on the grid. ▾ pick Yes or No for each comp; Fannie Mae requires it.</li>
       <li><b>Green certifications and ratings:</b> on the Energy efficient features line, ▾ pick Other and write the name, e.g. “HERS 55”, “Home Energy Score 8”, “LEED Gold”, “GreenPoint Rated”, “Energy Star”, “NGBS Silver”. Fannie Mae needs the name and score, and they go there by themselves. If you write something like “Title 24 rating” that it cannot read as a name and score, the pre-check asks you to reword it.</li>
       <li><b>Vehicle storage – Other:</b> a describe box appears (e.g. RV pad); it is required.</li></ol></details>
+    <details><summary>Rent schedule and income approach (6 Income)</summary><ol>
+      <li>Tentacle 6 opens by itself when the order (or your answer in 2 Subject › Approaches) says the assignment includes a <b>rent schedule (1007)</b> or the <b>income approach</b>. A rent schedule alone shows the subject's rent and the comparable rentals; the income approach adds the rented sales and the GRM.</li>
+      <li><b>Rent schedule – the subject:</b> is it rented? If Yes: the monthly rent, month-to-month or the lease start (MM/YYYY), concessions, utilities included, furnished. Rent control Yes / No (with a description if Yes). <b>+ Add</b> any additional rental income (parking, storage, other) with the actual and estimated amounts. The totals are added up for you.</li>
+      <li><b>Comparable rentals:</b> as before (type them or drop an MLS lease CSV). Under each one is a 3.6 line: furnished, utilities, concessions, rent control, and how it compares with the subject – vehicle storage (required), view, site, overall – and its <b>weight</b> (required), condition, lot size, market area, ZIP. Make the <b>Rental map</b> in the Maps card to locate them, so their distance and direction go into the report.</li>
+      <li><b>Gross rent multiplier:</b> under each rented sale, add the city, ZIP, sale date, units, ADUs, square feet, whether the rent is actual or estimated, rent control and the weight. Click <b>📍 Find on the map</b> to locate them for distance and direction.</li>
+      <li>The market rent you enter is the subject's market rent on the rent schedule and in the income approach. Write or edit the <b>Rental analysis comment</b> (rent schedule) and the <b>Income approach comment</b>.</li>
+      <li>The pre-check lists anything 3.6 still needs, labeled “Income (6)”.</li>
+      <li>Only the main house is on the rent schedule; an ADU is marked as not included. Tell Claude if you need an ADU's rent on its own line.</li></ol></details>
     <details><summary>Cost approach methods (5 Cost)</summary><ol>
       <li>The cost card asks three methods: the cost <b>Method</b> (comparative unit, unit in place, quantity survey), <b>Depreciation</b> (economic age-life is the usual; modified age-life or breakdown when you use them) and the site value <b>Method</b> (sales comparison, extraction, allocation).</li>
       <li>Pick <b>Other</b> on any of them and a describe box appears (up to 33 characters); Fannie Mae requires the words.</li>
@@ -1053,7 +1061,7 @@ nav.tabs button[aria-selected="true"] { background: var(--look-navy) !important;
 </div>
 <div id="toast" role="status" hidden></div>
 <script>
-const BUILD='o1-1022-0625';
+const BUILD='o1-1022-0654';
 const G = (() => {
 /* ---------------- small helpers ---------------- */
 const $ = (s, r = document) => r.querySelector(s);

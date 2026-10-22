@@ -821,6 +821,7 @@ async function buildFullReport(J) {
   if (!blank(G.value) || G.note) { const sca = child(child(VR, 'APPROACH_TO_VALUE'), 'SALES_COMPARISON_APPROACH'); const det = child(sca, 'SALES_COMPARISON_APPROACH_DETAIL');
     if (G.note) leaf(det, 'SalesComparisonCommentDescription', G.note.slice(0, 10000)); if (!blank(G.value)) leaf(det, 'ValueIndicatedBySalesComparisonAmount', Math.round(num(G.value))); }
   writeReportXML(sub, NS, J, SUBJ, VA, SVC);   // assignment, legal, zoning, H&BU, market, contract, value (report.js)
+  if (typeof rsXML === 'function') rsXML(J, sub, NS, SUBJ, VA, SVC);   // tentacle 6: rent schedule, comparable rentals, GRM comparables (rentsched.js)
   /* the subject's data sources SFREP showed red (her Oct 21 import) – D-1 SF1 / A-1 0900.0032: Subject Listing Information, Subject Transfer History and the
      unit's Area Data Source each name where the answer came from: the MLS for the listing, the CRS (public record) or MLS for the transfer history, and
      her own measuring at the inspection for the areas */
