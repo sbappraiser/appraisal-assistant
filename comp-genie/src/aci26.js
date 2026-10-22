@@ -32,6 +32,12 @@ function a26Garage(c, F) { const rows = c && c.edit && Array.isArray(c.edit.vs) 
   if (rows) rows.forEach(x => { const k = x.t === 'Garage' ? (x.a === 'Detached' ? 'gd' : x.a === 'BuiltIn' ? 'gbi' : 'ga') : x.t === 'Carport' || x.t === 'CommonCarport' ? 'cp' : /Driveway/.test(x.t) ? 'dw' : null; if (k) n[k] += +x.n || 0; });
   else { const gt = String((c ? V(c, 'garageType') : '') || ''); const g = num(F.garage) || 0; n[/detach/i.test(gt) ? 'gd' : /built/i.test(gt) ? 'gbi' : 'ga'] += g; n.cp += num(F.carport) || 0; if (c) n.dw += num(V(c, 'driveway')) || 0; }
   const s = ['ga', 'gd', 'gbi', 'cp', 'dw'].filter(k => n[k]).map(k => n[k] + k).join(''); return s || (c && c.edit && c.edit.vsNone ? 'None' : ''); }
+function a26CondoDesign(F) { const t = String(F.structure || '') + ' ' + String(F.style || ''); const at = /high/i.test(t) ? 'HR' : /mid/i.test(t) ? 'MR' : /garden|low/i.test(t) ? 'GR' : /town|row/i.test(t) ? 'RT' : /detach|site/i.test(t) ? 'DT' : t.trim() ? 'O' : 'GR';
+  const lv = Math.round(num(F.levels) || 1); const st = String(F.style || F.structure || '').replace(/[^A-Za-z]/g, ''); return `${at}${lv}L${st ? ';' + st : ''}`; }
+function a26CondoPark(c, F) { const rows = c && c.edit && Array.isArray(c.edit.vs) && c.edit.vs.length ? c.edit.vs : null; const n = { g: 0, cv: 0, op: 0 };
+  if (rows) rows.forEach(x => { const k = x.t === 'Garage' ? 'g' : /Carport|Covered/.test(x.t) ? 'cv' : /Open|Driveway|Uncovered/.test(x.t) ? 'op' : null; if (k) n[k] += +x.n || 0; });
+  else { n.g += num(F.garage) || 0; n.cv += num(F.carport) || 0; }
+  const s = ['g', 'cv', 'op'].filter(k => n[k]).map(k => n[k] + k).join(''); return s || (c && c.edit && c.edit.vsNone ? 'None' : ''); }
 const A26_FIN = { Cash: 'Cash', Conventional: 'Conv', FHA: 'FHA', VA: 'VA', USDARuralDevelopment: 'RH', Private: 'Seller', Seller: 'Seller' };
 function a26Fin(F) { const t = String(F.terms || ''); const k = /cash/i.test(t) ? 'Cash' : /fha/i.test(t) ? 'FHA' : /\bva\b/i.test(t) ? 'VA' : /usda|rural/i.test(t) ? 'RH' : /seller|private/i.test(t) ? 'Seller' : /conv/i.test(t) ? 'Conv' : t ? t.slice(0, 12) : '';
   return k ? `${k};${Math.round(num(F.conc) || 0)}` : ''; }
@@ -56,7 +62,7 @@ const A26_ROWS = [
   ['Leasehold / fee simple', () => 'Fee Simple', ['rights']],
   ['Site', F => a26Site(F.site), ['site', 'usable']],
   ['View', (F, c, R) => R && R.view_raw && !a26Own(c, ['view', 'viewRating', 'viewTypes']) ? R.view_raw : a26View(F.view), ['view']],
-  ['Design (style)', (F, c, R) => R && R.design_raw && !a26Own(c, ['style', 'attach', 'levels', 'stories']) ? R.design_raw : a26Design(F), ['style', 'attach', 'levels']],
+  ['Design (style)', (F, c, R) => R && R.design_raw && !a26Own(c, ['style', 'attach', 'levels', 'stories']) ? R.design_raw : (A26_CONDO ? a26CondoDesign(F) : a26Design(F)), ['style', 'attach', 'levels']],
   ['Quality of construction', (F, c, R) => R && R.quality_raw && !a26Own(c, ['q', 'quality']) ? R.quality_raw : a26Q(F.q), ['q']],
   ['Actual age', F => { const y = num(F.year); const e = num(String(app.job.subject.eff || '').slice(0, 4)) || new Date().getFullYear(); return y && y > 1700 ? Math.max(0, e - y) : ''; }, ['year']],
   ['Condition', (F, c, R) => R && R.condition_raw && !a26Own(c, ['c', 'condition']) ? R.condition_raw : a26C(F.c), ['c']],
@@ -68,7 +74,7 @@ const A26_ROWS = [
   ['Functional utility', (F, c, R) => R && R.fu_raw && !a26Own(c, ['func']) ? R.fu_raw : (!F.func || /^none/i.test(F.func) ? 'Average' : String(F.func)), ['func']],
   ['Heating / cooling', (F, c, R) => R && R.heating_cooling && !a26Own(c, ['heat', 'cool', 'heatCool']) ? R.heating_cooling : a26HC(F), ['heat', 'cool']],
   ['Energy efficient items', (F, c, R) => R && R.energy_raw && !a26Own(c, ['energy']) ? R.energy_raw : (F.energy || 'None'), ['energy']],
-  ['Garage / carport', (F, c, R) => R && R.garage_raw && !a26Own(c, ['garage', 'vs', 'carport', 'vsText']) ? R.garage_raw : a26Garage(c, F), ['garage', 'carport']],
+  ['Garage / carport', (F, c, R) => R && R.garage_raw && !a26Own(c, ['garage', 'vs', 'carport', 'vsText']) ? R.garage_raw : (A26_CONDO ? a26CondoPark(c, F) : a26Garage(c, F)), ['garage', 'carport']],
   ['Porch / patio / deck', (F, c, R) => R && R.porch_patio && !a26Own(c, ['porch']) ? R.porch_patio : (F.porch || 'None'), ['porch']],
   /* her three own lines on the ACI grid (from her Oct 2026 report): usable acres/neighborhood · ADU and outbuildings · pool/landscaping */
   ['Usable lot / neighborhood (your line)', F => { const u = num(F.usable); const n = String(F.nbhd || '').replace(/\s+/g, ''); return u || n ? `${u ? (+u).toFixed(2).replace(/0$/, '') : ''}/${n}` : ''; }, ['usable', 'nbhd']],
@@ -77,7 +83,8 @@ const A26_ROWS = [
 ];
 function a26Adj(J, c, ids) { if (!c || !ids.length) return null; const rows = adjRows(J).filter(r => ids.includes(r[0]) && (typeof rowShown !== 'function' || rowShown(r, J))); if (!rows.length) return null; let t = 0, any = false;
   rows.forEach(r => { const a = cellAmount(J, c, r); if (a && a.v !== null && a.v !== undefined && !isNaN(a.v)) { t += +a.v; any = true; } }); return any ? Math.round(t) : null; }
-function a26HTML(J) { if (!RC) return rcRun(() => a26HTML(J)); const U = usedComps(J); const S = subjFacts(J);
+let A26_CONDO = false;
+function a26HTML(J) { if (!RC) return rcRun(() => a26HTML(J)); A26_CONDO = typeof gridMode === 'function' && gridMode(J) === 'condo'; const U = usedComps(J); const S = subjFacts(J);
   const cp = (v, tag) => blank(v) || v === '' ? '<span class="muted">–</span>' : `<button type="button" class="a26cp" data-cp="${esc(String(v))}" title="Click to copy">${esc(String(v))}</button>${tag ? `<small class="a26t">${tag}</small>` : ''}`;
   const money0 = v => v === null ? '' : (v > 0 ? '+' : '') + Math.round(v).toLocaleString();
   const head = `<tr><th>ACI grid line</th><th>Subject</th>${U.map(c => `<th>Comp ${c.use}<br><small>${esc(compTitle(c))}</small></th>`).join('')}</tr>`;
@@ -93,7 +100,7 @@ function a26HTML(J) { if (!RC) return rcRun(() => a26HTML(J)); const U = usedCom
     ${val ? `<p>Indicated value by sales comparison: ${cp(Math.round(num(G0(J).value) || 0) || '')} · Opinion of market value: ${cp(Math.round(val))}</p>` : ''}
     ${texts.length ? `<h3>Comments</h3>${texts.map(([l, t]) => `<div class="a26txt"><b>${esc(l)}</b> <small>${String(t).length.toLocaleString()} characters</small><br>${cp(String(t).trim())}</div>`).join('')}` : ''}
     ${a26CondHTML(J, S)}
-    <p class="help">Condos use ACI's condo design and parking formats (e.g. GR2L;Garden, 1g1cv) – not on this sheet yet.</p>`; }
+    <p class="help">On a condo grid, Design and Parking use the 2.6 condo formats (e.g. GR2L;Garden, 1g1cv, None).</p>`; }
 /* her 2.6 Improvements condition line (Appendix D: "C3;Kitchen-updated-one to five years ago;Bathrooms-not updated;<description>").
    Suggested from the iPad's 3.6 answers – the two do not line up exactly (3.6 has no "remodeled", and its time frames differ),
    so every part is a drop-down she sets; the copy button builds the line. */

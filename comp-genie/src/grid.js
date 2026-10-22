@@ -60,6 +60,7 @@ const ADJ_ROWS = [
   ['energy', 'Energy efficient features', 'Dwelling', 'EnergyEfficientAndGreenFeatures', 'solar'],   // her ask Oct 20 2026: a $ rate for owned solar
   ['constr', 'Construction method', 'Dwelling', 'ConstructionMethod'],
   ['disaster', 'Disaster mitigation features', 'Dwelling', 'DisasterMitigationFeatures'],
+  ['accessib', 'Accessibility features', 'Dwelling', 'AccessibilityFeatures'],   // F-1 22.07.42 (her Oct 22 ask: the comp lines not sent yet)
   ['heat', 'Heating', 'Dwelling', 'HeatingSystem'],
   ['cool', 'Cooling (air conditioning)', 'Dwelling', 'CoolingSystem', 'cool'],
   ['beds', 'Bedrooms', 'Dwelling', 'LivingUnitBedroomCount', 'bed'],
@@ -116,7 +117,7 @@ const ADJ_ROWS = [
 const LINE_EG = { siteChar: 'e.g. excess land, landlocked, road frontage, shape, wetlands, zero lot line, flag lot', topo: 'e.g. flat, sloping, rolling, rocky', drain: 'e.g. erosion, improper grading, standing water',
   easement: 'e.g. ingress/egress, utility, drainage, conservation', hazard: 'e.g. FEMA flood hazard area, none', primaryAccess: 'e.g. public street, private street', streetAccess: 'e.g. local road | asphalt, collector street | concrete (type and surface)',
   restrict: 'e.g. age, historic preservation, land use, rental', envCond: 'e.g. none, underground storage tank, radon', func: 'e.g. none, floor plan, ceiling height, overimprovement',
-  adu: 'e.g. Guest House 600 sf 1/0 ba; Shed (▾ pick)', stl: 'listings: the % you expect it to sell at (e.g. 98%) · sales show their actual %', disaster: 'e.g. fire resistant exterior walls, noncombustible perimeter, fortified roof', zoning: 'legal, legal nonconforming, illegal, no zoning' };
+  adu: 'e.g. Guest House 600 sf 1/0 ba; Shed (▾ pick)', stl: 'listings: the % you expect it to sell at (e.g. 98%) · sales show their actual %', accessib: 'e.g. ramps, grab bars, doorways (wide), shower (roll-in)', disaster: 'e.g. fire resistant exterior walls, noncombustible perimeter, fortified roof', zoning: 'legal, legal nonconforming, illegal, no zoning' };
 const LOT_UTILITY = 'Usable Lot Area/Utility';      // her exact SFREP template "Add Other" row name (must match letter for letter)
 const RATES = { gla: ['$ per sq ft', 'subject − comp sq ft × rate'], agUnf: ['$ per sq ft', 'subject − comp unfinished above-grade sq ft × rate'], nsAbove: ['$ per sq ft', 'subject − comp non-standard above-grade sq ft × rate'], nsBelow: ['$ per sq ft', 'subject − comp non-standard below-grade sq ft × rate'], nonCont: ['$ per sq ft', 'subject − comp non-continuous sq ft × rate'], usableAc: ['$ per usable acre', 'subject − comp usable acres × rate'], bed: ['$ per bedroom', 'bedroom difference × rate'],
   bath: ['$ per full bath', 'full-bath difference × rate (half baths at half the rate)'], space: ['$ per garage space', 'space difference × rate'], timePct: ['% per month', 'months from sale to effective date × % × price'],
