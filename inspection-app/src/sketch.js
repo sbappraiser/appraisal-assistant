@@ -924,7 +924,7 @@ function renderPanel() {
   /* her ask (Oct 22, 2nd idea): the tools follow what you are doing – the main bar when you are not drawing; press ＋ and the
      drawing pad comes up (keypad, arrows / angle, ✓ Save, 🛑 Stop, ⌒ Curve, ⌖ Center); Save or Stop takes you back */
   const drawPad = !!a || SK.mode === 'start' || SK.mode === 'iwall';
-  document.body.classList.toggle('working', drawPad);
+  document.body.classList.toggle('working', drawPad); document.body.classList.toggle('dialon', !!SK.dial);
   const curveOk = (a && a.pts.length >= 2) || (sel && sel.type === 'wall');
   el.innerHTML = ctxHtml + `
   ${drawPad ? '' : `<div class="mainbar">
@@ -935,11 +935,9 @@ function renderPanel() {
       <div class="entry" id="skEntry">${ent ? esc(ent) + ' ft' : 'length'}</div>
       ${['7','8','9','4','5','6','1','2','3','.','0'].map(k => `<button class="key" data-k="${k}">${k}</button>`).join('')}<button class="key bs" id="skBs" title="Backspace: the last digit, then the last wall">⌫</button>
     </div>
-    ${SK.dial ? `<div class="dialbox">${dialSvg()}<div class="dlread" id="dlRead"></div>
-      <div class="dlrow"><button class="btn primary" id="dlDraw">Draw wall</button><button class="btn" id="dlClose">Arrows</button></div>
+    ${SK.dial ? `<div class="dialbox"><div class="dltop">${dialSvg()}<div class="dlside"><div class="dlread" id="dlRead"></div><button class="btn primary" id="dlDraw">Draw wall</button><button class="btn" id="dlClose">Arrows</button></div></div>
       <div class="dlrow"><button class="btn sm" data-dstep="-1">−1°</button><button class="btn sm" data-dstep="-0.5">−½°</button><button class="btn sm" data-dstep="0.5">+½°</button><button class="btn sm" data-dstep="1">+1°</button></div>
-      <div class="dlrow turns"><span class="help">Turn left</span><button class="btn sm" data-dturn="22.5">22.5</button><button class="btn sm" data-dturn="45">45</button><button class="btn sm" data-dturn="90">90</button></div>
-      <div class="dlrow turns"><span class="help">Turn right</span><button class="btn sm" data-dturn="-22.5">22.5</button><button class="btn sm" data-dturn="-45">45</button><button class="btn sm" data-dturn="-90">90</button></div></div>` : `<div class="arrows">
+      <div class="dlrow turns"><span class="help" title="Turn left from the last wall">⟲</span><button class="btn sm" data-dturn="22.5">22.5</button><button class="btn sm" data-dturn="45">45</button><button class="btn sm" data-dturn="90">90</button><span class="help" title="Turn right from the last wall">⟳</span><button class="btn sm" data-dturn="-22.5">22.5</button><button class="btn sm" data-dturn="-45">45</button><button class="btn sm" data-dturn="-90">90</button></div></div>` : `<div class="arrows">
       ${[['↖', -1, -1], ['↑', 0, -1], ['↗', 1, -1], ['←', -1, 0], ['ang'], ['→', 1, 0], ['↙', -1, 1], ['↓', 0, 1], ['↘', 1, 1]].map(x => x[0] === 'ang' ? `<button class="key arr angle" id="skAngle">∠ Angle</button>` : `<button class="key arr" data-dx="${x[1]}" data-dy="${x[2]}">${x[0]}</button>`).join('')}
     </div>`}
     <div class="acts">
@@ -961,7 +959,7 @@ function renderPanel() {
     if (k === '.' && SK.entry.includes('.')) return; if (SK.entry.includes('.') && SK.entry.split('.')[1].length >= 1) return toast('Lengths are to 0.1 ft'); SK.entry += k; showEntry(); }));
   el.querySelectorAll('[data-dx]').forEach(b => b.onclick = () => { if (SK.mode === 'iwall') { const L = parseFloat(SK.entry); if (!SK.iw.start) return toast('Tap where the wall starts first'); if (!(L > 0)) return toast('Type the length first'); const dx = +b.dataset.dx, dy = +b.dataset.dy, n = Math.hypot(dx, dy); const e = [SK.iw.start[0] + dx / n * L, SK.iw.start[1] + dy / n * L]; if (addIWall(SK.iw.start, e)) { SK.iw.prev = SK.iw.start; SK.iw.start = [r3(e[0]), r3(e[1])]; } SK.entry = ''; draw(); renderPanel(); return; } addWall(+b.dataset.dx, +b.dataset.dy); });
   on('skBs', backspace);
-  on('skAngle', () => { if (!curArea()) return toast('Start an area first'); const ld = lastDir(); SK.dial = { ang: SK.lastAngle ?? (ld ?? 0) }; renderPanel(); });
+  on('skAngle', () => { if (!curArea()) return toast('Start an area first'); const ld = lastDir(); SK.dial = { ang: SK.lastAngle ?? (ld ?? 0) }; renderPanel(); setTimeout(() => { const ca = curArea(); if (ca) ensureVisible(ca.pts[ca.pts.length - 1]); }, 40); });
   on('skNew', openDefs); on('skClose', closeArea); on('skDone', () => finishArea(false)); on('skLabel', () => openLabels()); on('skFit', () => { fitView(); draw(); }); on('skCenter', centreNow);
   on('skJump', jumpCorner); on('skStartHere', () => placeStart(SK.cursor, true)); on('skStartHere2', () => placeStart(SK.cursor, true)); on('skCurOff', () => { SK.cursor = null; draw(); renderPanel(); });
   on('skNewHere', () => openDefs(true)); on('skLabelHere', () => openLabels(null, SK.cursor));
