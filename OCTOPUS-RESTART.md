@@ -118,10 +118,12 @@ template. SFREP import: Home → Import Forms. XML must follow XSD element order
 3. **Waiting on her:** SFREP import of the test file "TEST Test6-1 5464 Berkeley Rd – Full report
    SFREP.zip"; try the flood and wildfire maps live; try Adjustment methods compared on a live order;
    ACI menu screenshots / an .RPS file; what the YouTube link showed; old rent survey PDFs (optional).
-4. Comp lines still not sent to SFREP: accessibility features (needs a grid line), water frontage
-   length, outbuilding utilities. 2.6 copy sheet: condo formats. ADU line in the rent schedule.
-5. Optional offers made: a document of all 97 starter comments for review; automatic device sync
-   (would store inspection data online – her decision).
+4. Done Oct 22: accessibility, water frontage, outbuilding utilities sent; 2.6 condo formats. Still open:
+   ADU line in the rent schedule. Starter comments doc for her review:
+   https://claude.ai/artifact/PSjqkYGdpSKj9p1N8v6txu (apply her edits to the apps).
+5. Optional offer: automatic device sync (would store inspection data online – her decision).
+   Business idea (subscription for other appraisers): logo concepts https://claude.ai/artifact/VXvm911a4KTwinhwQAvmnv;
+   her design summary for the IP attorney https://claude.ai/artifact/9BMfz4mZUCQkD6xieYMmKb.
 6. Name: she may rename "the Octopus" (ideas were offered).
 
 ## 8. How to restart in a new chat
