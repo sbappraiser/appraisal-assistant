@@ -11,6 +11,17 @@ const VMETHOD = [['TraditionalAppraisal', 'Traditional appraisal'], ['HybridAppr
 const VCOND = [['AsIs', 'As is'], ['SubjectToRepair', 'Subject to repair'], ['SubjectToInspection', 'Subject to inspection'], ['SubjectToCompletionPerPlans', 'Subject to completion per plans']];
 /* her three boxes → UAD 3.6 Additional Scope of Work (one 2,500-character field) */
 const sowText = R => [String(R.sowNote || '').trim(), String(R.eaNote || '').trim() ? 'Extraordinary assumptions: ' + String(R.eaNote).trim() : '', String(R.hcNote || '').trim() ? 'Hypothetical conditions: ' + String(R.hcNote).trim() : ''].filter(Boolean).join('\n\n');
+/* Additional appraiser certifications (her ask Oct 21 2026; A-1 2200.0034 / .0086 / .0087, F-1 29.053): up to 6, 360 characters each */
+const CERT_N = 6, CERT_MAX = 360;
+const certList = R => Array.from({ length: CERT_N }, (_, i) => String(R['cert' + (i + 1)] || '').trim()).filter(Boolean);
+const CERT_AI = ['The reported analyses, opinions and conclusions were developed, and this report has been prepared, in conformity with the requirements of the Code of Professional Ethics and Standards of Professional Practice of the Appraisal Institute.',
+  'The use of this report is subject to the requirements of the Appraisal Institute relating to review by its duly authorized representatives.',
+  'As of the date of this report, I have completed the continuing education program for Designated Members of the Appraisal Institute.'];   // her three, from her SFREP template (Oct 21 2026) – used until she saves her own
+function certHTML(R) { const L = certList(R); if (R.addlCert !== 'true' && !L.length) return '';
+  const n = Math.min(CERT_N, Math.max(3, L.length + 1));
+  return `<div class="certs"><p class="help">One certification per box – SFREP shows each as its own numbered line (up to ${CERT_N}, ${CERT_MAX} characters each). They cannot contradict the standard certifications.</p>
+    ${Array.from({ length: n }, (_, i) => { const k = 'cert' + (i + 1), v = String(R[k] || ''); return `<label class="fld"><span>Certification ${i + 1} <small class="${v.length > CERT_MAX ? 'warnTxt' : 'muted'}">${v.length} / ${CERT_MAX}</small></span><textarea class="txt" rows="3" maxlength="${CERT_MAX}" data-rpt="${k}">${esc(v)}</textarea></label>`; }).join('')}
+    <div class="row"><button type="button" class="btn sm" data-act="cert-usual">Use my usual certifications</button><button type="button" class="btn sm" data-act="cert-save"${L.length ? '' : ' disabled'}>Save these as my usual</button></div></div>`; }
 const sowAny = R => !!sowText(R); const sowLen = R => sowText(R).length;
 /* her appraiser details (from her SFREP signature page, Oct 21 2026) */
 const APPRAISER_ME = { first: 'Jennifer', middle: 'L', last: 'Heath', company: 'Jennifer Heath, LLC', addr: '5662 Calle Real, PNB #103', city: 'Goleta', state: 'CA', zip: '93117', licType: 'CertifiedResidential', lic: 'AR017399', licState: 'CA', licExp: '2027-03-04' };
@@ -133,7 +144,8 @@ function reportHTML(J) {
       <label class="fld"><span>Prior services: have you performed any services on this property in the three years before accepting the assignment?</span>${yn('priorSvc')}</label>
       ${F.priorHits.length ? `<p class="help warnTxt">Your records show: ${F.priorHits.map(esc).join(' · ')}</p>` : '<p class="help">Nothing in your archive or your orders for this address in the three years before the effective date.</p>'}
       <label class="fld"><span>Describe the prior services <small class="muted">(only when Yes; 1,250 characters)</small></span><textarea class="txt" rows="2" maxlength="1250" data-rpt="priorSvcText" placeholder="e.g. I appraised the subject property for a refinance in May 2024.">${esc(R.priorSvcText || '')}</textarea></label>
-      <label class="fld"><span>Additional certifications by you?</span>${yn('addlCert', false)}</label>
+      <label class="fld"><span>Additional appraiser certifications? <small class="muted">e.g. your Appraisal Institute certifications</small></span>${yn('addlCert', false)}</label>
+      ${certHTML(R)}
       <label class="fld"><span>Is this a reconsideration of value?</span>${yn('reconsider', false)}</label>
       <label class="fld"><span>Subject listed for sale in the past year?</span>${yn('listedYear', F.listedYear)}</label></section>
     ${typeof cmtBoxesHTML === 'function' ? cmtBoxesHTML(J) : ''}
@@ -167,11 +179,17 @@ document.addEventListener('change', e => {
   const t = e.target; if (!app.job) return; const R = R0(app.job);
   if (t.dataset.rpt) { const k = t.dataset.rpt, v = t.value.trim(); if (v === '') delete R[k]; else R[k] = k === 'zone' ? v.toUpperCase() : t.tagName === 'TEXTAREA' ? t.value : v;
     if (k === 'zoneDesc' && v) { const code = rv(app.job, 'zone').toUpperCase(); if (code) { zoneTable()[code] = v; DB.put('kv', { id: 'zoneDesc', v: app.zoneDesc }); } }
-    save(); if (['assign', 'zone', 'allRights', 'rightsType', 'sowGov', 'addlCond', 'sowIncome', 'sowCost', 'exclIncome', 'exclCost', 'sowNote', 'eaNote', 'hcNote'].includes(k)) { const c = $('#reportCard'); if (c) c.innerHTML = reportHTML(app.job); }
+    save(); if (['assign', 'zone', 'allRights', 'rightsType', 'sowGov', 'addlCond', 'sowIncome', 'sowCost', 'exclIncome', 'exclCost', 'sowNote', 'eaNote', 'hcNote', 'addlCert'].includes(k) || /^cert\d$/.test(k)) { const c = $('#reportCard'); if (c) c.innerHTML = reportHTML(app.job); }
     else { const b = document.querySelector('#reportCard .rptneed'); if (b) { const d = document.createElement('div'); d.innerHTML = reportHTML(app.job); const nb = d.querySelector('.rptneed'); if (nb) b.replaceWith(nb); } }   /* the 'still needed' list follows her answers */
     return; }
   if (t.dataset.hbu) { R.hbu[t.dataset.hbu] = t.checked; save(); }
 });
+document.addEventListener('click', async e => { const b = e.target.closest && e.target.closest('[data-act="cert-usual"],[data-act="cert-save"]'); if (!b || !app.job) return; const R = R0(app.job);
+  if (b.dataset.act === 'cert-save') { await DB.put('kv', { id: 'myCerts', v: certList(R) }); toast('Saved – “Use my usual certifications” puts these in on your next report'); return; }
+  const mine = ((await DB.get('kv', 'myCerts')) || {}).v; const L = mine && mine.length ? mine : CERT_AI;
+  if (certList(R).length && !confirm('Replace the certifications in these boxes with your usual ones?')) return;
+  for (let i = 1; i <= CERT_N; i++) delete R['cert' + i]; L.slice(0, CERT_N).forEach((t, i) => R['cert' + (i + 1)] = t); R.addlCert = 'true'; save();
+  const c = $('#reportCard'); if (c) c.innerHTML = reportHTML(app.job); toast(mine && mine.length ? 'Your usual certifications are in' : 'Your three Appraisal Institute certifications are in – edit them, then “Save these as my usual”'); });
 document.addEventListener('click', e => {
   const b = e.target.closest('[data-act="hbu-all"],[data-act="hbu-draft"],[data-act="exp-use"]'); if (!b || !app.job) return; const R = R0(app.job);
   if (b.dataset.act === 'exp-use') { R.expLow = b.dataset.lo; R.expHigh = b.dataset.hi; }
@@ -221,7 +239,9 @@ function writeReportXML(doc, NS, J, SUBJ, VA, SVC) {
     set(sow, 'GovernmentAgencyAppraisalIndicator', fb('sowGov', false)); if (R.sowGov === 'true' && R.govType) set(sow, 'GovernmentAgencyAppraisalType', R.govType);
     set(sow, 'ValuationAdditionalIntendedUserIndicator', fb('sowAddlUser', F.sowAddlUser)); set(sow, 'ValuationAdditionalScopeOfWorkIndicator', R.sowAddlScope === 'false' && !sowAny(R) ? 'false' : sowAny(R) || R.sowAddlScope === 'true' ? 'true' : 'false');   /* her text turns it on (A-1 2200.0062 / .0003; her Oct 21 SFREP: the box was there but the indicator No) */
     if (sowAny(R)) set(sow, 'ValuationScopeOfWorkDescription', sowText(R).slice(0, 2500));   // her added scope, extraordinary assumptions and hypothetical conditions in the one 3.6 field (F-1 29.003)
-    set(rd, 'AppraiserAdditionalCertificationIndicator', fb('addlCert', false)); set(rd, 'ReconsiderationOfValueIndicator', fb('reconsider', false));
+    { const CL = R.addlCert === 'false' ? [] : certList(R); set(rd, 'AppraiserAdditionalCertificationIndicator', CL.length ? 'true' : 'false');   // her certifications turn it on; Yes with none typed would fail the import (pre-check)
+      if (CL.length) { const CS = child(path(VR, 'SCOPE_OF_WORK'), 'VALUATION_REPORT_ADDITIONAL_CERTIFICATIONS');
+        CL.forEach(t => { const c = add(CS, 'VALUATION_REPORT_ADDITIONAL_CERTIFICATION'); set(c, 'ValuationAdditionalCertificationIncludedByType', 'Appraiser'); set(c, 'ValuationAdditionalCertificationText', t.slice(0, CERT_MAX)); }); } } set(rd, 'ReconsiderationOfValueIndicator', fb('reconsider', false));
     set(rd, 'AppraiserPriorServicesPerformedIndicator', tf('priorSvc')); if (R.priorSvc === 'true' && R.priorSvcText) set(rd, 'AppraiserPriorServicesPerformedDescription', R.priorSvcText.slice(0, 1250));
     set(child(SUBJ, 'LISTING_INFORMATION_SUMMARY'), 'ListedWithinPreviousYearIndicator', fb('listedYear', F.listedYear));
     if (SVC) set(child(SVC, 'SERVICE_DETAIL'), 'ServiceType', 'Valuation');

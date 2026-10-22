@@ -648,6 +648,8 @@ nav.tabs button[aria-selected="true"] { background: var(--look-navy) !important;
       <li><b>Every comment box</b> – here (Scope of work, highest and best use, extraordinary assumptions, market…) and in the Comp genie – knows its section. <b>Click into the box</b>: you can type, or click one of the comment names that appear under it to put that comment in where your cursor is.</li>
       <li><b>📋 My comments</b> under a box opens all of that section's comments with the full wording: <b>Use this</b> (empty box), <b>Add it</b> (adds at your cursor) or <b>Replace my text</b>. Tick <b>show every section</b> to look further, or search. UAD 2.6 comments stay hidden unless you tick them.</li>
       <li>Which comments show for a box goes by the <b>Section</b> name you gave each comment (e.g. "Highest and best use commentary"). If a comment doesn't show where you expect, Edit it here and change its Section.</li>
+      <li><b>Additional appraiser certifications</b> (e.g. your Appraisal Institute ones): Comp genie › Report details › Prior services and certifications › answer Yes. One certification per box (up to 6, 360 characters each – SFREP numbers each one). <b>Use my usual certifications</b> fills them; after you edit them, <b>Save these as my usual</b> and they are the ones used next time.</li>
+      <li><b>Extraordinary assumptions and hypothetical conditions</b> have no separate SFREP field: your wording goes in Additional Scope of Work, and the <b>Market value condition</b> (As is / Subject to repair / Subject to inspection / Subject to completion per plans) tells Fannie Mae one was used. The pre-check warns when they don't agree – e.g. an extraordinary assumption with "As is".</li>
       <li>SFREP has three scope of work places: the <b>Scope of Work</b> paragraph is printed by Fannie Mae and cannot be changed; <b>Additional Scope of Work</b> is the order's Scope of work box (what you did beyond the standard) together with your extraordinary assumptions and hypothetical conditions – 2,500 characters for all three; <b>Assignment Information and Scope of Work Commentary</b> (e.g. your inspection-limits paragraph) is the first box in the Comp genie's Report details › Comments for SFREP.</li>
       <li><b>Draft from your grid:</b> in the Comp genie, under the sales comparison comment, click <b>Draft the comment from my grid</b>. It writes the comparable paragraphs (superior / inferior overall, each adjustment with its amount, your low / mid / high tiers, sale-to-list price, your notes for the comp in [brackets]), your rate paragraphs with the rates on the grid, and the start of the reconciliation (bracketing and adjusted range, your weights). Read it, fill in the [brackets], then click <b>Put it in the comment</b> or <b>Add it to the end</b>. Nothing goes in until you click.</li>
       <li>Your library is kept in this browser on this computer and in your <b>Back up</b> zip – keep backing up.</li></ol></details>
@@ -965,7 +967,7 @@ nav.tabs button[aria-selected="true"] { background: var(--look-navy) !important;
 </div>
 <div id="toast" role="status" hidden></div>
 <script>
-const BUILD='o1-1022-0114';
+const BUILD='o1-1022-0118';
 const G = (() => {
 /* ---------------- small helpers ---------------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -5504,6 +5506,7 @@ const CPK_BOX = [
   ['textarea[data-rpt="priorSvcText"]', 'Prior services', /prior (appraisal|service)/i],
   ['textarea[data-rpt="addlCondText"]', 'Assignment conditions', /assignment|condition|limiting/i],
   ['textarea[data-rpt="rightsNot"], #f_rightsNot', 'Rights not appraised', /rights|mineral|ownership/i],
+  ['textarea[data-rpt^="cert"]', 'Additional certifications', /certif/i],
   ['textarea[data-rpt="cAssign"]', 'Assignment information and scope of work', /assignment|inspection|scope of work|ansi/i],
   ['textarea[data-rpt="cSubjPrior"], textarea[data-rpt="cCompPrior"]', 'Prior sales and transfers', /prior sale|transfer|sales history/i],
   ['textarea[data-rpt="cSite"]', 'Site', /^site(?! value)|zoning|hazard|flood|fire|views?\b/i],

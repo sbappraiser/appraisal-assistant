@@ -19,6 +19,7 @@ const CPK_BOX = [
   ['textarea[data-rpt="priorSvcText"]', 'Prior services', /prior (appraisal|service)/i],
   ['textarea[data-rpt="addlCondText"]', 'Assignment conditions', /assignment|condition|limiting/i],
   ['textarea[data-rpt="rightsNot"], #f_rightsNot', 'Rights not appraised', /rights|mineral|ownership/i],
+  ['textarea[data-rpt^="cert"]', 'Additional certifications', /certif/i],
   ['textarea[data-rpt="cAssign"]', 'Assignment information and scope of work', /assignment|inspection|scope of work|ansi/i],
   ['textarea[data-rpt="cSubjPrior"], textarea[data-rpt="cCompPrior"]', 'Prior sales and transfers', /prior sale|transfer|sales history/i],
   ['textarea[data-rpt="cSite"]', 'Site', /^site(?! value)|zoning|hazard|flood|fire|views?\b/i],
