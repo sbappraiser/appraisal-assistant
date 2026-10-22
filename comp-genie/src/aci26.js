@@ -14,9 +14,9 @@ const A26_LOC = { Residential: 'Res', BusyRoadway: 'BsyRd', CommercialArea: 'Com
 const A26_VIEW = { Residential: 'Res', Mountain: 'Mtn', Ocean: 'Wtr', Bay: 'Wtr', Lake: 'Wtr', River: 'Wtr', Creek: 'Wtr', Pond: 'Wtr', Reservoir: 'Wtr', Canal: 'Wtr', Cove: 'Wtr', Gulf: 'Wtr', Sound: 'Wtr', Woods: 'Woods', Park: 'Prk', Pastoral: 'Pstrl', Valley: 'Pstrl', GolfCourse: 'Glfvw', Skyline: 'CtySky', CityStreet: 'CtyStr', Industrial: 'Ind' };
 const a26Rating = L => L.some(x => x.impact === 'Adverse') ? 'A' : L.some(x => x.impact === 'Beneficial') ? 'B' : 'N';
 const a26MY = iso => { const m = String(iso || '').match(/^(\d{4})-(\d{2})/); return m ? `${m[2]}/${m[1].slice(2)}` : ''; };
-function a26Loc(text) { const L = typeof siParse === 'function' ? siParse(text || '') : []; if (!L.length) return ''; const f = []; L.forEach(x => { const a = A26_LOC[x.type] || (x.type === 'Other' ? (x.other || '').replace(/\s+/g, '') : ''); if (a && !f.includes(a) && f.length < 2) f.push(a); }); return [a26Rating(L), ...f].join(';'); }
+function a26Loc(text) { const L = typeof siParse === 'function' ? siParse(text || '') : []; if (!L.length) return ''; const f = []; L.forEach(x => { const a = A26_LOC[x.type] || (x.type === 'Other' ? (x.other || '').replace(/\s+/g, '') : ''); if (a && !f.includes(a) && f.length < 2) f.push(a); }); return [a26Rating(L), ...f, ...(f.length < 2 ? [''] : [])].join(';'); }
 function a26View(text) { const L = typeof vwParse === 'function' ? vwParse(text || '') : []; if (!L.length) return ''; const f = []; L.forEach(x => { const a = A26_VIEW[x.type] || (/power|pwr/i.test(x.other || '') ? 'PwrLn' : x.type === 'Other' ? (x.other || '').replace(/\s+/g, '') : ''); if (a && !f.includes(a) && f.length < 2) f.push(a); });
-  if (f.length < 2 && L.some(x => x.range === 'Partial') && !f.includes('Res')) f.push('LtdSght'); return [a26Rating(L), ...f].join(';'); }
+  if (f.length < 2 && L.some(x => x.range === 'Partial') && !f.includes('Res')) f.push('LtdSght'); return [a26Rating(L), ...f, ...(f.length < 2 ? [''] : [])].join(';'); }
 function a26Design(F) { const at = /semi/i.test(F.attach || '') ? 'SD' : /attach/i.test(F.attach || '') && !/detach/i.test(F.attach || '') ? 'AT' : 'DT'; const lv = num(F.levels); const st = String(F.style || '').replace(/[^A-Za-z]/g, '');
   return `${at}${lv ? (+lv).toString().replace(/\.0+$/, '') : ''}${st ? ';' + st : ''}`; }
 const a26Q = v => (String(v || '').match(/Q[1-6]/i) || [''])[0].toUpperCase(), a26C = v => (String(v || '').match(/C[1-6]/i) || [''])[0].toUpperCase();
@@ -38,14 +38,17 @@ function a26Fin(F) { const t = String(F.terms || ''); const k = /cash/i.test(t) 
 function a26SaleType(F) { if (F.listing) return 'Listing'; const t = String(F.xferTerms || '').toLowerCase(); return /reo|bank/.test(t) ? 'REO' : /short/.test(t) ? 'Short' : /court|foreclos/.test(t) ? 'CrtOrd' : /estate/.test(t) ? 'Estate' : /relocat/.test(t) ? 'Relo' : /related|non.?arm/.test(t) ? 'NonArm' : 'ArmLth'; }
 function a26Date(F) { const st = String(F.status || ''); if (/active|coming/i.test(st)) return 'Active'; if (/pending|contract/i.test(st)) return F.contract ? 'c' + a26MY(F.contract) : 'c'; if (/expired/i.test(st)) return 'e' + a26MY(F.listDate);
   if (/withdrawn/i.test(st)) return 'w' + a26MY(F.listDate); const s = a26MY(F.sale); if (!s) return ''; const c = /^\d{4}-\d{2}/.test(String(F.contract || '')) ? 'c' + a26MY(F.contract) : 'Unk'; return `s${s};${c}`; }
-function a26DataSrc(c, F) { const mls = c ? V(c, 'mls') : ''; const dom = F.dom === 0 ? 0 : blank(F.dom) ? 'Unk' : Math.round(num(F.dom)); return mls ? `SBMLS#${mls};DOM ${dom}` : (F.offMls ? `Off market;DOM 0` : ''); }
+function a26DataSrc(c, F) { const mls = c ? V(c, 'mls') : ''; const dom = F.dom === 0 ? 0 : blank(F.dom) ? 'Unk' : Math.round(num(F.dom)); return mls ? `SBMLS #${mls};DOM ${dom}` : (F.offMls ? `Off market;DOM 0` : ''); }   // her ACI form: "SBMLS #26-1392;DOM 148"
+/* her verification line in ACI: the recorded document number and date ("#25286 7/24/26") */
+function a26Verify(c, F) { const DN = typeof docNoOf === 'function' ? docNoOf(c) : null; const dn = DN ? (typeof docShort === 'function' ? docShort(DN.doc) : DN.doc) : ((c.src && c.src.cort && c.src.cort[c.cortPick || 0] && c.src.cort[c.cortPick || 0].doc) || ''); const cr = (c.src && c.src.cort && c.src.cort[0]) || null; const d = (cr && (cr.recDate || cr.saleDate)) || F.sale || ''; const m = String(d).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return dn ? `#${String(dn).replace(/^#/, '')}${m ? ` ${+m[2]}/${+m[3]}/${m[1].slice(2)}` : ''}` : (F.listing ? 'Active' : ''); }
 /* the grid rows in ACI's (1004) order: [label, value(F, c, raw, isSubj), grid lines whose $ adjustments sum here] */
 const A26_ROWS = [
   ['Proximity to subject', (F, c) => { if (!c) return ''; const p = proximity(c, app.job); return p ? `${p.mi.toFixed(2)} miles ${A26_DIR[p.dir] || p.dir}` : ''; }, []],
   ['Sale price', F => F.price ? Math.round(F.price) : '', []],
   ['Sale price / gross liv. area', F => F.price && num(F.gla) ? (F.price / num(F.gla)).toFixed(2) : '', []],
   ['Data source(s)', (F, c) => c ? a26DataSrc(c, F) : '', []],
-  ['Verification source(s)', (F, c) => c ? String(F.src || '').split('\n').filter(x => !/^MLS/.test(x)).join('/').replace(/^Your archive$/, '') : '', []],
+  ['Verification source(s)', (F, c) => c ? a26Verify(c, F) : '', []],
   ['Sale or financing concessions – line 1', (F, c) => c ? a26SaleType(F) : '', ['xferTerms']],
   ['Sale or financing concessions – line 2', (F, c) => c ? a26Fin(F) : '', ['terms', 'conc']],
   ['Date of sale / time', (F, c) => c ? a26Date(F) : '', ['sale']],
@@ -67,8 +70,10 @@ const A26_ROWS = [
   ['Energy efficient items', (F, c, R) => R && R.energy_raw && !a26Own(c, ['energy']) ? R.energy_raw : (F.energy || 'None'), ['energy']],
   ['Garage / carport', (F, c, R) => R && R.garage_raw && !a26Own(c, ['garage', 'vs', 'carport', 'vsText']) ? R.garage_raw : a26Garage(c, F), ['garage', 'carport']],
   ['Porch / patio / deck', (F, c, R) => R && R.porch_patio && !a26Own(c, ['porch']) ? R.porch_patio : (F.porch || 'None'), ['porch']],
-  ['Pool / spa', F => F.pool || 'None', ['pool']],
-  ['ADU / outbuildings', F => String(F.adu || 'None').split(/;\s*/).map(x => x.trim()).filter(x => x && !/^(no|none)$/i.test(x)).join('; ').slice(0, 40) || 'None', ['adu']],
+  /* her three own lines on the ACI grid (from her Oct 2026 report): usable acres/neighborhood · ADU and outbuildings · pool/landscaping */
+  ['Usable lot / neighborhood (your line)', F => { const u = num(F.usable); const n = String(F.nbhd || '').replace(/\s+/g, ''); return u || n ? `${u ? (+u).toFixed(2).replace(/0$/, '') : ''}/${n}` : ''; }, ['usable', 'nbhd']],
+  ['ADU / outbuildings (your line)', F => String(F.adu || 'None').split(/;\s*/).map(x => x.trim()).filter(x => x && !/^(no|none)$/i.test(x)).join('; ').slice(0, 40) || 'None', ['adu']],
+  ['Pool / landscaping (your line)', F => `${String(F.pool || 'None').replace(/,\s*/g, ',').replace(/Inground |Above-ground /g, '').replace(/\s*\/\s*Hot Tub/ig, '').slice(0, 18)}/${String(F.land || 'Average').replace(/\s+/g, '-')}`, ['pool', 'land', 'courts']],
 ];
 function a26Adj(J, c, ids) { if (!c || !ids.length) return null; const rows = adjRows(J).filter(r => ids.includes(r[0]) && (typeof rowShown !== 'function' || rowShown(r, J))); if (!rows.length) return null; let t = 0, any = false;
   rows.forEach(r => { const a = cellAmount(J, c, r); if (a && a.v !== null && a.v !== undefined && !isNaN(a.v)) { t += +a.v; any = true; } }); return any ? Math.round(t) : null; }
