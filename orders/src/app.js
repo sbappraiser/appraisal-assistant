@@ -370,7 +370,7 @@ function renderOrderSummary(f) {
   $('#osTheirs').onclick = () => { $('#f_status').value = 'Client letter'; update(); document.getElementById('docsSet').scrollIntoView({ behavior: 'smooth' }); };
 }
 let CUR_TAB = 'home';
-function showTab(t) { CUR_TAB = t;
+function showTab(t) { CUR_TAB = t; if (t === 'home' && typeof ibRender === 'function') setTimeout(() => { ibRender().then(() => { if (IB.perm === 'granted' && !IB.mail && !IB.busy) ibCheck(); }); }, 50);
   document.querySelectorAll('[data-tab]').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === t));
   document.querySelectorAll('.panel').forEach(p => { p.hidden = p.id !== 'panel-' + t; });
   if (t === 'home') renderHome();
