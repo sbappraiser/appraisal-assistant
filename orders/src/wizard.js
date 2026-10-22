@@ -59,11 +59,12 @@ const SLOTS = [
   ['crs', 'CRS Data property report', 'Fills the APN, owner, location and public-record facts (never beds, baths or square feet).', () => true],
   ['permitsCounty', 'County permit history (by parcel)', 'The CrystalViewer “Permit History by Parcel” printout: permits, zoning and parcel facts are read from it.', () => true],
   ['legal', 'Legal description', 'Only if it is a separate file – the prelim usually has it.', () => true],
+  ['plat', 'Plat map (assessor parcel map)', 'For the site size, shape and dimensions, and as an exhibit.', () => true],
   ['mls', 'MLS listing with its history', 'The subject’s listing and listing history (CSV export or printout).', w => w.listed === 'yes'],
   ['contract', 'Purchase contract, counter offers and addenda', 'Add every file – packets often come in several PDFs.', w => w.purchase === 'yes'],
   ['prelim', 'Preliminary title report', 'Easements, CC&R’s and the legal description are read from it.', () => true],
   ['deed', 'Deed (grant deed, trust transfer, quitclaim)', 'Vesting, the legal description and any rights not appraised (oil, gas, minerals) are read from it.', () => true],
-  ['other', 'Other documents', 'Plans, permits, HOA documents, disclosures, leaseback, plat map … each is sorted by kind.', () => true],
+  ['other', 'Other documents', 'Plans, permits, HOA documents, disclosures, leaseback … each is sorted by kind.', () => true],
 ];
 function renderWizard() {
   const box = $('#newBody'); if (!box || !cur) return; const w = cur.wizard = cur.wizard || {}; const f = readForm();

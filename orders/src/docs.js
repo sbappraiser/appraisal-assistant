@@ -7,7 +7,7 @@
 const h = s => hesc(s ?? '');
 const DOC_TYPES = [
   ['Order and client', [['clientLetter', 'Client’s engagement letter / order'], ['myLetter', 'My engagement letter (signed)'], ['invoice', 'Invoice / payment'], ['ipadWorkfile', 'iPad inspection (Workfile package)'], ['email', 'Email (with its attachments)']]],
-  ['Public record', [['crs', 'CRS property report'], ['permitsCounty', 'Permit history by parcel (County)'], ['permitsPdf', 'Permit records'], ['legal', 'Legal description'], ['deed', 'Deed (grant, trust transfer, quitclaim)'], ['prelim', 'Preliminary title report']]],
+  ['Public record', [['crs', 'CRS property report'], ['permitsCounty', 'Permit history by parcel (County)'], ['permitsPdf', 'Permit records'], ['legal', 'Legal description'], ['plat', 'Plat map (assessor parcel map)'], ['deed', 'Deed (grant, trust transfer, quitclaim)'], ['prelim', 'Preliminary title report']]],
   ['MLS and market', [['mls', 'MLS listing (subject)'], ['marketSearch', 'MLS market-area search'], ['crsList', 'CRS neighborhood sales list'], ['mlsStats', 'SBMLS monthly statistics'], ['zillow', 'Zillow market page']]],
   ['Plans and construction', [['floorplan', 'Floor plan (to trace in the sketch)'], ['plans', 'Plans'], ['specs', 'Specifications'], ['budget', 'Construction budget']]],
   ['HOA', [['condoQ', 'Condo questionnaire'], ['ccrs', 'CC&Rs'], ['hoaBudget', 'HOA budget'], ['bylaws', 'HOA bylaws'], ['minutes', 'HOA minutes']]],
@@ -15,7 +15,7 @@ const DOC_TYPES = [
   ['Other', [['photo', 'Photo'], ['other', 'Other']]],
 ];
 const DOC_LABEL = Object.fromEntries(DOC_TYPES.flatMap(g => g[1]));
-const READS = { crs: 'read for the subject facts', mls: 'read for the subject’s listing history', permitsCounty: 'read for the permit list', clientLetter: 'checked for AI and confidentiality wording', floorplan: 'ready to trace on the iPad' };
+const READS = { plat: 'kept for the site size, shape and dimensions, and as an exhibit', crs: 'read for the subject facts', mls: 'read for the subject’s listing history', permitsCounty: 'read for the permit list', clientLetter: 'checked for AI and confidentiality wording', floorplan: 'ready to trace on the iPad' };
 
 /* ---------- what kind of document is this? (text on page 1, then the file name) ---------- */
 const TEXT_RULES = [
@@ -37,6 +37,7 @@ const TEXT_RULES = [
   [/ADDENDUM/i, 'addendum'],
   [/PURCHASE AGREEMENT|Joint Escrow Instructions|Purchase Contract/i, 'contract'],
   [/Transfer Disclosure|Seller Property Questionnaire|Natural Hazard Disclosure|Statewide Buyer and Seller Advisory|DISCLOSURE/i, 'disclosures'],
+  [/ASSESSOR'?S?\s+(PARCEL\s+)?MAP|PLAT MAP|PARCEL MAP NO|TRACT MAP|RECORD OF SURVEY/i, 'plat'],
   [/SHEET INDEX|GREEN BUILDING CODE|ARCHITECT|SITE PLAN|ELEVATIONS?\b/i, 'plans'],
   [/FLOOR ?PLAN/i, 'floorplan'],
   [/Specifications|Outline Spec|Finish Schedule/i, 'specs'],
@@ -54,7 +55,7 @@ async function recheckDocTypes(o) { let n = 0;
     try { const f = await docFile(d.id); const said = f && await textDocType(f); if (said && said !== d.type && STRONG_TYPES.includes(said)) { await retypeDoc(d.id, said); n++; } } catch (e) {} }
   if (n) toast(n + ' document' + (n > 1 ? 's were' : ' was') + ' in the wrong kind and ' + (n > 1 ? 'have' : 'has') + ' been corrected (see Documents)', 6000); }
 const NAME_RULES = [
-  [/zillow/i, 'zillow'], [/\bCRS\b|Property[_ ]Report/i, 'crs'], [/CrystalViewer|permit[_ ]?hist/i, 'permitsCounty'], [/flexmls|\bMLS\b|customexport/i, 'mls'],
+  [/zillow/i, 'zillow'], [/\bCRS\b|Property[_ ]Report/i, 'crs'], [/CrystalViewer|permit[_ ]?hist/i, 'permitsCounty'], [/flexmls|\bMLS\b|customexport/i, 'mls'], [/\bplat\b|parcel[_ ]?map|assessor'?s?[_ ]?map|apn[_ ]?map|tract[_ ]?map/i, 'plat'],
   [/engagement|order[_ ]?form|appraisal[_ ]?order/i, 'clientLetter'], [/floor[_ ]?plan|floorplan/i, 'floorplan'], [/plans?\b|drawings|architect/i, 'plans'], [/spec/i, 'specs'],
   [/questionnaire/i, 'condoQ'], [/cc&?rs?\b|declaration/i, 'ccrs'], [/bylaws?/i, 'bylaws'], [/minutes/i, 'minutes'], [/hoa.*budget|reserve/i, 'hoaBudget'], [/budget|cost/i, 'budget'],
   [/prelim|title/i, 'prelim'], [/lease[_ ]?after|lease[_ ]?back|rent[_ ]?back|\bsip\b|\bbip\b/i, 'leaseback'], [/counter/i, 'counter'], [/addend/i, 'addendum'],
