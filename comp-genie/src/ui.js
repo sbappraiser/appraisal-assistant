@@ -384,7 +384,7 @@ function renderPage() {
   if (POP) { root.innerHTML = popHTML(J); document.title = `Comps ${POP.from}–${POP.to} · ${J.name}`; wbUndoBar(); return; }
   if (app.home || !J) { root.innerHTML = homeHTML(); document.title = 'Comp Genie'; return; }
   document.title = 'Comp Genie · ' + J.name;
-  root.dataset.stage = J.stage || (J.comps.some(c => c.use) ? 'workbook' : 'micro');
+  root.dataset.stage = J.stage || (J.comps.some(c => c.use) ? 'workbook' : J.comps.length ? 'micro' : 'setup');
   const ON = (...st) => st.includes(root.dataset.stage);   /* her ask (Oct 21 2026, "slow to load"): only the step she is on is built – the others were built and hidden on every redraw */
   root.innerHTML = `
   <header class="top"><h1>Comp Genie</h1><span class="pill ver" title="The Comp genie version – after Ctrl+R it should match the one I tell you">Version ${typeof BUILD !== 'undefined' ? BUILD : ''}</span>
@@ -420,8 +420,8 @@ function renderPage() {
   ${ARCH.loaded ? '' : `<section class="card notice"><b>Load your comp archive${app.jobs.some(j => j.comps.length) ? ' in this browser' : ' once'}.</b> ${app.jobs.some(j => j.comps.length) ? 'Each browser (Chrome, Firefox, Edge) keeps its own copy, and this one has none yet. ' : ''}Drop <i>Comp Archive.json.gz</i> and <i>CORT Sales.csv</i> anywhere on this page (or <label class="link">choose it<input type="file" multiple data-act="files" hidden></label>). It is saved on this computer only; nothing is uploaded.</section>`}
   ${stageBarHTML(J)}
   <div class="busy" id="busy" ${app.busy ? '' : 'hidden'}>${esc(app.busy)}</div>
-  <section class="card st st-micro" id="subjCard"><h2>Subject</h2>${ON('micro') ? subjectHTML(J) : ''}</section>
-  <section class="card st st-micro" id="setupCard">${ON('micro') ? reportHTML(J, 'early') : ''}</section>
+  <section class="card st st-setup" id="subjCard"><h2>④ Inspection – the subject</h2>${ON('setup') ? inspCardHTML(J) + subjectHTML(J) : ''}</section>
+  <section class="card st st-setup" id="setupCard">${ON('setup') ? reportHTML(J, 'early') : ''}</section>
   <section class="card st st-micro"><h2>Add comps</h2>
     <div class="addrow"><div class="sugwrap"><input id="addr" class="txt big" placeholder="Type a comp address, e.g. 1181 Glenview" autocomplete="off" data-act="sugg"><div class="sugg" id="sugg"></div></div>
       <button class="btn primary" data-act="add">Add comp</button></div>
@@ -775,7 +775,7 @@ document.addEventListener('click', async e => {
     case 'path': { if (typeof e !== 'undefined' && e.preventDefault) e.preventDefault(); const x = pathSteps(app.job).find(y => y.k === t.dataset.p); if (!x) break; if (x.href) { window.top.location.href = x.href; break; }
       app.pathAt = x.k; app.job.stage = x.st; save(); render.top = true; render(); setTimeout(() => { const c = document.querySelector(x.sel); if (c) { const d = c.closest('details'); if (d) d.open = true; c.scrollIntoView({ behavior: 'smooth', block: 'start' }); } }, 120); break; }
     case 'set-lines': { if (app.job.stage !== 'workbook') { app.job.stage = 'workbook'; save(); render.top = true; render(); } setTimeout(() => { const d = [...document.querySelectorAll('#gridCard details')].find(x => /Grid lines/.test(x.querySelector('summary') ? x.querySelector('summary').textContent : '')); if (d) { d.open = true; d.scrollIntoView({ behavior: 'smooth', block: 'start' }); } }, 120); break; }
-    case 'goreport': { app.job.stage = 'micro'; save(); render.top = true; render(); setTimeout(() => { const c = document.getElementById('setupCard'); if (c) c.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 120); break; }
+    case 'goreport': { app.job.stage = 'setup'; save(); render.top = true; render(); setTimeout(() => { const c = document.getElementById('setupCard'); if (c) c.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 120); break; }
     case 'close': if (CPOP) { window.close(); break; } app.sel = null; render(); break;
     case 'backup': backupJob(); break;
     case 'nuok': app.nuAsk = null; render(); break;
@@ -979,8 +979,8 @@ async function snapPick() { const L = (await snapIdx()).sort((a, b) => b.at - a.
 function pathSteps(J) { const U = usedComps(J), G = G0(J), R = R0(J), o = (app.orders || []).find(x => x.id === J.orderId) || null; const T = f => { try { return f(); } catch (e) { return false; } };
   const conf = U.filter(c => c.confirmed).length; const costOn = J.costOn ?? (R.sowCost === 'true' || (!R.sowCost && o && o.apCost)); const incOn = J.incomeOn ?? (R.sowIncome === 'true' || (!R.sowIncome && !!(o && (o.apIncome || o.rent))));
   return [
-    { n: '4', k: 'insp', l: 'Inspection', sub: 'iPad data, photos, sketch', st: 'micro', sel: '#subjCard', done: T(() => !!J.subject.insp), todo: 'drop your iPad Workfile package' },
-    { n: '5', k: 'setup', l: 'Assignment, scope and site', sub: 'scope · EA/HC · H&BU · site · certifications', st: 'micro', sel: '#setupCard', done: T(() => !precheckGrid(J).some(x => x.sev === 'Must fix' && (preGo0(J, x) || {}).label === 'Report details' && !rptLateMsg(x.msg))), todo: 'answer the questions in Assignment, scope and site' },
+    { n: '4', k: 'insp', l: 'Inspection', sub: 'iPad data, photos, sketch', st: 'setup', sel: '#subjCard', done: T(() => !!J.subject.insp), todo: 'drop your iPad Workfile package' },
+    { n: '5', k: 'setup', l: 'Assignment, scope and site', sub: 'scope · EA/HC · H&BU · site · certifications', st: 'setup', sel: '#setupCard', done: T(() => !precheckGrid(J).some(x => x.sev === 'Must fix' && (preGo0(J, x) || {}).label === 'Report details' && !rptLateMsg(x.msg))), todo: 'answer the questions in Assignment, scope and site' },
     { n: '6', k: 'market', l: 'Market', sub: 'macro → micro', href: o ? `../appraisal-assistant/?order=${encodeURIComponent(o.id)}&tab=market` : null, done: T(() => !!(o && o.market && (o.market.uad || o.market.charts || o.market.micro))), todo: 'the order’s Market tab' },
     { n: '7', k: 'sel', l: 'Comp selection', sub: `${J.comps.length} considered · ${U.length} used`, st: 'micro', sel: '#compsCard', done: U.length >= 3, todo: 'pick at least 3 comps for the grid' },
     { n: '8', k: 'data', l: 'Comp data', sub: `${conf} of ${U.length} confirmed`, st: 'workbook', sel: '#wbStrip', done: U.length > 0 && conf === U.length, todo: `confirm ${U.length - conf} comp${U.length - conf === 1 ? '' : 's'}` },
@@ -1085,3 +1085,9 @@ document.addEventListener('wheel', e => { if (POP || e.deltaY <= 0 || e.ctrlKey)
 
 /* the file she is in, top right (look.js) */
 window.lookFileName = () => app && app.job ? [app.job.fileNo || (app.job.subject && app.job.subject.fileNo) || '', app.job.subject.addr || app.job.name || ''].filter(Boolean).join(' · ') : '';
+
+/* ④ Inspection on its own page with ⑤ (her note Oct 22 2026: the Inspection step opened the comps page): the iPad Workfile package and what came in */
+function inspCardHTML(J) { const I = J.subject.insp;
+  return `<div class="row inspdrop">${I ? '' : '<b class="warnTxt">No inspection yet.</b>'}
+    <label class="btn ${I ? '' : 'primary'}">${I ? 'Replace with a newer Workfile package' : 'Add your iPad Workfile package (.zip)'}<input type="file" accept=".zip" data-act="files" hidden></label></div>
+    <p class="help">The subject's data, photos and sketch come from it. Comps are added on ⑦ Comp selection.</p>`; }

@@ -149,7 +149,7 @@ async function precheckRun(J, wantExport) {
 }
 
 /* her ask (Oct 21 2026): each pre-check line takes her to the place to fix it – the step, then the box (scrolled to and outlined) */
-function preGo(J, x) { const g = preGo0(J, x); if (g && g.label === 'Report details' && typeof rptLateMsg === 'function' && !rptLateMsg(String(x.msg || ''))) { g.stage = 'micro'; g.label = 'Assignment, scope and site'; } return g; }
+function preGo(J, x) { const g = preGo0(J, x); if (g && g.label === 'Report details' && typeof rptLateMsg === 'function' && !rptLateMsg(String(x.msg || ''))) { g.stage = 'setup'; g.label = 'Assignment, scope and site'; } return g; }
 function preGo0(J, x) { const m = String(x.msg || ''); const byUse = n => usedComps(J).find(c => +c.use === +n);
   let r;
   if ((r = m.match(/^Comp (\d+): Construction method/))) { const c = byUse(r[1]); if (c) return { stage: 'workbook', sel: `[data-gfact="${c.id}|constr"]`, label: 'comp ' + c.use + ' construction method' }; }
@@ -176,8 +176,8 @@ function preGo0(J, x) { const m = String(x.msg || ''); const byUse = n => usedCo
   if (/Opinion of market value/i.test(m)) return { stage: 'final', text: 'Opinion of market value', label: 'Report details' };
   if ((r = m.match(/^Comp (\d+): Construction method/))) { const c = byUse(r[1]); if (c) return { stage: 'workbook', sel: `[data-gfact="${c.id}|constr"]`, label: 'comp ' + c.use + ' construction method' }; }
   if (/exposure time/i.test(m)) return { stage: 'final', text: 'Value and reconciliation', label: 'Report details' };
-  if (/Workfile package/i.test(m)) return { stage: 'micro', sel: '#drop', label: 'drop it here (Comps considered)' };
-  if (/effective date/i.test(m)) return { stage: 'micro', sel: '[data-subj="eff"]', label: 'Subject card' };
+  if (/Workfile package/i.test(m)) return { stage: 'setup', sel: '#subjCard', label: '④ Inspection' };
+  if (/effective date/i.test(m)) return { stage: 'setup', sel: '[data-subj="eff"]', label: 'Subject card' };
   if (/COST_APPROACH|REPLACEMENT_REPRODUCTION|IMPROVEMENT_COST|SiteEstimated|Cost approach/i.test(m)) return { stage: 'cost', sel: '#costCard', label: 'Cost approach' };
   if (/^Subject ·/.test(m)) return { stage: 'final', sel: '#reportCard', label: 'Report details (or fix it on the iPad)' };
   return null; }

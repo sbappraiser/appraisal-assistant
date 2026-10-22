@@ -796,3 +796,4 @@ Decisions (her, Oct 19–20): "Exterior of dwelling" instead of left/right/side 
   - Client-requested conditions: hub Scope tab fields f_addlCond / f_addlCondText (NEW_FIELDS); reportFrom → RE(J) default; genie field moved to Scope of work; export uses RE.
   - Income approach: card #incomeCard stage 'income' (own page; CSS rule added), step ⑬; on when J.incomeOn, else sowIncome Yes, else the order's apIncome/rent.
   - Days on market table (expHelpHTML): list price, sale price, sale/list %, "n of m sold over the list price".
+- Her note Oct 22 2026: step ④ Inspection opened the comps page. New stage 'setup' (cards #subjCard with inspCardHTML – Workfile package button – and #setupCard); steps ④ and ⑤ go there; comps (Add comps, Comps considered) stay on 'micro' (⑦). New assignments open on 'setup'. preGo early items, Workfile and effective-date links → setup. Cards get scroll-margin-top so titles are not under the top bar (genie g2-1022-0410).
