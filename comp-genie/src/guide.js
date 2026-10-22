@@ -96,6 +96,7 @@ function guideHTML(id, label, xml) {
   const G = GUIDE[id] || {}, pk = pkKeyFor(id), S = pk ? PICK[pk] : null;
   const opts = S ? S.opts.map(o => `<li><b>${esc(o[1])}</b>${o[2] ? ' – ' + esc(o[2]) : ''}</li>`).join('') : (G.list || []).map(o => `<li>${esc(o)}</li>`).join('');
   return `<div class="sheet guide"><h2>${esc(label)}</h2>${xml ? `<p class="muted">UAD 3.6 field: <code>${esc(xml)}</code>${G.f ? ` · F-1 ${esc(G.f)}` : ''}</p>` : G.f ? `<p class="muted">F-1 ${esc(G.f)}</p>` : ''}
+    ${G.f ? `<p><button type="button" class="btn sm" data-f1="${esc(String(G.f).split(/[ ,]/)[0])}">📚 Open F-1 ${esc(G.f)} in my Library</button></p>` : ''}
     ${G.when ? `<p><b>When it is required:</b> ${esc(G.when)}</p>` : ''}${G.say ? `<p>${esc(G.say)}</p>` : '<p class="muted">No UAD 3.6 guidance written for this line yet.</p>'}
     ${S && S.help && S.help !== G.say ? `<p>${esc(S.help)}</p>` : ''}
     ${opts ? `<h3>${S ? 'Choices (the ▾ pick list)' : 'Allowed answers'}${S && S.multi ? ' – choose one or more' : S && S.one ? ' – choose one' : ''}</h3><ul class="gopts">${opts}</ul>` : ''}

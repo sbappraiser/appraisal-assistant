@@ -482,3 +482,16 @@ function t78XML(J, R, VR, SVC, child, add, set, path) { const v = k => String(R[
   const F = reportFrom(J);
   if ((R.sowAddlUser === 'true' || (blank(R.sowAddlUser) && F.sowAddlUser)) && String(F.otherUsers || R.addlUsers || '').trim()) set(path(VR, 'SCOPE_OF_WORK', 'VALUATION_REPORT_ADDITIONAL_INTENDED_USERS', 'VALUATION_REPORT_ADDITIONAL_INTENDED_USER'), 'ValuationAdditionalIntendedUserDescription', String(R.addlUsers || F.otherUsers).trim().slice(0, 180));
 }
+
+/* ⓘ beside each UAD field: opens the matching F-1 page in her Library (the head of the octopus, Oct 22 2026) */
+const F1_OF = { zone: '4.009', zoneDesc: '4.009', zoneComp: '4.008', zoneCompDesc: '4.014', zoneRebuild: '4.013', zoneIllegal: '4.011', siteDim: '4.001', parcelsContig: '4.003', parcelSep: '4.004', privMaint: '4.022',
+  ease: '4.050', easeType: '4.055', easeImpact: '4.056', easeDesc: '4.057', encr: '4.050', encrType: '4.059', encrDir: '4.059', encrImpact: '4.060', encrDesc: '4.061', allRights: '3.027', minLeased: '3.029', constr: '3.018',
+  nonArmsNote: '20.003', listedYear: '19.000', lstType: '19.003', lstId: '19.004', lstStart: '19.005', lstEnd: '19.006', lstDom: '19.007', lstOrig: '19.008', lstCdom: '19.010', hbuPresent: '16.004',
+  sowNote: '29.003', eaNote: '29.003', hcNote: '29.003', vcond: '26.009', asIsCond: '26.071', opinion: '26.007', expLow: '26.010', altValue: '26.017', altCond: '26.014', altLow: '26.016',
+  reconsider: '27.003', rovBy: '27.003', rovDate: '27.004', rovResult: '27.005', rovNote: '27.006', priorSvc: '29.050', priorSvcText: '29.051', addlCert: '29.053' };
+function libGo(q, kind) { try { if (window.parent !== window) { window.parent.postMessage({ type: 'aa-lib', q, kind: kind || 'f1' }, location.origin); return; } } catch (e) {}
+  window.open('../appraisal-assistant/?tab=library&q=' + encodeURIComponent(q) + '&kind=' + (kind || 'f1'), 'aa-hub'); }
+function f1Attach(root) { (root || document).querySelectorAll('[data-rpt]').forEach(el => { const f = F1_OF[el.dataset.rpt]; if (!f) return; const lab = el.closest('.fld'); const sp = lab && lab.querySelector(':scope > span'); if (!sp || sp.querySelector('.f1q')) return;
+    sp.insertAdjacentHTML('beforeend', ` <span class="f1q" role="button" tabindex="0" data-f1="${f}" title="F-1 ${f} – open Fannie Mae's guidance for this field in your Library">ⓘ</span>`); }); }
+document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('[data-f1]'); if (!b) return; e.preventDefault(); e.stopPropagation(); libGo(b.dataset.f1, 'f1'); }, true);
+if (typeof document !== 'undefined') { const go = () => { f1Attach(); new MutationObserver(() => f1Attach()).observe(document.body, { childList: true, subtree: true }); }; if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', go); else setTimeout(go, 0); }

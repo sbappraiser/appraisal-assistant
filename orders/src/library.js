@@ -45,8 +45,12 @@ async function libAdd(files0) { let added = 0, same = 0; const files = await lib
   LIB.busy = ''; LIB.hits = null; libRender(); if (typeof abSoon === 'function') abSoon();
   toast(`${added} added to the Library${same ? ` · ${same} already there` : ''}`, 5000); }
 /* search every page of every document: all the words must be on the page */
-async function libSearch(q) { LIB.q = q; const W = q.toLowerCase().split(/\s+/).filter(w => w.length > 1); if (!W.length) { LIB.hits = null; libRender(); return; }
-  const hits = []; for (const d of LIB.list) { const rec = await ODB.get('docs', d.id); const P = (rec && rec.pagesText) || [];
+async function libSearch(q, kind) { LIB.q = q; LIB.kind = kind || ''; const W = q.toLowerCase().split(/\s+/).filter(w => w.length > 1); if (!W.length) { LIB.hits = null; libRender(); return; }
+  const hits = []; for (const d of LIB.list.filter(x => !LIB.kind || x.kind === LIB.kind)) { const rec = await ODB.get('docs', d.id); const P = (rec && rec.pagesText) || [];
+    const fid = /^\d{1,2}\.\d{2,3}(\.\d+)?$/.test(q.trim()) ? q.trim().replace(/\./g, '\\.\\s?') : null;   // PDF text sometimes reads 27.005 as "27. 005"   // a F-1 field number: the exact number, its definition row first
+    if (fid) { const any = new RegExp('(^|[^\\d.])' + fid + '(?![\\d])'), row = new RegExp('(^|\\n)\\s*' + fid + '\\s+[A-Z][^\\n]{0,160}?(required|Required|Displays|displays|Optional|optional|N/A)');   // the field's own row in F-1's tables: number, label, when to include
+      P.forEach((t, i) => { const m = any.exec(t); if (!m) return; const at = m.index; const s0 = Math.max(0, at - 60);
+        hits.push({ id: d.id, name: d.name, kind: d.kind, page: i + 1, snip: (s0 ? '…' : '') + t.slice(s0, at + 320).replace(/\s+/g, ' ') + '…', score: row.test(t) ? 100 : 1 }); }); continue; }
     P.forEach((t, i) => { const low = t.toLowerCase(); if (!W.every(w => low.includes(w))) return; const at = low.indexOf(W[0]); const s = Math.max(0, at - 120);
       hits.push({ id: d.id, name: d.name, kind: d.kind, page: i + 1, snip: (s ? '…' : '') + t.slice(s, at + 260).replace(/\s+/g, ' ') + '…', score: W.reduce((n, w) => n + low.split(w).length - 1, 0) }); }); }
   hits.sort((a, b) => b.score - a.score); LIB.hits = hits.slice(0, 80); libRender(); }
@@ -60,7 +64,7 @@ function libRender() { const box = $('#libBody'); if (!box) return;
   box.innerHTML = `<label class="libdrop" id="libDrop"><input type="file" id="libFile" multiple accept=".pdf,.docx,.txt,.csv,.xlsx,.xml,.zip" hidden><b>Drop documents here, or click to choose them</b><span>PDF, Word, Excel, XML, text or a zip of them – F-1, A-1, D-1, UAD 2.6 guidelines, USPAP, Selling Guide, client guidelines, community plans and zoning</span></label>
     ${LIB.busy ? `<p class="help">${h(LIB.busy)}</p>` : ''}
     ${LIB.list.length ? `<div class="row libsearch"><input id="libQ" type="search" placeholder="Search every document, e.g. view range, extraordinary assumption, ANSI" value="${h(LIB.q)}"><button type="button" class="btn primary" id="libGo">Search</button></div>` : ''}
-    ${LIB.hits ? `<h3>${LIB.hits.length ? LIB.hits.length + (LIB.hits.length === 80 ? '+' : '') + ' pages found' : 'Nothing found – try fewer or other words'}</h3>${LIB.hits.map(x => `<div class="libhit"><button type="button" class="linkbtn" data-libopen="${x.id}" data-libpage="${x.page}"><b>${h(x.name)}</b> – ${/\.xlsx$/i.test(x.name) ? 'rows, part ' + x.page : 'page ' + x.page}</button> <small class="muted">${h(kinds[x.kind] || '')}</small><div>${mark(x.snip)}</div></div>`).join('')}` : ''}
+    ${LIB.hits ? `<h3>${LIB.hits.length ? LIB.hits.length + (LIB.hits.length === 80 ? '+' : '') + ' pages found' : LIB.kind && !LIB.list.some(x => x.kind === LIB.kind) ? `Your ${h((LIB_KINDS.find(k => k[0] === LIB.kind) || [, ''])[1])} is not in the Library yet – drop it in the box above` : 'Nothing found – try fewer or other words'}${LIB.kind ? ` <small>only in your ${h((LIB_KINDS.find(k => k[0] === LIB.kind) || [, ''])[1])} · <button type="button" class="linkbtn" id="libAll">search every document</button></small>` : ''}</h3>${LIB.hits.map(x => `<div class="libhit"><button type="button" class="linkbtn" data-libopen="${x.id}" data-libpage="${x.page}"><b>${h(x.name)}</b> – ${/\.xlsx$/i.test(x.name) ? 'rows, part ' + x.page : 'page ' + x.page}</button> <small class="muted">${h(kinds[x.kind] || '')}</small><div>${mark(x.snip)}</div></div>`).join('')}` : ''}
     <h3>Your documents (${LIB.list.length})</h3>
     ${LIB.list.length ? `<table class="facts libtab"><tr><th>Document</th><th>What it is</th><th>Pages</th><th>Added</th><th></th></tr>${LIB.list.slice().sort((a, b) => LIB_KINDS.findIndex(k => k[0] === a.kind) - LIB_KINDS.findIndex(k => k[0] === b.kind) || a.name.localeCompare(b.name)).map(d => `<tr>
       <td><button type="button" class="linkbtn" data-libopen="${d.id}">${h(d.name)}</button>${d.scan ? '<br><small class="warnTxt">A scan with little or no text – search cannot read it. In Acrobat: Scan &amp; OCR › Recognize text, then add it again.</small>' : ''}</td>
@@ -71,6 +75,8 @@ function libRender() { const box = $('#libBody'); if (!box) return;
   const f = $('#libFile'); if (f) f.onchange = () => { if (f.files.length) libAdd([...f.files]); f.value = ''; };
   const q = $('#libQ'); if (q) q.onkeydown = e => { if (e.key === 'Enter') libSearch(q.value); };
   const g = $('#libGo'); if (g) g.onclick = () => libSearch($('#libQ').value);
+  const al = $('#libAll'); if (al) al.onclick = () => libSearch(LIB.q, '');
+  if (q) q.onkeydown = e => { if (e.key === 'Enter') libSearch(q.value, LIB.kind); }; if (g) g.onclick = () => libSearch($('#libQ').value, LIB.kind);
 }
 document.addEventListener('click', async e => { if (!e.target.closest) return;
   const o = e.target.closest('[data-libopen]'); if (o) { libOpen(o.dataset.libopen, +o.dataset.libpage || 0); return; }
@@ -83,3 +89,9 @@ document.addEventListener('dragleave', e => { const z = $('#libDrop'); if (z && 
 document.addEventListener('drop', e => { if (!$('#panel-library') || $('#panel-library').hidden) return; e.preventDefault(); const z = $('#libDrop'); if (z) z.classList.remove('over'); const F = [...(e.dataTransfer.files || [])]; if (F.length) libAdd(F); });
 /* read the list when the Library is opened (the storage is ready by then) */
 (() => { const st = showTab; showTab = function (t) { const r = st.apply(this, arguments); if (t === 'library') libLoad().then(libRender).catch(e => console.warn('library', e)); return r; }; })();
+
+/* "ⓘ" in the Comp genie (or any page): open the Library at a F-1 field number (her ask Oct 22 2026) */
+async function libLookup(q, kind) { showTab('library'); if (typeof octoMark === 'function') octoMark(); await libLoad(); await libSearch(String(q || ''), kind || '');
+  const t = document.querySelector('#libBody h3'); if (t) t.scrollIntoView({ block: 'start' }); }
+window.addEventListener('message', e => { if (e.origin !== location.origin || !e.data || e.data.type !== 'aa-lib') return; libLookup(e.data.q, e.data.kind); });
+{ const P = new URLSearchParams(location.search); if (P.get('tab') === 'library' && P.get('q')) setTimeout(() => libLookup(P.get('q'), P.get('kind') || ''), 900); }
