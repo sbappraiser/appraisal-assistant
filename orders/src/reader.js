@@ -127,12 +127,18 @@ function rdRender() {
         <li><b>Accept or reject</b> each thing Claude finds, in the checklist below.</li></ol>
       <div class="row"><button type="button" class="btn primary" id="rdRedact">Redact pages</button>${ai === 'Yes' && key ? '<button type="button" class="btn ghost small" id="rdPrep">Send without redacting</button>' : ''}</div></div>` : ''}
     ${stickiesHtml()}
+    ${(() => { const mine = facts.filter(f => f.docId === RD.id); const pend = rv.sugg.filter(x => x.state === 'new').length; return mine.length || pend ? `<div class="row rdclear">${mine.length ? `<button type="button" class="btn ghost small danger" id="rdClearFacts">Clear all ${mine.length} accepted entr${mine.length === 1 ? 'y' : 'ies'} on this document</button>` : ''}${pend ? `<button type="button" class="btn ghost small" id="rdClearSugg">Reject the ${pend} suggestion${pend === 1 ? '' : 's'} not decided yet</button>` : ''}</div>` : ''; })()}
     ${C.items.map(rowFor).join('')}
     ${rdExtras(meta)}`;
   const side = $('#rdSide');
   side.querySelectorAll('[data-goto]').forEach(b => b.onclick = () => { RD.page = +b.dataset.goto; rdPage(); });
-  side.querySelectorAll('[data-acc]').forEach(b => b.onclick = () => { const s = rv.sugg.find(x => x.id === b.dataset.acc); const v = side.querySelector(`[data-sugv="${s.id}"]`).value.trim(); s.state = 'accepted';
+  side.querySelectorAll('[data-acc]').forEach(b => b.onclick = () => { const s = rv.sugg.find(x => x.id === b.dataset.acc); const v = side.querySelector(`[data-sugv="${s.id}"]`).value.trim(); s.state = 'accepted'; const norm = x => String(x || '').toLowerCase().replace(/[^a-z0-9$]+/g, ' ').trim();
+    if ((cur.facts || []).some(f => f.docId === RD.id && f.key === s.key && norm(f.value) === norm(v))) { saveLetter(true, true); rdRender(); toast('Already accepted – not added twice'); return; }
     (cur.facts = cur.facts || []).push({ id: uid(), docId: RD.id, doc: meta.name, type: meta.type, key: s.key, label: (C.items.find(i => i[0] === s.key) || [, s.key])[1], value: v, page: s.page, n: +((String(s.quote || '').match(/^#(\d+)/) || [])[1] || 0) || null, by: v === s.value ? s.by : 'you', at: new Date().toISOString() }); markFilled(cur.facts[cur.facts.length - 1], meta.type, s.key, v); saveLetter(true, true); rdRender(); });
+  /* her ask (Oct 22 2026): the same document read several times left repeated entries – clear them in one click (asked first) */
+  const cf = $('#rdClearFacts'); if (cf) cf.onclick = () => { const mine = (cur.facts || []).filter(f => f.docId === RD.id); if (!confirm(`Clear all ${mine.length} accepted entries on this document? What they filled in on the order (the UAD 3.6 sales contract boxes, the legal description) stays – change those boxes yourself if needed.`)) return;
+    cur.factsCleared = (cur.factsCleared || []).concat(mine.map(f => ({ ...f, cleared: new Date().toISOString() }))).slice(-300); cur.facts = cur.facts.filter(f => f.docId !== RD.id); saveLetter(true, true); rdRender(); renderFacts(); toast('Cleared – read the document again, or use the contract packet, to start fresh', 6000); };
+  const cs = $('#rdClearSugg'); if (cs) cs.onclick = () => { rv.sugg.forEach(x => { if (x.state === 'new') x.state = 'rejected'; }); saveLetter(true, true); rdRender(); };
   side.querySelectorAll('[data-rej]').forEach(b => b.onclick = () => { rv.sugg.find(x => x.id === b.dataset.rej).state = 'rejected'; saveLetter(true, true); rdRender(); });
   side.querySelectorAll('[data-unfact]').forEach(b => b.onclick = () => { cur.facts = cur.facts.filter(f => f.id !== b.dataset.unfact); saveLetter(true, true); rdRender(); });
   side.querySelectorAll('[data-ownadd]').forEach(b => b.onclick = () => { const k = b.dataset.ownadd, i = side.querySelector(`[data-own="${k}"]`); const v = i.value.trim(); if (!v) return;

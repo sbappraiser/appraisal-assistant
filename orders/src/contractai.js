@@ -40,11 +40,11 @@ async function cbClaude(content, system) {
   let r = await call(content, 16000); try { if (!r.cut) return parse(r.txt); } catch (e) {}
   r = await call([...content, { type: 'text', text: 'Your last answer was too long and was cut off. Answer again with shorter "changes" and "what" text and a summary under 200 words. JSON only.' }], 16000);
   try { return parse(r.txt); } catch (e) { throw new Error('Claude’s answer could not be read (it was cut off or not in the expected form). Try again; if it happens again, tell Claude in the chat.'); } }
-async function cbSend() {
-  if (CB.busy) return; CB.busy = true; const btn = $('#cbGo'); const say = t => { if (btn) btn.textContent = t; };
+async function cbSend(pre) {   // pre = { plan, pics } from the packet redaction screen (redacted pictures only)
+  if (CB.busy) return; CB.busy = true; const btn = $(pre ? '#cbRedGo' : '#cbGo'); const say = t => { if (btn) btn.textContent = t; };
   try {
-    const plan = CB.plan; const pdfjs = await loadPdfJs(); const pics = [];
-    for (const f of plan) { if (f.skip || !(f.imgs || []).length) continue; const rec = await ODB.get('docs', f.d.id); const pdf = await pdfjs.getDocument({ data: new Uint8Array(await rec.blob.arrayBuffer()), isEvalSupported: false, wasmUrl: './wasm/', standardFontDataUrl: './standard_fonts/' }).promise;
+    const plan = pre ? pre.plan : CB.plan; const pics = pre ? pre.pics : []; const pdfjs = pre ? null : await loadPdfJs();
+    if (!pre) for (const f of plan) { if (f.skip || !(f.imgs || []).length) continue; const rec = await ODB.get('docs', f.d.id); const pdf = await pdfjs.getDocument({ data: new Uint8Array(await rec.blob.arrayBuffer()), isEvalSupported: false, wasmUrl: './wasm/', standardFontDataUrl: './standard_fonts/' }).promise;
       for (const n of f.imgs) { say(`Preparing pictures… ${pics.length + 1}`); const cv = await pbPageJpeg(pdf, n); pics.push({ file: f.d.name, n, data: cv.toDataURL('image/jpeg', 0.72).split(',')[1] }); } }
     const texts = []; let t0 = ''; for (const f of plan) { if (f.skip) continue; t0 += `\n##### FILE: ${f.d.name} (${f.pages || '?'} pages; filed as ${DOC_LABEL[f.d.type] || f.d.type}) #####`; for (const p of f.text) { if (cbScrambled(p.t) && (f.imgs || []).includes(p.n)) continue; const block = `\n=== ${f.d.name} – page ${p.n} ===\n${p.t}`; if (t0.length + block.length > PB_MAX_TEXT && t0) { texts.push(t0); t0 = ''; } t0 += block; } } if (t0) texts.push(t0);
     const rounds = []; const n = Math.max(1, Math.ceil(pics.length / PB_MAX_IMG), texts.length);
@@ -67,7 +67,7 @@ async function cbSend() {
       docs: (out.documents || []).filter(x => x && (x.file || x.kind)), steps: (out.steps || []).filter(x => x && x.what), final: out.final || {}, flags: (out.flags || []).filter(x => x && x.text),
       summary: String(out.summary || ''), totalPages: pagesSum || +out.totalPages || null, used: {} };
     (cur.aiLog = cur.aiLog || []).push({ at: cur.contractPacket.at, doc: 'Contract packet (' + sentFiles.length + ' files)', pages: [], mode: cur.contractPacket.mode, model: aiModel(), items: cur.contractPacket.docs.length });
-    CB.plan = null; CB.show = true; CB.err = ''; saveLetter(true, true); renderDocs();
+    CB.plan = null; CB.show = true; CB.err = ''; if (pre) cbRedClose(); saveLetter(true, true); renderDocs();
     toast(`Claude read the contract packet together: ${sentFiles.length} files, ${cur.contractPacket.totalPages || '?'} pages`, 6000);
   } catch (e) { console.error(e); CB.err = String(e.message || e); toast('Not sent or not read: ' + CB.err, 9000); say('Try again'); renderCtBatch(); }
   CB.busy = false;
@@ -118,6 +118,7 @@ async function renderCtBatch() {
   if (!docs.length) html += '';
   else if (!ok) html += `To have Claude read the contract, counters and addenda together (negotiation, final price, last signature, total pages), set <b>AI use</b> on this order to Yes or Redacted (it is <b>${h(ai || 'not set')}</b>). Each file can still be read on its own with <b>Read</b>.`;
   else if (!key) html += 'Claude can read them together, but no Claude API key is saved yet: <b>Settings → Claude</b>.';
+  else if (ai === 'Redacted') html += `<button type="button" class="btn small" id="cbRed">${P ? 'Redact and read the packet again' : 'Redact the whole packet, then read it with Claude'}</button> <span class="help">all ${docs.length} files on one screen: check the black boxes, add your own, then send only the redacted pictures</span>`;
   else html += `<button type="button" class="btn small" id="cbPlan">${P ? 'Read the packet again' : 'Read the contract packet together with Claude'}</button> <span class="help">one request with the contract, every counter offer and addendum, so Claude can follow the negotiation</span>`;
   if (P && !CB.show) html += ` <button type="button" class="btn ghost small" id="cbShow">Show the contract packet</button>`;
   html += '</div>';
@@ -135,6 +136,7 @@ async function renderCtBatch() {
     CB.plan.forEach(f => { if (f.skip || !f.text) return; const red = cur.aiUse === 'Redacted' && !/- REDACTED\.pdf$/i.test(f.d.name); if (red) { f.noPics = true; return; }
       const all = new Set([...(f.imgs || []), ...f.text.map(p => p.n)]); f.imgs = [...all].sort((a, b) => a - b); }); } catch (e) { console.error(e); toast('Could not open the contract files: ' + (e.message || e)); } renderCtBatch(); };
   const go = $('#cbGo'); if (go) go.onclick = () => cbSend();
+  const rb = $('#cbRed'); if (rb) rb.onclick = () => cbRedOpen();
   box.querySelectorAll('[data-cbcopy]').forEach(b => b.onclick = async () => { CB.plan = null; await openReader(b.dataset.cbcopy); for (let i = 0; i < 40 && !RD.pdf; i++) await new Promise(r => setTimeout(r, 150)); if (!RD.pdf) return;
     RD.prepMode = 'copy'; RD.prepFrom = 1; RD.prepTo = RD.pdf.numPages; rdPrepare(); });
   const cc = $('#cbCancel'); if (cc) cc.onclick = () => { CB.plan = null; renderCtBatch(); };
@@ -145,4 +147,58 @@ async function renderCtBatch() {
   const sm = $('#cbSum'); if (sm) sm.onchange = () => { cur.contractPacket.summary = sm.value; saveLetter(true, true); };
   const us = $('#cbUseSum'); if (us) us.onclick = () => { cur.uad = cur.uad || {}; if (String(cur.uad.cmt || '').trim() && !confirm('Replace the 20.011 Sales contract analysis you already have with this draft?')) return; cur.uad.cmt = $('#cbSum').value; saveLetter(true, true); toast('It is the 20.011 Sales contract analysis now (open the purchase contract with Read to see or edit it)', 7000); };
   const cp = $('#cbCopy'); if (cp) cp.onclick = async () => { try { await navigator.clipboard.writeText($('#cbSum').value); toast('Copied'); } catch (e) { toast('Could not copy'); } };
+}
+
+/* her ask (Oct 22 2026): "I should be able to redact when all three can be read at the same time" – one screen with every page of
+   every packet file, blacked out on this computer (the same rules and boxes as one document), then only these pictures go to Claude. */
+const CBR = { docs: [], boxes: {}, mode: 'black' };
+async function cbRedPage(x, n) {   // the redaction of one page of one packet file, using the reader's redactPage
+  const keep = { pdf: RD.pdf, boxes: RD.boxes, extra: RD.extra };
+  RD.pdf = x.pdf; RD.boxes = CBR.boxes[x.d.id] = CBR.boxes[x.d.id] || {}; RD.extra = cur.redactNames || '';
+  try { return await redactPage(n, !x.copy); } finally { RD.pdf = keep.pdf; RD.boxes = keep.boxes; RD.extra = keep.extra; } }
+function cbRedClose() { const o = $('#cbRedPane'); if (o) o.remove(); }
+async function cbRedOpen() {
+  cbRedClose(); const pdfjs = await loadPdfJs(); const all = cbDocs();
+  const copies = all.filter(d => /- REDACTED\.pdf$/i.test(d.name)).map(d => d.name.replace(/ - REDACTED\.pdf$/i, '').toLowerCase());
+  CBR.docs = [];
+  for (const d of all) { const isCopy = /- REDACTED\.pdf$/i.test(d.name); if (!isCopy && copies.includes(d.name.replace(/\.pdf$/i, '').toLowerCase())) continue;
+    const rec = await ODB.get('docs', d.id); if (!rec || !rec.blob || !/pdf/i.test(rec.mime || rec.blob.type || d.name)) continue;
+    const pdf = await pdfjs.getDocument({ data: new Uint8Array(await rec.blob.arrayBuffer()), isEvalSupported: false, wasmUrl: './wasm/', standardFontDataUrl: './standard_fonts/' }).promise;
+    CBR.docs.push({ d, pdf, copy: isCopy }); }
+  const total = CBR.docs.reduce((a, x) => a + x.pdf.numPages, 0);
+  const pane = document.createElement('div'); pane.id = 'cbRedPane'; pane.className = 'cbredpane'; document.body.appendChild(pane);
+  const canSend = total <= 60;
+  pane.innerHTML = `<div class="rdsendbar"><b>The whole contract packet, redacted: ${CBR.docs.length} files, ${total} pages – check every page.</b> <span class="rddir">This is exactly what Claude will see: black boxes are painted into the pictures, and no text is sent. Drag on a page to black out anything else (signatures, initials, account numbers).</span>
+    <label>Also remove these names <span class="opt">separate with commas – buyers, sellers, agents, escrow, anyone else</span><input id="cbRedNames" value="${h(cur.redactNames || '')}"></label>
+    <div class="row"><span>Drag to:</span><div class="seg2"><button type="button" data-cbdm="black" aria-pressed="true">Black box</button><button type="button" data-cbdm="blur" aria-pressed="false">Blur</button></div><button type="button" class="btn ghost small" id="cbRedUndo">Undo last box</button></div>
+    <span class="row">${canSend ? `<button type="button" class="btn primary" id="cbRedGo">Send these ${total} redacted pages to Claude</button>` : '<span class="help warnTxt">More than 60 pages – remove the disclosures from the packet first.</span>'}<button type="button" class="btn ghost" id="cbRedSave">Also save redacted copies (PDF)</button><button type="button" class="btn ghost" id="cbRedClose">Close</button></span>
+    <span class="row rdzoom"><span>Page size:</span><button type="button" class="btn ghost small" data-cbz="-" aria-label="Smaller pages">−</button><button type="button" class="btn ghost small" data-cbz="1">One page across</button><button type="button" class="btn ghost small" data-cbz="+" aria-label="Bigger pages">＋</button><button type="button" class="btn ghost small" data-cbz="mini">▴ Hide the directions</button></span></div>
+    <div id="cbRedThumbs" class="rdthumbs"></div>`;
+  const th = $('#cbRedThumbs'); const bar = pane.querySelector('.rdsendbar');
+  const zoomTo = w => { CBR.zoom = Math.max(200, Math.min(2600, Math.round(w))); th.style.gridTemplateColumns = `repeat(auto-fill, minmax(${Math.min(CBR.zoom, th.clientWidth || CBR.zoom)}px, 1fr))`; }; zoomTo(CBR.zoom || 320);
+  pane.querySelectorAll('[data-cbz]').forEach(b => b.onclick = () => { const k = b.dataset.cbz; if (k === 'mini') { const m = bar.classList.toggle('mini'); b.textContent = m ? '▾ Show the directions' : '▴ Hide the directions'; return; } if (k === '1') zoomTo(th.clientWidth || 1200); else zoomTo((CBR.zoom || 320) * (k === '+' ? 1.3 : 1 / 1.3)); });
+  pane.addEventListener('wheel', e => { if (!e.ctrlKey || !e.target.closest('#cbRedThumbs')) return; e.preventDefault(); zoomTo((CBR.zoom || 320) * (e.deltaY < 0 ? 1.12 : 1 / 1.12)); }, { passive: false });
+  pane.querySelectorAll('[data-cbdm]').forEach(b => b.onclick = () => { CBR.mode = b.dataset.cbdm; pane.querySelectorAll('[data-cbdm]').forEach(x => x.setAttribute('aria-pressed', x === b)); });
+  $('#cbRedClose').onclick = cbRedClose;
+  $('#cbRedNames').onchange = e => { cur.redactNames = e.target.value; saveLetter(true, true); cbRedOpen(); };
+  const draw = async (x, n, cv, cap) => { const { cv: nv, hits } = await cbRedPage(x, n); cv.getContext('2d').drawImage(nv, 0, 0); cap.textContent = `${x.d.name} – page ${n}${x.copy ? ' (your redacted copy)' : ` · ${hits} item${hits === 1 ? '' : 's'} blacked out`}`; };
+  for (const x of CBR.docs) for (let n = 1; n <= x.pdf.numPages; n++) {
+    const { cv, hits } = await cbRedPage(x, n); if (!pane.isConnected) return; cv.dataset.doc = x.d.id; cv.dataset.n = n;
+    const fig = document.createElement('figure'); fig.innerHTML = `<figcaption>${h(x.d.name)} – page ${n}${x.copy ? ' (your redacted copy)' : ` · ${hits} item${hits === 1 ? '' : 's'} blacked out`}</figcaption>`; fig.prepend(cv); th.appendChild(fig);
+    let st = null; cv.onpointerdown = e => { const r = cv.getBoundingClientRect(); st = [(e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height]; cv.setPointerCapture(e.pointerId); };
+    cv.onpointerup = async e => { if (!st) return; const r = cv.getBoundingClientRect(); const en = [(e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height]; const b = { x: Math.min(st[0], en[0]), y: Math.min(st[1], en[1]), w: Math.abs(en[0] - st[0]), h: Math.abs(en[1] - st[1]), mode: CBR.mode, t: Date.now() }; st = null;
+      if (b.w < 0.01 || b.h < 0.005) return; const B = CBR.boxes[x.d.id] = CBR.boxes[x.d.id] || {}; (B[n] = B[n] || []).push(b); await draw(x, n, cv, fig.querySelector('figcaption')); }; }
+  $('#cbRedUndo').onclick = async () => { let last = null; for (const x of CBR.docs) { const B = CBR.boxes[x.d.id] || {}; for (const n in B) { const b = (B[n] || []).at(-1); if (b && (!last || b.t > last.b.t)) last = { x, n: +n, b }; } }
+    if (!last) return; CBR.boxes[last.x.d.id][last.n].pop(); const cv = th.querySelector(`canvas[data-doc="${last.x.d.id}"][data-n="${last.n}"]`); if (cv) { cv.getContext('2d').clearRect(0, 0, cv.width, cv.height); await draw(last.x, last.n, cv, cv.parentNode.querySelector('figcaption')); } };
+  const sv = $('#cbRedSave'); sv.onclick = async () => { sv.disabled = true; sv.textContent = 'Saving…';
+    try { for (const x of CBR.docs) { if (x.copy) continue; const pages = []; for (const cv of th.querySelectorAll(`canvas[data-doc="${x.d.id}"]`)) { const bin = atob(cv.toDataURL('image/jpeg', 0.85).split(',')[1]); const u8 = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i); pages.push({ jpg: u8, w: cv.width, h: cv.height }); }
+        const blob = jpegPdf(pages); const name = x.d.name.replace(/\.pdf$/i, '') + ' - REDACTED.pdf'; const m2 = { id: uid(), name, type: x.d.type, size: blob.size, mime: 'application/pdf', added: new Date().toISOString(), note: 'redacted copy – pictures only, no hidden text' };
+        await ODB.put('docs', { ...m2, orderId: cur.id, blob: new File([blob], name, { type: 'application/pdf' }) }); cur.docs.push(m2); }
+      saveLetter(true, true); toast('Saved a redacted copy of each file to this order’s documents', 6000); renderDocs(); } catch (e) { toast('Could not save: ' + (e.message || e)); }
+    sv.textContent = 'Saved'; };
+  const go = $('#cbRedGo'); if (go) go.onclick = () => { const pics = [], plan = [];
+    for (const x of CBR.docs) { const cvs = [...th.querySelectorAll(`canvas[data-doc="${x.d.id}"]`)]; cvs.forEach(cv => { const sc = Math.min(1, 1400 / Math.max(cv.width, cv.height)); let c2 = cv; if (sc < 1) { c2 = document.createElement('canvas'); c2.width = Math.round(cv.width * sc); c2.height = Math.round(cv.height * sc); c2.getContext('2d').drawImage(cv, 0, 0, c2.width, c2.height); }
+        pics.push({ file: x.d.name, n: +cv.dataset.n, data: c2.toDataURL('image/jpeg', 0.72).split(',')[1] }); });
+      plan.push({ d: x.d, pages: x.pdf.numPages, text: [], imgs: cvs.map(cv => +cv.dataset.n) }); }
+    cbSend({ plan, pics }); };
 }
