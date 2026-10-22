@@ -23,14 +23,24 @@ async function libXlsxPages(file) { const z = await G.readZip(file); const dec =
       return c.getAttribute('t') === 's' && v ? ss[+v.textContent] : is ? is.textContent : v ? v.textContent : ''; }).filter(x => String(x).trim()).join(' | ')).filter(Boolean);
     for (let i = 0; i < rows.length; i += 60) pages.push(rows.slice(i, i + 60).join('\n')); }
   return pages; }
-async function libAdd(files) { let added = 0, same = 0;
+/* zips (her Oct 22 2026: Fannie's D-1 comes as a zip of zips): every PDF, XML, Word, Excel or text file inside is added on its own, named after the zip it came from */
+const LIB_OK = /\.(pdf|docx|xlsx|txt|csv|xml)$/i;
+async function libExpand(files) { const out = [];
+  const walk = async (blob, prefix, hint, depth) => { const z = await G.readZip(blob);
+    for (const [name, bytes] of z) { if (/(^|\/)__MACOSX\/|\/$/.test(name)) continue; const base = name.split('/').pop(); if (!base || base.startsWith('.')) continue;
+      if (/\.zip$/i.test(base) && depth < 3) { await walk(new Blob([bytes]), base.replace(/\.zip$/i, '').replace(/^Appendix D-1\s*/i, 'D-1 ') + ' – ', hint, depth + 1); continue; }
+      if (!LIB_OK.test(base)) continue; const f = new File([bytes], prefix + base, { type: /\.pdf$/i.test(base) ? 'application/pdf' : /\.xml$/i.test(base) ? 'text/xml' : '' }); f.kindHint = hint; out.push(f); } };
+  for (const f of files) { if (/\.zip$/i.test(f.name)) { LIB.busy = 'Opening ' + f.name + '…'; libRender(); try { await walk(f, '', libKindOf(f.name), 0); } catch (e) { toast('Could not open ' + f.name + ': ' + (e.message || e), 6000); } } else out.push(f); }
+  return out; }
+async function libAdd(files0) { let added = 0, same = 0; const files = await libExpand(files0);
   for (const file of files) { if (LIB.list.some(x => x.name === file.name && x.size === file.size)) { same++; continue; }
     const id = 'lib' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
     LIB.busy = 'Reading ' + file.name + '…'; libRender();
     await ODB.put('docs', { id, orderId: LIB_ORDER, name: file.name, type: 'library', size: file.size, mime: file.type, added: new Date().toISOString(), blob: file });
-    let pages = []; try { if (/\.xlsx$/i.test(file.name)) { pages = await libXlsxPages(file); const rec = await ODB.get('docs', id); rec.pagesText = pages; await ODB.put('docs', rec); } else { const rec = await docPages(id); pages = (rec && rec.pagesText) || []; await ODB.put('docs', rec); } } catch (e) { console.warn('library read', e); }
+    let pages = []; try { if (/\.xml$/i.test(file.name)) { const lines = (await file.text()).split(/\n/); for (let i = 0; i < lines.length; i += 250) pages.push(lines.slice(i, i + 250).join('\n')); const rec = await ODB.get('docs', id); rec.pagesText = pages; await ODB.put('docs', rec); }
+      else if (/\.xlsx$/i.test(file.name)) { pages = await libXlsxPages(file); const rec = await ODB.get('docs', id); rec.pagesText = pages; await ODB.put('docs', rec); } else { const rec = await docPages(id); pages = (rec && rec.pagesText) || []; await ODB.put('docs', rec); } } catch (e) { console.warn('library read', e); }
     const words = pages.join(' ').match(/[A-Za-z]{3,}/g) || [];
-    LIB.list.push({ id, name: file.name, kind: libKindOf(file.name), size: file.size, added: new Date().toISOString().slice(0, 10), pages: pages.length, scan: words.length < 50 * Math.max(1, pages.length) / 10 });
+    LIB.list.push({ id, name: file.name, kind: file.kindHint && file.kindHint !== 'other' ? file.kindHint : libKindOf(file.name), size: file.size, added: new Date().toISOString().slice(0, 10), pages: pages.length, scan: words.length < 50 * Math.max(1, pages.length) / 10 });
     await libSave(); added++; }
   LIB.busy = ''; LIB.hits = null; libRender(); if (typeof abSoon === 'function') abSoon();
   toast(`${added} added to the Library${same ? ` · ${same} already there` : ''}`, 5000); }
@@ -41,13 +51,13 @@ async function libSearch(q) { LIB.q = q; const W = q.toLowerCase().split(/\s+/).
       hits.push({ id: d.id, name: d.name, kind: d.kind, page: i + 1, snip: (s ? '…' : '') + t.slice(s, at + 260).replace(/\s+/g, ' ') + '…', score: W.reduce((n, w) => n + low.split(w).length - 1, 0) }); }); }
   hits.sort((a, b) => b.score - a.score); LIB.hits = hits.slice(0, 80); libRender(); }
 async function libOpen(id, page) { const rec = await ODB.get('docs', id); if (!rec || !rec.blob) { toast('That file is not in this browser any more – add it again'); return; }
-  const url = URL.createObjectURL(rec.blob); const pdf = /pdf/i.test(rec.mime || '') || /\.pdf$/i.test(rec.name);
+  const url = URL.createObjectURL(rec.blob); const pdf = /pdf|xml/i.test(rec.mime || '') || /\.(pdf|xml)$/i.test(rec.name);
   if (pdf) window.open(url + (page ? '#page=' + page : ''), '_blank'); else { const a = document.createElement('a'); a.href = url; a.download = rec.name; a.click(); }
   setTimeout(() => URL.revokeObjectURL(url), 120000); }
 function libRender() { const box = $('#libBody'); if (!box) return;
   const kinds = Object.fromEntries(LIB_KINDS); const W = LIB.q.toLowerCase().split(/\s+/).filter(w => w.length > 1);
   const mark = s => { let x = h(s); W.forEach(w => { x = x.replace(new RegExp('(' + w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi'), '<mark>$1</mark>'); }); return x; };
-  box.innerHTML = `<label class="libdrop" id="libDrop"><input type="file" id="libFile" multiple accept=".pdf,.docx,.txt,.csv,.xlsx" hidden><b>Drop documents here, or click to choose them</b><span>PDF, Word, Excel or text – F-1, A-1, D-1, UAD 2.6 guidelines, USPAP, Selling Guide, client guidelines, community plans and zoning</span></label>
+  box.innerHTML = `<label class="libdrop" id="libDrop"><input type="file" id="libFile" multiple accept=".pdf,.docx,.txt,.csv,.xlsx,.xml,.zip" hidden><b>Drop documents here, or click to choose them</b><span>PDF, Word, Excel, XML, text or a zip of them – F-1, A-1, D-1, UAD 2.6 guidelines, USPAP, Selling Guide, client guidelines, community plans and zoning</span></label>
     ${LIB.busy ? `<p class="help">${h(LIB.busy)}</p>` : ''}
     ${LIB.list.length ? `<div class="row libsearch"><input id="libQ" type="search" placeholder="Search every document, e.g. view range, extraordinary assumption, ANSI" value="${h(LIB.q)}"><button type="button" class="btn primary" id="libGo">Search</button></div>` : ''}
     ${LIB.hits ? `<h3>${LIB.hits.length ? LIB.hits.length + (LIB.hits.length === 80 ? '+' : '') + ' pages found' : 'Nothing found – try fewer or other words'}</h3>${LIB.hits.map(x => `<div class="libhit"><button type="button" class="linkbtn" data-libopen="${x.id}" data-libpage="${x.page}"><b>${h(x.name)}</b> – ${/\.xlsx$/i.test(x.name) ? 'rows, part ' + x.page : 'page ' + x.page}</button> <small class="muted">${h(kinds[x.kind] || '')}</small><div>${mark(x.snip)}</div></div>`).join('')}` : ''}
