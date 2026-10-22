@@ -114,12 +114,13 @@ function reportHTML(J) {
       <label class="fld"><span>Client</span>${inp('client', 'Client name')}</label>
       <label class="fld"><span>Client address</span>${inp('clientAddr1', 'Street')} ${inp('clientAddr2', 'City, ST ZIP')}</label>
       <label class="fld"><span>Lender (if not the client)</span>${inp('lender')}</label>
-      <label class="fld"><span>AMC</span>${inp('amc')}</label></section>
+      <label class="fld"><span>AMC</span>${inp('amc')}</label>
+      ${cmtBoxHTML(J, 'cAssign')}</section>
     <section><h3>Highest and best use</h3>
       ${HBU_TESTS.map(([k, l]) => `<label class="check"><input type="checkbox" data-hbu="${k}" ${H[k] ? 'checked' : ''}>${l}</label>`).join('')}
       <label class="fld"><span>Is the highest and best use as improved the present use?</span>${yn('hbuPresent', F.hbuPresent === 'true' ? true : F.hbuPresent === 'false' ? false : undefined)}</label>
       <div class="row"><button class="btn small" data-act="hbu-all">All four tests met · present use</button><button class="btn ghost small" data-act="hbu-draft">Draft the comment</button></div>
-      <label class="fld"><span>Highest and best use comment ${cmtBtn('textarea[data-rpt="hbuNote"]')}</span><textarea class="txt" rows="4" data-rpt="hbuNote" placeholder="${esc(F.hbuNote ? 'From the order’s Scope of work: ' + F.hbuNote : 'Your comment')}">${esc(R.hbuNote || '')}</textarea></label></section>
+      <label class="fld"><span>Highest and best use comment ${cmtCount(String(R.hbuNote || ''), 4000)}</span><textarea class="txt" rows="4" maxlength="4000" data-rpt="hbuNote" placeholder="${esc(F.hbuNote ? 'From the order’s Scope of work: ' + F.hbuNote : 'Your comment')}">${esc(R.hbuNote || '')}</textarea></label></section>
     <section><h3>Scope of work <small>UAD 3.6 – every answer is required</small></h3>
       <label class="fld"><span>Cost approach developed?</span>${yn('sowCost', F.sowCost)}</label>
       <label class="fld"><span>Income approach developed?</span>${yn('sowIncome', F.sowIncome)}</label>
@@ -139,7 +140,9 @@ function reportHTML(J) {
       <label class="fld"><span>Rights not included <small class="muted">(only sent when the answer above is No; 540 characters)</small></span><textarea class="txt" rows="2" maxlength="540" data-rpt="rightsNot" placeholder="${esc(F.rightsNot || 'e.g. Oil, gas and mineral rights below 500 feet, reserved in a prior deed')}">${esc(R.rightsNot || '')}</textarea>${F.rightsNot && R.allRights !== 'false' ? '<small class="muted">The order has a reservation from the deed. If those rights are not part of what you appraised, answer No above.</small>' : ''}</label>
       ${R.allRights === 'false' ? `<label class="fld"><span>Kind of rights not included</span>${sel('rightsType', RIGHTS_TYPES, rightsGuess(rv(J, 'rightsNot')), 'from the description')}</label>${R.rightsType === 'Other' ? `<label class="fld"><span>Describe (33 characters)</span>${inp('rightsOther', 'e.g. Geothermal rights')}</label>` : ''}` : ''}
       <label class="fld"><span>Zoning code</span>${inp('zone', 'e.g. E-3', '8em')}</label>
-      <label class="fld"><span>Zoning description</span>${inp('zoneDesc', 'e.g. One-family residential, 7,000 sq. ft. minimum lot')}<small class="muted">Kept for this code, so you type it once.</small></label></section>
+      <label class="fld"><span>Zoning description</span>${inp('zoneDesc', 'e.g. One-family residential, 7,000 sq. ft. minimum lot')}<small class="muted">Kept for this code, so you type it once.</small></label>
+      ${CMT_TIP}${cmtBoxHTML(J, 'cSite')}${cmtBoxHTML(J, 'cSubject')}</section>
+    <section><h3>Prior sale and transfer history</h3>${cmtBoxHTML(J, 'cSubjPrior')}${cmtBoxHTML(J, 'cCompPrior')}</section>
     <section><h3>Prior services and certifications</h3>
       <label class="fld"><span>Prior services: have you performed any services on this property in the three years before accepting the assignment?</span>${yn('priorSvc')}</label>
       ${F.priorHits.length ? `<p class="help warnTxt">Your records show: ${F.priorHits.map(esc).join(' · ')}</p>` : '<p class="help">Nothing in your archive or your orders for this address in the three years before the effective date.</p>'}
@@ -148,7 +151,6 @@ function reportHTML(J) {
       ${certHTML(R)}
       <label class="fld"><span>Is this a reconsideration of value?</span>${yn('reconsider', false)}</label>
       <label class="fld"><span>Subject listed for sale in the past year?</span>${yn('listedYear', F.listedYear)}</label></section>
-    ${typeof cmtBoxesHTML === 'function' ? cmtBoxesHTML(J) : ''}
     <section><h3>Value and reconciliation</h3>
       <label class="fld"><span>Opinion of market value</span>${inp('opinion', !blank(G.value) ? money(G.value) + ' (sales comparison)' : '$')}</label>
       <label class="fld"><span>Market value condition</span>${sel('vcond', VCOND, 'AsIs', 'usual')}</label>
@@ -158,7 +160,7 @@ function reportHTML(J) {
       ${R.addlCond === 'true' ? `<label class="fld"><span>Describe them <small class="muted">(2,500 characters)</small></span><textarea class="txt" rows="2" maxlength="2500" data-rpt="addlCondText">${esc(R.addlCondText || '')}</textarea></label>` : ''}
       ${['Income', 'Cost'].map(A => { const off = R['sow' + A] === 'false' || (blank(R['sow' + A]) && F['sow' + A] === false); if (!off) return ''; const k = 'excl' + A;
         return `<label class="fld"><span>${A} approach not developed – reason</span>${sel(k, EXCL_REASONS.filter(x => A === 'Cost' || !/Depreciation|Land/.test(x[0])), 'NotNecessaryForCredibleResults', 'usual')}${R[k] === 'Other' ? ` <input class="txt" data-rpt="${k}Other" maxlength="225" value="${esc(R[k + 'Other'] || '')}" placeholder="Describe (225 characters)">` : ''}</label>`; }).join('')}
-      <label class="fld"><span>Reconciliation comment ${cmtBtn('textarea[data-rpt="reconNote"]')}</span><textarea class="txt" rows="3" data-rpt="reconNote">${esc(R.reconNote || '')}</textarea></label></section>
+      <label class="fld"><span>Reconciliation comment ${cmtCount(String(R.reconNote || ''), 5000)}</span><textarea class="txt" rows="3" maxlength="5000" data-rpt="reconNote">${esc(R.reconNote || '')}</textarea></label></section>
     <section><h3>Market <small>from the hub's Market tab</small></h3>
       ${M ? `<table class="mini"><tr><th>Look back</th><td>${esc(M.L)} months</td></tr><tr><th>Actives</th><td>${esc(M.activeN)}${M.activeN ? ` · ${money(M.activeLow)} / ${money(M.activeMed)} / ${money(M.activeHigh)} · median DOM ${esc(Math.round(M.activeDom))}` : ''}</td></tr>
         <tr><th>Pendings</th><td>${esc(M.pendingN)}</td></tr><tr><th>Sales</th><td>${esc(M.salesN)}${M.salesN ? ` · ${money(M.saleLow)} / ${money(M.saleMed)} / ${money(M.saleHigh)}` : ''}</td></tr>
@@ -166,6 +168,7 @@ function reportHTML(J) {
         <tr><th>Boundary</th><td>${M.boundary ? '✓' : '<b class="warnTxt">missing</b>'}</td></tr><tr><th>Search criteria</th><td>${M.criteria ? '✓' : '<b class="warnTxt">missing</b>'}</td></tr><tr><th>Price trend comment</th><td>${M.comment ? '✓ ' + M.comment.length.toLocaleString() + ' characters' : '<b class="warnTxt">missing</b>'}</td></tr></table>
         <p class="help">These go into the Market section. To change them, open the order's Market tab in the Appraisal Assistant, then come back here.</p>`
       : `<p class="help">${F.hasOrder ? 'Nothing yet. In the Appraisal Assistant open this order › <b>Market</b> tab: drop your SBMLS market-area search CSV (the micro market: actives, pendings and sales in the look-back period) and, once a month, the SBMLS monthly statistics PDF (the macro market). Check the boundary, criteria and price-trend comment, then come back here.' : 'Link this assignment to an order to bring in the Market section.'}</p>`}
+      ${cmtBoxHTML(J, 'cMarket')}
       ${F.contract && (F.contract.price || F.contract.cdate) ? `<p class="help">Sales contract (from the document reader): ${esc(money(num(String(F.contract.price).replace(/[$,]/g, ''))))}${F.contract.cdate ? ' · ' + esc(F.contract.cdate) : ''} – goes into the contract section.</p>` : ''}</section>
   </div>`;
 }

@@ -6,11 +6,11 @@
    ===================================================================== */
 const CMT_BOXES = [
   ['cAssign', 'Assignment', 'Assignment information and scope of work commentary', 5000],   // SFREP's box under Assignment Information (her inspection-limits paragraph); from My comments – nothing to draft
-  ['cSubjPrior', 'SubjectPriorSalesAndTransferHistory', 'Analysis of prior sale and transfer history – subject', 4000],
-  ['cCompPrior', 'ComparablesPriorSalesAndTransferHistory', 'Analysis of prior sale and transfer history – comparable sales', 4000],
-  ['cSite', 'Site', 'Site commentary', 4000],
-  ['cSubject', 'SubjectProperty', 'Subject property commentary', 4000],
-  ['cMarket', 'Market', 'Market commentary', 4000]];
+  ['cSubjPrior', 'SubjectPriorSalesAndTransferHistory', 'Analysis of prior sale and transfer history – subject', 5000],
+  ['cCompPrior', 'ComparablesPriorSalesAndTransferHistory', 'Analysis of prior sale and transfer history – comparable sales', 5000],
+  ['cSite', 'Site', 'Site commentary', 5000],
+  ['cSubject', 'SubjectProperty', 'Subject property commentary', 5000],
+  ['cMarket', 'Market', 'Market commentary', 5000]];
 /* her view line in words, each view once: "a partial residential view (neutral)" */
 function cmtView(v) { if (!v) return ''; let L = []; try { L = vwParse(v); } catch (e) {} const seen = new Set(); L = L.filter(x => { const k = x.type + '|' + x.range + '|' + x.impact; if (seen.has(k)) return false; seen.add(k); return true; });
   if (!L.length) return 'view: ' + v; return 'the view is ' + L.map(x => `${x.range ? x.range.toLowerCase() + ' ' : ''}${x.type === 'Other' ? (x.other || 'other') : words(x.type)} (${String(x.impact || '').toLowerCase()})`).join(' and '); }
@@ -36,9 +36,14 @@ function cmtDraft(J, k) { const S = subjFacts(J), F = reportFrom(J), o = orderOf
   if (k === 'cSubject') return '[Add only what the Improvements fields do not show – e.g. the scope and quality of recent work, permits, unusual features or layout, deferred maintenance.]';
   if (k === 'cMarket') return '[Add what the market numbers do not show – e.g. what is driving demand, financing and interest rates, seasonality, how this property type is selling in this market.]';
   return ''; }
-function cmtBoxesHTML(J) { const R = R0(J);
-  return `<section><h3>Comments for SFREP <small>boxes that came in empty – draft from your data, then edit</small></h3>
-    <p class="help">Write only what the fields above cannot show – Fannie Mae’s reviewers read the fields, so repeating them only uses up the box. Your standard paragraphs are under 📋 My comments.</p>
-    ${CMT_BOXES.map(([k, , l, max]) => `<label class="fld"><span>${l} ${k === 'cAssign' ? '<small class="muted">use 📋 My comments below</small>' : `<button type="button" class="btn sm" data-cmtdraft="${k}">Draft it</button>`}</span><textarea class="txt" rows="3" maxlength="${max}" data-rpt="${k}">${esc(R[k] || '')}</textarea></label>`).join('')}</section>`; }
+/* one box, placed in its own section of Report details (her ask Oct 22 2026: the site comment belongs with the site, not at the end) */
+const cmtCount = (v, max) => `<small class="cmtcnt${v.length > max ? ' warnTxt' : ''}">${v.length.toLocaleString()} / ${max.toLocaleString()} characters</small>`;
+function cmtBoxHTML(J, k) { const R = R0(J); const B = CMT_BOXES.find(b => b[0] === k); if (!B) return ''; const [, , l, max] = B; const v = String(R[k] || '');
+  return `<label class="fld"><span>${l} ${cmtCount(v, max)} ${k === 'cAssign' ? '' : `<button type="button" class="btn sm" data-cmtdraft="${k}">Draft it</button>`}</span><textarea class="txt" rows="${Math.min(10, 3 + Math.round(v.length / 160))}" maxlength="${max}" data-rpt="${k}">${esc(v)}</textarea>${k === 'cAssign' ? '<small class="muted">Leave it empty to keep the Assignment comment you wrote on the iPad; text here replaces it.</small>' : ''}</label>`; }
+function cmtBoxesHTML() { return ''; }   // the boxes now sit in their sections (report.js)
+const CMT_TIP = '<p class="help">Write only what the fields cannot show – reviewers read the fields, so repeating them only uses up the box. Your standard paragraphs are under 📋 My comments.</p>';
+/* live character count under every box that has one */
+document.addEventListener('input', e => { const t = e.target; if (!t || t.tagName !== 'TEXTAREA' || !t.maxLength || t.maxLength < 0) return; const lab = t.closest('label'); const c = lab && lab.querySelector('.cmtcnt'); if (!c) return;
+  const max = t.maxLength; c.textContent = `${t.value.length.toLocaleString()} / ${max.toLocaleString()} characters`; c.classList.toggle('warnTxt', t.value.length >= max); });
 document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('[data-cmtdraft]'); if (!b || !app.job) return; const k = b.dataset.cmtdraft; const R = R0(app.job);
   if (R[k] && !confirm('Replace your text in this box with a new draft?')) return; R[k] = cmtDraft(app.job, k); save(); const c = document.getElementById('reportCard'); if (c) c.innerHTML = reportHTML(app.job); });
