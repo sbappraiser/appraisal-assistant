@@ -376,3 +376,5 @@ html.testcopy .bar { border-bottom-color: #7b2cbf; }
 input.txt:focus, select.txt:focus, textarea.txt:focus { background: #fff4b0 !important; }
 .sev.Recommended { color: #fff; }
 .wchip.on { color: #fff; }
+
+.starters{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 4px;align-items:center}.starters .stlab{font-size:.8em;color:#5b2a86;width:100%}.chip.starter{font-size:.85em;padding:6px 10px;border-radius:14px;border:1px solid #c9b8e0;background:#f7f2fc;color:#3b1d5e}

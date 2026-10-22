@@ -629,7 +629,8 @@ nav.tabs button[aria-selected="true"] { background: var(--look-navy) !important;
       <li><b>ⓘ beside a question</b> and <b>📚 Open F-1 … in my Library</b> (in a grid line’s guidance) open the Library at Fannie Mae’s F-1 guidance for that field – the page where it is defined comes first. Your F-1 PDF must be in the Library.</li>
       <li>Drop-downs use Fannie Mae’s own choices. To hide choices you never use: ⚙ Settings › My drop-down lists – untick them and Save (an answer already chosen stays).</li></ol></details>
     <details><summary>My comments – your comment library</summary><ol>
-      <li><b>UAD 3.6 starter comments:</b> on Common responses click <b>Add the UAD 3.6 starter comments</b> once. 87 short comments written for the 3.6 boxes the way Fannie Mae's samples are: a sentence or two, only what the fields cannot show. They come from your own 2.6 wording (measuring, observation limits, data sources, ownership rights, wells and agricultural meters, fire and flood, permits, exposure time). Each title names its F-1 field and character limit (e.g. “Fire hazard severity zone – F-1 4.049, 140 characters”). Fill in the [brackets] from your inspection notes; delete what does not apply. Nothing you already have is changed.</li>
+      <li><b>UAD 3.6 starter comments:</b> on Common responses click <b>Add the UAD 3.6 starter comments</b> once. 97 short comments written for the 3.6 boxes the way Fannie Mae's samples are: a sentence or two, only what the fields cannot show. They come from your own 2.6 wording (measuring, observation limits, data sources, ownership rights, wells and agricultural meters, fire and flood, permits, exposure time). Each title names its F-1 field and character limit (e.g. “Fire hazard severity zone – F-1 4.049, 140 characters”). Fill in the [brackets] from your inspection notes; delete what does not apply. Nothing you already have is changed.</li>
+      <li><b>On the iPad:</b> Summaries tab – under each “Your added comment” box are the 3.6 starter comments for that box (site, view, access, exterior, interior, outbuildings, energy, disaster mitigation, vehicle storage, amenities, assignment, quality and condition). Tap one: it is added after your words and the first [bracket] is selected so you can type over it. Needs Attention lists any box with an unfilled [bracket]; the pre-check here does the same for the whole report. (The iPad has the starter set; your own edits stay in your office comment library.)</li>
       <li>They show up by themselves under the matching box (click in a comment box: the chips under it are that box's comments). Your 2.6 comments stay as they are, marked 2.6; tick <b>also 2.6</b> in the picker to see them.</li>
       <li>Click the <b>My comments</b> tab.</li>
       <li>First time: under <b>Import my OneNote library</b>, choose what the comments were written for (your OneNote library is <b>UAD 2.6</b>), then click <b>Choose the PDF or comment file…</b> and pick the PDF you exported from OneNote (or a comment file Claude made for you – those carry their own UAD 2.6 / 3.6 tag). Each page becomes one comment, sorted by its OneNote section; long comments that run onto a second page are joined back together. Pages with a title but no text yet are left out and listed.</li>
@@ -1074,7 +1075,7 @@ nav.tabs button[aria-selected="true"] { background: var(--look-navy) !important;
   <div class="cmtImp"><label>Import my OneNote library (PDF) – these comments were written for <select id="cmtImpVer"><option value="2.6">UAD 2.6</option><option value="3.6">UAD 3.6</option><option value="both">both</option></select></label>
     <label class="btn small">Import a comment file or PDF…<input id="cmtFile" type="file" accept=".pdf,application/pdf,.json,application/json" hidden></label><span id="cmtMsg" class="help"></span></div>
   <p class="help">Copy puts the comment on the clipboard – paste it into SFREP and fill in the <mark class="blank">[blanks]</mark>. Kept in this browser only and in your Back up; nothing is sent anywhere. The Comp genie's comment boxes have a <b>My comments</b> button that uses this same list.</p>
-  <div class="cmtImp"><button type="button" class="btn" data-cmt36="1">Add the UAD 3.6 starter comments</button><span class="help">87 short comments written for the 3.6 boxes (Fannie Mae's style: only what the fields cannot show), from your own 2.6 wording – each names its F-1 field and character limit. Fill in the [brackets] from your notes.</span></div>
+  <div class="cmtImp"><button type="button" class="btn" data-cmt36="1">Add the UAD 3.6 starter comments</button><span class="help">97 short comments written for the 3.6 boxes (Fannie Mae's style: only what the fields cannot show), from your own 2.6 wording – each names its F-1 field and character limit. Fill in the [brackets] from your notes.</span></div>
   <div id="cmtTiles" class="cmtTiles"></div>
   <div id="cmtBody"></div>
 </section>
@@ -1101,7 +1102,7 @@ nav.tabs button[aria-selected="true"] { background: var(--look-navy) !important;
 </div>
 <div id="toast" role="status" hidden></div>
 <script>
-const BUILD='o1-1022-0839';
+const BUILD='o1-1022-0902';
 const G = (() => {
 /* ---------------- small helpers ---------------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -5923,8 +5924,20 @@ const CMT36 = [
   ['Reconciliation', 'Most weight to sales comparison', '26.019', 5000, 'The sales comparison approach is given most weight as it reflects buyer behavior in this market; the cost approach supports the conclusion.'],
   ['Reconciliation', 'Exposure time', '26.019', 5000, 'Exposure time is estimated at [30–90] days, based on the comparables’ days on market at a competitive price after the last price reduction.'],
   ['Assignment conditions', 'Client-requested condition', '26.018', 2500, 'At the client’s request, a value is also given [subject to completion of the repairs / as of a retrospective date] as described.'],
+  /* ---- iPad comment boxes (added Oct 22 2026): exterior, view, access, outbuildings, disaster mitigation ---- */
+  ['Subject property', 'Exterior – roof and windows', '8.061', 5000, 'The roof was [replaced in [year] / is original]; the windows are [original single pane / dual pane replaced in [year]], per [the owner / permits].'],
+  ['Subject property', 'Exterior – recent work', '8.061', 5000, 'The exterior was [painted / re-stuccoed] in [year] and shows minimal wear.'],
+  ['Subject property', 'Exterior – deferred maintenance', '8.061', 5000, 'Peeling paint and weathered trim were observed on the [south] elevation; this is typical deferred maintenance reflected in the exterior condition rating.'],
+  ['Site', 'View – partial ocean', '4.042', 2500, 'A partial ocean view is available from the [living room and primary bedroom] over neighboring rooftops.'],
+  ['Site', 'View – mountain', '4.042', 2500, 'The subject has an open mountain view from the [rear yard and main living areas].'],
+  ['Site', 'Access – private lane', '4.024', 300, 'Access is by a paved private lane shared with [n] homes; typical for the area.'],
+  ['Site', 'Access – steep driveway', '4.024', 300, 'Access is by a steep paved driveway from [street]; typical for hillside homes here.'],
+  ['Subject property', 'Outbuilding – permitted', '12.025', 5000, 'The [detached studio / workshop] was permitted in [year], per [the owner / permit records], and is in condition similar to the dwelling.'],
+  ['Subject property', 'Outbuilding – no permit found', '12.025', 5000, 'No permit was found for the [shed / studio]; it is given [no / limited] contributory value.'],
+  ['Subject property', 'Disaster mitigation – wildfire', '5.001', 5000, 'The home has [ember-resistant vents, a Class A roof and maintained defensible space], typical of hardening in this fire hazard area.'],
 ];
-/* add the set to her library – shown first, nothing she has is changed (her database rule) */
+
+/* UAD 3.6 starter comments – adding them to her library (the list itself is in cmt36data.js, shared with the iPad app) *//* add the set to her library – shown first, nothing she has is changed (her database rule) */
 async function cmt36Add() { const now = new Date().toISOString(); const add = []; CMT36.forEach(([section, title, fid, lim, text]) => { const id = cmtId(section, title + ' (3.6)', text); if (!CMT[id]) add.push({ id, section, title: `${title} – F-1 ${fid}, ${lim.toLocaleString()} characters`, text, ver: '3.6', src: 'UAD 3.6 starter set (Oct 2026)', added: now }); });
   if (!add.length) { toast('The UAD 3.6 starter comments are already in your library'); return; }
   const secs = [...new Set(add.map(x => x.section))];

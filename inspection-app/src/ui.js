@@ -781,6 +781,8 @@ function bind(root) {
   root.querySelectorAll('[data-ovrsave]').forEach(b => b.onclick = () => { const r = ($('#ovrText').value || '').trim() || 'Overridden in field'; app.ins.overrides[b.dataset.ovrsave] = r; app.ovrOpen = null; save(); renderTab(); toast('Overridden'); });
   root.querySelectorAll('[data-ovrcancel]').forEach(b => b.onclick = () => { app.ovrOpen = null; renderTab(); });
   root.querySelectorAll('[data-ovrclear]').forEach(b => b.onclick = () => { delete app.ins.overrides[b.dataset.ovrclear]; save(); renderTab(); });
+  root.querySelectorAll('[data-starter]').forEach(b => b.onclick = () => { const [id, k] = b.dataset.starter.split('|'); const c = (typeof CMT36 !== 'undefined' ? CMT36 : [])[+k]; const ta = document.getElementById('c-' + id); if (!c || !ta) return;
+    ta.value = (ta.value.trim() ? ta.value.trim() + ' ' : '') + c[4]; ta.dispatchEvent(new Event('input')); ta.focus(); const i = ta.value.indexOf('['); if (i >= 0) ta.setSelectionRange(i, ta.value.indexOf(']', i) + 1); toast('Added – fill in the [brackets]'); });
   root.querySelectorAll('[data-comment]').forEach(t => { let before = t.value; t.addEventListener('input', () => { if (before.trim().length >= 15 && !t.value.trim()) offerUndo(app.ins.comments, t.dataset.comment, before); before = t.value || before; app.ins.comments[t.dataset.comment] = t.value; save(); updateSummary(t.dataset.comment); }); });
   root.querySelectorAll('[data-final]').forEach(t => { t.addEventListener('input', () => { app.ins.finals[t.dataset.final] = t.value; save(); const c = document.getElementById('cnt-' + t.dataset.final); const lim = COMMENT_TARGETS.find(x => x.id === t.dataset.final).lim; c.textContent = t.value.length + ' / ' + lim; c.classList.toggle('over', t.value.length > lim); }); });
   root.querySelectorAll('[data-editfinal]').forEach(b => b.onclick = () => { const id = b.dataset.editfinal; app.ins.finals[id] = buildComment(app.ins, COMMENT_TARGETS.find(x => x.id === id)).text; save(); renderTab(); });
@@ -952,7 +954,7 @@ function renderSummaries() {
         <div class="limit ${r.over ? 'over' : ''}" id="cnt-${t.id}">${r.text.length} / ${t.lim}</div>
         ${r.dropped.length ? `<div class="dropped">Left out to stay under the limit (kept in your workfile): ${esc(r.dropped.join(' '))}</div>` : ''}
         <label class="flabel" for="c-${t.id}"><span class="tag">Optional</span><span class="lab">Your added comment</span></label>
-        <textarea class="txt" spellcheck="true" autocorrect="on" autocapitalize="sentences" id="c-${t.id}" data-comment="${t.id}" placeholder="Added after the checkbox summary">${esc(ins.comments[t.id] || '')}</textarea>
+        <textarea class="txt" spellcheck="true" autocorrect="on" autocapitalize="sentences" id="c-${t.id}" data-comment="${t.id}" placeholder="Added after the checkbox summary">${esc(ins.comments[t.id] || '')}</textarea>${starterChips(t.id)}
         <div class="row"><button class="btn sm" data-editfinal="${t.id}">Edit final wording</button><button class="btn sm" data-copy="${t.id}">Copy</button></div>
         ${typeof dkNoteSugg === 'function' ? dkNoteSugg(ins, t.id) : ''}`}
     </div>`;
@@ -1030,6 +1032,7 @@ function computeIssues(ins) {
   if (ins.sketch && ins.sketch.areaCount && (!ins.sketch.imageAt || ins.sketch.imageAt + 5000 < ins.sketch.updated)) out.push({ key: 'skimg:' + Math.floor((ins.sketch.updated || 0) / 60000), sev: 'Check', label: 'The sketch image is missing or older than the drawing: open ✏️ Sketch and tap “Back to inspection” to refresh it before exporting.', tab: 'interior', group: 'unit', anchor: 'f-interior-sketchRev' });
   wordFlags(ins).forEach(w => out.push({ key: 'word:' + w.where + ':' + w.word, sev: 'Check', label: `Wording: “${w.word}” in ${w.where} may be flagged in SFREP or by reviewers (fair housing / bias wording). Consider rephrasing.`, tab: w.tab, group: w.group || null, anchor: w.anchor || '', item: w.item || null }));
   measureReminders(ins).forEach(m => out.push({ key: 'measure:' + m, sev: 'Check', label: `Measure for SFREP: ${m}`, tab: 'attention', anchor: '' }));
+  COMMENT_TARGETS.forEach(t => { const r = buildComment(ins, t); const br = (r.text.match(/\[[^\]\n]{1,80}\]/) || [])[0]; if (br) out.push({ key: `br:${t.id}`, sev: 'Required', label: `${t.title}: fill in ${br}`, tab: 'summaries', group: null, anchor: 'sum-' + t.id }); });
   COMMENT_TARGETS.forEach(t => { const r = buildComment(ins, t); if (r.over) out.push({ key: `lim:${t.id}`, sev: 'Required', label: `${t.title} is over ${t.lim} characters`, tab: 'summaries', anchor: 'sum-' + t.id, noOverride: true }); });
   _issueCache.ins = ins; _issueCache.ver = sig; _issueCache.val = out;
   return out;
@@ -1106,3 +1109,9 @@ function renderExport() {
     <div class="exp"><h3>Where files go</h3><p>Export opens the share sheet. Choose <b>Save to Files</b>, then <b>OneDrive → Inspections</b>. It appears on your PC once the iPad is on Wi-Fi.</p></div>
   </section>`;
 }
+
+/* UAD 3.6 starter comments under each iPad comment box (Oct 22 2026; the same list as the Appraisal Assistant's Common responses, cmt36data.js) */
+const STARTER_FID = { accessDesc: ['4.024'], siteFeatures: ['4.066'], siteInfluence: ['4.030', '4.049'], view: ['4.042'], disaster: ['5.001'], energy: ['6.015', '6.016'], exterior: ['8.061'], interior: ['10.061'], adu: ['10.061'],
+  outbuilding: ['12.025'], functional: ['11.001'], vehicle: ['13.010'], amenities: ['14.011'], assignment: ['2.061'], qc: ['15.010'] };
+function starterChips(id) { const F = STARTER_FID[id]; if (!F || typeof CMT36 === 'undefined') return ''; const L = CMT36.map((c, k) => [c, k]).filter(([c]) => F.includes(c[2])); if (!L.length) return '';
+  return `<div class="starters"><span class="stlab">3.6 starter comments – tap to add:</span>${L.map(([c, k]) => `<button type="button" class="chip starter" data-starter="${id}|${k}" title="${esc(c[4])}">${esc(c[1])}</button>`).join('')}</div>`; }

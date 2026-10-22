@@ -49,6 +49,7 @@ function precheckXML(xml) {
   };
   walk(doc.documentElement);
   unknown.forEach((n, k) => out.push({ sev: 'Check', msg: `${k} is not in the UAD 3.6 delivery spec (A-1)${n > 1 ? ` – ${n} times` : ''}`, hint: 'The import may ignore or reject it.' }));
+  { const seen = new Set(); [...doc.getElementsByTagName('*')].filter(e => !e.children.length && /Comment|Description$/.test(e.localName)).forEach(e => { const m = (e.textContent || '').match(/\[[^\]\n]{1,80}\]/); if (m && !seen.has(e.localName + m[0])) { seen.add(e.localName + m[0]); out.push({ sev: 'Must fix', msg: `${where(e)}: unfilled ${m[0]} – a starter comment still has a blank to fill in`, hint: 'Replace the [brackets] with the facts, or delete that part.' }); } }); }   // her starter comments (Oct 22 2026)
   out.push(...precheckReq(doc));   // Fannie Mae's always-required fields that are missing (A-1 "R", Oct 22 2026)
   return out;
 }
