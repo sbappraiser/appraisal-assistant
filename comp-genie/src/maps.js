@@ -378,10 +378,11 @@ async function mapOwnPicture(J, key, file) {
   const M = await mapsGet(J); M[key] = { ...(M[key] && key === 'fire' ? { zone: M[key].zone } : {}), blob, at: Date.now(), src: 'your picture: ' + file.name, use: true }; await mapsPut(J, M); toast('Your picture is used for the ' + MAP_LABEL[key].toLowerCase()); mapsRender();
 }
 
-const MAP_LABEL = { loc: 'Location map', rent: 'Rental map', nbhd: 'Market area map', aerial: 'Aerial view', flood: 'Flood map', fire: 'Wildfire map' };
+const MAP_LABEL = { loc: 'Location map', rent: 'Rental map', nbhd: 'Market area map', aerial: 'Aerial view', flood: 'Flood map', fire: 'Wildfire map', plat: 'Plat map' };
 const MAP_IMG = { loc: ['SalesComparableMap', 'Location map – subject and comparable sales', 'Location Map.jpg'], rent: ['RentalComparableMap', 'Rental map – subject and comparable rentals', 'Rental Map.jpg'],
   nbhd: ['MarketAnalysisExhibit', 'Market area map – subject and market area boundary', 'Market Area Map.jpg'],
-  aerial: ['SiteExhibit', 'Aerial view of the subject', 'Aerial View.jpg'], flood: ['SiteExhibit', 'Flood map', 'Flood Map.jpg'], fire: ['SiteExhibit', 'Fire hazard severity zone map', 'Wildfire Map.jpg'] };
+  aerial: ['SiteExhibit', 'Aerial view of the subject', 'Aerial View.jpg'], flood: ['SiteExhibit', 'Flood map', 'Flood Map.jpg'], fire: ['SiteExhibit', 'Fire hazard severity zone map', 'Wildfire Map.jpg'],
+  plat: ['PropertyBoundaries', 'Plat map – subject parcel', 'Plat Map.jpg'] };
 function mapCaption(k, m) {
   if (k === 'flood' && m.zone) return `Flood map – FEMA zone ${m.zone.zone}${m.panel ? ', FIRM panel ' + m.panel.panel + (m.panel.date ? ' effective ' + showDate(m.panel.date) : '') : ''}`;
   if (k === 'fire' && m.zone && m.zone.cls && m.zone.cls !== 'Unknown') return m.zone.cls === 'None' ? 'Fire hazard map – not in a mapped CAL FIRE Fire Hazard Severity Zone' : `Fire hazard map – CAL FIRE ${m.zone.cls} Fire Hazard Severity Zone${m.zone.ra ? ' (' + m.zone.ra + ')' : ''}`;
@@ -390,26 +391,28 @@ let MAPS_CACHE = { job: null, M: {} }; const MAP_URL = {};
 const MAP_EDITABLE = k => ['loc', 'rent', 'nbhd'].includes(k);
 async function mapsRender() {
   const box = document.getElementById('mapCard'); if (!box || !app.job) return; const J = app.job;
-  if (MAPS_CACHE.job !== J.id) MAPS_CACHE = { job: J.id, M: await mapsGet(J) }; else MAPS_CACHE.M = await mapsGet(J); const M = MAPS_CACHE.M;
+  if (MAPS_CACHE.job !== J.id) MAPS_CACHE = { job: J.id, M: await mapsGet(J) }; else MAPS_CACHE.M = await mapsGet(J);
+  if (await platFromOrder(J, true)) MAPS_CACHE.M = await mapsGet(J); const M = MAPS_CACHE.M;
   const used = usedComps(J); const noGeo = used.filter(c => !geoOf(c)); const sOk = num(J.subject.lat) && num(J.subject.lon);
-  const make = { loc: 'Make the location map', rent: 'Make the rental map', nbhd: 'Make the market area map', aerial: 'Make the aerial view', flood: 'Make the flood map', fire: 'Make the wildfire map' };
+  const make = { loc: 'Make the location map', rent: 'Make the rental map', nbhd: 'Make the market area map', aerial: 'Make the aerial view', flood: 'Make the flood map', fire: 'Make the wildfire map', plat: 'Use the plat map from Documents' };
   const card = k => { const m = M[k]; if (m && m.blob) { if (MAP_URL[k]) URL.revokeObjectURL(MAP_URL[k]); MAP_URL[k] = URL.createObjectURL(m.blob); }
     const btn = `<button class="btn sm primary" data-map="${k}">${m ? 'Make it again' : make[k]}</button>`;
     const own = `<label class="btn sm">Use my own picture<input type="file" accept="image/*" data-mapown="${k}" hidden></label>`;
     const styleSel = ['flood', 'fire'].includes(k) ? `<label class="inl small">Style <select data-mapbase="${k}">${Object.entries(MAP_BASES).filter(([b]) => b !== 'sat').map(([b, x]) => `<option value="${b}" ${((m && m.base) || (mapBasePref() === 'street' ? 'soft' : mapBasePref())) === b ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select></label>` : '';
     const info = k === 'flood' && m && m.zone ? `<small>FEMA zone <b>${esc(m.zone.zone)}</b>${m.zone.sfha ? ' (Special Flood Hazard Area)' : ''}${m.panel ? ` · FIRM panel <b>${esc(m.panel.panel)}</b>${m.panel.date ? ' · effective ' + esc(showDate(m.panel.date)) : ''}` : ''}${(m.letters || []).length ? ' · ' + m.letters.map(l => esc(l.kind + ' ' + l.case)).join(', ') : ''}</small>`
       : k === 'fire' ? `${m && m.zone ? `<small>CAL FIRE: <b>${esc(m.zone.cls === 'None' ? 'not in a mapped zone' : m.zone.cls === 'Unknown' ? 'not found – check the viewer' : m.zone.cls + ' zone' + (m.zone.ra ? ' (' + m.zone.ra + ')' : ''))}</b></small>` : ''}${fireCheck(J) ? `<small class="warnTxt">${esc(fireCheck(J))}</small>` : ''}<small>Check it: <a href="${FHSZ_VIEW.SRA}" target="_blank" rel="noopener">CAL FIRE state (SRA) viewer</a> · <a href="${FHSZ_VIEW.LRA}" target="_blank" rel="noopener">local (LRA) viewer</a></small>`
+      : k === 'plat' ? `<small>${m ? 'Goes in the Site section of the report (Property boundaries).' : 'Drop the plat map in the order’s Documents (kind: Plat map) – it comes in here by itself.'}</small>`
       : k === 'nbhd' ? `<small>${nbOf(J) ? `Boundary drawn (${nbOf(J).pts.length} points). It also shows on the location map when you tick it in Edit map.` : 'Draw the boundary after you make the map (Edit map › ✏ Draw boundary).'}</small>` : '';
     return `<div class="mapbox"><b>${MAP_LABEL[k]}</b>${m ? `<a href="${MAP_URL[k]}" target="_blank" title="Open full size"><img src="${MAP_URL[k]}" alt="${MAP_LABEL[k]}"></a><small class="muted">${esc(m.src || (m.n ? 'subject + ' + m.n : ''))} · ${new Date(m.at).toLocaleString()}</small>
       <label class="check"><input type="checkbox" data-mapuse="${k}" ${m.use !== false ? 'checked' : ''}> Put it in the SFREP report</label>` : '<div class="mapempty">not made yet</div>'}
-      <div class="row">${btn}${['aerial', 'flood', 'fire', 'nbhd'].includes(k) ? own : ''}${m && m.layout ? `<button class="btn sm" data-mapedit="${k}">Edit map</button>` : ''}${k === 'aerial' && m && m.width ? `<button class="btn sm" data-aerialw="${Math.max(60, Math.round(m.width / 1.6))}">Closer</button><button class="btn sm" data-aerialw="${Math.min(2000, Math.round(m.width * 1.6))}">Farther</button>` : ''}${m ? `<a class="btn sm" href="${MAP_URL[k]}" download="${MAP_IMG[k][2]}">Save picture</a><button class="btn sm" data-mapdel="${k}">✕</button>` : ''}</div>
+      <div class="row">${btn}${['aerial', 'flood', 'fire', 'nbhd', 'plat'].includes(k) ? own : ''}${m && m.layout ? `<button class="btn sm" data-mapedit="${k}">Edit map</button>` : ''}${k === 'aerial' && m && m.width ? `<button class="btn sm" data-aerialw="${Math.max(60, Math.round(m.width / 1.6))}">Closer</button><button class="btn sm" data-aerialw="${Math.min(2000, Math.round(m.width * 1.6))}">Farther</button>` : ''}${m ? `<a class="btn sm" href="${MAP_URL[k]}" download="${MAP_IMG[k][2]}">Save picture</a><button class="btn sm" data-mapdel="${k}">✕</button>` : ''}</div>
       ${styleSel}${info}</div>`; };
-  box.innerHTML = `<h2>Maps and exhibits <small>location, market area, aerial, flood and wildfire maps – they go into the SFREP report</small></h2>
+  box.innerHTML = `<h2>Maps and exhibits <small>location, market area, aerial, flood, wildfire and plat maps – they go into the SFREP report</small></h2>
     ${MAPS.busy ? `<p class="help"><b>${esc(MAPS.busy)}</b></p>` : ''}
     ${!sOk ? '<p class="help warnTxt">The subject has no latitude / longitude yet – drop the subject’s CRS report (Add comps) or your iPad workfile.</p>' : ''}
     ${noGeo.length ? `<p class="help">${noGeo.length} comp${noGeo.length > 1 ? 's' : ''} on the grid ha${noGeo.length > 1 ? 've' : 's'} no latitude / longitude (${noGeo.map(c => esc(compTitle(c))).join(', ')}) – the map looks ${noGeo.length > 1 ? 'them' : 'it'} up by address. The comp's CRS report gives the exact spot.</p>` : ''}
     <p class="row"><label class="inl">Map style for new maps <select data-mapbasepref>${Object.entries(MAP_BASES).map(([b, x]) => `<option value="${b}" ${mapBasePref() === b ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select></label><span class="help">You can change the style of each map in Edit map.</span></p>
-    <div class="maps">${card('loc')}${(J.rentals || []).some(r => r.use) || M.rent ? card('rent') : ''}${card('nbhd')}${card('aerial')}${card('flood')}${card('fire')}</div>
+    <div class="maps">${card('loc')}${(J.rentals || []).some(r => r.use) || M.rent ? card('rent') : ''}${card('nbhd')}${card('aerial')}${card('flood')}${card('fire')}${card('plat')}</div>
     <p class="help">Street map © OpenStreetMap contributors · USGS The National Map (topo, imagery, roads) · USDA NAIP imagery · flood zones from FEMA’s National Flood Hazard Layer · fire zones from CAL FIRE / OSFM. Pins are placed from latitude / longitude (approximate). Check each map before the report goes out.</p>`;
 }
 document.addEventListener('click', async e => {
@@ -417,7 +420,7 @@ document.addEventListener('click', async e => {
   if (b.dataset.mapdel) { const M = await mapsGet(J); delete M[b.dataset.mapdel]; await mapsPut(J, M); mapsRender(); return; }
   if (MAPS.busy && Date.now() - (MAPS.since || 0) < 90000) { toast('Still working on the last map – ' + MAPS.busy); return; }
   const k = b.dataset.map; MAPS.since = Date.now(); b.disabled = true; const was = b.textContent; b.textContent = 'Working…';
-  try { if (k === 'loc' || k === 'rent') await makeLocationMap(J, k); else if (k === 'nbhd') await makeMarketMap(J); else if (k === 'aerial') await makeAerial(J); else if (k === 'flood') await makeFloodMap(J); else if (k === 'fire') await makeFireMap(J); }
+  try { if (k === 'loc' || k === 'rent') await makeLocationMap(J, k); else if (k === 'nbhd') await makeMarketMap(J); else if (k === 'aerial') await makeAerial(J); else if (k === 'flood') await makeFloodMap(J); else if (k === 'fire') await makeFireMap(J); else if (k === 'plat') await platFromOrder(J, false); }
   catch (x) { console.warn('map', x); toast('That map could not be made: ' + (x.message || x) + ' – try again in a minute, or use your own picture', 9000); }
   finally { MAPS.busy = ''; MAPS.since = 0; b.disabled = false; b.textContent = was; mapsRender(); }
 });
@@ -429,6 +432,21 @@ document.addEventListener('change', async e => {
   if (t.dataset.mapbase) { const M = await mapsGet(app.job); const k = t.dataset.mapbase; M[k] = { ...(M[k] || {}), base: t.value }; if (!M[k].blob) delete M[k].blob; await mapsPut(app.job, M);
     if (M[k].blob) toast('Click “Make it again” to redraw the ' + MAP_LABEL[k].toLowerCase() + ' in this style'); }
 });
+/* her ask (Oct 22 2026): the plat map is only an exhibit – the newest Plat map in the order's Documents is put in as is (not read).
+   quiet = from the page drawing: only when the order has a plat she has not brought in yet (her own picture is never replaced). */
+async function platFromOrder(J, quiet) {
+  const o = typeof orderOf === 'function' ? orderOf(J) : null; const ds = ((o && o.docs) || []).filter(d => d.type === 'plat').sort((a, b) => String(b.added || '').localeCompare(String(a.added || '')));
+  const d = ds[0]; if (!d) { if (!quiet) toast('No plat map in this order’s Documents yet – drop it there (kind: Plat map), or use your own picture', 8000); return false; }
+  const M = await mapsGet(J); const key = d.id + '|' + (d.added || '');
+  if (quiet && M.plat && (M.plat.doc === key || !M.plat.doc)) return false;
+  const rec = typeof readOrderDoc === 'function' ? await readOrderDoc(d.id) : null; if (!rec) { if (!quiet) toast('That plat map file is no longer stored – drop it in Documents again'); return false; }
+  let blob = null;
+  if (rec.preview) blob = await (await fetch(rec.preview)).blob();
+  else if (rec.blob && /^image\//i.test(rec.blob.type || rec.mime || '')) blob = rec.blob;
+  if (!blob) { if (!quiet) toast('Open the order’s Documents and pick “Plat map” for that file again – it makes the picture for the report', 9000); return false; }
+  M.plat = { blob, at: Date.now(), src: 'from Documents: ' + (d.name || 'plat map'), use: M.plat && M.plat.use === false ? false : true, doc: key }; await mapsPut(J, M);
+  if (!quiet) toast('The plat map is in the exhibits'); return true;
+}
 /* for the full report: the pictures she kept ticked */
 async function mapsForReport(J) { const M = await mapsGet(J); return Object.keys(MAP_IMG).filter(k => M[k] && M[k].blob && M[k].use !== false).map(k => ({ k, blob: M[k].blob, cat: MAP_IMG[k][0], cap: mapCaption(k, M[k]), file: MAP_IMG[k][2] })); }
 

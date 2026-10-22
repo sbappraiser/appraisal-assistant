@@ -59,7 +59,7 @@ const SLOTS = [
   ['crs', 'CRS Data property report', 'Fills the APN, owner, location and public-record facts (never beds, baths or square feet).', () => true],
   ['permitsCounty', 'County permit history (by parcel)', 'The CrystalViewer “Permit History by Parcel” printout: permits, zoning and parcel facts are read from it.', () => true],
   ['legal', 'Legal description', 'Only if it is a separate file – the prelim usually has it.', () => true],
-  ['plat', 'Plat map (assessor parcel map)', 'For the site size, shape and dimensions, and as an exhibit.', () => true],
+  ['plat', 'Plat map (assessor parcel map)', 'An exhibit only – it goes into the report’s Site section (not read).', () => true],
   ['mls', 'MLS listing with its history', 'The subject’s listing and listing history (CSV export or printout).', w => w.listed === 'yes'],
   ['contract', 'Purchase contract, counter offers and addenda', 'Add every file – packets often come in several PDFs.', w => w.purchase === 'yes'],
   ['prelim', 'Preliminary title report', 'Easements, CC&R’s and the legal description are read from it.', () => true],

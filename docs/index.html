@@ -714,7 +714,7 @@ nav.tabs button[aria-selected="true"] { background: var(--look-navy) !important;
       <li>After a document is read, its tag changes so you never do it twice: <b>✓ read by Claude</b> (green outline) once Claude has read it – also for permit files read together; <b>3 to accept or reject</b> (orange) while suggestions are waiting; and <b>✓ done · 2 accepted · filled in: Legal description</b> (solid green) when every suggestion is accepted or rejected, naming what it filled in on the order.</li>
       <li>Uploading a file with the same name as one already in the order <b>replaces</b> it – you never get two copies. Its sticky notes and accepted entries stay. (Orders that already had a file twice are cleaned up when you open them.)</li>
       <li>Drop every file for the order into the <b>Documents</b> box, or click <b>Choose files</b>. Each one is sorted by kind; change the kind with its drop-down if it guessed wrong.</li>
-      <li><b>Plat map</b> (assessor parcel map, under Public record): sorted by itself when the file name or page says plat, parcel map, assessor's map or tract map. Use it for the site size, shape and dimensions (Subject › Site dimensions), and as an exhibit. New order step 2 lists it too.</li>
+      <li><b>Plat map</b> (assessor parcel map, under Public record): an exhibit only – it is not read. Drop it in Documents (sorted by itself when the file name or page says plat, parcel map, assessor's map or tract map; otherwise pick Plat map in its drop-down). The Comp genie's <b>Maps and exhibits</b> card brings in page 1 by itself and puts it in the report's Site section (Property boundaries). Untick “Put it in the SFREP report” to leave it out, or use your own picture instead.</li>
       <li>Click a file name to open it. Click <b>Read</b> to open the reader (next section). <b>Remove</b> takes it out of the order.</li>
       <li><b>Search:</b> type a word in "Search every document…" and press Enter or <b>Search</b>. It looks through the text of every document, your sticky notes and your accepted entries. Click a result to open that page with the word highlighted.</li>
       <li>Scanned PDFs have no text to search. Open the file in Acrobat → <b>Scan &amp; OCR → Recognize text</b>, save, and drop it in again.</li>
@@ -1123,7 +1123,7 @@ nav.tabs button[aria-selected="true"] { background: var(--look-navy) !important;
 </div>
 <div id="toast" role="status" hidden></div>
 <script>
-const BUILD='o1-1022-1859';
+const BUILD='o1-1022-1907';
 const G = (() => {
 /* ---------------- small helpers ---------------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -2321,7 +2321,7 @@ const DOC_TYPES = [
   ['Other', [['photo', 'Photo'], ['other', 'Other']]],
 ];
 const DOC_LABEL = Object.fromEntries(DOC_TYPES.flatMap(g => g[1]));
-const READS = { plat: 'kept for the site size, shape and dimensions, and as an exhibit', crs: 'read for the subject facts', mls: 'read for the subject’s listing history', permitsCounty: 'read for the permit list', clientLetter: 'checked for AI and confidentiality wording', floorplan: 'ready to trace on the iPad' };
+const READS = { plat: 'put into the report as an exhibit (Site section)', crs: 'read for the subject facts', mls: 'read for the subject’s listing history', permitsCounty: 'read for the permit list', clientLetter: 'checked for AI and confidentiality wording', floorplan: 'ready to trace on the iPad' };
 
 /* ---------- what kind of document is this? (text on page 1, then the file name) ---------- */
 const TEXT_RULES = [
@@ -2465,6 +2465,8 @@ async function readDoc(meta, file) { // turns the readable kinds into facts; not
         meta.note = 'iPad inspection' + (P.inspDate ? ' of ' + (G.showDate ? G.showDate(P.inspDate) : P.inspDate) : '') + (P.addr ? ' · ' + P.addr : '') + ' · the Comp genie tab takes the subject from it';
         if (P.addr && $('#f_address').value.trim() && !sameStreet(P.addr, $('#f_address').value)) meta.warn = 'This inspection is for ' + P.addr + ', not ' + street(readForm()) + '.';
         if (P.inspDate && !$('#f_inspDate').value) { const d = G.isoDate(P.inspDate) || P.inspDate; if (/^\d{4}-\d\d-\d\d$/.test(d)) $('#f_inspDate').value = d; } } catch (e) { meta.note = 'could not open the zip: ' + (e.message || e); }
+    } else if (meta.type === 'plat') {   // an exhibit only (her rule): not read – a picture of page 1 is kept for the report's Site section
+      const prev = await planPreview(file, meta.page || 1); if (prev) { const rec = await ODB.get('docs', meta.id); rec.preview = prev.src; rec.pages = prev.pages; await ODB.put('docs', rec); meta.pages = prev.pages; meta.note = 'exhibit – the Comp genie puts it in the report (Site section)'; }
     } else if (meta.type === 'floorplan') {
       const prev = await planPreview(file, meta.page || 1); if (prev) { const rec = await ODB.get('docs', meta.id); rec.preview = prev.src; rec.pages = prev.pages; await ODB.put('docs', rec); meta.pages = prev.pages; meta.note = 'ready for the iPad'; }
     }
@@ -2509,6 +2511,7 @@ async function fillTextStates() {   // older documents: look once, then show the
 }
 function textChip(d) {
   if (d.type === 'email') return '<span class="chip ok" title="Read here: from, to, date, subject and text are searchable; its attachments are separate documents">✓ read here</span>';
+  if (d.type === 'plat') return '<span class="chip ok" title="An exhibit only – not read. The Comp genie puts page 1 into the report’s Site section (Maps and exhibits card).">✓ exhibit</span>';
   if (d.type === 'ipadWorkfile') return '<span class="chip ok" title="Open the Comp genie tab: the subject column fills from this inspection (once; again when you drop a newer one)">✓ for the Comp genie</span>';
   const st = d.textState || ''; if (!st) return '';
   if (st === 'text') return `<span class="chip ok" title="${AUTO_READ.includes(d.type) ? 'Read here when you uploaded it – what it filled in is listed next to the name.' : 'Click Read: the reader suggests what to use and you accept or reject each one. Nothing is sent anywhere.'}">${AUTO_READ.includes(d.type) ? '✓ read here' : '✓ text – click Read'}</span>`;
@@ -2537,7 +2540,7 @@ function renderDocs() {
   box.innerHTML = list.length ? `<table class="docs"><tbody>${list.map(d => `<tr>
       <td><button type="button" class="lnk" data-dopen="${d.id}" title="Open">${h(d.name)}</button><small>${Math.max(1, Math.round(d.size / 1024)).toLocaleString()} KB${d.note ? ' · ' + h(d.note) : READS[d.type] ? '' : ''}</small>${docStatusChips(d)}${d.warn ? `<small class="warnTxt">⚠ ${h(d.warn)}</small>` : ''}</td>
       <td><button type="button" class="kindBtn" data-dkind="${d.id}" aria-haspopup="true" title="Change the kind of document">${h(DOC_LABEL[d.type] || 'Other')} ▾</button>${d.type === 'floorplan' && d.pages > 1 ? ` <label class="pg">page <input data-dpage="${d.id}" inputmode="numeric" value="${d.page || 1}" size="2"> of ${d.pages}</label>` : ''}</td>
-      <td class="acts"><button type="button" class="btn small" data-dread="${d.id}">Read</button><button type="button" class="btn ghost small danger" data-ddel="${d.id}">Remove</button></td></tr>`).join('')}</tbody></table>`
+      <td class="acts">${d.type === 'plat' ? '' : `<button type="button" class="btn small" data-dread="${d.id}">Read</button>`}<button type="button" class="btn ghost small danger" data-ddel="${d.id}">Remove</button></td></tr>`).join('')}</tbody></table>`
     : '<p class="help">No documents yet.</p>';
   $('#docCount').textContent = list.length ? list.length + ' file' + (list.length > 1 ? 's' : '') : '';
   box.querySelectorAll('[data-dopen]').forEach(b => b.onclick = () => openDoc(b.dataset.dopen));
@@ -2750,7 +2753,7 @@ function applyClientLetter(F) { // fills only empty boxes (type, form, client al
   return did;
 }
 
-const NO_ADDR_CHECK = ['photo', 'floorplan', 'marketSearch', 'crsList', 'mls', 'crs', 'zillow', 'mlsStats'];   // market pages (Zillow, SBMLS statistics) are not about one property
+const NO_ADDR_CHECK = ['plat', 'photo', 'floorplan', 'marketSearch', 'crsList', 'mls', 'crs', 'zillow', 'mlsStats'];   // market pages (Zillow, SBMLS statistics) are not about one property
 async function checkDocAddress(meta, file) { // is this document for the order's property? (street number and street name on its first pages)
   const street = ($('#f_address').value || '').split(',')[0].trim(); if (!street || !isPdf(file) || NO_ADDR_CHECK.includes(meta.type)) return;
   const sp = G.splitAddr(street); const word = (sp.street.split(/\s+/).find(w => w.length > 2 && !/^(north|south|east|west|n|s|e|w)$/i.test(w)) || '').toLowerCase(); if (!sp.no || !word) return;
@@ -4718,7 +4721,7 @@ const SLOTS = [
   ['crs', 'CRS Data property report', 'Fills the APN, owner, location and public-record facts (never beds, baths or square feet).', () => true],
   ['permitsCounty', 'County permit history (by parcel)', 'The CrystalViewer “Permit History by Parcel” printout: permits, zoning and parcel facts are read from it.', () => true],
   ['legal', 'Legal description', 'Only if it is a separate file – the prelim usually has it.', () => true],
-  ['plat', 'Plat map (assessor parcel map)', 'For the site size, shape and dimensions, and as an exhibit.', () => true],
+  ['plat', 'Plat map (assessor parcel map)', 'An exhibit only – it goes into the report’s Site section (not read).', () => true],
   ['mls', 'MLS listing with its history', 'The subject’s listing and listing history (CSV export or printout).', w => w.listed === 'yes'],
   ['contract', 'Purchase contract, counter offers and addenda', 'Add every file – packets often come in several PDFs.', w => w.purchase === 'yes'],
   ['prelim', 'Preliminary title report', 'Easements, CC&R’s and the legal description are read from it.', () => true],
