@@ -203,6 +203,7 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; } .fat
 .btn.danger.armed { background: var(--warn); color: #fff; border-color: var(--warn); }
 .cmtTools{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.cmtTools input[type=search]{min-width:260px}
 .cmtImp{display:flex;gap:10px;flex-wrap:wrap;align-items:center;background:#f6f8fa;border:1px solid #e3e8ee;border-radius:8px;padding:8px 12px;margin:8px 0}
+.cmtTiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:8px;margin:12px 0}.cmtTile{text-align:left;border:1.5px solid #c9d3df;background:#fff;border-radius:10px;padding:9px 12px;cursor:pointer;font:inherit;display:flex;flex-direction:column;gap:2px}.cmtTile:hover{border-color:#1f3a68;background:#f4f7fb}.cmtTile.on{border-color:#1f3a68;background:#1f3a68;color:#fff}.cmtTile.on small{color:#dfe6f0}.cmtTile small{color:#556;font-size:13px}.cmtTile.none{opacity:.45}.cmtGrpH{margin:14px 0 2px;font-size:19px;color:#1f3a68}.cmtPick{margin:10px 2px}
 .cmtSecH{margin:18px 0 6px;font-size:15px;letter-spacing:.04em;color:#46607a;text-transform:uppercase}
 .cmt{border:1px solid #e3e8ee;border-radius:8px;padding:10px 12px;margin:6px 0;background:#fff}.cmt.editing{background:#fffdf3}
 .cmtTop{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.cmtText{margin-top:6px;line-height:1.45;font-size:14px}.cmtText.clip{max-height:7.5em;overflow:hidden;-webkit-mask-image:linear-gradient(#000 70%,transparent)}
@@ -574,6 +575,7 @@ mark.blank{background:#fff3a8;padding:0 2px;border-radius:3px}.cmt textarea{widt
       <li>Importing the same OneNote PDF again later adds the new comments and updates the ones you have not edited; your edited ones stay as you have them.</li>
       <li><b>Every comment box</b> – here (Scope of work, highest and best use, extraordinary assumptions, market…) and in the Comp genie – knows its section. <b>Click into the box</b>: you can type, or click one of the comment names that appear under it to put that comment in where your cursor is.</li>
       <li><b>📋 My comments</b> under a box opens all of that section's comments with the full wording: <b>Use this</b> (empty box), <b>Add it</b> (adds at your cursor) or <b>Replace my text</b>. Tick <b>show every section</b> to look further, or search. UAD 2.6 comments stay hidden unless you tick them.</li>
+      <li>The <b>My comments</b> tab shows a small box for each part of the report, in report order (Assignment and scope of work, Subject, Market, Site, Highest and best use, Improvements, Sales contract, Sales comparison, Cost, Income, Reconciliation, Certifications). Click a box to see only its comments; click it again to close it. Searching looks in every section and shows how many were found in each box.</li>
       <li>Which comments show for a box goes by the <b>Section</b> name you gave each comment (e.g. "Highest and best use commentary"). If a comment doesn't show where you expect, Edit it here and change its Section.</li>
       <li><b>Additional appraiser certifications</b> (e.g. your Appraisal Institute ones): Comp genie › Report details › Prior services and certifications › answer Yes. One certification per box (up to 6, 360 characters each – SFREP numbers each one). <b>Use my usual certifications</b> fills them; after you edit them, <b>Save these as my usual</b> and they are the ones used next time.</li>
       <li><b>Extraordinary assumptions and hypothetical conditions</b> have no separate SFREP field: your wording goes in Additional Scope of Work, and the <b>Market value condition</b> (As is / Subject to repair / Subject to inspection / Subject to completion per plans) tells Fannie Mae one was used. The pre-check warns when they don't agree – e.g. an extraordinary assumption with "As is".</li>
@@ -864,12 +866,13 @@ mark.blank{background:#fff3a8;padding:0 2px;border-radius:3px}.cmt textarea{widt
 </section>
 <section class="panel" id="panel-comments" hidden>
   <div class="listHead"><div><h2>My comments</h2><p class="help" id="cmtCount"></p></div>
-    <div class="cmtTools"><input id="cmtQ" type="search" placeholder="Search, e.g. laser, ADU, permit, fire"><select id="cmtSec"></select>
+    <div class="cmtTools"><input id="cmtQ" type="search" placeholder="Search, e.g. laser, ADU, permit, fire"><select id="cmtSec" hidden></select>
       <select id="cmtVer"><option value="">2.6 and 3.6</option><option value="3.6">For UAD 3.6</option><option value="2.6">For UAD 2.6</option></select>
       <button type="button" class="btn" id="cmtAdd">Add a comment</button></div></div>
   <div class="cmtImp"><label>Import my OneNote library (PDF) – these comments were written for <select id="cmtImpVer"><option value="2.6">UAD 2.6</option><option value="3.6">UAD 3.6</option><option value="both">both</option></select></label>
     <label class="btn small">Import a comment file or PDF…<input id="cmtFile" type="file" accept=".pdf,application/pdf,.json,application/json" hidden></label><span id="cmtMsg" class="help"></span></div>
   <p class="help">Copy puts the comment on the clipboard – paste it into SFREP and fill in the <mark class="blank">[blanks]</mark>. Kept in this browser only and in your Back up; nothing is sent anywhere. The Comp genie's comment boxes have a <b>My comments</b> button that uses this same list.</p>
+  <div id="cmtTiles" class="cmtTiles"></div>
   <div id="cmtBody"></div>
 </section>
 <section class="panel" id="panel-wording" hidden>

@@ -8,7 +8,24 @@
    The Comp genie reads the same list for its "My comments" picker.
    item: {id, title, section, text, ver: '2.6' | '3.6' | 'both', src, added, edited}
    ===================================================================== */
-let CMT = {}; const CMT_UI = { q: '', sec: '', ver: '', edit: null, open: {} };
+let CMT = {}; const CMT_UI = { q: '', sec: '', ver: '', edit: null, open: {}, grp: (() => { try { return localStorage.getItem('aa.cmtGrp') || ''; } catch (e) { return ''; } })() };
+/* the report's sections, in the order they come in the report (her ask Oct 22 2026: small boxes by section, not alphabetical);
+   each comment goes in the first group whose words match its Section name */
+const CMT_GROUPS = [
+  ['Assignment and scope of work', /assignment|scope of work|intended (use|user)|extraordinary|hypothetical|\bEA\b|\bHC\b|data source|confidential|engagement|prior (appraisal|service)|inspection|ansi|measure/i],
+  ['Subject and transfer history', /subject prior|prior sale|transfer|listing|sales history/i],
+  ['Market', /market|price trend|neighbou?rhood|boundar/i],
+  ['Site', /^site(?! value)|zoning|hazard|flood|fire|views?\b|easement|well|septic|utilit|access|lot\b|mineral|rights/i],
+  ['Highest and best use', /highest and best|\bhbu\b/i],
+  ['Improvements', /subject property|improvement|dwelling|quality|condition|functional|energy|green|adu|outbuilding|permit|garage|pool/i],
+  ['Sales contract', /contract|concession/i],
+  ['Sales comparison', /sales comp|comparable/i],
+  ['Cost approach', /cost|site value|land/i],
+  ['Income approach', /income|rent|grm/i],
+  ['Reconciliation', /reconcil|exposure|final value/i],
+  ['Certifications and conditions', /certif|limiting|condition/i]];
+const cmtGroup = x => (CMT_GROUPS.find(([, r]) => r.test(x.section || '')) || ['Other'])[0];
+const cmtGrpOrder = g => { const i = CMT_GROUPS.findIndex(([n]) => n === g); return i < 0 ? 99 : i; };
 const CMT_VER = { '2.6': 'UAD 2.6', '3.6': 'UAD 3.6', both: '2.6 and 3.6' };
 async function cmtLoad() { const r = await ODB.get('kv', 'cmt:lib'); CMT = (r && r.v) || {}; }
 async function cmtSave() { await ODB.put('kv', { id: 'cmt:lib', v: CMT }); try { new BroadcastChannel('aa-cmt').postMessage(1); } catch (e) {} }   // the comment boxes (here and in the Comp genie) read the library again
@@ -63,7 +80,7 @@ async function cmtImport(file, ver) {
   } catch (e) { console.error(e); toast(e.message || 'Could not read that PDF'); }
 }
 const cmtFits = x => /^[A-Z][A-Z ]+ – /.test(x.title);   // condensed versions that fit one box come first
-const cmtList = () => Object.values(CMT).sort((a, b) => a.section.localeCompare(b.section) || cmtFits(b) - cmtFits(a) || a.title.localeCompare(b.title));
+const cmtList = () => Object.values(CMT).sort((a, b) => cmtGrpOrder(cmtGroup(a)) - cmtGrpOrder(cmtGroup(b)) || a.section.localeCompare(b.section) || cmtFits(b) - cmtFits(a) || a.title.localeCompare(b.title));
 const cmtHi = s => h(s).replace(/\[([^\]]{1,80})\]/g, '<mark class="blank">[$1]</mark>').replace(/\n/g, '<br>');
 function cmtMatch(x, q, sec, ver) {
   if (sec && x.section !== sec) return false; if (ver && !(x.ver === ver || x.ver === 'both')) return false;
@@ -72,12 +89,18 @@ function cmtMatch(x, q, sec, ver) {
 function cmtRender() {
   const box = $('#cmtBody'); if (!box) return;
   const all = cmtList(); const secs = [...new Set(all.map(x => x.section))].sort();
-  const L = all.filter(x => cmtMatch(x, CMT_UI.q, CMT_UI.sec, CMT_UI.ver));
+  const M = all.filter(x => cmtMatch(x, CMT_UI.q, CMT_UI.sec, CMT_UI.ver));
+  const groups = [...CMT_GROUPS.map(([n]) => n), 'Other'].map(n => [n, M.filter(x => cmtGroup(x) === n).length, all.filter(x => cmtGroup(x) === n).length]).filter(g => g[2]);
+  if (CMT_UI.grp && !groups.some(g => g[0] === CMT_UI.grp)) CMT_UI.grp = '';
+  const searching = !!CMT_UI.q.trim(), editingNew = CMT_UI.edit && CMT[CMT_UI.edit] && !CMT[CMT_UI.edit].text;
+  const L = M.filter(x => searching || editingNew && x.id === CMT_UI.edit || (CMT_UI.grp && cmtGroup(x) === CMT_UI.grp));
+  const tiles = $('#cmtTiles'); if (tiles) tiles.innerHTML = groups.map(([n, k, t]) => `<button type="button" class="cmtTile${CMT_UI.grp === n && !searching ? ' on' : ''}${searching && !k ? ' none' : ''}" data-cgrp="${h(n)}"><b>${h(n)}</b><small>${searching ? `${k} found` : `${t} comment${t === 1 ? '' : 's'}`}</small></button>`).join('');
   $('#cmtCount').textContent = all.length ? `${all.length} comments · ${secs.length} sections${L.length !== all.length ? ` · ${L.length} shown` : ''}` : 'No comments yet – import your OneNote library (PDF) or add one.';
   const sel = $('#cmtSec'); const cur = CMT_UI.sec; sel.innerHTML = `<option value="">All sections</option>${secs.map(s => `<option ${s === cur ? 'selected' : ''}>${h(s)}</option>`).join('')}`;
   let sec = '';
-  box.innerHTML = L.map(x => {
-    const head = x.section !== sec ? `<h3 class="cmtSecH">${h(x.section)}${x.limit ? ` <small>· this UAD 3.6 box holds ${x.limit.toLocaleString()} characters – everything you paste into it together</small>` : ''}</h3>` : ''; sec = x.section;
+  if (!L.length) { box.innerHTML = all.length ? `<p class="help cmtPick">${searching ? 'Nothing found – try fewer words.' : 'Click a section above to see its comments.'}</p>` : ''; return; }
+  box.innerHTML = (searching ? '' : `<h2 class="cmtGrpH">${h(CMT_UI.grp)}</h2>`) + L.map(x => {
+    const head = x.section !== sec ? `<h3 class="cmtSecH">${searching ? h(cmtGroup(x)) + ' › ' : ''}${h(x.section)}${x.limit ? ` <small>· this UAD 3.6 box holds ${x.limit.toLocaleString()} characters – everything you paste into it together</small>` : ''}</h3>` : ''; sec = x.section;
     if (CMT_UI.edit === x.id) return head + `<div class="cmt editing"><div class="grid2"><label>Title<input data-ce="title" value="${h(x.title)}"></label><label>Section<input data-ce="section" value="${h(x.section)}" list="cmtSecs"></label></div>
       <label>Written for<select data-ce="ver">${Object.entries(CMT_VER).map(([k, v]) => `<option value="${k}" ${k === x.ver ? 'selected' : ''}>${v}</option>`).join('')}</select></label>
       <label>Comment<textarea data-ce="text" rows="${Math.min(18, 4 + Math.round(x.text.length / 110))}">${h(x.text)}</textarea></label>
@@ -98,9 +121,10 @@ function cmtInit() {
   $('#cmtSec').onchange = e => { CMT_UI.sec = e.target.value; cmtRender(); };
   $('#cmtVer').onchange = e => { CMT_UI.ver = e.target.value; cmtRender(); };
   $('#cmtFile').onchange = e => { const f = e.target.files[0]; if (f) cmtImport(f, $('#cmtImpVer').value); e.target.value = ''; };
-  $('#cmtAdd').onclick = async () => { const id = 'n' + Date.now().toString(36); CMT[id] = { id, title: 'New comment', section: CMT_UI.sec || 'My comments', text: '', ver: '3.6', src: 'typed', added: new Date().toISOString().slice(0, 10), edited: true };
+  $('#cmtAdd').onclick = async () => { const id = 'n' + Date.now().toString(36); CMT[id] = { id, title: 'New comment', section: CMT_UI.sec || (CMT_UI.grp && CMT_UI.grp !== 'Other' ? CMT_UI.grp : 'My comments'), text: '', ver: '3.6', src: 'typed', added: new Date().toISOString().slice(0, 10), edited: true };
     CMT_UI.edit = id; CMT_UI.q = ''; $('#cmtQ').value = ''; await cmtSave(); cmtRender(); const t = document.querySelector('[data-ce="title"]'); if (t) { t.focus(); t.select(); } };
   p.addEventListener('click', async e => {
+    const g = e.target.closest('[data-cgrp]'); if (g) { CMT_UI.grp = CMT_UI.grp === g.dataset.cgrp && !CMT_UI.q ? '' : g.dataset.cgrp; CMT_UI.q = ''; $('#cmtQ').value = ''; try { localStorage.setItem('aa.cmtGrp', CMT_UI.grp); } catch (x) {} cmtRender(); return; }
     const b = e.target.closest('[data-cact]'); if (!b) return; const x = CMT[b.dataset.id]; const a = b.dataset.cact;
     if (a === 'copy' && x) cmtCopy(x);
     if (a === 'edit') { CMT_UI.edit = b.dataset.id; CMT_UI.del = null; cmtRender(); }
