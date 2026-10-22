@@ -375,7 +375,7 @@ const toScr = ([x, y]) => [x * SK.view.s + SK.view.ox, y * SK.view.s + SK.view.o
 const toFt = (px, py) => [(px - SK.view.ox) / SK.view.s, (py - SK.view.oy) / SK.view.s];
 function fitView() {
   const pts = SK.sk.areas.filter(a => here(a)).flatMap(a => a.pts);
-  const W = cv.clientWidth, H = cv.clientHeight;
+  const { W, H } = viewBox();
   if (!pts.length) { SK.view = { s: 14, ox: W / 2, oy: H / 2 }; return; }
   const xs = pts.map(p => p[0]), ys = pts.map(p => p[1]); const w = Math.max(10, Math.max(...xs) - Math.min(...xs)), h = Math.max(10, Math.max(...ys) - Math.min(...ys));
   const s = Math.max(2, Math.min(60, Math.min((W - 120) / w, (H - 120) / h)));
@@ -481,12 +481,18 @@ function jumpCorner() { // nearest corner to the cursor; press again for the nex
 }
 function setCursor(ft) { SK.cursor = [Math.round(ft[0] * 10) / 10, Math.round(ft[1] * 10) / 10]; SK.cursorOrig = null; SK.cursorJumped = false; SK.jumpIdx = 0; }
 function ensureVisible(pt) { const [X, Y] = toScr(pt); const W = cv.clientWidth, H = cv.clientHeight; if (X < 40 || Y < 40 || X > W - 40 || Y > H - 40) centreOn(pt); }
-function centreOn(pt) { SK.view = { ...SK.view, ox: cv.clientWidth / 2 - pt[0] * SK.view.s, oy: cv.clientHeight / 2 - pt[1] * SK.view.s }; saveViewSoon(); draw(); }
-function centreNow() {
-  const a = curArea(); if (a && a.pts.length) return centreOn(a.pts[a.pts.length - 1]);
+function centreOn(pt) { const { W, H } = viewBox(); SK.view = { ...SK.view, ox: W / 2 - pt[0] * SK.view.s, oy: H / 2 - pt[1] * SK.view.s }; saveViewSoon(); draw(); }
+function viewBox() { const r = cv.parentElement.getBoundingClientRect(); return { W: r.width || cv.clientWidth, H: r.height || cv.clientHeight }; }
+function centreNow() {   // her ask (Oct 22): center what you are drawing, else all your areas on this level, in the visible drawing space
+  sizeCanvas(); const { W, H } = viewBox(); const top = 56;   // keep clear of the totals box
+  const fit = (pts, zoomOutOnly) => { const xs = pts.map(p => p[0]), ys = pts.map(p => p[1]); const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+    const w = Math.max(1, x1 - x0), h = Math.max(1, y1 - y0); const fitS = Math.max(2, Math.min(60, Math.min((W - 80) / w, (H - top - 60) / h)));
+    const s = zoomOutOnly ? Math.min(SK.view.s, fitS) : fitS; SK.view = { s, ox: W / 2 - (x0 + w / 2) * s, oy: top + (H - top) / 2 - (y0 + h / 2) * s }; saveViewSoon(); draw(); };
+  const a = curArea(); if (a && a.pts.length) return fit(a.pts.length > 1 ? shape(a) : a.pts, true);
+  if (SK.sel && (SK.sel.type === 'area' || SK.sel.type === 'wall')) { const ar = SK.sk.areas.find(x => x.id === SK.sel.id); if (ar) return fit(shape(ar), true); }
+  const all = SK.sk.areas.filter(x => here(x) && x.pts.length).flatMap(x => x.pts.length > 1 ? shape(x) : x.pts);
+  if (all.length) return fit(all, false);
   if (SK.cursor) return centreOn(SK.cursor);
-  if (SK.sel && (SK.sel.type === 'area' || SK.sel.type === 'wall')) { const ar = SK.sk.areas.find(x => x.id === SK.sel.id); if (ar) return centreOn(centroid(shape(ar))); }
-  if (SK.sel && SK.sel.type === 'label') { const l = SK.sk.labels.find(x => x.id === SK.sel.id); if (l) return centreOn([l.x, l.y]); }
   fitView(); draw();
 }
 /* alignment dots: from the pen point, the places (right / left / up / down) where the next wall lines up with another corner */
@@ -585,6 +591,10 @@ function finishArea(closed) {
 }
 function backspace() {
   if (SK.entry) { SK.entry = SK.entry.slice(0, -1); renderPanel(); return; }
+  if (curArea()) return backspaceWall();   // drawing: take off the last wall
+  return doUndo();   // her ask (Oct 22): ⌫ and Undo are one button – a digit first, then the last wall or the last step
+}
+function backspaceWall() {
   let a = curArea();
   if (!a && SK.sel && SK.sel.type === 'area') { a = SK.sk.areas.find(x => x.id === SK.sel.id); if (a) { pushUndo(); a.closed = false; SK.drawId = a.id; SK.mode = 'draw'; SK.sel = null; toast('Area reopened – keep pressing ⌫ to remove walls'); markDirty(); draw(); renderPanel(); return; } }
   if (!a) return toast('Nothing to remove');
@@ -854,8 +864,8 @@ function renderInfo() {
 function skTray() { if (SK.tray === undefined) { let v = null; try { v = localStorage.getItem('skTray'); } catch (e) {} SK.tray = v === null ? 'draw' : v; } return SK.tray; }
 function setTray(t) { SK.tray = t; try { localStorage.setItem('skTray', t); } catch (e) {} }
 function openHelp() { openSheet(`<h3>How to use the sketch</h3><div class="calc">
-  <p><b>Tools at the bottom.</b> Tap <b>✏ Walls</b> to pin the keypad, arrows (or the ∠ angle circle), ⌒ Curve, ◎ Center and ⌫ Back. Tap <b>Aa Labels &amp; symbols</b> to pin Label, Symbol, Door, Interior wall, Rotate and New area. Tap the pinned one (📌) again to unpin it – the drawing gets the whole screen.</p>
-  <p><b>Drawing walls:</b> + New area, tap where it starts (or press and hold a corner and drag), type a length and tap an arrow. ∠ Angle opens the angle circle. Tap the green start to close. ⌫ removes the last digit, then the last wall.</p>
+  <p><b>Tools at the bottom.</b> Tap <b>✏ Walls</b> to pin the keypad, arrows (or the ∠ angle circle), ⌒ Curve, ⌖ Center (what you are drawing, or all your areas) and ⌫ (back / undo). Tap <b>Aa Labels &amp; symbols</b> to pin Label, Symbol, Door, Interior wall, Rotate and New area. Tap the pinned one (📌) again to unpin it – the drawing gets the whole screen.</p>
+  <p><b>Drawing walls:</b> + New area, tap where it starts (or press and hold a corner and drag), type a length and tap an arrow. ∠ Angle opens the angle circle. Tap the green start to close. ⌫ removes the last digit, then the last wall; when you are not drawing it undoes the last step (↷ Redo is in ☰).</p>
   <p><b>Changing things:</b> tap a wall to change its length or curve it; tap an area for its properties, turn, copy or delete; tap empty space for the cursor. Drag an area, label or symbol to move it.</p>
   <p><b>Moving around:</b> two fingers to zoom and move. ◎ centers on what you are working on. Blue dots line up with other corners (☰ › Line-up dots).</p>
   <p><b>☰ menu:</b> save to the inspection, redo, add a level or page, copy this level to another level (a second story you can still change), text size, underlay, versions.</p>
@@ -904,11 +914,11 @@ function renderPanel() {
   document.body.classList.toggle('working', !!SK.drawId || SK.mode === 'iwall');
   const curveOk = (a && a.pts.length >= 2) || (sel && sel.type === 'wall');
   el.innerHTML = ctxHtml + `
-  <div class="trays"><button class="tray ${tray === 'draw' ? 'on' : ''}" data-tray="draw" title="${tray === 'draw' ? 'Unpin' : 'Pin'} the drawing tools">✏ Walls${tray === 'draw' ? ' <span class="pin">📌</span>' : ''}</button><button class="tray ${tray === 'fin' ? 'on' : ''}" data-tray="fin" title="${tray === 'fin' ? 'Unpin' : 'Pin'} labels and symbols">Aa Labels &amp; symbols${tray === 'fin' ? ' <span class="pin">📌</span>' : ''}</button><span class="grow"></span><button class="btn sm" id="skUndo">↶ Undo</button></div>
+  <div class="trays"><button class="tray ${tray === 'draw' ? 'on' : ''}" data-tray="draw" title="${tray === 'draw' ? 'Unpin' : 'Pin'} the drawing tools">✏ Walls${tray === 'draw' ? ' <span class="pin">📌</span>' : ''}</button><button class="tray ${tray === 'fin' ? 'on' : ''}" data-tray="fin" title="${tray === 'fin' ? 'Unpin' : 'Pin'} labels and symbols">Aa Labels &amp; symbols${tray === 'fin' ? ' <span class="pin">📌</span>' : ''}</button><span class="grow"></span>${drawPad ? '' : '<button class="btn sm" id="skUndo">↶ Undo</button>'}</div>
   ${drawPad ? `<div class="pad">
     <div class="keys">
       <div class="entry" id="skEntry">${ent ? esc(ent) + ' ft' : 'length'}</div>
-      ${['7','8','9','4','5','6','1','2','3','.','0'].map(k => `<button class="key" data-k="${k}">${k}</button>`).join('')}<button class="key bs" id="skBs" title="Back: digit, then last wall">⌫</button>
+      ${['7','8','9','4','5','6','1','2','3','.','0'].map(k => `<button class="key" data-k="${k}">${k}</button>`).join('')}<button class="key bs" id="skBs" title="Back: the last digit, then undo the last step">⌫</button>
     </div>
     ${SK.dial ? `<div class="dialbox">${dialSvg()}<div class="dlread" id="dlRead"></div>
       <div class="dlrow"><button class="btn primary" id="dlDraw">Draw wall</button><button class="btn" id="dlClose">Arrows</button></div>
@@ -918,10 +928,10 @@ function renderPanel() {
       ${[['↖', -1, -1], ['↑', 0, -1], ['↗', 1, -1], ['←', -1, 0], ['ang'], ['→', 1, 0], ['↙', -1, 1], ['↓', 0, 1], ['↘', 1, 1]].map(x => x[0] === 'ang' ? `<button class="key arr angle" id="skAngle">∠ Angle</button>` : `<button class="key arr" data-dx="${x[1]}" data-dy="${x[2]}">${x[0]}</button>`).join('')}
     </div>`}
     <div class="acts">
-      ${SK.mode === 'iwall' ? '' : SK.mode === 'start' ? `<button class="btn primary big" id="skStartHere2" ${SK.cursor ? '' : 'disabled'}>${SK.cursor ? '📍 Start here' : 'Tap the sketch, then Start here'}</button>` : '<button class="btn primary big" id="skNew">+ New area</button>'}
-      ${SK.mode === 'iwall' ? '' : `<button class="btn big" id="skClose" ${a ? '' : 'disabled'}>Close area</button>
-      <button class="btn big" id="skDone" ${a ? '' : 'disabled'}>Stop (leave open)</button>`}
-      <div class="two"><button class="btn big" id="skCurveT" ${curveOk ? '' : 'disabled'}>⌒ Curve</button><button class="btn big" id="skCenter">◎ Center</button></div>
+      ${SK.mode === 'iwall' ? '' : SK.mode === 'start' ? `<button class="btn primary big ico" id="skStartHere2" ${SK.cursor ? '' : 'disabled'} title="Start the area here"><span>📍</span><small>Start</small></button>` : '<button class="btn primary big ico" id="skNew" title="New area"><span>＋</span><small>New</small></button>'}
+      ${SK.mode === 'iwall' ? '' : `<button class="btn big ico" id="skClose" ${a ? '' : 'disabled'} title="Close the area"><span>⬠</span><small>Close</small></button>
+      <button class="btn big ico" id="skDone" ${a ? '' : 'disabled'} title="Stop – leave the area open"><span>⏹</span><small>Stop</small></button>`}
+      <button class="btn big ico" id="skCurveT" ${curveOk ? '' : 'disabled'} title="Curve the last wall (or the wall you tapped)"><span>⌒</span><small>Curve</small></button><button class="btn big ico" id="skCenter" title="Center what you are drawing, or all your areas"><span>⌖</span><small>Center</small></button>
     </div>
   </div>` : tray === 'fin' ? `<div class="fintray">
       <button class="btn big" id="skLabel">Aa Label</button><button class="btn big" id="skSym">◫ Symbol</button><button class="btn big" id="skDoor">◜ Door</button>
