@@ -917,3 +917,4 @@ Decisions (her, Oct 19–20): "Exterior of dwelling" instead of left/right/side 
 - iPad 6x-1022-1621 (her: how do I accept the angled line?): dial button renamed green ✓ Draw this wall (.dlgo); the preview end shows a green ✓ – one tap on it (within 34 px) draws the wall; preview label says 'tap ✓ to draw'. st254.
 
 - iPad 6x-1022-1630 (her iPad screenshots): cursor drawn as an orange select dot unless SK.mode === 'start' (red crosshair); addWall in start mode with a cursor calls placeStart first (length + arrow starts the area); other-level outlines show grey wall lengths (view scale ≥ 6). st256.
+- iPad 6x-1022-1637 (her garage start): start mode – length + arrow moves SK.cursor (no drawing, replaces 1630's auto-start); the start point is an orange ring 'tap to start here'; tapping within 26 px of it calls placeStart. st257.

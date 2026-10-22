@@ -430,7 +430,8 @@ function draw() {
   if (SK.dragPrev) { const d = SK.dragPrev; const [X1, Y1] = toScr(d.from), [X2, Y2] = toScr(d.pt); ctx.strokeStyle = '#ff7a00'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(X1, Y1); ctx.lineTo(X2, Y2); ctx.stroke();
     const L = wallLen(d.from, d.pt); ctx.font = '700 20px system-ui'; ctx.textAlign = 'left'; const t = `${r1(L).toFixed(1)}'${d.snap === 'corner' ? ' → corner' : d.snap === 'dot' ? ' · on dot' : d.snap === 'align' ? ' · lined up' : d.snap === '45' ? ' · ' + Math.round(d.ang) + '°' : ''}`; const w = ctx.measureText(t).width;
     ctx.fillStyle = 'rgba(255,255,255,.9)'; ctx.fillRect(X2 + 12, Y2 - 34, w + 12, 28); ctx.fillStyle = '#c75b00'; ctx.fillText(t, X2 + 18, Y2 - 13); }
-  if (SK.cursor && SK.mode !== 'start') { const [X, Y] = toScr(SK.cursor); ctx.beginPath(); ctx.arc(X, Y, 9, 0, 7); ctx.fillStyle = 'rgba(255,122,0,.35)'; ctx.fill(); ctx.lineWidth = 2.5; ctx.strokeStyle = '#ff7a00'; ctx.stroke(); ctx.beginPath(); ctx.arc(X, Y, 3, 0, 7); ctx.fillStyle = '#ff7a00'; ctx.fill(); }
+  if (SK.cursor && SK.mode === 'start') { const [X, Y] = toScr(SK.cursor); ctx.beginPath(); ctx.arc(X, Y, 13, 0, 7); ctx.fillStyle = 'rgba(255,122,0,.25)'; ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = '#ff7a00'; ctx.stroke(); ctx.beginPath(); ctx.arc(X, Y, 4, 0, 7); ctx.fillStyle = '#ff7a00'; ctx.fill(); ctx.font = '700 13px system-ui'; ctx.textAlign = 'left'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(255,255,255,.9)'; ctx.strokeText('tap to start here', X + 16, Y - 10); ctx.fillStyle = '#c75b00'; ctx.fillText('tap to start here', X + 16, Y - 10); }
+  else if (SK.cursor) { const [X, Y] = toScr(SK.cursor); ctx.beginPath(); ctx.arc(X, Y, 9, 0, 7); ctx.fillStyle = 'rgba(255,122,0,.35)'; ctx.fill(); ctx.lineWidth = 2.5; ctx.strokeStyle = '#ff7a00'; ctx.stroke(); ctx.beginPath(); ctx.arc(X, Y, 3, 0, 7); ctx.fillStyle = '#ff7a00'; ctx.fill(); }
   else if (SK.cursor) { const [X, Y] = toScr(SK.cursor); ctx.strokeStyle = '#d00'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(X - 16, Y); ctx.lineTo(X + 16, Y); ctx.moveTo(X, Y - 16); ctx.lineTo(X, Y + 16); ctx.stroke(); ctx.beginPath(); ctx.arc(X, Y, 8, 0, 7); ctx.stroke(); }
   drawIWalls(ctx, toScr, s, IW().filter(w => here(w)), SK.sel && SK.sel.type === 'iwall' ? SK.sel.id : null);
   if (SK.sel && SK.sel.type === 'iwall') { const w = IW().find(x => x.id === SK.sel.id); if (w) { const [X1, Y1] = toScr(w.a), [X2, Y2] = toScr(w.b); ctx.font = '700 14px system-ui'; ctx.fillStyle = '#c75b00'; ctx.textAlign = 'center'; ctx.fillText(r1(wallLen(w.a, w.b)).toFixed(1) + "'", (X1 + X2) / 2, (Y1 + Y2) / 2 - 8); } }
@@ -541,7 +542,9 @@ function addWallTo(pt) {
   markDirty(); draw(); renderPanel();
 }
 function addWall(dx, dy) {
-  if (!curArea() && SK.mode === 'start' && SK.cursor) { if (!(parseFloat(SK.entry) > 0)) return toast('Type the wall length first'); const e = SK.entry; placeStart(SK.cursor, true); SK.entry = e; }   // her Oct 22: start at the cursor without a separate Start here
+  if (!curArea() && SK.mode === 'start' && SK.cursor) {   // her Oct 22: move the start point (nothing is drawn) – e.g. 3 ft up from the house corner for the garage
+    const L0 = parseFloat(SK.entry); if (!(L0 > 0)) return toast('Type how far to move the start point first'); const n0 = Math.hypot(dx, dy); SK.cursor = [r3(SK.cursor[0] + dx / n0 * L0), r3(SK.cursor[1] + dy / n0 * L0)]; SK.entry = ''; ensureVisible(SK.cursor); draw(); renderPanel();
+    return toast(`Start point moved ${L0} ft – move it again, or tap it (or 📍 Start) to start drawing there`); }
   const a = curArea(); if (!a) return toast(SK.mode === 'start' ? 'Tap the sketch to drop the start point first' : 'Tap “New area” first');
   const L = parseFloat(SK.entry); if (!(L > 0)) return toast('Type the wall length first');
   const len = Math.hypot(dx, dy); const last = a.pts[a.pts.length - 1];
@@ -665,6 +668,7 @@ function onDown(e) {
     if (cur.pts.length >= 3 && Math.hypot(e.offsetX - SX, e.offsetY - SY) < 22) { gest = { type: 'dottap', pt: st, x: e.offsetX, y: e.offsetY, moved: false, v: { ...SK.view } }; return; }
     const last = cur.pts[cur.pts.length - 1]; const [LX, LY] = toScr(last);
     if (pen || Math.hypot(e.offsetX - LX, e.offsetY - LY) < 34) { gest = { type: 'drawdrag', from: last, x: e.offsetX, y: e.offsetY, moved: false }; return; } }
+  if (SK.mode === 'start' && SK.cursor) { const [CX, CY] = toScr(SK.cursor); if (Math.hypot(e.offsetX - CX, e.offsetY - CY) < 26) { placeStart(SK.cursor, true); return; } }
   if (SK.mode === 'start') { const c = nearCorner(ft, 22); if (c || pen) { gest = { type: 'startdrag', at: c ? [...c] : snapPoint(ft), x: e.offsetX, y: e.offsetY, moved: false }; return; } }
   if (SK.mode === 'select' && !pen) { const lb = hitLabel(ft), sy = lb ? null : hitSymbol(ft), an = lb || sy ? null : hitName(ft);
     const already = SK.sel && ((lb && SK.sel.type === 'label' && SK.sel.id === lb.id) || (sy && SK.sel.type === 'symbol' && SK.sel.id === sy.id) || (an && SK.sel.type === 'area' && SK.sel.id === an.id));
@@ -903,7 +907,7 @@ function renderPanel() {
   const a = curArea(); const sel = SK.sel;
   let ctxHtml = '';
   if (SK.curve) ctxHtml = curveCtx();
-  if (ctxHtml) {} else if (SK.mode === 'start') ctxHtml = `<div class="ctx"><b>Starting corner for the ${esc(defOf(SK.pendingDef).name)}:</b> ${SK.cursor ? 'cursor dropped –' : 'tap to drop the cursor, or press on a corner and drag to draw the first wall.'}
+  if (ctxHtml) {} else if (SK.mode === 'start') ctxHtml = `<div class="ctx"><b>Starting corner for the ${esc(defOf(SK.pendingDef).name)}:</b> ${SK.cursor ? 'type a length + arrow to move the point (nothing is drawn), then tap the orange point or 📍 Start –' : 'tap to drop the start point (tap a corner to snap to it), or press on a corner and drag to draw the first wall.'}
       ${SK.cursor ? `<button class="btn sm" id="skJump">⤓ Jump to nearest corner</button><button class="btn primary sm" id="skStartHere">Start here</button>` : ''}<button class="btn sm" id="skCancelStart">Cancel</button></div>`;
   else if (SK.mode === 'symbol') ctxHtml = `<div class="ctx"><b>Tap where the ${esc(SYMBOLS[SK.pendingSym].n.toLowerCase())} goes.</b> <button class="btn sm" id="skCancelLabel">Cancel</button></div>`;
   else if (SK.mode === 'iwall') ctxHtml = `<div class="ctx"><b>Interior walls:</b> ${SK.iw && SK.iw.start ? 'tap where this wall ends (it snaps to walls and corners), or type a length and press an arrow. Keep tapping to continue the wall.' : 'tap where the wall starts – on an outside wall, a corner, or anywhere.'} <button class="btn sm" id="iwBreak" ${SK.iw && SK.iw.start ? '' : 'disabled'}>Start a separate wall</button><button class="btn primary sm" id="iwDone">Done</button></div>`;
