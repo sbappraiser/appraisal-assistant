@@ -56,7 +56,7 @@ function reportFrom(J) {
     client: c0.company || c0.name || '', clientAddr1: c0.addr1 || '', clientAddr2: c0.addr2 || '',
     lender: o.lenderDiff ? (o.lenderCo || '') : '', lenderAddr1: o.lenderDiff ? o.lenderAddr1 || '' : '', lenderAddr2: o.lenderDiff ? o.lenderAddr2 || '' : '',
     amc: o.amcUsed ? (o.amcCo || '') : '', amcAddr1: o.amcUsed ? o.amcAddr1 || '' : '', amcAddr2: o.amcUsed ? o.amcAddr2 || '' : '',
-    insp: I.inspType || 'InteriorAndExterior', market: (o.market && o.market.uad) || null, contract: o.uad || null, hasOrder: !!o.id, zoneComp: I.zoneComp || '', accessRaw: I.accessRaw || '',
+    insp: I.inspType || 'InteriorAndExterior', market: (o.market && o.market.uad) || null, contract: o.uad || null, hasOrder: !!o.id, fee: o.fee || '', otherUsers: o.otherUsers || '', zoneComp: I.zoneComp || '', accessRaw: I.accessRaw || '',
     sowCost: o.id ? !!o.apCost : undefined, sowIncome: o.id ? !!o.apIncome : undefined, sowRent: o.id ? !!o.rent : undefined, sowAddlUser: o.id ? !!String(o.otherUsers || '').trim() : undefined,
     /* her Order › Scope of work tab (Oct 21 2026): highest and best use, added scope, extraordinary assumptions, hypothetical conditions */
     hbu: { legal: !!o.hbuLegal, phys: !!o.hbuPhys, fin: !!o.hbuFin, max: !!o.hbuMax }, hbuPresent: o.hbuPresent || '', hbuNote: o.hbuNote || '', sowNote: o.sowNote || '', eaNote: o.ea || '', hcNote: o.hc || '', addlCond: o.addlCond || '', addlCondText: o.addlCondText || '',
@@ -184,14 +184,19 @@ function reportHTML(J, part) {   // part: 'early' (Assignment, scope and site �
       <label class="fld"><span>Additional appraiser certifications? <small class="muted">e.g. your Appraisal Institute certifications</small></span>${yn('addlCert', false)}</label>
       ${certHTML(R)}
       <label class="fld"><span>Is this a reconsideration of value?</span>${yn('reconsider', false)}</label>
+      ${R.reconsider === 'true' ? fx('Requested by', selA('rovBy', 'RECONSIDERATION_OF_VALUE/ReconsiderationOfValueRequestedByType', 'BorrowerInitiated')) + fx('Result', selA('rovResult', 'RECONSIDERATION_OF_VALUE/ReconsiderationOfValueResultType', '')) + fx('Date of the result', inp('rovDate', 'YYYY-MM-DD')) + fx('Reconsideration of value – comment', ta('rovNote', 2500, 'What was asked, what you reviewed, and why the value did or did not change', 3), '2,500 characters') : ''}
+      ${revHTML(R)}
     </section>
     <section><h3>Value and reconciliation</h3>
       ${rptIndHTML(J)}
       <label class="fld"><span>Opinion of market value</span>${inp('opinion', !blank(G.value) ? money(Math.round(num(G.value))) + ' (sales comparison)' : '$')}</label>
       <label class="fld"><span>Additional client-requested conditions? <small class="muted">(from the order – e.g. a value under a marketing-time limit)</small></span>${yn('addlCond', F.addlCond === 'true' ? true : false)}</label>
-      ${RX.addlCond === 'true' ? `<label class="fld"><span>Describe them <small class="muted">(2,500 characters)</small></span><textarea class="txt" rows="2" maxlength="2500" data-rpt="addlCondText" placeholder="${esc(F.addlCondText ? 'From the order: ' + F.addlCondText : 'The conditions the client asked for')}">${esc(R.addlCondText || '')}</textarea></label>` : ''}
+      ${RX.addlCond === 'true' ? `<label class="fld"><span>Describe them <small class="muted">(2,500 characters)</small></span><textarea class="txt" rows="2" maxlength="2500" data-rpt="addlCondText" placeholder="${esc(F.addlCondText ? 'From the order: ' + F.addlCondText : 'The conditions the client asked for')}">${esc(R.addlCondText || '')}</textarea></label>`
+        + fx('Alternate opinion of value (under those conditions)', inp('altValue', '$')) + fx('Its value condition', selA('altCond', 'ADDITIONAL_REQUESTED_CONDITIONAL_VALUATION/PropertyValuationConditionalConclusionType', 'AsIs'))
+        + fx('Its time frame', selA('altTime', 'ADDITIONAL_REQUESTED_CONDITIONAL_VALUATION/MarketingOrExposureTimeType', 'ClientImposedRestrictedMarketingTime')) + fx('Days', inp('altLow', 'from', '6em') + ' to ' + inp('altHigh', 'to', '6em')) : ''}
       <label class="fld"><span>Reasonable exposure time (days)</span>${inp('expLow', 'from', '6em')} to ${inp('expHigh', 'to', '6em')}</label>
       ${expHelpHTML(J)}
+      ${M && M.mktime ? `<p class="help">Marketing time (from <b>3 Market</b>): <b>${esc({ UnderThreeMonths: 'under 3 months', ThreeToSixMonths: '3 to 6 months', OverSixMonths: 'over 6 months' }[M.mktime] || M.mktime)}</b> – your exposure time should agree with it.</p>` : ''}
       ${['Income', 'Cost'].map(A => { const off = R['sow' + A] === 'false' || (blank(R['sow' + A]) && F['sow' + A] === false); if (!off) return ''; const k = 'excl' + A;
         return `<label class="fld"><span>${A} approach not developed – reason</span>${sel(k, EXCL_REASONS.filter(x => A === 'Cost' || !/Depreciation|Land/.test(x[0])), 'NotNecessaryForCredibleResults', 'usual')}${R[k] === 'Other' ? ` <input class="txt" data-rpt="${k}Other" maxlength="225" value="${esc(R[k + 'Other'] || '')}" placeholder="Describe (225 characters)">` : ''}</label>`; }).join('')}
       <label class="fld"><span>Reconciliation comment ${cmtCount(String(R.reconNote || ''), 5000)}</span><textarea class="txt" rows="3" maxlength="5000" data-rpt="reconNote">${esc(R.reconNote || '')}</textarea></label></section>
@@ -217,7 +222,7 @@ document.addEventListener('change', e => {
   const t = e.target; if (!app.job) return; const R = R0(app.job);
   if (t.dataset.rpt) { const k = t.dataset.rpt, v = t.value.trim(); if (v === '') delete R[k]; else R[k] = k === 'zone' ? v.toUpperCase() : t.tagName === 'TEXTAREA' ? t.value : v;
     if (k === 'zoneDesc' && v) { const code = rv(app.job, 'zone').toUpperCase(); if (code) { zoneTable()[code] = v; DB.put('kv', { id: 'zoneDesc', v: app.zoneDesc }); } }
-    save(); if (['assign', 'zone', 'allRights', 'rightsType', 'sowGov', 'addlCond', 'sowIncome', 'sowCost', 'exclIncome', 'exclCost', 'sowNote', 'eaNote', 'hcNote', 'addlCert', 'zoneComp', 'zoneIllegal', 'parcels', 'parcelsContig', 'parcelSep', 'ease', 'easeType', 'encr', 'encrType', 'listedYear', 'lstType', 'vcond', 'allRights'].includes(k) || /^cert\d$/.test(k)) rptRedraw();
+    save(); if (['assign', 'zone', 'allRights', 'rightsType', 'sowGov', 'addlCond', 'sowIncome', 'sowCost', 'exclIncome', 'exclCost', 'sowNote', 'eaNote', 'hcNote', 'addlCert', 'zoneComp', 'zoneIllegal', 'parcels', 'parcelsContig', 'parcelSep', 'ease', 'easeType', 'encr', 'encrType', 'listedYear', 'lstType', 'vcond', 'allRights', 'reconsider', 'addlCond'].includes(k) || /^cert\d$/.test(k)) rptRedraw();
     else [['#setupCard', 'early'], ['#compHistCard', 'comps'], ['#reportCard', 'late'], ['#certCard', 'certs']].forEach(([id, pt]) => { const b = document.querySelector(id + ' .rptneed'); if (b) { const d = document.createElement('div'); d.innerHTML = reportHTML(app.job, pt); const nb = d.querySelector('.rptneed'); if (nb) b.replaceWith(nb); } });   /* the 'still needed' list follows her answers */
     return; }
   if (t.dataset.hbu) { R.hbu[t.dataset.hbu] = t.checked; save(); }
@@ -306,6 +311,7 @@ function writeReportXML(doc, NS, J, SUBJ, VA, SVC) {
   if (zone || zd) { const z = path(SITE, 'SITE_ZONING', 'SITE_ZONING_DETAIL'); set(z, 'SiteZoningClassificationDescription', zd && zd.slice(0, 100)); set(z, 'SiteZoningClassificationIdentifier', zone); }
   set(path(SUBJ, 'SALES_CONTRACTS', 'SALES_CONTRACT', 'SALES_CONTRACT_DETAIL'), 'AllPropertyRightsAppraisedIndicator', tf('allRights', 'true'));
   t2XML(J, R, SUBJ, VR, child, add, set, path, doc, NS);   // tentacle 2 office fields (Oct 22 2026)
+  t78XML(J, R, VR, SVC, child, add, set, path);   // tentacles 7 and 8 (Oct 22 2026)
   if (tf('allRights', 'true') === 'false') { const rn = rv(J, 'rightsNot'); if (rn) set(sow, 'PropertyRightsNotAppraisedDescription', String(rn).slice(0, 540));
     const ty = R.rightsType || rightsGuess(rn); if (ty) { const ri = add(path(SUBJ, 'REAL_PROPERTY_INTERESTS'), 'REAL_PROPERTY_INTEREST');
       set(ri, 'AppraisedIndicator', 'false'); set(ri, 'PropertyPartialInterestType', ty); if (ty === 'Other') set(ri, 'PropertyPartialInterestTypeOtherDescription', String(R.rightsOther || '').slice(0, 33) || null); } }
@@ -344,6 +350,7 @@ function writeReportXML(doc, NS, J, SUBJ, VA, SVC) {
     const RO = child(child(P, 'ROLES'), 'ROLE'); RO.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:label', 'ROLE_Appraiser'); set(path(RO, 'APPRAISER', 'APPRAISER_DETAIL'), 'AppraiserCompanyName', M.company);
     const L = path(RO, 'LICENSES', 'LICENSE'); set(child(L, 'APPRAISER_LICENSE'), 'AppraiserLicenseType', M.licType); const LD = child(L, 'LICENSE_DETAIL'); set(LD, 'LicenseExpirationDate', M.licExp); set(LD, 'LicenseIdentifier', M.lic); set(LD, 'LicenseIssuingAuthorityStateCode', M.licState);
     set(child(RO, 'ROLE_DETAIL'), 'PartyRoleType', 'Appraiser');
+    { const fee = num(String(reportFrom(J).fee || '').replace(/[$,\s]/g, '')); if (fee) { const PSV = path(RO, 'SERVICE_PROVIDER', 'PROVIDED_SERVICES', 'PROVIDED_SERVICE'); set(PSV, 'FeeType', 'AppraisalFee'); set(PSV, 'ProvidedServiceActualCostAmount', fee.toFixed(2)); } }   // her fee from the order (A-1 2.006)
     const insp = [...SUBJ.getElementsByTagNameNS(NS, 'INSPECTION')].find(x => (x.getAttributeNS('http://www.w3.org/1999/xlink', 'label') || '') === 'INSPECTION_Appraiser');
     if (insp) { const RL = child(SVC, 'RELATIONSHIPS'); const r = doc.createElementNS(NS, 'RELATIONSHIP'); const XLN = 'http://www.w3.org/1999/xlink'; r.setAttributeNS(XLN, 'xlink:arcrole', 'urn:fdc:mismo.org:2009:residential/INSPECTION_CompletedBy_ROLE'); r.setAttributeNS(XLN, 'xlink:from', 'INSPECTION_Appraiser'); r.setAttributeNS(XLN, 'xlink:to', 'ROLE_Appraiser'); RL.appendChild(r); } }
   // parties: client, lender, AMC
@@ -363,7 +370,7 @@ const RPT_PARTS = { early: ['Assignment', 'Legal and rights', 'Site', 'Improveme
 const RPT_EARLY = RPT_PARTS.early, RPT_LATE = RPT_PARTS.late;
 const RPT_STAGE = { early: 'setup', comps: 'workbook', late: 'recon', certs: 'final' };
 /* which part a "still needed" message belongs to */
-const rptPartOf = m => /prior services|certification|reconsideration/i.test(m) ? 'certs' : /comparable sales.*transfer|comparables' transfer/i.test(m) ? 'comps' : /opinion of market value|reconciliation comment|exposure time|client-requested|approach not developed/i.test(m) ? 'late' : 'early';
+const rptPartOf = m => /prior services|certification|reconsideration|revision/i.test(m) ? 'certs' : /comparable sales.*transfer|comparables' transfer/i.test(m) ? 'comps' : /opinion of market value|reconciliation comment|exposure time|client-requested|approach not developed/i.test(m) ? 'late' : 'early';
 const rptLateMsg = m => rptPartOf(m) !== 'early';
 function rptPart(J, html, part) {
   const a = html.indexOf('<div class="rptgrid">'); const body = html.slice(a + '<div class="rptgrid">'.length, html.lastIndexOf('</div>'));
@@ -455,3 +462,23 @@ document.addEventListener('click', e => { const b = e.target.closest && e.target
   if (b.dataset.act === 'set-opts') { optsPopup(); return; }
   const m = document.getElementById('optsPop'); if (b.dataset.opts === 'save' && m) { const hide = [...m.querySelectorAll('[data-optk]')].filter(x => !x.checked).map(x => x.dataset.optk); try { localStorage.setItem('genie.hideOpts', JSON.stringify(hide)); } catch (er) {} toast(hide.length + ' choice' + (hide.length === 1 ? '' : 's') + ' hidden'); rptRedraw(); }
   if (m) m.remove(); });
+
+/* revision history (A-1 27.000–27.002, her octopus tentacle 8, Oct 22 2026): one row per change after the report was first sent */
+const REVISION_CATS = () => a1Opts('VALUATION_REVISION/RevisionCategoryType');
+function revHTML(R) { const L = R.revs || [];
+  return `<div class="revs"><b>Revision history</b> <small class="muted">– goes into the report (UAD section 27) only when you change a report already delivered; one row per change, 1,250 characters each. Not the same as “Your revision log” in the pre-check, which keeps a reviewer's requests as reminders.</small>
+    ${L.map((r, i) => `<div class="revrow"><input class="txt" data-rev="${i}|date" value="${esc(r.date || '')}" placeholder="YYYY-MM-DD" style="width:9em"><select data-rev="${i}|cat"><option value="">Section…</option>${REVISION_CATS().map(([v, l]) => `<option value="${v}"${r.cat === v ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select><textarea class="txt" rows="2" maxlength="1250" data-rev="${i}|text" placeholder="What changed and why">${esc(r.text || '')}</textarea><button type="button" class="btn sm" data-revdel="${i}">Remove</button></div>`).join('')}
+    <button type="button" class="btn sm" data-act="rev-add">+ Add a revision</button></div>`; }
+document.addEventListener('change', e => { const t = e.target; if (!t.dataset || !t.dataset.rev || !app.job) return; const [i, k] = t.dataset.rev.split('|'); const R = R0(app.job); R.revs = R.revs || []; if (!R.revs[+i]) return; R.revs[+i][k] = k === 'date' ? (isoDate(t.value) || t.value.trim()) : t.value; save(); });
+document.addEventListener('click', e => { const a = e.target.closest && e.target.closest('[data-act="rev-add"],[data-revdel]'); if (!a || !app.job) return; const R = R0(app.job); R.revs = R.revs || [];
+  if (a.dataset.act === 'rev-add') R.revs.push({ date: todayISO(), cat: '', text: '' }); else R.revs.splice(+a.dataset.revdel, 1); save(); rptRedraw(); });
+/* tentacles 7 and 8 in the SFREP file */
+function t78XML(J, R, VR, SVC, child, add, set, path) { const v = k => String(R[k] ?? '').trim(); const amt = k => { const n = num(v(k).replace(/[$,\s]/g, '')); return blank(n) ? null : Math.round(n); };
+  if (R.addlCond === 'true') { const A = path(VR, 'VALUATION_RECONCILIATION', 'ADDITIONAL_REQUESTED_CONDITIONAL_VALUATIONS', 'ADDITIONAL_REQUESTED_CONDITIONAL_VALUATION');
+    set(A, 'AdditionalOpinionOfValueAmount', amt('altValue')); set(A, 'PropertyValuationConditionalConclusionType', v('altCond') || 'AsIs'); set(A, 'MarketingOrExposureTimeType', v('altTime') || 'ClientImposedRestrictedMarketingTime');
+    if (v('altLow') && v('altHigh')) { set(A, 'MarketingOrExposureLowRangeDaysCount', num(v('altLow'))); set(A, 'MarketingOrExposureHighRangeDaysCount', num(v('altHigh'))); } else if (v('altLow') || v('altHigh')) set(A, 'MarketingOrExposureDaysCount', num(v('altLow') || v('altHigh'))); }
+  if (R.reconsider === 'true') { const O = path(VR, 'RECONSIDERATIONS_OF_VALUE', 'RECONSIDERATION_OF_VALUE'); set(O, 'ReconsiderationOfValueRequestedByType', v('rovBy') || 'BorrowerInitiated'); set(O, 'ReconsiderationOfValueResultType', v('rovResult') || null); set(O, 'ReconsiderationOfValueResultDate', isoDate(v('rovDate')) || null); set(O, 'ReconsiderationOfValueCommentDescription', v('rovNote').slice(0, 2500) || null); }
+  (R.revs || []).filter(r => r.cat && r.text).forEach(r => { const V = add(child(VR, 'VALUATION_REVISIONS'), 'VALUATION_REVISION'); set(V, 'RevisionCategoryType', r.cat); set(V, 'RevisionDate', isoDate(r.date) || todayISO()); set(V, 'RevisionText', String(r.text).slice(0, 1250)); });
+  const F = reportFrom(J);
+  if ((R.sowAddlUser === 'true' || (blank(R.sowAddlUser) && F.sowAddlUser)) && String(F.otherUsers || R.addlUsers || '').trim()) set(path(VR, 'SCOPE_OF_WORK', 'VALUATION_REPORT_ADDITIONAL_INTENDED_USERS', 'VALUATION_REPORT_ADDITIONAL_INTENDED_USER'), 'ValuationAdditionalIntendedUserDescription', String(R.addlUsers || F.otherUsers).trim().slice(0, 180));
+}

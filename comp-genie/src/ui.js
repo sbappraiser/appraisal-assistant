@@ -443,12 +443,11 @@ function renderPage() {
   <section class="card st st-workbook" id="wbStrip">${ON('workbook') ? confirmStripHTML(J) : ''}</section>
   <div id="detail" class="st st-micro st-workbook">${app.sel && ON("micro", "workbook") ? detailHTML(J.comps.find(c => c.id === app.sel)) : ''}</div>
   <section class="card st st-workbook" id="gridCard">${ON('workbook') ? `<div class="gboxbar"><b>The grid in its own box</b> <span class="help" style="margin:0">scroll inside it – up and down with the mouse wheel, side to side with the bar at the bottom (or Shift + wheel)</span><span class="grow"></span><button class="btn primary" data-act="gbox-close">✕ Close the box (Esc)</button></div>` + gridHTML(J) : ''}</section>
-  <section class="card st st-final" id="finalCard">${ON('final') ? finalGridHTML(J) : ''}</section>
   <section class="card st st-exhibits" id="mapCard"></section>
   <section class="card st st-cost" id="refCard">${ON('cost') ? refHTML(J) : ''}</section>
   <section class="card st st-cost" id="costCard">${ON('cost') ? costHTML(J) : ''}</section>
   <section class="card st st-income" id="incomeCard">${ON('income') ? incomeHTML(J) : ''}</section>
-  <section class="card st st-workbook st-final" id="nuCard">${ON('workbook', 'final') ? notUsedHTML(J) : ''}</section>
+  <section class="card st st-workbook" id="nuCard">${ON('workbook') ? notUsedHTML(J) : ''}</section>
   <section class="card st st-workbook" id="timeCard">${ON('workbook') ? timeHTML(J) : ''}</section>
   <section class="card st st-workbook" id="supCard">${ON('workbook') ? supHTML(J) : ''}</section>
   <section class="card st st-workbook" id="compHistCard">${ON('workbook') ? reportHTML(J, 'comps') : ''}</section>
@@ -457,6 +456,7 @@ function renderPage() {
   <section class="card st st-final" id="reviewCard">${ON('final') ? reviewHTML(J) : ''}</section>
   <section class="card st st-final" id="preCard">${ON('final') ? precheckHTML(J) : ''}</section>
   <section class="card st st-final" id="exportCard"><h2>Export</h2>${ON('final') ? exportHTML(J) : ''}</section>
+  <section class="card st st-final" id="finalCard">${ON('final') ? finalGridHTML(J) : ''}</section>
   <footer class="foot">Comp Genie · your data stays on this computer · build ${typeof BUILD !== 'undefined' ? BUILD : ''}</footer>`;
   if (window.parent !== window && app.job) try { window.parent.postMessage({ type: 'aa-path', order: app.job.orderId || '', steps: pathSteps(app.job).map(x => ({ n: x.n, done: !!x.done })) }, location.origin); } catch (e) {}   // the octopus menu's green ✓ per tentacle
   fillImages(); mapsRender(); { const t = document.querySelector('.top'); if (t) document.documentElement.style.setProperty('--toph', t.offsetHeight + 'px'); }   // the comp's sticky header sits under the top bar
@@ -494,7 +494,7 @@ function renderParts0(opts = {}) {
   const cc = $('#compsCard'); if (cc && ON('micro')) { cc.innerHTML = compsCardHTML(J); fillImages(cc); }
   const ex = $('#exportCard'); if (ex && ON('final')) ex.innerHTML = '<h2>Export</h2>' + exportHTML(J);
   if (opts.grid !== false) { const gc = $('#gridCard'); if (gc && ON('workbook')) gc.innerHTML = gridHTML(J); }
-  { const nc = $('#nuCard'); if (nc && ON('workbook', 'final')) nc.innerHTML = notUsedHTML(J); const tc = $('#timeCard'); if (tc && ON('workbook')) tc.innerHTML = timeHTML(J); const sc = $('#supCard'); if (sc && ON('workbook')) sc.innerHTML = supHTML(J); const pc = $('#preCard'); if (pc && ON('final')) pc.innerHTML = precheckHTML(J); }
+  { const nc = $('#nuCard'); if (nc && ON('workbook')) nc.innerHTML = notUsedHTML(J); const tc = $('#timeCard'); if (tc && ON('workbook')) tc.innerHTML = timeHTML(J); const sc = $('#supCard'); if (sc && ON('workbook')) sc.innerHTML = supHTML(J); const pc = $('#preCard'); if (pc && ON('final')) pc.innerHTML = precheckHTML(J); }
   if (opts.field && app.sel) { // one row of the field-by-field table
     const c = J.comps.find(x => x.id === app.sel); const f = FIELD[opts.field]; const u = val(c, f.k);
     const inp = document.querySelector(`[data-edit="${f.k}"]`); const row = inp && inp.closest('tr');

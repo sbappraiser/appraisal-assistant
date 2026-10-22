@@ -413,3 +413,4 @@ body:not(.gridbox):not(.popgrid) #gridCard .tablewrap{position:sticky;top:var(--
 .rptbands>section>div.fld:has(textarea){grid-column:1/-1}.rptneed a.rptgo{color:inherit;text-decoration:underline;cursor:pointer}
 header.top h1 small{font-size:.5em;font-weight:600;color:#5b2a86;margin-left:6px;letter-spacing:.02em}
 .optset{border:1px solid #dde3ea;border-radius:8px;margin:8px 0;padding:6px 10px;display:flex;flex-wrap:wrap;gap:4px 16px}.optset legend{font-weight:700}
+.revs{grid-column:1/-1;margin:8px 0}.revrow{display:grid;grid-template-columns:9em 14em 1fr auto;gap:8px;align-items:start;margin:6px 0}
