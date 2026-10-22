@@ -56,17 +56,11 @@ async function renderHome() {
     ${hcBtn()}<button class="icon-btn" id="storeBtn">Storage check</button><label class="icon-btn" style="position:relative;overflow:hidden">Restore backup<input id="restoreFile" type="file" accept=".zip,application/zip" style="position:absolute;inset:0;opacity:0"></label></div></header>
   <main>
     ${(navigator.standalone || matchMedia('(display-mode: standalone)').matches) ? '' : '<p class="warn-box">You are in Safari. Inspections made here are kept separately from the Home Screen app – use the Home Screen icon for real work.</p>'}
-    ${await ordersBlock(all)}
-    <form class="new-form" id="newForm" autocomplete="off">
-      <h2 style="grid-column:1/-1">Start a new inspection</h2>
-      <div><label class="flabel" for="nAddr"><span class="tag">Required</span><span class="lab">Property address</span></label><input class="txt" id="nAddr" required placeholder="123 Oak Street"></div>
-      <div><label class="flabel" for="nFile"><span class="tag">Required</span><span class="lab">File name</span></label><input class="txt" id="nFile" required placeholder="2026-1015"></div>
-      <button class="btn primary" type="submit">Start inspection</button>
-    </form>
+    ${await homeList(all)}
     ${!DB.persistent ? '<p class="warn-box">This browser is not letting the app save to the iPad. Open the app from its Home Screen icon so inspections are kept.</p>' : ''}
-    <div class="cards">${all.map(i => safeCard(i)).join('') || '<p class="help">No inspections yet. Start one above; everything you enter saves to this iPad as you go, with or without a signal.</p>'}</div>
     <p class="app-ver">Version ${typeof BUILD !== 'undefined' ? esc(BUILD) : '?'}</p>
   </main>`;
+  { const nb = $('#newBtn'); if (nb) nb.onclick = () => { const f = $('#newForm'); f.hidden = !f.hidden; if (!f.hidden) $('#nAddr').focus(); }; }
   $('#newForm').onsubmit = async e => {
     e.preventDefault(); const a = $('#nAddr').value.trim(), f = $('#nFile').value.trim(); if (!a || !f) return;
     const ins = newInspection(f, a); await DB.put('inspections', ins); openInspection(ins.id);
@@ -460,6 +454,36 @@ function extraPhotos(sec) {
    Kept in the sketches store: 'orders:active' = the list, 'plan:<order>:<n>' = floor plan pictures. */
 const fmtD = iso => { if (!iso) return ''; const [y, m, d] = String(iso).split('-').map(Number); if (!d) return iso; return new Date(y, m - 1, d).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' }); };
 const fmtT = t => { if (!t) return ''; const [hh, mm] = t.split(':').map(Number); return new Date(2000, 0, 1, hh, mm).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }); };
+/* her ask (Oct 22): one list – Active orders (orders from the computer + every inspection not yet sent), then Sent orders;
+   each row: address, file name, date; newest first; two copies of the same address are flagged so the newest is clear */
+async function homeList(all) {
+  let rec = null; try { rec = await DB.get('sketches', 'orders:active'); } catch (e) {}
+  const orders = (rec && rec.orders) || []; const sk = {}; try { ((await DB.all('sketches')) || []).forEach(r => { if (r && r.areas) sk[r.id] = r.areas.filter(a => a.closed).length; }); } catch (e) {}
+  const key = a => String(a || '').toLowerCase().replace(/,.*$/, '').replace(/[^a-z0-9]/g, '');
+  const rows = [];
+  all.forEach(i => { const o = i.orderId ? orders.find(x => x.id === i.orderId) : null; rows.push({ i, o, addr: insAddr(i) || (o && o.address) || '', file: insTitle(i), t: i.updated || 0, sent: !!i.exported }); });
+  orders.filter(o => !all.some(i => i.orderId === o.id)).forEach(o => rows.push({ o, addr: o.address || '', file: o.fileNo ? 'File ' + o.fileNo : '', t: o.inspDate ? new Date(o.inspDate + 'T' + (o.inspTime || '09:00')).getTime() : (rec && rec.made) || 0, sent: false, todo: true }));
+  const cnt = {}; rows.filter(r => r.i).forEach(r => { const k = key(r.addr); cnt[k] = (cnt[k] || 0) + 1; });
+  const newest = {}; rows.filter(r => r.i).forEach(r => { const k = key(r.addr); if (!newest[k] || r.t > newest[k]) newest[k] = r.t; });
+  const when = t => t ? new Date(t).toLocaleString([], { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' }) : '';
+  const row = r => { const i = r.i, o = r.o; const k = key(r.addr); const dup = i && cnt[k] > 1; const confirming = i && app.confirm === 'del:' + i.id;
+    const street = String(r.addr || '').split(',')[0] || '(no address)';
+    const bits = i ? [i.photos.length + ' photos', sk[i.id] ? '✏️ sketch ' + sk[i.id] + ' area' + (sk[i.id] > 1 ? 's' : '') : 'no sketch', i.exported ? 'sent ' + new Date(i.exported).toLocaleDateString() : ''].filter(Boolean) : [o.inspDate ? 'inspection ' + fmtD(o.inspDate) + (o.inspTime ? ' at ' + fmtT(o.inspTime) : '') : 'order – not started', o.access && o.access.phone ? 'access ' + o.access.phone : ''].filter(Boolean);
+    return `<div class="hrow ${dup ? (r.t === newest[k] ? 'dupnew' : 'dupold') : ''}"><div class="hmain"><b>${esc(street)}</b> <span class="hfile">${esc(r.file)}</span>
+        ${dup ? `<span class="hdup">${r.t === newest[k] ? 'newest copy' : 'older copy'}</span>` : ''}<div class="meta">${i ? 'updated ' : ''}${esc(when(r.t))}${bits.length ? ' · ' + esc(bits.join(' · ')) : ''}</div></div>
+      <div class="hbtns">${confirming ? `<span class="confirm">Delete it and its photos${i.exported ? '' : ' (NOT sent)'}?</span><button class="btn danger solid sm" data-delyes="${i.id}">Delete</button><button class="btn sm" data-delno="1">Keep</button>`
+        : i ? `<button class="btn primary sm" data-open="${i.id}">Open</button><button class="btn sm" data-backup="${i.id}" title="Export a Workfile (backup / move to another device)">Workfile</button><button class="btn danger sm" data-del="${i.id}" aria-label="Delete">✕</button>`
+        : `<button class="btn primary sm" data-ostart="${esc(o.id)}">Start</button>`}</div></div>`; };
+  const act = rows.filter(r => !r.sent).sort((a, b) => b.t - a.t), sent = rows.filter(r => r.sent).sort((a, b) => b.t - a.t);
+  return `<section class="orders-home"><div class="row" style="align-items:center;justify-content:space-between;flex-wrap:wrap"><h2>Active orders${rec ? ` <small>orders file from ${esc(new Date(rec.made).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }))}</small>` : ''}</h2>
+    <span class="row"><button class="btn primary" id="newBtn">＋ New inspection</button><label class="btn" style="position:relative;overflow:hidden">${rec ? 'Get newer orders' : 'Get orders'}<input id="ordersFile" type="file" style="position:absolute;inset:0;opacity:0"></label>${rec ? '<button class="btn" data-oclear>Clear orders</button>' : ''}</span></div>
+    <form class="new-form" id="newForm" autocomplete="off" hidden>
+      <div><label class="flabel" for="nAddr"><span class="tag">Required</span><span class="lab">Property address</span></label><input class="txt" id="nAddr" required placeholder="123 Oak Street"></div>
+      <div><label class="flabel" for="nFile"><span class="tag">Required</span><span class="lab">File name</span></label><input class="txt" id="nFile" required placeholder="2026-1015"></div>
+      <button class="btn primary" type="submit">Start inspection</button></form>
+    <div class="hlist">${act.map(row).join('') || `<p class="help">No active orders. On the computer, press <b data-keep>Send active orders to the iPad</b> (the same file works on the iPhone), save it to iCloud Drive or OneDrive, then tap <b>Get orders</b> here – or tap <b>＋ New inspection</b>.</p>`}</div></section>
+    ${sent.length ? `<section class="orders-home"><h2>Sent orders <small>exported – kept here until you delete them</small></h2><div class="hlist">${sent.map(row).join('')}</div></section>` : ''}`;
+}
 async function ordersBlock(all) {
   let rec = null; try { rec = await DB.get('sketches', 'orders:active'); } catch (e) {}
   const list = (rec && rec.orders) || [];

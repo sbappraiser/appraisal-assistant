@@ -394,3 +394,13 @@ input.txt:focus, select.txt:focus, textarea.txt:focus { background: #fff4b0 !imp
   .attn-pill { padding: 6px 10px; font-size: 15px; }
   .bar .saved { font-size: 13px; padding: 4px 6px; }
 }
+
+/* home list (her Oct 22 ask): one list, newest first */
+.hlist { display: grid; gap: 6px; margin-top: 8px; }
+.hrow { display: flex; gap: 10px; align-items: center; justify-content: space-between; border: 2px solid #000; border-radius: 10px; padding: 8px 12px; background: #fff; }
+.hrow .hmain { min-width: 0; } .hrow .hfile { color: #333; font-weight: 600; } .hrow .meta { font-size: 15px; }
+.hrow .hbtns { display: flex; gap: 6px; flex: none; align-items: center; }
+.hrow.dupnew { border-color: var(--go, #0fa84a); } .hrow.dupold { opacity: .8; border-style: dashed; }
+.hdup { font-size: 13px; font-weight: 700; border-radius: 999px; padding: 1px 8px; margin-left: 4px; background: var(--req, #c4f2d6); } .hrow.dupold .hdup { background: var(--warn-lt, #ffe1e1); }
+#newForm[hidden] { display: none; } #newForm { margin-top: 8px; }
+@media (max-width: 520px) { .hrow { flex-direction: column; align-items: stretch; } .hrow .hbtns { justify-content: flex-start; } }
