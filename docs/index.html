@@ -146,6 +146,7 @@ table.mkrows td small { display: block; color: var(--muted); font-size: 12px; } 
 .rdflow { border-color: var(--accent); } .rdflow ol.steps { margin: 4px 0; padding-left: 20px; font-size: 13.5px; } .rdflow ol.steps li { margin: 3px 0; }
 .rdai { background: var(--field); border: 1px solid var(--line); border-radius: 10px; padding: 10px; } .rdai input { width: 3em; display: inline; }
 #rdSend { position: fixed; inset: 0; z-index: 25; background: var(--bg); overflow: auto; padding: 16px; } .rdsendbar { position: sticky; top: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; display: grid; gap: 8px; z-index: 2; }
+.rdsendbar.mini .rddir, .rdsendbar.mini > label, .rdsendbar.mini > p { display: none; } .rdsendbar.mini { padding: 6px 10px; } .rdzoom { gap: 6px; align-items: center; }
 .rdthumbs { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; padding-top: 14px; } .rdthumbs canvas { width: 100%; height: auto; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,.15); cursor: crosshair; touch-action: none; } .rdthumbs figure { margin: 0; } .rdthumbs figcaption { font-size: 13px; color: var(--muted); }
 .searchrow { display: flex; gap: 8px; align-items: flex-end; } .searchrow label { flex: 1; }
 .rdx { background: var(--field); border: 1px solid var(--line); border-radius: 10px; padding: 10px; display: grid; gap: 8px; } .rdx h4 { margin: 0; font: 600 14px var(--ui); } .rdx textarea { width: 100%; } table.uadm th { width: 52%; font-size: 12.5px; } table.uadm input, table.uadm select { width: 100%; }
@@ -754,6 +755,9 @@ nav.tabs button[aria-selected="true"] { background: var(--look-navy) !important;
       <li>Check the <b>UAD 3.6 sales contract</b> boxes. <b>20.011 Sales contract analysis</b> is drafted from your entries; edit, <b>Copy</b>, paste into SFREP.</li>
       <li><b>20.011 Sales contract analysis</b> starts as a draft in your own layout (ANALYSIS OF THE SALES CONTRACT): document and page count, price and acceptance date, seller and signer, contingencies, close of escrow, personal property included and <b>excluded</b> (new checklist line), leaseback, 1031, buyer's broker, credits, "All other terms … fairly typical", no counter offers, and your furnishings paragraph when furnishings transfer. [Brackets] are for you – arm's length, seller and signer names, effect on price. <b>Redo</b> rebuilds it from the facts you accepted.</li>
       </ol></details>
+    <details><summary>Redacting pages: page size</summary><ol>
+      <li>On the redaction pages, <b>Page size: − / ＋</b> makes the pages smaller or bigger; <b>One page across</b> shows one page at a time, as wide as the screen. You can also hold <b>Ctrl</b> and turn the mouse wheel (or pinch on a touchpad) over a page – only the pages change, not the heading.</li>
+      <li><b>▴ Hide the directions</b> folds the heading down to its buttons so you see more of the page; <b>▾ Show the directions</b> brings them back.</li></ol></details>
     <details><summary>Contract packet: read the contract, counter offers and addenda together</summary><ol>
       <li>Drop every file of the purchase packet in <b>Documents</b> – the purchase contract, each seller and buyer counter offer, each addendum, a leaseback. Each is filed by kind; fix a kind with its drop-down.</li>
       <li>Under the document list, the <b>Contract packet</b> box lists them. On an order with <b>AI use</b> Yes or Redacted, click <b>Read the contract packet together with Claude</b>. You first see what will be sent, file by file; click <b>Send … pages to Claude</b>.</li>
@@ -1140,7 +1144,7 @@ nav.tabs button[aria-selected="true"] { background: var(--look-navy) !important;
 </div>
 <div id="toast" role="status" hidden></div>
 <script>
-const BUILD='o1-1022-2006';
+const BUILD='o1-1022-2009';
 const G = (() => {
 /* ---------------- small helpers ---------------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -3676,11 +3680,20 @@ async function rdPrepare(mode) { // mode 'claude' = to send; 'copy' = a redacted
   const from = Math.max(1, Math.min(RD.pdf.numPages, RD.prepFrom)), to = Math.min(RD.pdf.numPages, Math.max(from, RD.prepTo), from + (mode === 'copy' ? 199 : 29));
   const red = mode === 'copy' || cur.aiUse === 'Redacted'; const pane = $('#rdSend'); pane.hidden = false; if (RD.extra == null) RD.extra = cur.redactNames || '';
   const canSend = (cur.aiUse === 'Yes' || cur.aiUse === 'Redacted') && aiKey();
-  pane.innerHTML = `<div class="rdsendbar"><b>${red ? 'Redacted pages' : 'Pages'} ${from}–${to}: check every page.</b> ${red ? 'Black boxes are painted into the picture itself, so the hidden words are gone. Drag on a page to black out anything else (signatures, account numbers).' : ''}
+  pane.innerHTML = `<div class="rdsendbar"><b>${red ? 'Redacted pages' : 'Pages'} ${from}–${to}: check every page.</b> <span class="rddir">${red ? 'Black boxes are painted into the picture itself, so the hidden words are gone. Drag on a page to black out anything else (signatures, account numbers).' : ''}</span>
     ${red ? `<label>Also remove these names <span class="opt">separate with commas – buyers, sellers, agents, anyone else on the pages</span><input id="rdExtra" value="${h(RD.extra || '')}" placeholder="Broadway Warehouse, Colleen Casey"></label><p class="help">Signatures and initials are pictures, not text: drag a box over each one.</p>
       <div class="row"><span>Drag to:</span><div class="seg2"><button type="button" data-dm="black" aria-pressed="${(RD.drawMode || 'black') === 'black'}">Black box</button><button type="button" data-dm="blur" aria-pressed="${RD.drawMode === 'blur'}">Blur</button></div><button type="button" class="btn ghost small" id="rdUndoBox">Undo last box</button></div>
       <p class="help">Blur scrambles the pixels so nothing underneath can be read back; it looks softer than a black box (good for photos and logos). Names and numbers found in the text are always blacked out.</p>` : ''}
-    <span class="row">${mode === 'copy' ? `<button type="button" class="btn${canSend ? ' ghost' : ' primary'}" id="rdSavePdf">Save redacted PDF</button>` : ''}${canSend && (mode === 'claude' || to - from < 30) ? `<button type="button" class="btn primary" id="rdGo">Send these ${to - from + 1} ${red ? 'redacted ' : ''}pages to Claude</button>` : canSend ? '<span class="help">Claude reads up to 30 pages at a time: close this and set fewer pages to send.</span>' : ''}<button type="button" class="btn ghost" id="rdCancel">${mode === 'copy' ? 'Close' : 'Cancel'}</button></span></div><div id="rdThumbs" class="rdthumbs"></div>`;
+    <span class="row">${mode === 'copy' ? `<button type="button" class="btn${canSend ? ' ghost' : ' primary'}" id="rdSavePdf">Save redacted PDF</button>` : ''}${canSend && (mode === 'claude' || to - from < 30) ? `<button type="button" class="btn primary" id="rdGo">Send these ${to - from + 1} ${red ? 'redacted ' : ''}pages to Claude</button>` : canSend ? '<span class="help">Claude reads up to 30 pages at a time: close this and set fewer pages to send.</span>' : ''}<button type="button" class="btn ghost" id="rdCancel">${mode === 'copy' ? 'Close' : 'Cancel'}</button></span>
+    <span class="row rdzoom"><span>Page size:</span><button type="button" class="btn ghost small" data-rz="-" aria-label="Smaller pages">−</button><button type="button" class="btn ghost small" data-rz="1">One page across</button><button type="button" class="btn ghost small" data-rz="+" aria-label="Bigger pages">＋</button><button type="button" class="btn ghost small" data-rz="mini">${RD.barMini ? '▾ Show the directions' : '▴ Hide the directions'}</button><span class="help">or hold Ctrl and turn the mouse wheel over a page</span></span></div><div id="rdThumbs" class="rdthumbs"></div>`;
+  /* her ask (Oct 22 2026): zooming made the heading bigger, not the page – the pages have their own size, and the heading can fold away */
+  const bar = pane.querySelector('.rdsendbar'); if (bar) bar.classList.toggle('mini', !!RD.barMini);
+  const zoomTo = w => { RD.zoom = Math.max(200, Math.min(2600, Math.round(w))); const t = $('#rdThumbs'); if (t) t.style.gridTemplateColumns = `repeat(auto-fill, minmax(${Math.min(RD.zoom, t.clientWidth || RD.zoom)}px, 1fr))`; };
+  zoomTo(RD.zoom || 320);
+  pane.querySelectorAll('[data-rz]').forEach(b => b.onclick = () => { const k = b.dataset.rz; const t = $('#rdThumbs');
+    if (k === 'mini') { RD.barMini = !RD.barMini; bar.classList.toggle('mini', RD.barMini); b.textContent = RD.barMini ? '▾ Show the directions' : '▴ Hide the directions'; return; }
+    if (k === '1') zoomTo((t && t.clientWidth) || 1200); else zoomTo((RD.zoom || 320) * (k === '+' ? 1.3 : 1 / 1.3)); });
+  if (!pane.dataset.wheel) { pane.dataset.wheel = '1'; pane.addEventListener('wheel', e => { if (!e.ctrlKey || !e.target.closest('#rdThumbs')) return; e.preventDefault(); zoomTo((RD.zoom || 320) * (e.deltaY < 0 ? 1.12 : 1 / 1.12)); }, { passive: false }); }
   const th = $('#rdThumbs'); RD.prepared = [];
   for (let n = from; n <= to; n++) { const { cv, hits } = await redactPage(n, red); cv.dataset.n = n; const wrap = document.createElement('figure'); wrap.innerHTML = `<figcaption>Page ${n}${red ? ` · ${hits} item${hits === 1 ? '' : 's'} blacked out` : ''}</figcaption>`; wrap.prepend(cv); th.appendChild(wrap); RD.prepared.push(n);
     if (red) { let st = null; cv.onpointerdown = e => { const r = cv.getBoundingClientRect(); st = [(e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height]; cv.setPointerCapture(e.pointerId); };
