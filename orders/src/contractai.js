@@ -41,15 +41,7 @@ const CB_RULES = `Rules: read every file together as ONE purchase packet and fol
   Use [brackets] only for what the appraiser must still confirm.`;
 
 const cbScrambled = t => { t = String(t || ''); return t.length > 200 && (t.match(/[A-Za-z]{3,}/g) || []).join('').length / t.length < 0.25; };   // C.A.R. form fonts print as scrambled text
-async function cbClaude(content, system) {
-  const call = async (c, max) => { const res = await fetch('https://api.anthropic.com/v1/messages', { method: 'POST', headers: { 'content-type': 'application/json', 'x-api-key': aiKey(), 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-      body: JSON.stringify({ model: aiModel(), max_tokens: max, system, messages: [{ role: 'user', content: c }] }) });
-    let j = null; try { j = await res.json(); } catch (e) {} if (!res.ok) throw new Error((j && j.error && j.error.message) || 'Claude answered with an error (' + res.status + (res.status === 413 ? ' – too many pages at once' : '') + ')');
-    return { txt: (j.content || []).filter(x => x.type === 'text').map(x => x.text).join(''), cut: j.stop_reason === 'max_tokens' }; };
-  const parse = t => JSON.parse(t.slice(t.indexOf('{'), t.lastIndexOf('}') + 1));
-  let r = await call(content, 16000); try { if (!r.cut) return parse(r.txt); } catch (e) {}
-  r = await call([...content, { type: 'text', text: 'Your last answer was too long and was cut off. Answer again with shorter "changes" and "what" text and a summary under 200 words. JSON only.' }], 16000);
-  try { return parse(r.txt); } catch (e) { throw new Error('Claude’s answer could not be read (it was cut off or not in the expected form). Try again; if it happens again, tell Claude in the chat.'); } }
+async function cbClaude(content, system, say) { return aiCall(content, system, { say, max: 16000 }); }
 async function cbSend(pre) {   // pre = { plan, pics } from the packet redaction screen (redacted pictures only)
   if (CB.busy) return; CB.busy = true; const btn = $(pre ? '#cbRedGo' : '#cbGo'); const say = t => { if (btn) btn.textContent = t; };
   try {
@@ -67,10 +59,10 @@ async function cbSend(pre) {   // pre = { plan, pics } from the packet redaction
       if (R.text) content.push({ type: 'text', text: 'Contract packet (readable pages):' + R.text });
       R.pics.forEach(p => { content.push({ type: 'text', text: `=== ${p.file} – page ${p.n} (scanned picture) ===` }); content.push({ type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: p.data } }); });
       content.push({ type: 'text', text: `${rounds.length > 1 ? `This is part ${i + 1} of ${rounds.length} of the packet. ` : 'These are all the files of the purchase packet. '}\n${CB_RULES}\nAnswer with JSON only, in this form: ${CB_SHAPE}` });
-      results.push(await cbClaude(content, sys)); }
+      results.push(await cbClaude(content, sys, say)); }
     let out = results[0] || {};
     if (results.length > 1) { say('Claude is putting the parts together…');
-      out = await pbClaude([{ type: 'text', text: `${subj}\n\nThe packet was read in ${results.length} parts. Here is what each part found:\n${results.map((r, i) => `--- part ${i + 1} ---\n${JSON.stringify(r)}`).join('\n')}\n\nMerge them into one answer for the whole packet.\n${CB_RULES}\nAnswer with JSON only, in this form: ${CB_SHAPE}` }], sys); }
+      out = await pbClaude([{ type: 'text', text: `${subj}\n\nThe packet was read in ${results.length} parts. Here is what each part found:\n${results.map((r, i) => `--- part ${i + 1} ---\n${JSON.stringify(r)}`).join('\n')}\n\nMerge them into one answer for the whole packet.\n${CB_RULES}\nAnswer with JSON only, in this form: ${CB_SHAPE}` }], sys, say); }
     const sentFiles = plan.filter(f => !f.skip && ((f.text || []).length || (f.imgs || []).length)).map(f => f.d.name);
     const pagesSum = plan.filter(f => !f.skip).reduce((a, f) => a + (f.pages || 0), 0);
     cur.contractPacket = { at: new Date().toISOString(), model: aiModel(), files: sentFiles, mode: cur.aiUse === 'Redacted' ? 'redacted' : 'full', rounds: rounds.length,
@@ -79,7 +71,7 @@ async function cbSend(pre) {   // pre = { plan, pics } from the packet redaction
     (cur.aiLog = cur.aiLog || []).push({ at: cur.contractPacket.at, doc: 'Contract packet (' + sentFiles.length + ' files)', pages: [], mode: cur.contractPacket.mode, model: aiModel(), items: cur.contractPacket.docs.length });
     CB.plan = null; CB.show = true; CB.err = ''; if (pre) cbRedClose(); saveLetter(true, true); renderDocs();
     toast(`Claude read the contract packet together: ${sentFiles.length} files, ${cur.contractPacket.totalPages || '?'} pages`, 6000);
-  } catch (e) { console.error(e); CB.err = String(e.message || e); toast('Not sent or not read: ' + CB.err, 9000); say('Try again'); renderCtBatch(); }
+  } catch (e) { console.error(e); CB.err = String(e.message || e); toast('Not sent or not read: ' + CB.err, 9000); say('Try again'); const eb = document.getElementById('cbRedErr'); if (eb) eb.textContent = 'Not sent or not read: ' + CB.err; renderCtBatch(); }
   CB.busy = false;
 }
 
@@ -192,6 +184,7 @@ async function cbRedOpen(opt) {   // opt = { docs, title, send, max } – the co
     <label>Also remove these names <span class="opt">separate with commas – buyers, sellers, agents, escrow, anyone else</span><input id="cbRedNames" value="${h(cur.redactNames || '')}"></label>
     <div class="row"><span>Drag to:</span><div class="seg2"><button type="button" data-cbdm="black" aria-pressed="true">Black box</button><button type="button" data-cbdm="blur" aria-pressed="false">Blur</button></div><button type="button" class="btn ghost small" id="cbRedUndo">Undo last box</button></div>
     <span class="row">${canSend ? `<button type="button" class="btn primary" id="cbRedGo">Send these ${total} redacted pages to Claude</button>` : `<span class="help warnTxt">More than ${opt.max || 60} pages – too many at once; leave some files out first.</span>`}<button type="button" class="btn ghost" id="cbRedSave">Also save redacted copies (PDF)</button><button type="button" class="btn ghost" id="cbRedClose">Close</button></span>
+    <p class="help warnTxt" id="cbRedErr"></p>
     <span class="row rdzoom"><span>Page size:</span><button type="button" class="btn ghost small" data-cbz="-" aria-label="Smaller pages">−</button><button type="button" class="btn ghost small" data-cbz="1">One page across</button><button type="button" class="btn ghost small" data-cbz="+" aria-label="Bigger pages">＋</button><button type="button" class="btn ghost small" data-cbz="mini">▴ Hide the directions</button></span></div>
     <div id="cbRedThumbs" class="rdthumbs"></div>`;
   const th = $('#cbRedThumbs'); const bar = pane.querySelector('.rdsendbar');

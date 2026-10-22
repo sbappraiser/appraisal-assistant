@@ -11,7 +11,7 @@
    report by itself – she reads it, copies what she wants.
    ===================================================================== */
 const PB_TYPES = ['permitsPdf', 'permitsCounty'];
-const PB_MAX_IMG = 36, PB_MAX_TEXT = 350000;
+const PB_MAX_IMG = 14, PB_MAX_TEXT = 350000;
 const PB = { plan: null, busy: false, show: false };
 const pbDocs = () => ((cur && cur.docs) || []).filter(d => PB_TYPES.includes(d.type));
 
@@ -52,12 +52,25 @@ function pbSubjectText() {
 const PB_SHAPE = `{"permits":[{"number":"permit or case number","agency":"City of …, County of Santa Barbara, …","kind":"Building|Electrical|Plumbing|Mechanical|Grading|Demolition|Solar|Pool/spa|ADU|Planning/zoning|Code enforcement|Fire|Other","work":"short description of the work","sqft":"square feet added or converted, if stated, else empty","applied":"YYYY-MM-DD or empty","issued":"YYYY-MM-DD or empty","finaled":"YYYY-MM-DD or empty","status":"Finaled|Issued – no final|Expired|Withdrawn/void|Applied only|Unknown","file":"file name","page":1,"quote":"the words you read it from"}],"flags":[{"text":"what the appraiser should look at","file":"file name","page":1}],"comment":"a short factual permit-history paragraph for the appraisal (under 1,000 characters)"}`;
 const PB_RULES = `Rules: report only what the documents say – never guess a date, status or size. Treat the same permit number in several files as ONE permit and combine what each file says. Sort the permits oldest first. A permit with an issue date but no final inspection is "Issued – no final". Flags: permits never finaled or expired; living area added or converted (garage, ADU, addition) and how it compares with the public-record living area; code-enforcement cases; work for a different address or parcel; anything that conflicts between files. The comment follows the appraiser's own style (her example: "According to the County permit history, the current owner completed a garage re-roof in 2025 (25CNP-00019), an interior remodel and a bathroom upgrade in 2010 (10BDP-01201, 10PLM-00088), permitted the rear storage shed in 2009 (09EXE-00405), and completed an addition and remodel in 2008 (08BDP-01440). The owner reported recent upgrades include: ___ (based on interview). The permit history also reflects that a prior owner completed a kitchen remodel in 2005 (05BDP-00837) and a main house re-roof in 2003 (03CNP-00167)."): plain words, one sentence for the current owner's work newest first, then the owner-interview sentence with the blank ___ left for her, then a sentence for prior owners' work newest first. Tell current from prior owners by the owner name and sale date in the public-record facts and the names in the case titles; if you cannot tell, say "the permit history reflects". Use the short permit number in brackets (drop the OOOOO- filler). Describe each item by what was done (garage re-roof, bathroom upgrade), not by case type; a Closed case is described as completed. Leave out enforcement cases, open questions, missing finals and square-footage comparisons – those belong in flags, not the comment. Facts only, no value opinion.`;
 
-async function pbClaude(content, maxTokens, system) {
-  const res = await fetch('https://api.anthropic.com/v1/messages', { method: 'POST', headers: { 'content-type': 'application/json', 'x-api-key': aiKey(), 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-    body: JSON.stringify({ model: aiModel(), max_tokens: maxTokens || 8000, system: system || 'You read building permit records for a residential appraiser in California and report exactly what they say, with file names and page numbers. Reply with JSON only.', messages: [{ role: 'user', content }] }) });
-  const j = await res.json(); if (!res.ok) throw new Error((j.error && j.error.message) || 'Claude answered with an error (' + res.status + ')');
-  const txt = (j.content || []).filter(c => c.type === 'text').map(c => c.text).join(''); return JSON.parse(txt.slice(txt.indexOf('{'), txt.lastIndexOf('}') + 1));
-}
+/* one careful call to Claude, shared by the permit and contract readers (Oct 22 2026, after "it asks me to try again"):
+   waits and tries again when her API plan's per-minute limit is reached (429) or Claude is busy (529), gives the answer room,
+   asks once for a shorter answer when it was cut off, and says plainly what went wrong. */
+async function aiCall(content, system, opts) {
+  opts = opts || {}; const say = opts.say || (() => {}); const wait = ms => new Promise(r => setTimeout(r, ms));
+  const call = async (c, max) => { for (let tryN = 0; ; tryN++) {
+      let res; try { res = await fetch('https://api.anthropic.com/v1/messages', { method: 'POST', headers: { 'content-type': 'application/json', 'x-api-key': aiKey(), 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+        body: JSON.stringify({ model: aiModel(), max_tokens: max, system, messages: [{ role: 'user', content: c }] }) }); } catch (e) { if (tryN < 2) { say('No answer from Claude – trying again…'); await wait(5000); continue; } throw new Error('Claude could not be reached (internet?)'); }
+      let j = null; try { j = await res.json(); } catch (e) {}
+      if ((res.status === 429 || res.status === 529 || res.status === 503) && tryN < 4) { const ra = +(res.headers.get('retry-after') || 0); const ms = Math.min(90000, Math.max(ra * 1000, [20000, 40000, 60000, 60000][tryN])); say(`Your Claude plan's per-minute limit was reached – waiting ${Math.round(ms / 1000)} seconds, then going on…`); await wait(ms); continue; }
+      if (!res.ok) { const m = (j && j.error && j.error.message) || ''; throw new Error(res.status === 413 ? 'too many pages in one request' : res.status === 401 ? 'the Claude API key was not accepted – check it in Settings' : res.status === 429 ? 'your Claude plan’s per-minute limit is still reached – wait a few minutes and try again' : (m || 'Claude answered with an error (' + res.status + ')')); }
+      return { txt: (j.content || []).filter(x => x.type === 'text').map(x => x.text).join(''), cut: j.stop_reason === 'max_tokens' }; } };
+  const parse = t => JSON.parse(t.slice(t.indexOf('{'), t.lastIndexOf('}') + 1));
+  let r = await call(content, opts.max || 16000); try { if (!r.cut) return parse(r.txt); } catch (e) {}
+  say('The answer was too long – asking Claude for a shorter one…');
+  r = await call([...content, { type: 'text', text: 'Your last answer was too long and was cut off. Answer again, shorter (short descriptions, no repeats). JSON only.' }], opts.max || 16000);
+  try { return parse(r.txt); } catch (e) { throw new Error('Claude’s answer could not be read (cut off or not in the expected form) – try again'); } }
+async function pbClaude(content, maxTokens, system, say) {
+  return aiCall(content, system || 'You read building permit records for a residential appraiser in California and report exactly what they say, with file names and page numbers. Reply with JSON only.', { say, max: Math.max(maxTokens || 0, 16000) }); }
 async function pbSend(pre) {   // pre = { plan, pics } from the one-screen redaction (redacted pictures only)
   if (PB.busy) return; PB.busy = true; const btn = $(pre ? '#cbRedGo' : '#pbGo'); const say = t => { if (btn) btn.textContent = t; };
   try {
@@ -75,7 +88,7 @@ async function pbSend(pre) {   // pre = { plan, pics } from the one-screen redac
       if (R.text) content.push({ type: 'text', text: 'Permit records (readable pages):' + R.text });
       R.pics.forEach(p => { content.push({ type: 'text', text: `=== ${p.file} – page ${p.n} (scanned picture) ===` }); content.push({ type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: p.data } }); });
       content.push({ type: 'text', text: `${rounds.length > 1 ? `This is part ${i + 1} of ${rounds.length} of the permit records for this property. ` : 'These are all the permit records for this property. '}Read every page above together and build one permit timeline.\n${PB_RULES}\nAnswer with JSON only, in this form: ${PB_SHAPE}` });
-      results.push(await pbClaude(content)); }
+      results.push(await pbClaude(content, 16000, null, say)); }
     let out = results[0] || {};
     if (results.length > 1) { say('Claude is putting the parts together…');
       out = await pbClaude([{ type: 'text', text: `${subj}\n\nThe permit records for this property were read in ${results.length} parts. Here is what each part found:\n${results.map((r, i) => `--- part ${i + 1} ---\n${JSON.stringify(r)}`).join('\n')}\n\nMerge them into one timeline (the same permit number is one permit).\n${PB_RULES}\nAnswer with JSON only, in this form: ${PB_SHAPE}` }]); }
@@ -85,7 +98,7 @@ async function pbSend(pre) {   // pre = { plan, pics } from the one-screen redac
     (cur.aiLog = cur.aiLog || []).push({ at: cur.permitTimeline.at, doc: 'All permit records (' + sentFiles.length + ' files)', pages: [], mode: cur.permitTimeline.mode, model: aiModel(), items: cur.permitTimeline.permits.length });
     PB.plan = null; PB.show = true; if (pre && typeof cbRedClose === 'function') cbRedClose(); saveLetter(true, true); renderDocs();
     toast(`Claude read ${sentFiles.length} permit files together: ${cur.permitTimeline.permits.length} permits, ${cur.permitTimeline.flags.length} things to check`, 6000);
-  } catch (e) { console.error(e); toast('Not sent or not read: ' + (e.message || e), 7000); say('Try again'); }
+  } catch (e) { console.error(e); const m = 'Not sent or not read: ' + (e.message || e); toast(m, 9000); say('Try again'); const eb = document.getElementById('cbRedErr'); if (eb) eb.textContent = m; }
   PB.busy = false;
 }
 /* newest permit first (her request, Oct 19 2026): by the latest of final, issued and applied dates; undated ones last */
