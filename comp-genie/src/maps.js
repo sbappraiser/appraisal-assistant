@@ -413,6 +413,7 @@ async function mapsRender() {
     ${noGeo.length ? `<p class="help">${noGeo.length} comp${noGeo.length > 1 ? 's' : ''} on the grid ha${noGeo.length > 1 ? 've' : 's'} no latitude / longitude (${noGeo.map(c => esc(compTitle(c))).join(', ')}) – the map looks ${noGeo.length > 1 ? 'them' : 'it'} up by address. The comp's CRS report gives the exact spot.</p>` : ''}
     <p class="row"><label class="inl">Map style for new maps <select data-mapbasepref>${Object.entries(MAP_BASES).map(([b, x]) => `<option value="${b}" ${mapBasePref() === b ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select></label><span class="help">You can change the style of each map in Edit map.</span></p>
     <div class="maps">${card('loc')}${(J.rentals || []).some(r => r.use) || M.rent ? card('rent') : ''}${card('nbhd')}${card('aerial')}${card('flood')}${card('fire')}${card('plat')}</div>
+    ${cosbCardHTML(J)}
     <p class="help">Street map © OpenStreetMap contributors · USGS The National Map (topo, imagery, roads) · USDA NAIP imagery · flood zones from FEMA’s National Flood Hazard Layer · fire zones from CAL FIRE / OSFM. Pins are placed from latitude / longitude (approximate). Check each map before the report goes out.</p>`;
 }
 document.addEventListener('click', async e => {
@@ -553,3 +554,49 @@ async function mapEdit(J, key, startMode) {
       toast(nbChanged && others.length ? `Map saved. The boundary changed – open Edit map › Save on the ${others.map(k => MAP_LABEL[k].toLowerCase()).join(' and ')} to show it there too.` : 'Map saved', nbChanged && others.length ? 9000 : 3000); } });
 }
 document.addEventListener('click', e => { const b = e.target.closest('[data-mapedit]'); if (b && app.job) mapEdit(app.job, b.dataset.mapedit); const a = e.target.closest('[data-aerialw]'); if (a && app.job) { if (MAPS.busy && Date.now() - (MAPS.since || 0) < 90000) { toast('Still working on the last map'); return; } MAPS.since = Date.now(); makeAerial(app.job, +a.dataset.aerialw).catch(x => toast('The aerial could not be made: ' + (x.message || x), 8000)).finally(() => { MAPS.busy = ''; MAPS.since = 0; mapsRender(); }); } });
+
+/* ===== her County of Santa Barbara map (Oct 22 2026): "I use this site a lot for mapping, fire maps, zoning maps, flood maps,
+   environmental maps". The front door: (1) open her own County map viewer at the subject; (2) ask the County's PUBLIC map layers
+   what lies at the subject's point – the same public answers the viewer shows when she clicks. Read-only, nothing is changed;
+   layers that need a sign-in are skipped and named. ===== */
+const COSB_APP = 'c32ed45a43604562b0e4a87906a3bf3e', COSB_PORTAL = 'https://cosb-ent.maps.arcgis.com';
+const cosbViewerUrl = (lat, lon) => `${COSB_PORTAL}/apps/webappviewer/index.html?id=${COSB_APP}` + (lat && lon ? `&center=${lon},${lat},4326&level=18&marker=${lon},${lat},4326,Subject` : '');
+const COSB_KEY = /zon|land ?use|general plan|fire|fhsz|flood|fema|coastal|environment|esh|habitat|wetland|creek|riparian|landslide|geolog|fault|seismic|liquefaction|soil|slope|archae|histor|airport|noise|overlay|design control|community plan|specific plan|urban|rural|williamson|agricultur|oak|tsunami|dam|sea level|parcel|supervisor|district|special problem/i;
+async function cosbJson(url) { const r = await fetch(url, { credentials: 'omit' }); if (!r.ok) throw new Error('HTTP ' + r.status); const j = await r.json(); if (j && j.error) throw new Error((j.error.message || 'error') + (j.error.code ? ' (' + j.error.code + ')' : '')); return j; }
+async function cosbLayers() {   // the viewer's web map → its layers (cached for the session)
+  if (MAPS.cosbLayers) return MAPS.cosbLayers;
+  const app = await cosbJson(`${COSB_PORTAL}/sharing/rest/content/items/${COSB_APP}/data?f=json`); const wm = app && app.map && app.map.itemId; if (!wm) throw new Error('the County viewer did not say which map it uses');
+  const web = await cosbJson(`${COSB_PORTAL}/sharing/rest/content/items/${wm}/data?f=json`); const out = [];
+  const walk = (L, grp) => (L || []).forEach(x => { if (x.layers && !x.url) walk(x.layers, x.title); else if (x.url) out.push({ title: x.title || grp || x.url, url: String(x.url).replace(/\/+$/, ''), sub: x.layers }); });
+  walk(web.operationalLayers); MAPS.cosbLayers = out; return out; }
+async function cosbLookup(J) {
+  const lat = num(J.subject.lat), lon = num(J.subject.lon); if (!lat || !lon) throw new Error('the subject has no latitude / longitude yet');
+  const L = await cosbLayers(); const found = [], skipped = []; const d = 0.0008; const ext = `${lon - d},${lat - d},${lon + d},${lat + d}`;
+  await Promise.all(L.map(async x => {
+    try {
+      if (/\/MapServer$/i.test(x.url)) { const j = await cosbJson(`${x.url}/identify?geometry=${lon},${lat}&geometryType=esriGeometryPoint&sr=4326&layers=all&tolerance=2&mapExtent=${ext}&imageDisplay=400,400,96&returnGeometry=false&f=json`);
+        (j.results || []).forEach(r => found.push({ group: x.title, layer: r.layerName, attrs: r.attributes || {}, value: r.value })); }
+      else { const u = /\/(FeatureServer|MapServer)\/\d+$/i.test(x.url) ? x.url : null; if (!u) { skipped.push(x.title + ' (not a map layer)'); return; }
+        const j = await cosbJson(`${u}/query?geometry=${lon},${lat}&geometryType=esriGeometryPoint&inSR=4326&spatialRel=esriSpatialRelIntersects&outFields=*&returnGeometry=false&f=json`);
+        (j.features || []).forEach(f => found.push({ group: x.title, layer: x.title, attrs: f.attributes || {} })); }
+    } catch (e) { skipped.push(x.title + ' – ' + (/499|498|403|token/i.test(e.message) ? 'needs a sign-in' : e.message)); } }));
+  const clean = a => Object.entries(a).filter(([k, v]) => v !== null && v !== '' && v !== 'Null' && !/^(objectid|fid|shape|globalid|shape_?(length|area)|st_(area|length)|created|last_?edited|gdb_)/i.test(k) && !/^\s*$/.test(String(v))).slice(0, 8);
+  const rows = found.map(r => ({ ...r, key: COSB_KEY.test(r.layer + ' ' + r.group), pairs: clean(r.attrs) }));
+  rows.sort((a, b) => (b.key - a.key) || String(a.layer).localeCompare(String(b.layer)));
+  J.cosb = { at: Date.now(), lat, lon, rows: rows.slice(0, 80).map(r => ({ group: r.group, layer: r.layer, key: r.key, pairs: r.pairs, value: r.value })), skipped: skipped.slice(0, 40), layers: L.length };
+  await saveNow(); return J.cosb; }
+function cosbCardHTML(J) {
+  const lat = num(J.subject.lat), lon = num(J.subject.lon); const C = J.cosb;
+  const rows = C ? C.rows.map(r => `<tr class="${r.key ? 'key' : ''}"><th>${esc(r.layer)}${r.group && r.group !== r.layer ? `<br><small class="muted">${esc(r.group)}</small>` : ''}</th><td>${r.pairs.length ? r.pairs.map(([k, v]) => `<span class="cosbkv"><small>${esc(k)}</small> ${esc(String(v))}</span>`).join(' ') : esc(r.value || '')}</td></tr>`).join('') : '';
+  return `<div class="cosb"><b>County of Santa Barbara map</b> <span class="help">your County viewer: zoning, land use, fire, flood, environmental and other layers</span>
+    <div class="row"><a class="btn sm" href="${esc(cosbViewerUrl(lat, lon))}" target="_blank" rel="noopener">Open the County map ${lat && lon ? 'at the subject' : ''} ↗</a>${lat && lon ? `<button class="btn sm" data-cosb="1">${C ? 'Look again' : 'What the County layers say at the subject'}</button>` : '<span class="help">The subject needs its latitude / longitude first.</span>'}${C ? `<button class="btn sm" data-cosbcopy="1">Copy</button>` : ''}</div>
+    ${MAPS.cosbBusy ? '<p class="help"><b>Asking the County layers…</b></p>' : ''}${MAPS.cosbErr ? `<p class="help warnTxt">${esc(MAPS.cosbErr)} – use Open the County map instead.</p>` : ''}
+    ${C ? `<p class="help">Read ${new Date(C.at).toLocaleString()} from ${C.layers} County layer${C.layers === 1 ? '' : 's'} at ${C.lat.toFixed(5)}, ${C.lon.toFixed(5)} – the layers most often needed are first. Check each against the County viewer before you rely on it.</p>
+      ${rows ? `<div class="tableWrap"><table class="facts cosbt">${rows}</table></div>` : '<p class="help">No County layer has anything at this point.</p>'}
+      ${C.skipped.length ? `<details><summary class="help">${C.skipped.length} layer${C.skipped.length === 1 ? '' : 's'} not read</summary><p class="help">${C.skipped.map(esc).join(' · ')}</p></details>` : ''}` : ''}</div>`; }
+document.addEventListener('click', async e => {
+  const b = e.target.closest && e.target.closest('[data-cosb],[data-cosbcopy]'); if (!b || !app.job) return; const J = app.job;
+  if (b.dataset.cosbcopy) { const C = J.cosb; if (!C) return; const t = C.rows.map(r => `${r.layer}: ${r.pairs.map(([k, v]) => k + ' ' + v).join('; ') || r.value || ''}`).join('\n'); try { await navigator.clipboard.writeText(t); toast('Copied'); } catch (x) { toast('Could not copy'); } return; }
+  MAPS.cosbBusy = true; MAPS.cosbErr = ''; mapsRender();
+  try { const C = await cosbLookup(J); toast(`${C.rows.length} thing${C.rows.length === 1 ? '' : 's'} found in the County layers`); } catch (x) { console.warn('cosb', x); MAPS.cosbErr = 'The County layers could not be read here: ' + (x.message || x); }
+  MAPS.cosbBusy = false; mapsRender(); });

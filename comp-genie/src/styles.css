@@ -431,3 +431,5 @@ table.a26 td { vertical-align: top; }
 .mehead select{max-width:330px;width:auto}
 
 .meth{min-width:1180px}.meth td{vertical-align:top}.meth td.mcell{width:17%;min-width:170px}.meth th:first-child{min-width:120px}.meth .mbad{background:#fff3f3}.meth .mon{background:#e5f4e4;outline:2px solid #1e7a3c}.mx{color:#c00000;font-weight:800}.mc{color:#b36b00}.mo{color:#1e7a3c}.ml{color:#555}.mpick{display:inline-flex;gap:4px;align-items:center;font-size:13px;cursor:pointer}.mpick span{color:#1e7a3c;font-weight:800}.mwhy{background:#f7f5ff;border:1px solid #c9bdf2;border-radius:8px;padding:8px 12px}
+.cosb { margin: 12px 0; padding: 10px 12px; border: 1px solid var(--line, #d5dbe3); border-radius: 10px; }
+.cosbt tr.key th { color: #1f3a68; } .cosbt th { width: 32%; vertical-align: top; } .cosbkv { display: inline-block; margin: 0 10px 4px 0; } .cosbkv small { color: #5b6b7d; }
