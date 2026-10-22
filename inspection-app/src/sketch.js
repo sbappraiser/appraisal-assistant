@@ -930,7 +930,7 @@ function renderPanel() {
     <div class="acts">
       ${SK.mode === 'iwall' ? '' : SK.mode === 'start' ? `<button class="btn primary big ico" id="skStartHere2" ${SK.cursor ? '' : 'disabled'} title="Start the area here"><span>📍</span><small>Start</small></button>` : '<button class="btn primary big ico" id="skNew" title="New area"><span>＋</span><small>New</small></button>'}
       ${SK.mode === 'iwall' ? '' : `<button class="btn big ico" id="skClose" ${a ? '' : 'disabled'} title="Close the area"><span>⬠</span><small>Close</small></button>
-      <button class="btn big ico" id="skDone" ${a ? '' : 'disabled'} title="Stop – leave the area open"><span>⏹</span><small>Stop</small></button>`}
+      <button class="btn big ico" id="skDone" ${a ? '' : 'disabled'} title="Stop – leave the area open"><span class="stopsign"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><polygon points="7,1 17,1 23,7 23,17 17,23 7,23 1,17 1,7" fill="#d40000" stroke="#fff" stroke-width="1.6"/><polygon points="7,1 17,1 23,7 23,17 17,23 7,23 1,17 1,7" fill="none" stroke="#000" stroke-width=".8"/><text x="12" y="15.2" text-anchor="middle" font-size="6.6" font-weight="700" font-family="Arial,sans-serif" fill="#fff">STOP</text></svg></span><small>Stop</small></button>`}
       <button class="btn big ico" id="skCurveT" ${curveOk ? '' : 'disabled'} title="Curve the last wall (or the wall you tapped)"><span>⌒</span><small>Curve</small></button><button class="btn big ico" id="skCenter" title="Center what you are drawing, or all your areas"><span>⌖</span><small>Center</small></button>
     </div>
   </div>` : tray === 'fin' ? `<div class="fintray">
