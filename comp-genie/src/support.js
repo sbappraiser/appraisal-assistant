@@ -72,7 +72,7 @@ function supRun(J) {
   });
   return res;
 }
-function supHTML(J) { return supHTML0(J) + costCheckHTML(J) + pairsHTML(J); }   // step 9: grouped sales, then the depreciated cost check and any matched pairs (adjsup.js)
+function supHTML(J) { return (typeof methHTML === 'function' ? methHTML(J) : '') + supHTML0(J) + costCheckHTML(J) + pairsHTML(J); }   // step 9: grouped sales, then the depreciated cost check and any matched pairs (adjsup.js)
 function supHTML0(J) {
   const T = J.support; const G = G0(J);
   const head = `<h2>Grouped-sales support <small>for the other lines</small></h2>

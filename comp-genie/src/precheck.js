@@ -60,6 +60,8 @@ function precheckGrid(J) { if (!RC) return rcRun(() => precheckGrid(J));
   if (!String(G.note || '').trim()) out.push({ sev: 'Check', msg: 'The sales comparison comment is empty.' });
   if (String(G.note || '').length > 10000) out.push({ sev: 'Must fix', msg: `The sales comparison comment is ${G.note.length.toLocaleString()} characters – UAD 3.6 allows 10,000; only the first 10,000 are sent. Move the standard rate paragraphs to a general commentary section.` });
   if (!J.subject.eff) out.push({ sev: 'Must fix', msg: 'No effective date on the assignment.' });
+  if (typeof methPick === 'function' && (J.regress || J.support || J.sensSnap)) { const G = G0(J), P = methPick(J); const miss = METH_LINES.filter(([k]) => !blank(G.rates[k]) && num(G.rates[k]) && !(P[k] || []).length).map(([, l]) => l.toLowerCase());
+    if (miss.length) out.push({ sev: 'Check', msg: `No method ticked ✓ yet for: ${miss.join(', ')} (Adjustment support › Adjustment methods compared). Tick the one(s) you rely on, or say in the comment how these were derived.` }); }
   if (typeof fireCheck === 'function') { const fc = fireCheck(J); if (fc) out.push({ sev: 'Check', msg: fc }); }
   { const R = (J.report || {}), rn = typeof rv === 'function' ? rv(J, 'rightsNot') : R.rightsNot;
     if (R.allRights === 'false' && !String(rn || '').trim()) out.push({ sev: 'Must fix', msg: 'You answered No to "All rights included in the appraisal?" – describe the rights not included (report section, 540 characters).' });
