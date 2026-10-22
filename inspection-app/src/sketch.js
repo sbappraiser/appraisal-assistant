@@ -521,7 +521,7 @@ function dragEnd(from, ft) { // where a dragged wall ends: line-up dots, corners
 /* ---------- actions ---------- */
 const curArea = () => SK.sk.areas.find(a => a.id === SK.drawId);
 function startArea(defId) { SK.mode = 'start'; SK.pendingDef = defId; SK.sel = null; SK.cursor = null; renderPanel(); draw(); }
-function placeStart(ft, exact) { if (document.body.classList.contains('padmin')) { document.body.classList.remove('padmin'); const pb = document.getElementById('skPadBtn'); if (pb) pb.textContent = '⌄ Hide keypad'; setTimeout(sizeCanvas, 30); } pushUndo(); const p = exact ? [r3(ft[0]), r3(ft[1])] : snapPoint(ft); SK.lastDef = SK.pendingDef; SK.cursor = null; const a = { id: uid(), def: SK.pendingDef, level: SK.level, pg: SK.pg, pts: [p], closed: false }; SK.sk.areas.push(a); SK.drawId = a.id; SK.mode = 'draw'; markDirty(); draw(); renderPanel(); }
+function placeStart(ft, exact) { if (skTray() !== 'draw') { setTray('draw'); setTimeout(sizeCanvas, 30); } /* starting walls brings the Walls tools back */ pushUndo(); const p = exact ? [r3(ft[0]), r3(ft[1])] : snapPoint(ft); SK.lastDef = SK.pendingDef; SK.cursor = null; const a = { id: uid(), def: SK.pendingDef, level: SK.level, pg: SK.pg, pts: [p], closed: false }; SK.sk.areas.push(a); SK.drawId = a.id; SK.mode = 'draw'; markDirty(); draw(); renderPanel(); }
 function addWallTo(pt) {
   const a = curArea(); if (!a) return; pushUndo(); a.pts.push([r3(pt[0]), r3(pt[1])]); SK.entry = '';
   if (a.pts.length >= 4 && Math.hypot(a.pts[a.pts.length - 1][0] - a.pts[0][0], a.pts[a.pts.length - 1][1] - a.pts[0][1]) < 0.06) { a.pts.pop(); finishArea(true); return; }
@@ -792,13 +792,11 @@ function renderShell() {
   const p = SK.ins.data.property || {};
   document.getElementById('app').innerHTML = `
   <header class="skbar">
-    <button class="btn" id="skBack">‹ Back to inspection</button>
+    <button class="btn" id="skBack">‹ Back</button>
     <div class="sktitle"><b>${esc(p.fileName || 'Sketch')}</b><span>${esc([p.addr, p.unit].filter(Boolean).join(' '))}</span></div>
-    <span class="saved" id="skSaved">Saved ✓</span><span class="ver">v ${typeof BUILD !== 'undefined' ? BUILD : '?'}</span>
-    <button class="btn" id="skUndo">↶ Undo</button><button class="btn" id="skRedo">↷</button>
-    <button class="btn sendbtn ${SK.sentClean ? 'sent' : ''}" id="skSend" title="Save the area totals and the sketch image to the inspection">${SK.sentClean ? 'Saved to inspection ✓' : 'Save to inspection'}</button>
-    <button class="btn" id="skPadBtn" title="Hide or show the keypad to see more of the sketch">${document.body.classList.contains('padmin') ? '⌃ Keypad' : '⌄ Hide keypad'}</button>
-    <button class="btn" id="skMenu">☰ More</button>
+    <span class="saved" id="skSaved">Saved ✓</span>
+    <button class="btn icon" id="skInfoBtn" title="How to use the sketch" aria-label="How to use the sketch">ⓘ</button>
+    <button class="btn icon" id="skMenu" aria-label="Menu">☰</button>
   </header>
   <div class="sklevels" id="skLevels"></div>
   <div class="skwrap"><canvas id="skCanvas"></canvas><div class="skinfo" id="skInfo"></div></div>
@@ -808,10 +806,8 @@ function renderShell() {
   cv.addEventListener('pointerdown', onDown); cv.addEventListener('pointermove', onMove); cv.addEventListener('pointerup', onUp); cv.addEventListener('pointercancel', onUp);
   cv.addEventListener('wheel', e => { e.preventDefault(); const k = e.deltaY < 0 ? 1.1 : 1 / 1.1; const s = Math.max(1.5, Math.min(120, SK.view.s * k)); const kk = s / SK.view.s; SK.view = { s, ox: e.offsetX - (e.offsetX - SK.view.ox) * kk, oy: e.offsetY - (e.offsetY - SK.view.oy) * kk }; draw(); }, { passive: false });
   document.getElementById('skBack').onclick = goBack;
-  document.getElementById('skUndo').onclick = doUndo; document.getElementById('skRedo').onclick = doRedo;
-  document.getElementById('skMenu').onclick = openMenu;
-  document.getElementById('skPadBtn').onclick = () => { const on = !document.body.classList.contains('padmin'); document.body.classList.toggle('padmin', on); try { localStorage.setItem('skPadMin', on ? '1' : '0'); } catch (e) {} document.getElementById('skPadBtn').textContent = on ? '⌃ Keypad' : '⌄ Hide keypad'; setTimeout(sizeCanvas, 30); };
-  document.getElementById('skSend').onclick = sendNow;
+  document.getElementById('skMenu').onclick = openMenu; document.getElementById('skInfoBtn').onclick = openHelp;
+  document.body.classList.remove('padmin');
   document.getElementById('skSheetBg').addEventListener('click', e => { if (e.target.id === 'skSheetBg') closeSheet(); });
   renderLevels(); renderPanel(); renderInfo();
   window.addEventListener('resize', sizeCanvas); try { new ResizeObserver(() => sizeCanvas()).observe(cv.parentElement); } catch (e) {} sizeCanvas();
@@ -852,6 +848,18 @@ function renderInfo() {
   el.innerHTML = `<b>Finished above grade ${fmt(T.agFin)} sf</b>${T.agNon ? ` · nonstandard ${fmt(T.agNon)}` : ''}${T.bgFin || T.bgNon ? ` · below grade ${fmt(T.bgFin + T.bgNon)}` : ''}${T.gar.length ? ` · garage ${fmt(T.gar.reduce((t, x) => t + x.sf, 0))}` : ''} <button class="btn sm" id="skTotals">Totals</button>`;
   document.getElementById('skTotals').onclick = openTotals;
 }
+/* her ask (Oct 22 2026): two pinnable tool trays – ✏ Walls (keypad, arrows / angle circle, curve, center, back, undo)
+   and Aa Labels & symbols (label, symbol, door, interior wall, rotate, new area). Tap the pinned one to unpin it and
+   give the drawing the whole screen. The directions moved to ⓘ; send, save, redo and clone-a-level are in ☰. */
+function skTray() { if (SK.tray === undefined) { let v = null; try { v = localStorage.getItem('skTray'); } catch (e) {} SK.tray = v === null ? 'draw' : v; } return SK.tray; }
+function setTray(t) { SK.tray = t; try { localStorage.setItem('skTray', t); } catch (e) {} }
+function openHelp() { openSheet(`<h3>How to use the sketch</h3><div class="calc">
+  <p><b>Tools at the bottom.</b> Tap <b>✏ Walls</b> to pin the keypad, arrows (or the ∠ angle circle), ⌒ Curve, ◎ Center and ⌫ Back. Tap <b>Aa Labels &amp; symbols</b> to pin Label, Symbol, Door, Interior wall, Rotate and New area. Tap the pinned one (📌) again to unpin it – the drawing gets the whole screen.</p>
+  <p><b>Drawing walls:</b> + New area, tap where it starts (or press and hold a corner and drag), type a length and tap an arrow. ∠ Angle opens the angle circle. Tap the green start to close. ⌫ removes the last digit, then the last wall.</p>
+  <p><b>Changing things:</b> tap a wall to change its length or curve it; tap an area for its properties, turn, copy or delete; tap empty space for the cursor. Drag an area, label or symbol to move it.</p>
+  <p><b>Moving around:</b> two fingers to zoom and move. ◎ centers on what you are working on. Blue dots line up with other corners (☰ › Line-up dots).</p>
+  <p><b>☰ menu:</b> save to the inspection, redo, add a level or page, copy this level to another level (a second story you can still change), text size, underlay, versions.</p>
+  <p class="help">While you draw an area, the level buttons and address hide to give you more room.</p></div><div class="row"><button class="btn" data-close>Close</button></div>`); }
 function renderPanel() {
   const el = document.getElementById('skPanel'); if (!el) return;
   const a = curArea(); const sel = SK.sel;
@@ -864,7 +872,7 @@ function renderPanel() {
   else if (SK.mode === 'uscale') ctxHtml = `<div class="ctx"><b>Set the scale:</b> ${SK.us && SK.us.a ? 'now tap the other end.' : 'tap one end of the scale bar, or of a wall whose length is printed on the plan.'} <button class="btn sm" id="skCancelLabel">Cancel</button></div>`;
   else if (SK.mode === 'umove') ctxHtml = `<div class="ctx"><b>Move the floor plan:</b> drag it until it lines up with your walls. <button class="btn primary sm" id="skCancelLabel">Done</button></div>`;
   else if (SK.mode === 'label') ctxHtml = `<div class="ctx"><b>Tap where “${esc(SK.pendingLabel.text)}” goes.</b> <button class="btn sm" id="skCancelLabel">Cancel</button></div>`;
-  else if (a) ctxHtml = `<div class="ctx"><b>Drawing: ${esc(a.name || defOf(a.def).name)}</b> · ${a.pts.length - 1} wall${a.pts.length === 2 ? '' : 's'} · type a length + arrow, drag from the orange point, or tap a blue dot to line up with another corner. Tap the green start to close.${a.pts.length >= 2 ? ' <button class="btn sm" id="skCurveLast">⌒ Curve last wall</button> <button class="btn sm" id="skFlip" title="Blocked by a gate or wall? Keep going from your starting corner">⇄ Other end</button>' : ''}${a.pts.length >= 3 ? ' <button class="btn sm" id="skSquare" title="Fill the last one or two walls you could not measure (square corner)">⌐ Fill missing walls</button>' : ''}
+  else if (a) ctxHtml = `<div class="ctx"><b>Drawing: ${esc(a.name || defOf(a.def).name)}</b> · ${a.pts.length - 1} wall${a.pts.length === 2 ? '' : 's'}<span class="hint"> · type a length + arrow, drag from the orange point, or tap a blue dot to line up with another corner. Tap the green start to close.</span>${a.pts.length >= 2 ? ' <button class="btn sm" id="skFlip" title="Blocked by a gate or wall? Keep going from your starting corner">⇄ Other end</button>' : ''}${a.pts.length >= 3 ? ' <button class="btn sm" id="skSquare" title="Fill the last one or two walls you could not measure (square corner)">⌐ Fill missing walls</button>' : ''}
       <button class="btn sm ${SK.insideOn ? 'primary' : ''}" id="skInside" title="The next walls were measured inside: two wall thicknesses are added">${SK.insideOn ? `✓ Measured inside (+${Math.round(wallT() * 12)} in × 2)` : 'Measured inside?'}</button>${SK.insideOn ? '<button class="btn sm" id="skWallT">wall thickness</button>' : ''}</div>`;
   else if (sel && sel.type === 'wall') { const ar = SK.sk.areas.find(x => x.id === sel.id); const ws = walls(ar).find(w => w[0] === sel.i); const L = ws ? r1(wallLen(ws[1], ws[2])) : 0; const closing = ar.closed && sel.i === ar.pts.length - 1;
     ctxHtml = `<div class="ctx"><b>Wall: ${L.toFixed(1)} ft</b>${closing ? ' · closing wall (adjusts by itself)' : ''} of ${esc(ar.name || defOf(ar.def).name)}
@@ -890,13 +898,17 @@ function renderPanel() {
     ctxHtml = `<div class="ctx"><b>${esc(l.text)}</b> · ${l.room ? (l.room.gone ? 'room was removed on the Interior tab' : lk ? 'linked to ' + esc(itemName(l.room.list, lk)) + ' on the Interior tab' : esc(roomWord(l.room)) + ' – added to the Interior tab when saved') : 'label only'} <button class="btn sm" id="skLblEdit">Change</button><button class="btn sm danger" id="skDel">Delete</button><span class="help">Drag it to move it.</span></div>`; }
   else if (SK.cursor) ctxHtml = `<div class="ctx"><b>Cursor</b> <button class="btn sm" id="skJump">⤓ Jump to nearest corner</button><button class="btn sm" id="skNewHere">+ New area here</button><button class="btn sm" id="skLabelHere">Aa Label here</button><button class="btn sm" id="skCurOff">✕</button>
       <span class="help">Press and hold a corner to start a new area there and drag the first wall.</span></div>`;
-  else ctxHtml = `<div class="ctx muted">Tap a wall to change its length, tap an area for its properties, tap empty space for the cursor. Two fingers to zoom and move.</div>`;
+  else ctxHtml = '';
   const ent = SK.entry || '';
+  const tray = skTray(); const drawPad = tray === 'draw' || SK.mode === 'iwall';
+  document.body.classList.toggle('working', !!SK.drawId || SK.mode === 'iwall');
+  const curveOk = (a && a.pts.length >= 2) || (sel && sel.type === 'wall');
   el.innerHTML = ctxHtml + `
-  <div class="pad">
+  <div class="trays"><button class="tray ${tray === 'draw' ? 'on' : ''}" data-tray="draw" title="${tray === 'draw' ? 'Unpin' : 'Pin'} the drawing tools">✏ Walls${tray === 'draw' ? ' <span class="pin">📌</span>' : ''}</button><button class="tray ${tray === 'fin' ? 'on' : ''}" data-tray="fin" title="${tray === 'fin' ? 'Unpin' : 'Pin'} labels and symbols">Aa Labels &amp; symbols${tray === 'fin' ? ' <span class="pin">📌</span>' : ''}</button><span class="grow"></span><button class="btn sm" id="skUndo">↶ Undo</button></div>
+  ${drawPad ? `<div class="pad">
     <div class="keys">
       <div class="entry" id="skEntry">${ent ? esc(ent) + ' ft' : 'length'}</div>
-      ${['7','8','9','4','5','6','1','2','3','.','0'].map(k => `<button class="key" data-k="${k}">${k}</button>`).join('')}<button class="key bs" id="skBs" title="Backspace: digit, then last wall">⌫</button>
+      ${['7','8','9','4','5','6','1','2','3','.','0'].map(k => `<button class="key" data-k="${k}">${k}</button>`).join('')}<button class="key bs" id="skBs" title="Back: digit, then last wall">⌫</button>
     </div>
     ${SK.dial ? `<div class="dialbox">${dialSvg()}<div class="dlread" id="dlRead"></div>
       <div class="dlrow"><button class="btn primary" id="dlDraw">Draw wall</button><button class="btn" id="dlClose">Arrows</button></div>
@@ -906,14 +918,19 @@ function renderPanel() {
       ${[['↖', -1, -1], ['↑', 0, -1], ['↗', 1, -1], ['←', -1, 0], ['ang'], ['→', 1, 0], ['↙', -1, 1], ['↓', 0, 1], ['↘', 1, 1]].map(x => x[0] === 'ang' ? `<button class="key arr angle" id="skAngle">∠ Angle</button>` : `<button class="key arr" data-dx="${x[1]}" data-dy="${x[2]}">${x[0]}</button>`).join('')}
     </div>`}
     <div class="acts">
-      ${SK.mode === 'start' ? `<button class="btn primary big" id="skStartHere2" ${SK.cursor ? '' : 'disabled'}>${SK.cursor ? '📍 Start here' : 'Tap the sketch, then Start here'}</button>` : '<button class="btn primary big" id="skNew">+ New area</button>'}
-      <button class="btn big" id="skClose" ${a ? '' : 'disabled'}>Close area</button>
-      <button class="btn big" id="skDone" ${a ? '' : 'disabled'}>Stop (leave open)</button>
-      <div class="two"><button class="btn big" id="skLabel">Aa Label</button><button class="btn big" id="skSym">◫ Symbol</button></div>
-      <div class="two"><button class="btn big ${SK.mode === 'iwall' ? 'primary' : ''}" id="skIWall">┼ Interior wall</button><button class="btn big" id="skDoor">◜ Door</button></div>
-      <div class="two"><button class="btn big" id="skCenter">◎ Center</button><button class="btn big" id="skFit">Fit all</button></div>
+      ${SK.mode === 'iwall' ? '' : SK.mode === 'start' ? `<button class="btn primary big" id="skStartHere2" ${SK.cursor ? '' : 'disabled'}>${SK.cursor ? '📍 Start here' : 'Tap the sketch, then Start here'}</button>` : '<button class="btn primary big" id="skNew">+ New area</button>'}
+      ${SK.mode === 'iwall' ? '' : `<button class="btn big" id="skClose" ${a ? '' : 'disabled'}>Close area</button>
+      <button class="btn big" id="skDone" ${a ? '' : 'disabled'}>Stop (leave open)</button>`}
+      <div class="two"><button class="btn big" id="skCurveT" ${curveOk ? '' : 'disabled'}>⌒ Curve</button><button class="btn big" id="skCenter">◎ Center</button></div>
     </div>
-  </div>`;
+  </div>` : tray === 'fin' ? `<div class="fintray">
+      <button class="btn big" id="skLabel">Aa Label</button><button class="btn big" id="skSym">◫ Symbol</button><button class="btn big" id="skDoor">◜ Door</button>
+      <button class="btn big ${SK.mode === 'iwall' ? 'primary' : ''}" id="skIWall">┼ Interior wall</button><button class="btn big" id="skRotT">⟳ Rotate</button><button class="btn big" id="skNew">+ New area</button>
+      <button class="btn big" id="skCenter">◎ Center</button><button class="btn big" id="skFit">Fit all</button></div>` : ''}`;
+  el.querySelectorAll('[data-tray]').forEach(b => b.onclick = () => { const t = b.dataset.tray; setTray(skTray() === t ? '' : t); renderPanel(); setTimeout(sizeCanvas, 30); });
+  { const u = document.getElementById('skUndo'); if (u) u.onclick = doUndo; const c2 = document.getElementById('skCenter2'); if (c2) c2.onclick = centreNow; }
+  { const ct = document.getElementById('skCurveT'); if (ct) ct.onclick = () => { const ca = curArea(); if (ca && ca.pts.length >= 2) return startCurve(ca, ca.pts.length - 2); if (sel && sel.type === 'wall') return startCurve(SK.sk.areas.find(x => x.id === sel.id), sel.i); toast('Tap a wall first, or draw one'); }; }
+  { const rt = document.getElementById('skRotT'); if (rt) rt.onclick = () => { if (sel && (sel.type === 'area' || sel.type === 'symbol')) return toast('Use Turn above to turn the selected item'); if (!SK.sk.areas.length) return toast('Nothing drawn yet'); SK.rotC = null; SK.sel = { type: 'all' }; SK.cursor = null; renderPanel(); }; }
   const on = (id, fn) => { const b = document.getElementById(id); if (b) b.onclick = fn; };
   // digits act on finger-down and only change the length box, so a quick tap is never missed or doubled
   const showEntry = () => { const en = document.getElementById('skEntry'); if (en) en.textContent = SK.entry ? SK.entry + ' ft' : 'length'; };
@@ -1155,8 +1172,15 @@ function openTotals() {
     <div class="row"><button class="btn primary" id="tSend">Save totals + sketch image to inspection</button><button class="btn" data-close>Close</button></div>`, sh => sh.querySelector('#tSend').onclick = () => { closeSheet(); sendNow(); });
 }
 function openMenu() {
-  openSheet(`<h3>More</h3><div class="grid-btns col">
-    <button class="btn" id="mSend">Save totals + sketch image to inspection</button>
+  openSheet(`<h3>Menu</h3><div class="grid-btns col">
+    <button class="btn primary" id="mSend">${SK.sentClean ? 'Saved to inspection ✓ – save again' : 'Send: save totals + sketch image to the inspection'}</button>
+    <button class="btn" id="mSave">Save now</button>
+    <button class="btn" id="mRedo">↷ Redo</button>
+    <button class="btn" id="mClone">⧉ Clone this level for another story…</button>
+    <button class="btn" id="mLevel">+ Add a level</button>
+    <button class="btn" id="mPage">+ Add a sketch page</button>
+    <button class="btn" id="mDots">Line-up dots: ${SK.showDots === false ? 'off – turn on' : 'on – turn off'}</button>
+    <button class="btn" id="mFit">Fit the whole sketch on screen</button>
     <div class="lrow"><span><b>Text size</b> (area names, labels) ${Math.round(TS() * 100)}%</span><span><button class="btn sm" data-ts="-0.1">A−</button> <button class="btn sm" data-ts="0.1">A+</button></span></div>
     <div class="lrow"><span><b>Dimension size</b> (wall lengths) ${Math.round(DS() * 100)}%</span><span><button class="btn sm" data-ds="-0.1">A−</button> <button class="btn sm" data-ds="0.1">A+</button></span></div>
     <div class="lrow"><span><b>Area colors</b> (on screen and printed) – ${SK.lib.fills === false ? 'off' : 'on'}</span><button class="btn sm" id="mFills">${SK.lib.fills === false ? 'Turn on' : 'Turn off'}</button></div>
@@ -1166,8 +1190,20 @@ function openMenu() {
     <button class="btn" id="mTypes">My area types and labels</button>
     <button class="btn" id="mExport">Export my area types and labels</button>
     <label class="btn">Import area types and labels<input type="file" id="mImport" accept=".json,application/json" hidden></label>
-    </div><div class="row"><button class="btn" data-close>Close</button></div>`, sh => {
+    </div><p class="help">Version ${typeof BUILD !== 'undefined' ? BUILD : '?'}</p><div class="row"><button class="btn" data-close>Close</button></div>`, sh => {
       sh.querySelector('#mSend').onclick = () => { closeSheet(); sendNow(); };
+      sh.querySelector('#mSave').onclick = async () => { closeSheet(); clearTimeout(saveTimer); await saveSketch(); toast('Saved'); };
+      sh.querySelector('#mRedo').onclick = () => { closeSheet(); doRedo(); };
+      sh.querySelector('#mLevel').onclick = () => { closeSheet(); const b = document.getElementById('skAddLv'); if (b) b.click(); };
+      sh.querySelector('#mPage').onclick = () => { closeSheet(); const b = document.getElementById('skAddPg'); if (b) b.click(); };
+      sh.querySelector('#mDots').onclick = () => { closeSheet(); const b = document.getElementById('skDots'); if (b) b.click(); };
+      sh.querySelector('#mFit').onclick = () => { closeSheet(); fitView(); draw(); };
+      sh.querySelector('#mClone').onclick = () => { if (SK.drawId) { closeSheet(); return toast('Finish or close the area you are drawing first'); }
+        const src = SK.sk.areas.filter(a => here(a) && a.closed); if (!src.length) { closeSheet(); return toast('Nothing closed on ' + LEVEL_NAME(SK.level) + ' to clone yet'); }
+        const used = new Set(SK.sk.areas.filter(a => PG(a) === SK.pg).map(a => a.level));
+        openSheet(`<h3>Clone ${LEVEL_NAME(SK.level)} for another story</h3><p class="help">Copies every closed area on ${LEVEL_NAME(SK.level)} (${src.map(a => esc(a.name || defOf(a.def).name)).join(', ')}) to the level you pick, in the same spot. Each copy is an ordinary area: tap it › Edit walls to change the walls that differ, or delete the ones that are not on that floor (a garage, a porch).</p>
+          <div class="grid-btns">${LEVELS.filter(l => l !== SK.level).map(l => `<button class="btn ${used.has(l) ? 'dim' : ''}" data-cl="${l}">${LEVEL_NAME(l)}${used.has(l) ? ' <small>has areas</small>' : ''}</button>`).join('')}</div><div class="row"><button class="btn" data-close>Cancel</button></div>`,
+          s2 => s2.querySelectorAll('[data-cl]').forEach(b => b.onclick = () => { const to = b.dataset.cl; if (used.has(to) && !confirm(LEVEL_NAME(to) + ' already has areas. Add the copies on top of them?')) return; closeSheet(); copyAreas(src, to); })); };
       const sc = (k, d) => { SK.lib[k] = Math.max(0.6, Math.min(2.5, Math.round(((SK.lib[k] || 1) + d) * 10) / 10)); saveLib(); draw(); openMenu(); };
       sh.querySelectorAll('[data-ts]').forEach(b => b.onclick = () => sc('textScale', +b.dataset.ts)); sh.querySelectorAll('[data-ds]').forEach(b => b.onclick = () => sc('dimScale', +b.dataset.ds));
       sh.querySelector('#mFills').onclick = () => { SK.lib.fills = SK.lib.fills === false; saveLib(); draw(); openMenu(); };
@@ -1327,7 +1363,6 @@ const skWatch = setTimeout(() => { if (!document.getElementById('skCanvas')) skF
   SK.level = SK.sk.level || 'L1'; SK.pg = SK.sk.pg || 1; if (!pageList().some(x => x.n === SK.pg)) SK.pg = 1; try { SK.showDots = localStorage.getItem('skDots') !== '0'; } catch (e) {}
   document.title = 'Sketch – ' + ((SK.ins.data && SK.ins.data.property && SK.ins.data.property.fileName) || 'Inspection');
   try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {}); } catch (e) {}
-  try { document.body.classList.toggle('padmin', localStorage.getItem('skPadMin') === '1'); } catch (e) {}
   SK.step = 'drawing the screen'; renderShell(); setSaved(true); SK.step = 'open';
   if (!DB.persistent) toast('Warning: this page cannot save to the iPad. Open the app from its Home Screen icon.');
   if (SK.sk.view && SK.sk.view.s) { SK.view = SK.sk.view; draw(); } else { fitView(); draw(); }
