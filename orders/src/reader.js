@@ -215,8 +215,8 @@ function sensitiveTerms() {
    names typed after Buyer / Seller / Agent / Broker / By … labels; on C.A.R. forms (form wording scrambled) every typed-in entry that
    looks like a name or company; signature and initials areas next to their labels. Prices, dates, percents and the subject's own
    address are put back afterwards so the contract can still be read. */
-const RD_LABEL = /^(buyers?|sellers?|buyer'?s? (brokerage firm|agent|broker)|seller'?s? (brokerage firm|agent|broker)|listing (agent|broker|firm)|selling (agent|broker|firm)|agent|broker(age)?( firm)?|by|escrow (holder|officer)|print(ed)? name|name|assignee|trustee|loan officer|attorney|notary|witness|company|firm)\s*:?$/i;
-const RD_LABEL_END = /\b(buyer|seller|agent|broker|brokerage firm|escrow holder|escrow officer|print(ed)? name|trustee|assignee)\s*:\s*$/i;
+const RD_LABEL = /^(owner|owners?:|applicant|contractor|architect|engineer|designer|license#?|lic\.?|agent for owner|buyers?|sellers?|buyer'?s? (brokerage firm|agent|broker)|seller'?s? (brokerage firm|agent|broker)|listing (agent|broker|firm)|selling (agent|broker|firm)|agent|broker(age)?( firm)?|by|escrow (holder|officer)|print(ed)? name|name|assignee|trustee|loan officer|attorney|notary|witness|company|firm)\s*:?$/i;
+const RD_LABEL_END = /\b(owner|applicant|contractor|architect|engineer|buyer|seller|agent|broker|brokerage firm|escrow holder|escrow officer|print(ed)? name|trustee|assignee)\s*:\s*$/i;
 const RD_SIGN = /signature|\(sign\)|^sign here|initials/i;
 const RD_KEEP = new Set(['yes', 'no', 'n/a', 'na', 'none', 'cash', 'conventional', 'fha', 'va', 'usda', 'seller', 'buyer', 'both', 'as-is', 'as is', 'days', 'calendar', 'business', 'california', 'ca', 'all', 'other', 'see', 'attached', 'addendum', 'counter', 'offer', 'county', 'city', 'escrow', 'title', 'loan', 'appraisal', 'contingency', 'waived', 'removed', 'included', 'excluded', 'refrigerator', 'washer', 'dryer', 'stove', 'oven', 'microwave', 'dishwasher', 'spa', 'hot tub', 'pool', 'solar', 'furniture', 'furnishings']);
 const RD_MONTHS = /^(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)/i;
@@ -237,14 +237,21 @@ async function redactPage(n, redact) { // → canvas with the page painted, sens
       const spans = []; s.replace(PATTERN, (m, off) => { spans.push([off, m.length]); return m; });
       s.replace(/[A-Za-z0-9@.'’-]{3,}/g, (w, off) => { if (terms.has(w.replace(/[.'’]+$/, '').toLowerCase())) spans.push([off, w.length]); return w; });
       spans.forEach(([o, l]) => { g.fillRect(x + (o - 2) * per * sc - 2, y - hgt - 1, (l + 3) * per * sc + 4, hgt * 1.3 + 2); hits++; }); });
-    hits += await rdMore(g, cv, vp, sc, tc, orig, pg); }
+    /* her ask (Oct 22 2026): scanned pages (permits) have no text – read them on this computer (OCR) and black out what is found */
+    let ocr = null; const txtLen = (tc.items.map(i => i.str).join(' ').match(/[A-Za-z]{3,}/g) || []).join('').length;
+    if (txtLen < 40) { try { ocr = await rdOcr(orig || cv, (RD.pdf.fingerprints && RD.pdf.fingerprints[0] || RD.id || 'x') + '|' + n); } catch (e) { console.warn('OCR', e); RD.ocrErr = String(e.message || e); } }
+    if (ocr) { ocr.lines.forEach(L => { const str = L.map(w => w.s).join(' '); const offs = []; let o = 0; L.forEach(w => { offs.push([o, o + w.s.length]); o += w.s.length + 1; });
+        const hitW = new Set(); str.replace(PATTERN, (m, off) => { L.forEach((w, i) => { if (offs[i][1] > off && offs[i][0] < off + m.length) hitW.add(i); }); return m; });
+        L.forEach((w, i) => { if (terms.has(w.s.replace(/[^\w@.'’-]+/g, '').replace(/[.'’]+$/, '').toLowerCase())) hitW.add(i); });
+        hitW.forEach(i => { const w = L[i]; g.fillRect(w.x - 2, w.y - w.h - 2, w.w + 4, w.h * 1.3 + 3); hits++; }); }); }
+    hits += await rdMore(g, cv, vp, sc, tc, orig, pg, ocr); }
   (RD.boxes[n] || []).forEach(b => { const X = b.x * cv.width, Y = b.y * cv.height, W = Math.max(2, b.w * cv.width), H = Math.max(2, b.h * cv.height);
     if (b.mode === 'blur') { pixelate(g, X, Y, W, H); } else { g.fillStyle = '#000'; g.fillRect(X, Y, W, H); } hits++; });
   return { cv, hits };
 }
-async function rdMore(g, cv, vp, sc, tc, orig, pg) {
+async function rdMore(g, cv, vp, sc, tc, orig, pg, ocr) {
   const f = readForm(); const subj = new Set(String([f.address, f.city, f.county, 'Santa Barbara', 'Montecito', 'Goleta', 'Carpinteria', 'Summerland'].join(' ')).toLowerCase().split(/[\s,]+/).filter(w => w.length > 1));
-  const I = tc.items.filter(it => it.str && it.str.trim()).map(it => { const [x, y] = vp.convertToViewportPoint(it.transform[4], it.transform[5]); const h = Math.max(6, Math.min(Math.abs(it.transform[3]) || 99, it.height || 99) * sc); return { s: it.str, x, y, w: Math.max(4, it.width * sc), h }; });
+  const I = ocr ? ocr.words : tc.items.filter(it => it.str && it.str.trim()).map(it => { const [x, y] = vp.convertToViewportPoint(it.transform[4], it.transform[5]); const h = Math.max(6, Math.min(Math.abs(it.transform[3]) || 99, it.height || 99) * sc); return { s: it.str, x, y, w: Math.max(4, it.width * sc), h }; });
   const all = I.map(i => i.s).join(' '); const scrambled = all.length > 200 && (all.match(/[A-Za-z]{3,}/g) || []).join('').length / all.length < 0.25;
   let n = 0; const box = (X, Y, W, H) => { g.fillStyle = '#000'; g.fillRect(X, Y, W, H); n++; };
   const black = it => box(it.x - 2, it.y - it.h - 1, it.w + 4, it.h * 1.3 + 2);
@@ -270,12 +277,32 @@ async function rdMore(g, cv, vp, sc, tc, orig, pg) {
     const near = (p, it) => Math.abs((p.y + p.h / 2) - (it.y - it.h / 2)) < Math.max(p.h, it.h) * 1.6 + 6 * sc;
     const anchors = I.filter(it => /^(buyers?|sellers?|buyer'?s? signature|seller'?s? signature|signature|initials?|by|date)\s*:?$/i.test(it.s.trim()) || /\b\d{1,2}\/\d{1,2}\/\d{2,4}\b/.test(it.s) || (rdCleanItem(it.s) && rdLooksLikeName(it.s, subj)));
     pics.forEach(p => { if (Math.max(p.w, p.h) < 16 * sc || p.w < 6 || p.h < 4 || p.w > cv.width * 0.6 || p.h > cv.height * 0.12) return; if (anchors.some(it => near(p, it))) box(p.x - 3, p.y - 3, p.w + 6, p.h + 6); }); } catch (e) { console.warn('pictures on the page', e); }
+  /* addresses that are not the subject's (agents, contractors, owners' mailing) */
+  const subjNo = (String(f.address || '').match(/^\s*(\d+)/) || [])[1];
+  const ADDR = /\b(\d{2,6})\s+(?:[NSEW]\.?\s+)?[A-Za-z][A-Za-z'.-]+(?:\s+[A-Za-z][A-Za-z'.-]+){0,3}\s+(?:AVE(?:NUE)?|ST(?:REET)?|RD|ROAD|DR(?:IVE)?|LN|LANE|WAY|BLVD|BOULEVARD|CT|COURT|PL(?:ACE)?|CIR(?:CLE)?|TER(?:RACE)?|HWY|PKWY)\b\.?/i;
+  if (ocr) ocr.lines.forEach(L => { const str = L.map(w => w.s).join(' '); const m = str.match(ADDR); if (!m || m[1] === subjNo) return; const start = str.indexOf(m[0]); let o = 0; L.forEach(w => { const a = o, b = o + w.s.length; o = b + 1; if (b > start && a < start + m[0].length) black(w); }); });
+  else I.forEach(it => { const m = it.s.match(ADDR); if (m && m[1] !== subjNo) black(it); });
   /* prices, dates, percents and the subject's own address stay readable (her ask Oct 22 2026: half of the address kept getting covered) */
   const am = String(f.address || '').match(/^\s*(\d+[A-Za-z]?)\s+([A-Za-z]+)/); const zip = (String(f.address || '') + ' ' + String(f.zip || '')).match(/\b(9\d{4})\b/); const city = String(f.city || '').trim().toLowerCase();
   const isAddr = t => { const l = String(t).toLowerCase(); return !!((am && am[2].length > 3 && l.includes(am[2].toLowerCase())) || (zip && l.includes(zip[1])) || (city.length > 3 && l.includes(city) && /\b(ca|california)\b/.test(l))); };
   if (orig) I.forEach(it => { const mm = it.s.match(RD_PUTBACK) || []; if (!isAddr(it.s) && (!mm.length || mm.join('').length < it.s.trim().length * 0.5)) return; const X = Math.max(0, it.x - 1), Y = Math.max(0, it.y - it.h * 0.95), W = Math.min(cv.width - X, it.w + 2), H = Math.min(cv.height - Y, it.h * 1.2); if (W > 0 && H > 0) g.drawImage(orig, X, Y, W, H, X, Y, W, H); });
   RD_PUTBACK.lastIndex = 0; return n;
 }
+const RD_TESS_URL = 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js';
+let RD_TESS = null;
+async function rdTess() {   // the on-computer text reader (Tesseract, open source): only the program and its English data are downloaded
+  if (RD_TESS) return RD_TESS;
+  RD_TESS = (async () => { if (!window.Tesseract) await new Promise((ok, no) => { const sc = document.createElement('script'); sc.src = RD_TESS_URL; sc.onload = ok; sc.onerror = () => no(new Error('the on-computer text reader could not be loaded')); document.head.appendChild(sc); });
+    return await window.Tesseract.createWorker('eng'); })();
+  RD_TESS.catch(() => { RD_TESS = null; }); return RD_TESS; }
+async function rdOcr(canvas, key) {
+  RD.ocrCache = RD.ocrCache || {}; if (RD.ocrCache[key]) return RD.ocrCache[key];
+  const T = await rdTess(); const { data } = await T.recognize(canvas);
+  const W = w => ({ s: w.text, x: w.bbox.x0, y: w.bbox.y1, w: Math.max(4, w.bbox.x1 - w.bbox.x0), h: Math.max(6, w.bbox.y1 - w.bbox.y0) });
+  let lines = (data.lines || []).map(l => (l.words || []).filter(w => w.text && w.text.trim()).map(W)).filter(l => l.length);
+  const words = lines.length ? lines.flat() : (data.words || []).filter(w => w.text && w.text.trim()).map(W);
+  if (!lines.length && words.length) { const rows = []; words.slice().sort((a, b) => a.y - b.y || a.x - b.x).forEach(w => { const r = rows.find(r => Math.abs(r[0].y - w.y) < w.h * 0.6); if (r) r.push(w); else rows.push([w]); }); lines = rows.map(r => r.sort((a, b) => a.x - b.x)); }
+  return RD.ocrCache[key] = { words, lines }; }
 function scanNote() {   // a scanned page: offer Claude right here when this order allows it, else say what to change
   const ai = cur.aiUse, ok = ai === 'Yes' || ai === 'Redacted', key = aiKey();
   const how = 'or open the file in Acrobat → <b>Scan &amp; OCR → Recognize text</b>, save it, and drop it here again.';

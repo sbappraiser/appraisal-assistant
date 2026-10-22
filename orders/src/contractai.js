@@ -176,8 +176,9 @@ async function cbRedPage(x, n) {   // the redaction of one page of one packet fi
   RD.pdf = x.pdf; RD.boxes = CBR.boxes[x.d.id] = CBR.boxes[x.d.id] || {}; RD.extra = cur.redactNames || '';
   try { return await redactPage(n, !x.copy); } finally { RD.pdf = keep.pdf; RD.boxes = keep.boxes; RD.extra = keep.extra; } }
 function cbRedClose() { const o = $('#cbRedPane'); if (o) o.remove(); }
-async function cbRedOpen() {
-  cbRedClose(); const pdfjs = await loadPdfJs(); const all = cbDocs();
+async function cbRedOpen(opt) {   // opt = { docs, title, send, max } – the contract packet by default; the permit records use it too
+  opt = opt || { docs: cbDocs, title: 'The whole contract packet', send: cbSend, max: 60 }; CBR.opt = opt;
+  cbRedClose(); const pdfjs = await loadPdfJs(); const all = opt.docs();
   const copies = all.filter(d => /- REDACTED\.pdf$/i.test(d.name)).map(d => d.name.replace(/ - REDACTED\.pdf$/i, '').toLowerCase());
   CBR.docs = [];
   for (const d of all) { const isCopy = /- REDACTED\.pdf$/i.test(d.name); if (!isCopy && copies.includes(d.name.replace(/\.pdf$/i, '').toLowerCase())) continue;
@@ -186,11 +187,11 @@ async function cbRedOpen() {
     CBR.docs.push({ d, pdf, copy: isCopy }); }
   const total = CBR.docs.reduce((a, x) => a + x.pdf.numPages, 0);
   const pane = document.createElement('div'); pane.id = 'cbRedPane'; pane.className = 'cbredpane'; document.body.appendChild(pane);
-  const canSend = total <= 60;
-  pane.innerHTML = `<div class="rdsendbar"><b>The whole contract packet, redacted: ${CBR.docs.length} files, ${total} pages – check every page.</b> <span class="rddir">This is exactly what Claude will see: black boxes are painted into the pictures, and no text is sent. Drag on a page to black out anything else (signatures, initials, account numbers).</span>
+  const canSend = total <= (opt.max || 60);
+  pane.innerHTML = `<div class="rdsendbar"><b>${h(opt.title)}, redacted: ${CBR.docs.length} files, ${total} pages – check every page.</b> <span class="rddir">This is exactly what Claude will see: black boxes are painted into the pictures, and no text is sent. Drag on a page to black out anything else (signatures, initials, account numbers).</span>
     <label>Also remove these names <span class="opt">separate with commas – buyers, sellers, agents, escrow, anyone else</span><input id="cbRedNames" value="${h(cur.redactNames || '')}"></label>
     <div class="row"><span>Drag to:</span><div class="seg2"><button type="button" data-cbdm="black" aria-pressed="true">Black box</button><button type="button" data-cbdm="blur" aria-pressed="false">Blur</button></div><button type="button" class="btn ghost small" id="cbRedUndo">Undo last box</button></div>
-    <span class="row">${canSend ? `<button type="button" class="btn primary" id="cbRedGo">Send these ${total} redacted pages to Claude</button>` : '<span class="help warnTxt">More than 60 pages – remove the disclosures from the packet first.</span>'}<button type="button" class="btn ghost" id="cbRedSave">Also save redacted copies (PDF)</button><button type="button" class="btn ghost" id="cbRedClose">Close</button></span>
+    <span class="row">${canSend ? `<button type="button" class="btn primary" id="cbRedGo">Send these ${total} redacted pages to Claude</button>` : `<span class="help warnTxt">More than ${opt.max || 60} pages – too many at once; leave some files out first.</span>`}<button type="button" class="btn ghost" id="cbRedSave">Also save redacted copies (PDF)</button><button type="button" class="btn ghost" id="cbRedClose">Close</button></span>
     <span class="row rdzoom"><span>Page size:</span><button type="button" class="btn ghost small" data-cbz="-" aria-label="Smaller pages">−</button><button type="button" class="btn ghost small" data-cbz="1">One page across</button><button type="button" class="btn ghost small" data-cbz="+" aria-label="Bigger pages">＋</button><button type="button" class="btn ghost small" data-cbz="mini">▴ Hide the directions</button></span></div>
     <div id="cbRedThumbs" class="rdthumbs"></div>`;
   const th = $('#cbRedThumbs'); const bar = pane.querySelector('.rdsendbar');
@@ -199,10 +200,11 @@ async function cbRedOpen() {
   pane.addEventListener('wheel', e => { if (!e.ctrlKey || !e.target.closest('#cbRedThumbs')) return; e.preventDefault(); zoomTo((CBR.zoom || 320) * (e.deltaY < 0 ? 1.12 : 1 / 1.12)); }, { passive: false });
   pane.querySelectorAll('[data-cbdm]').forEach(b => b.onclick = () => { CBR.mode = b.dataset.cbdm; pane.querySelectorAll('[data-cbdm]').forEach(x => x.setAttribute('aria-pressed', x === b)); });
   $('#cbRedClose').onclick = cbRedClose;
-  $('#cbRedNames').onchange = e => { cur.redactNames = e.target.value; saveLetter(true, true); cbRedOpen(); };
+  $('#cbRedNames').onchange = e => { cur.redactNames = e.target.value; saveLetter(true, true); cbRedOpen(opt); };
   const draw = async (x, n, cv, cap) => { const { cv: nv, hits } = await cbRedPage(x, n); cv.getContext('2d').drawImage(nv, 0, 0); cap.textContent = `${x.d.name} – page ${n}${x.copy ? ' (your redacted copy)' : ` · ${hits} item${hits === 1 ? '' : 's'} blacked out`}`; };
   for (const x of CBR.docs) for (let n = 1; n <= x.pdf.numPages; n++) {
-    const { cv, hits } = await cbRedPage(x, n); if (!pane.isConnected) return; cv.dataset.doc = x.d.id; cv.dataset.n = n;
+    const wait = document.createElement('p'); wait.className = 'help'; wait.textContent = `Preparing ${x.d.name} – page ${n}… (a scanned page is read on this computer first, a few seconds)`; th.appendChild(wait);
+    const { cv, hits } = await cbRedPage(x, n); wait.remove(); if (!pane.isConnected) return; cv.dataset.doc = x.d.id; cv.dataset.n = n;
     const fig = document.createElement('figure'); fig.innerHTML = `<figcaption>${h(x.d.name)} – page ${n}${x.copy ? ' (your redacted copy)' : ` · ${hits} item${hits === 1 ? '' : 's'} blacked out`}</figcaption>`; fig.prepend(cv); th.appendChild(fig);
     let st = null; cv.onpointerdown = e => { const r = cv.getBoundingClientRect(); st = [(e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height]; cv.setPointerCapture(e.pointerId); };
     cv.onpointerup = async e => { if (!st) return; const r = cv.getBoundingClientRect(); const en = [(e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height]; const b = { x: Math.min(st[0], en[0]), y: Math.min(st[1], en[1]), w: Math.abs(en[0] - st[0]), h: Math.abs(en[1] - st[1]), mode: CBR.mode, t: Date.now() }; st = null;
@@ -219,5 +221,5 @@ async function cbRedOpen() {
     for (const x of CBR.docs) { const cvs = [...th.querySelectorAll(`canvas[data-doc="${x.d.id}"]`)]; cvs.forEach(cv => { const sc = Math.min(1, 1400 / Math.max(cv.width, cv.height)); let c2 = cv; if (sc < 1) { c2 = document.createElement('canvas'); c2.width = Math.round(cv.width * sc); c2.height = Math.round(cv.height * sc); c2.getContext('2d').drawImage(cv, 0, 0, c2.width, c2.height); }
         pics.push({ file: x.d.name, n: +cv.dataset.n, data: c2.toDataURL('image/jpeg', 0.72).split(',')[1] }); });
       plan.push({ d: x.d, pages: x.pdf.numPages, text: [], imgs: cvs.map(cv => +cv.dataset.n) }); }
-    cbSend({ plan, pics }); };
+    opt.send({ plan, pics }); };
 }

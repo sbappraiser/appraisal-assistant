@@ -57,14 +57,14 @@ async function pbClaude(content, maxTokens, system) {
   const j = await res.json(); if (!res.ok) throw new Error((j.error && j.error.message) || 'Claude answered with an error (' + res.status + ')');
   const txt = (j.content || []).filter(c => c.type === 'text').map(c => c.text).join(''); return JSON.parse(txt.slice(txt.indexOf('{'), txt.lastIndexOf('}') + 1));
 }
-async function pbSend() {
-  if (PB.busy) return; PB.busy = true; const btn = $('#pbGo'); const say = t => { if (btn) btn.textContent = t; };
+async function pbSend(pre) {   // pre = { plan, pics } from the one-screen redaction (redacted pictures only)
+  if (PB.busy) return; PB.busy = true; const btn = $(pre ? '#cbRedGo' : '#pbGo'); const say = t => { if (btn) btn.textContent = t; };
   try {
-    const plan = PB.plan; const pdfjs = await loadPdfJs();
+    const plan = pre ? pre.plan : PB.plan; const pdfjs = pre ? null : await loadPdfJs();
     // the pictures, in rounds of PB_MAX_IMG; all the text goes with the first round (split if very long)
-    const pics = []; for (const f of plan) { if (f.skip || !(f.imgs || []).length) continue; const rec = await ODB.get('docs', f.d.id); const pdf = await pdfjs.getDocument({ data: new Uint8Array(await rec.blob.arrayBuffer()), isEvalSupported: false, wasmUrl: './wasm/', standardFontDataUrl: './standard_fonts/' }).promise;
+    const pics = pre ? pre.pics : []; if (!pre) for (const f of plan) { if (f.skip || !(f.imgs || []).length) continue; const rec = await ODB.get('docs', f.d.id); const pdf = await pdfjs.getDocument({ data: new Uint8Array(await rec.blob.arrayBuffer()), isEvalSupported: false, wasmUrl: './wasm/', standardFontDataUrl: './standard_fonts/' }).promise;
       for (const n of f.imgs) { say(`Preparing pictures… ${pics.length + 1}`); const cv = await pbPageJpeg(pdf, n); pics.push({ file: f.d.name, n, data: cv.toDataURL('image/jpeg', 0.72).split(',')[1] }); } }
-    for (const f of plan) if (f.imgImage) { const rec = await ODB.get('docs', f.d.id); const bm = await createImageBitmap(rec.blob); const sc = Math.min(1, 1400 / Math.max(bm.width, bm.height)); const cv = document.createElement('canvas'); cv.width = Math.round(bm.width * sc); cv.height = Math.round(bm.height * sc); cv.getContext('2d').drawImage(bm, 0, 0, cv.width, cv.height); pics.push({ file: f.d.name, n: 1, data: cv.toDataURL('image/jpeg', 0.72).split(',')[1] }); }
+    if (!pre) for (const f of plan) if (f.imgImage) { const rec = await ODB.get('docs', f.d.id); const bm = await createImageBitmap(rec.blob); const sc = Math.min(1, 1400 / Math.max(bm.width, bm.height)); const cv = document.createElement('canvas'); cv.width = Math.round(bm.width * sc); cv.height = Math.round(bm.height * sc); cv.getContext('2d').drawImage(bm, 0, 0, cv.width, cv.height); pics.push({ file: f.d.name, n: 1, data: cv.toDataURL('image/jpeg', 0.72).split(',')[1] }); }
     const texts = []; let cur0 = ''; for (const f of plan) { if (f.skip) continue; for (const p of f.text) { const block = `\n=== ${f.d.name} – page ${p.n} ===\n${p.t}`; if (cur0.length + block.length > PB_MAX_TEXT && cur0) { texts.push(cur0); cur0 = ''; } cur0 += block; } } if (cur0) texts.push(cur0);
     const rounds = []; const nImgRounds = Math.ceil(pics.length / PB_MAX_IMG); const n = Math.max(1, nImgRounds, texts.length);
     for (let i = 0; i < n; i++) rounds.push({ text: texts[i] || '', pics: pics.slice(i * PB_MAX_IMG, (i + 1) * PB_MAX_IMG) });
@@ -82,7 +82,7 @@ async function pbSend() {
     cur.permitTimeline = { at: new Date().toISOString(), model: aiModel(), files: sentFiles, rounds: rounds.length, mode: cur.aiUse === 'Redacted' ? 'redacted' : 'full',
       permits: (out.permits || []).filter(x => x && (x.work || x.number)), flags: (out.flags || []).filter(x => x && x.text), comment: String(out.comment || '') };
     (cur.aiLog = cur.aiLog || []).push({ at: cur.permitTimeline.at, doc: 'All permit records (' + sentFiles.length + ' files)', pages: [], mode: cur.permitTimeline.mode, model: aiModel(), items: cur.permitTimeline.permits.length });
-    PB.plan = null; PB.show = true; saveLetter(true, true); renderDocs();
+    PB.plan = null; PB.show = true; if (pre && typeof cbRedClose === 'function') cbRedClose(); saveLetter(true, true); renderDocs();
     toast(`Claude read ${sentFiles.length} permit files together: ${cur.permitTimeline.permits.length} permits, ${cur.permitTimeline.flags.length} things to check`, 6000);
   } catch (e) { console.error(e); toast('Not sent or not read: ' + (e.message || e), 7000); say('Try again'); }
   PB.busy = false;
@@ -112,6 +112,7 @@ async function renderPermBatch() {
   if (!docs.length) html += '';
   else if (!ok) html += `To have Claude read them all together and build one timeline, set <b>AI use</b> on this order to Yes or Redacted (it is <b>${h(ai || 'not set')}</b>).`;
   else if (!key) html += 'Claude can read them all together, but no Claude API key is saved yet: <b>Standard wording → AI settings</b>.';
+  else if (ai === 'Redacted') html += `<button type="button" class="btn small" id="pbRed">${T ? 'Redact and read all the permits again' : 'Redact all the permit files, then read them with Claude'}</button> <span class="help">every page on one screen – names, phones and other addresses are blacked out by themselves (scans are read on this computer first); check them, then only the pictures go</span>`;
   else html += `<button type="button" class="btn small" id="pbPlan">${T ? 'Read all the permits again' : 'Read all the permits together with Claude'}</button> <span class="help">one request with every permit file, so Claude can build one timeline${T ? '' : ''}</span>`;
   if (T && !PB.show) html += ` <button type="button" class="btn ghost small" id="pbShow">Show the permit timeline (${T.permits.length})</button>`;
   html += '</div>';
@@ -129,6 +130,7 @@ async function renderPermBatch() {
   const hd = $('#pbHide'); if (hd) hd.onclick = () => { PB.show = false; renderPermBatch(); };
   const cc = $('#pbCancel'); if (cc) cc.onclick = () => { PB.plan = null; renderPermBatch(); };
   const go = $('#pbGo'); if (go) go.onclick = () => pbSend();
+  const pr = $('#pbRed'); if (pr) pr.onclick = () => cbRedOpen({ docs: pbDocs, title: 'All the permit records', send: pbSend, max: 72 });
   const ta = $('#pbComment'); if (ta) ta.onchange = () => { cur.permitTimeline.comment = ta.value; saveLetter(true, true); };
   const cp = $('#pbCopy'); if (cp) cp.onclick = async () => { const t = pbSorted(T.permits).map(p => [p.number, p.work, p.sqft && p.sqft + ' sq. ft.', p.applied && 'applied ' + p.applied, p.issued && 'issued ' + p.issued, p.finaled && 'final ' + p.finaled, p.status].filter(Boolean).join(' · ')).join('\n') + (T.flags.length ? '\n\nTo check:\n' + T.flags.map(f => '- ' + f.text).join('\n') : ''); try { await navigator.clipboard.writeText(t); toast('Copied'); } catch (e) { toast('Could not copy'); } };
   const c2 = $('#pbCopyC'); if (c2) c2.onclick = async () => { try { await navigator.clipboard.writeText($('#pbComment').value); toast('Copied'); } catch (e) { toast('Could not copy'); } };

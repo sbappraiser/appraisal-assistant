@@ -764,7 +764,8 @@ nav.tabs button[aria-selected="true"] { background: var(--look-navy) !important;
       <li>It only reads; nothing is changed. Check anything you use against the viewer – a point near a boundary can fall on the neighbor's side.</li></ol></details>
     <details><summary>Redacting pages: page size</summary><ol>
       <li>On the redaction pages, <b>Page size: − / ＋</b> makes the pages smaller or bigger; <b>One page across</b> shows one page at a time, as wide as the screen. You can also hold <b>Ctrl</b> and turn the mouse wheel (or pinch on a touchpad) over a page – only the pages change, not the heading.</li>
-      <li><b>What is blacked out by itself</b> (on this computer, before anything is sent): names on the order, the CRS owner and recent buyers/sellers, MLS agents and offices, names you typed in <b>Also remove these names</b>; emails, phone numbers, loan/escrow/file numbers, DocuSign IDs; names typed after Buyer, Seller, Agent, Broker, Brokerage Firm, By, Escrow …; on C.A.R. forms every typed-in entry that looks like a name or company; the space next to “Initials” and above “Signature”; signature pictures (DocuSign, eSign, scanned signatures) drawn on a Buyer / Seller / Signature line or next to a typed name or date; the DocuSigned-by box and its ID. Prices, dates, percents and the subject's address (even split over pieces, or under a DocuSign envelope ID) are left readable. Still check every page – scanned pages and handwriting need your own boxes.</li>
+      <li><b>What is blacked out by itself</b> (on this computer, before anything is sent): names on the order, the CRS owner and recent buyers/sellers, MLS agents and offices, names you typed in <b>Also remove these names</b>; emails, phone numbers, loan/escrow/file numbers, DocuSign IDs; names typed after Buyer, Seller, Agent, Broker, Brokerage Firm, By, Escrow …; on C.A.R. forms every typed-in entry that looks like a name or company; the space next to “Initials” and above “Signature”; signature pictures (DocuSign, eSign, scanned signatures) drawn on a Buyer / Seller / Signature line or next to a typed name or date; the DocuSigned-by box and its ID. Prices, dates, percents and the subject's address (even split over pieces, or under a DocuSign envelope ID) are left readable. <b>Scanned pages</b> (most County permit files) are read on this computer first with an open-source text reader (Tesseract) – the pages never leave your computer, only the reader program is downloaded the first time – and the same rules black out owner, agent, contractor and applicant names, phone numbers and any address that is not the subject's. Still check every page – handwriting and faint scans need your own boxes.</li>
+      <li><b>Permit records on a Redacted order:</b> in the Permit records box click <b>Redact all the permit files, then read them with Claude</b> – every page on one screen, blacked out by itself; check and add boxes, then <b>Send</b>. Claude builds one permit timeline from the redacted pictures.</li>
       <li><b>Redacted order + contract packet:</b> in the Contract packet box click <b>Redact the whole packet, then read it with Claude</b>. Every page of every file is on one screen, already blacked out by itself; drag to add boxes (Undo last box works across the files), then <b>Send these … redacted pages to Claude</b> – only those pictures go, no text. <b>Also save redacted copies</b> keeps a “- REDACTED” PDF of each file in Documents. The page on the left of a document's reader is your original – it stays on your computer.</li>
       <li><b>Repeated entries</b> from reading the same document several times: open the document with <b>Read</b> and click <b>Clear all … accepted entries on this document</b> (asks first; what they filled in on the order stays). <b>Reject the … suggestions not decided yet</b> clears the waiting ones. The same entry is no longer added twice.</li>
       <li><b>▴ Hide the directions</b> folds the heading down to its buttons so you see more of the page; <b>▾ Show the directions</b> brings them back.</li></ol></details>
@@ -1155,7 +1156,7 @@ nav.tabs button[aria-selected="true"] { background: var(--look-navy) !important;
 </div>
 <div id="toast" role="status" hidden></div>
 <script>
-const BUILD='o1-1022-2054';
+const BUILD='o1-1022-2116';
 const G = (() => {
 /* ---------------- small helpers ---------------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -3675,8 +3676,8 @@ function sensitiveTerms() {
    names typed after Buyer / Seller / Agent / Broker / By … labels; on C.A.R. forms (form wording scrambled) every typed-in entry that
    looks like a name or company; signature and initials areas next to their labels. Prices, dates, percents and the subject's own
    address are put back afterwards so the contract can still be read. */
-const RD_LABEL = /^(buyers?|sellers?|buyer'?s? (brokerage firm|agent|broker)|seller'?s? (brokerage firm|agent|broker)|listing (agent|broker|firm)|selling (agent|broker|firm)|agent|broker(age)?( firm)?|by|escrow (holder|officer)|print(ed)? name|name|assignee|trustee|loan officer|attorney|notary|witness|company|firm)\s*:?$/i;
-const RD_LABEL_END = /\b(buyer|seller|agent|broker|brokerage firm|escrow holder|escrow officer|print(ed)? name|trustee|assignee)\s*:\s*$/i;
+const RD_LABEL = /^(owner|owners?:|applicant|contractor|architect|engineer|designer|license#?|lic\.?|agent for owner|buyers?|sellers?|buyer'?s? (brokerage firm|agent|broker)|seller'?s? (brokerage firm|agent|broker)|listing (agent|broker|firm)|selling (agent|broker|firm)|agent|broker(age)?( firm)?|by|escrow (holder|officer)|print(ed)? name|name|assignee|trustee|loan officer|attorney|notary|witness|company|firm)\s*:?$/i;
+const RD_LABEL_END = /\b(owner|applicant|contractor|architect|engineer|buyer|seller|agent|broker|brokerage firm|escrow holder|escrow officer|print(ed)? name|trustee|assignee)\s*:\s*$/i;
 const RD_SIGN = /signature|\(sign\)|^sign here|initials/i;
 const RD_KEEP = new Set(['yes', 'no', 'n/a', 'na', 'none', 'cash', 'conventional', 'fha', 'va', 'usda', 'seller', 'buyer', 'both', 'as-is', 'as is', 'days', 'calendar', 'business', 'california', 'ca', 'all', 'other', 'see', 'attached', 'addendum', 'counter', 'offer', 'county', 'city', 'escrow', 'title', 'loan', 'appraisal', 'contingency', 'waived', 'removed', 'included', 'excluded', 'refrigerator', 'washer', 'dryer', 'stove', 'oven', 'microwave', 'dishwasher', 'spa', 'hot tub', 'pool', 'solar', 'furniture', 'furnishings']);
 const RD_MONTHS = /^(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)/i;
@@ -3697,14 +3698,21 @@ async function redactPage(n, redact) { // → canvas with the page painted, sens
       const spans = []; s.replace(PATTERN, (m, off) => { spans.push([off, m.length]); return m; });
       s.replace(/[A-Za-z0-9@.'’-]{3,}/g, (w, off) => { if (terms.has(w.replace(/[.'’]+$/, '').toLowerCase())) spans.push([off, w.length]); return w; });
       spans.forEach(([o, l]) => { g.fillRect(x + (o - 2) * per * sc - 2, y - hgt - 1, (l + 3) * per * sc + 4, hgt * 1.3 + 2); hits++; }); });
-    hits += await rdMore(g, cv, vp, sc, tc, orig, pg); }
+    /* her ask (Oct 22 2026): scanned pages (permits) have no text – read them on this computer (OCR) and black out what is found */
+    let ocr = null; const txtLen = (tc.items.map(i => i.str).join(' ').match(/[A-Za-z]{3,}/g) || []).join('').length;
+    if (txtLen < 40) { try { ocr = await rdOcr(orig || cv, (RD.pdf.fingerprints && RD.pdf.fingerprints[0] || RD.id || 'x') + '|' + n); } catch (e) { console.warn('OCR', e); RD.ocrErr = String(e.message || e); } }
+    if (ocr) { ocr.lines.forEach(L => { const str = L.map(w => w.s).join(' '); const offs = []; let o = 0; L.forEach(w => { offs.push([o, o + w.s.length]); o += w.s.length + 1; });
+        const hitW = new Set(); str.replace(PATTERN, (m, off) => { L.forEach((w, i) => { if (offs[i][1] > off && offs[i][0] < off + m.length) hitW.add(i); }); return m; });
+        L.forEach((w, i) => { if (terms.has(w.s.replace(/[^\w@.'’-]+/g, '').replace(/[.'’]+$/, '').toLowerCase())) hitW.add(i); });
+        hitW.forEach(i => { const w = L[i]; g.fillRect(w.x - 2, w.y - w.h - 2, w.w + 4, w.h * 1.3 + 3); hits++; }); }); }
+    hits += await rdMore(g, cv, vp, sc, tc, orig, pg, ocr); }
   (RD.boxes[n] || []).forEach(b => { const X = b.x * cv.width, Y = b.y * cv.height, W = Math.max(2, b.w * cv.width), H = Math.max(2, b.h * cv.height);
     if (b.mode === 'blur') { pixelate(g, X, Y, W, H); } else { g.fillStyle = '#000'; g.fillRect(X, Y, W, H); } hits++; });
   return { cv, hits };
 }
-async function rdMore(g, cv, vp, sc, tc, orig, pg) {
+async function rdMore(g, cv, vp, sc, tc, orig, pg, ocr) {
   const f = readForm(); const subj = new Set(String([f.address, f.city, f.county, 'Santa Barbara', 'Montecito', 'Goleta', 'Carpinteria', 'Summerland'].join(' ')).toLowerCase().split(/[\s,]+/).filter(w => w.length > 1));
-  const I = tc.items.filter(it => it.str && it.str.trim()).map(it => { const [x, y] = vp.convertToViewportPoint(it.transform[4], it.transform[5]); const h = Math.max(6, Math.min(Math.abs(it.transform[3]) || 99, it.height || 99) * sc); return { s: it.str, x, y, w: Math.max(4, it.width * sc), h }; });
+  const I = ocr ? ocr.words : tc.items.filter(it => it.str && it.str.trim()).map(it => { const [x, y] = vp.convertToViewportPoint(it.transform[4], it.transform[5]); const h = Math.max(6, Math.min(Math.abs(it.transform[3]) || 99, it.height || 99) * sc); return { s: it.str, x, y, w: Math.max(4, it.width * sc), h }; });
   const all = I.map(i => i.s).join(' '); const scrambled = all.length > 200 && (all.match(/[A-Za-z]{3,}/g) || []).join('').length / all.length < 0.25;
   let n = 0; const box = (X, Y, W, H) => { g.fillStyle = '#000'; g.fillRect(X, Y, W, H); n++; };
   const black = it => box(it.x - 2, it.y - it.h - 1, it.w + 4, it.h * 1.3 + 2);
@@ -3730,12 +3738,32 @@ async function rdMore(g, cv, vp, sc, tc, orig, pg) {
     const near = (p, it) => Math.abs((p.y + p.h / 2) - (it.y - it.h / 2)) < Math.max(p.h, it.h) * 1.6 + 6 * sc;
     const anchors = I.filter(it => /^(buyers?|sellers?|buyer'?s? signature|seller'?s? signature|signature|initials?|by|date)\s*:?$/i.test(it.s.trim()) || /\b\d{1,2}\/\d{1,2}\/\d{2,4}\b/.test(it.s) || (rdCleanItem(it.s) && rdLooksLikeName(it.s, subj)));
     pics.forEach(p => { if (Math.max(p.w, p.h) < 16 * sc || p.w < 6 || p.h < 4 || p.w > cv.width * 0.6 || p.h > cv.height * 0.12) return; if (anchors.some(it => near(p, it))) box(p.x - 3, p.y - 3, p.w + 6, p.h + 6); }); } catch (e) { console.warn('pictures on the page', e); }
+  /* addresses that are not the subject's (agents, contractors, owners' mailing) */
+  const subjNo = (String(f.address || '').match(/^\s*(\d+)/) || [])[1];
+  const ADDR = /\b(\d{2,6})\s+(?:[NSEW]\.?\s+)?[A-Za-z][A-Za-z'.-]+(?:\s+[A-Za-z][A-Za-z'.-]+){0,3}\s+(?:AVE(?:NUE)?|ST(?:REET)?|RD|ROAD|DR(?:IVE)?|LN|LANE|WAY|BLVD|BOULEVARD|CT|COURT|PL(?:ACE)?|CIR(?:CLE)?|TER(?:RACE)?|HWY|PKWY)\b\.?/i;
+  if (ocr) ocr.lines.forEach(L => { const str = L.map(w => w.s).join(' '); const m = str.match(ADDR); if (!m || m[1] === subjNo) return; const start = str.indexOf(m[0]); let o = 0; L.forEach(w => { const a = o, b = o + w.s.length; o = b + 1; if (b > start && a < start + m[0].length) black(w); }); });
+  else I.forEach(it => { const m = it.s.match(ADDR); if (m && m[1] !== subjNo) black(it); });
   /* prices, dates, percents and the subject's own address stay readable (her ask Oct 22 2026: half of the address kept getting covered) */
   const am = String(f.address || '').match(/^\s*(\d+[A-Za-z]?)\s+([A-Za-z]+)/); const zip = (String(f.address || '') + ' ' + String(f.zip || '')).match(/\b(9\d{4})\b/); const city = String(f.city || '').trim().toLowerCase();
   const isAddr = t => { const l = String(t).toLowerCase(); return !!((am && am[2].length > 3 && l.includes(am[2].toLowerCase())) || (zip && l.includes(zip[1])) || (city.length > 3 && l.includes(city) && /\b(ca|california)\b/.test(l))); };
   if (orig) I.forEach(it => { const mm = it.s.match(RD_PUTBACK) || []; if (!isAddr(it.s) && (!mm.length || mm.join('').length < it.s.trim().length * 0.5)) return; const X = Math.max(0, it.x - 1), Y = Math.max(0, it.y - it.h * 0.95), W = Math.min(cv.width - X, it.w + 2), H = Math.min(cv.height - Y, it.h * 1.2); if (W > 0 && H > 0) g.drawImage(orig, X, Y, W, H, X, Y, W, H); });
   RD_PUTBACK.lastIndex = 0; return n;
 }
+const RD_TESS_URL = 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js';
+let RD_TESS = null;
+async function rdTess() {   // the on-computer text reader (Tesseract, open source): only the program and its English data are downloaded
+  if (RD_TESS) return RD_TESS;
+  RD_TESS = (async () => { if (!window.Tesseract) await new Promise((ok, no) => { const sc = document.createElement('script'); sc.src = RD_TESS_URL; sc.onload = ok; sc.onerror = () => no(new Error('the on-computer text reader could not be loaded')); document.head.appendChild(sc); });
+    return await window.Tesseract.createWorker('eng'); })();
+  RD_TESS.catch(() => { RD_TESS = null; }); return RD_TESS; }
+async function rdOcr(canvas, key) {
+  RD.ocrCache = RD.ocrCache || {}; if (RD.ocrCache[key]) return RD.ocrCache[key];
+  const T = await rdTess(); const { data } = await T.recognize(canvas);
+  const W = w => ({ s: w.text, x: w.bbox.x0, y: w.bbox.y1, w: Math.max(4, w.bbox.x1 - w.bbox.x0), h: Math.max(6, w.bbox.y1 - w.bbox.y0) });
+  let lines = (data.lines || []).map(l => (l.words || []).filter(w => w.text && w.text.trim()).map(W)).filter(l => l.length);
+  const words = lines.length ? lines.flat() : (data.words || []).filter(w => w.text && w.text.trim()).map(W);
+  if (!lines.length && words.length) { const rows = []; words.slice().sort((a, b) => a.y - b.y || a.x - b.x).forEach(w => { const r = rows.find(r => Math.abs(r[0].y - w.y) < w.h * 0.6); if (r) r.push(w); else rows.push([w]); }); lines = rows.map(r => r.sort((a, b) => a.x - b.x)); }
+  return RD.ocrCache[key] = { words, lines }; }
 function scanNote() {   // a scanned page: offer Claude right here when this order allows it, else say what to change
   const ai = cur.aiUse, ok = ai === 'Yes' || ai === 'Redacted', key = aiKey();
   const how = 'or open the file in Acrobat → <b>Scan &amp; OCR → Recognize text</b>, save it, and drop it here again.';
@@ -4183,14 +4211,14 @@ async function pbClaude(content, maxTokens, system) {
   const j = await res.json(); if (!res.ok) throw new Error((j.error && j.error.message) || 'Claude answered with an error (' + res.status + ')');
   const txt = (j.content || []).filter(c => c.type === 'text').map(c => c.text).join(''); return JSON.parse(txt.slice(txt.indexOf('{'), txt.lastIndexOf('}') + 1));
 }
-async function pbSend() {
-  if (PB.busy) return; PB.busy = true; const btn = $('#pbGo'); const say = t => { if (btn) btn.textContent = t; };
+async function pbSend(pre) {   // pre = { plan, pics } from the one-screen redaction (redacted pictures only)
+  if (PB.busy) return; PB.busy = true; const btn = $(pre ? '#cbRedGo' : '#pbGo'); const say = t => { if (btn) btn.textContent = t; };
   try {
-    const plan = PB.plan; const pdfjs = await loadPdfJs();
+    const plan = pre ? pre.plan : PB.plan; const pdfjs = pre ? null : await loadPdfJs();
     // the pictures, in rounds of PB_MAX_IMG; all the text goes with the first round (split if very long)
-    const pics = []; for (const f of plan) { if (f.skip || !(f.imgs || []).length) continue; const rec = await ODB.get('docs', f.d.id); const pdf = await pdfjs.getDocument({ data: new Uint8Array(await rec.blob.arrayBuffer()), isEvalSupported: false, wasmUrl: './wasm/', standardFontDataUrl: './standard_fonts/' }).promise;
+    const pics = pre ? pre.pics : []; if (!pre) for (const f of plan) { if (f.skip || !(f.imgs || []).length) continue; const rec = await ODB.get('docs', f.d.id); const pdf = await pdfjs.getDocument({ data: new Uint8Array(await rec.blob.arrayBuffer()), isEvalSupported: false, wasmUrl: './wasm/', standardFontDataUrl: './standard_fonts/' }).promise;
       for (const n of f.imgs) { say(`Preparing pictures… ${pics.length + 1}`); const cv = await pbPageJpeg(pdf, n); pics.push({ file: f.d.name, n, data: cv.toDataURL('image/jpeg', 0.72).split(',')[1] }); } }
-    for (const f of plan) if (f.imgImage) { const rec = await ODB.get('docs', f.d.id); const bm = await createImageBitmap(rec.blob); const sc = Math.min(1, 1400 / Math.max(bm.width, bm.height)); const cv = document.createElement('canvas'); cv.width = Math.round(bm.width * sc); cv.height = Math.round(bm.height * sc); cv.getContext('2d').drawImage(bm, 0, 0, cv.width, cv.height); pics.push({ file: f.d.name, n: 1, data: cv.toDataURL('image/jpeg', 0.72).split(',')[1] }); }
+    if (!pre) for (const f of plan) if (f.imgImage) { const rec = await ODB.get('docs', f.d.id); const bm = await createImageBitmap(rec.blob); const sc = Math.min(1, 1400 / Math.max(bm.width, bm.height)); const cv = document.createElement('canvas'); cv.width = Math.round(bm.width * sc); cv.height = Math.round(bm.height * sc); cv.getContext('2d').drawImage(bm, 0, 0, cv.width, cv.height); pics.push({ file: f.d.name, n: 1, data: cv.toDataURL('image/jpeg', 0.72).split(',')[1] }); }
     const texts = []; let cur0 = ''; for (const f of plan) { if (f.skip) continue; for (const p of f.text) { const block = `\n=== ${f.d.name} – page ${p.n} ===\n${p.t}`; if (cur0.length + block.length > PB_MAX_TEXT && cur0) { texts.push(cur0); cur0 = ''; } cur0 += block; } } if (cur0) texts.push(cur0);
     const rounds = []; const nImgRounds = Math.ceil(pics.length / PB_MAX_IMG); const n = Math.max(1, nImgRounds, texts.length);
     for (let i = 0; i < n; i++) rounds.push({ text: texts[i] || '', pics: pics.slice(i * PB_MAX_IMG, (i + 1) * PB_MAX_IMG) });
@@ -4208,7 +4236,7 @@ async function pbSend() {
     cur.permitTimeline = { at: new Date().toISOString(), model: aiModel(), files: sentFiles, rounds: rounds.length, mode: cur.aiUse === 'Redacted' ? 'redacted' : 'full',
       permits: (out.permits || []).filter(x => x && (x.work || x.number)), flags: (out.flags || []).filter(x => x && x.text), comment: String(out.comment || '') };
     (cur.aiLog = cur.aiLog || []).push({ at: cur.permitTimeline.at, doc: 'All permit records (' + sentFiles.length + ' files)', pages: [], mode: cur.permitTimeline.mode, model: aiModel(), items: cur.permitTimeline.permits.length });
-    PB.plan = null; PB.show = true; saveLetter(true, true); renderDocs();
+    PB.plan = null; PB.show = true; if (pre && typeof cbRedClose === 'function') cbRedClose(); saveLetter(true, true); renderDocs();
     toast(`Claude read ${sentFiles.length} permit files together: ${cur.permitTimeline.permits.length} permits, ${cur.permitTimeline.flags.length} things to check`, 6000);
   } catch (e) { console.error(e); toast('Not sent or not read: ' + (e.message || e), 7000); say('Try again'); }
   PB.busy = false;
@@ -4238,6 +4266,7 @@ async function renderPermBatch() {
   if (!docs.length) html += '';
   else if (!ok) html += `To have Claude read them all together and build one timeline, set <b>AI use</b> on this order to Yes or Redacted (it is <b>${h(ai || 'not set')}</b>).`;
   else if (!key) html += 'Claude can read them all together, but no Claude API key is saved yet: <b>Standard wording → AI settings</b>.';
+  else if (ai === 'Redacted') html += `<button type="button" class="btn small" id="pbRed">${T ? 'Redact and read all the permits again' : 'Redact all the permit files, then read them with Claude'}</button> <span class="help">every page on one screen – names, phones and other addresses are blacked out by themselves (scans are read on this computer first); check them, then only the pictures go</span>`;
   else html += `<button type="button" class="btn small" id="pbPlan">${T ? 'Read all the permits again' : 'Read all the permits together with Claude'}</button> <span class="help">one request with every permit file, so Claude can build one timeline${T ? '' : ''}</span>`;
   if (T && !PB.show) html += ` <button type="button" class="btn ghost small" id="pbShow">Show the permit timeline (${T.permits.length})</button>`;
   html += '</div>';
@@ -4255,6 +4284,7 @@ async function renderPermBatch() {
   const hd = $('#pbHide'); if (hd) hd.onclick = () => { PB.show = false; renderPermBatch(); };
   const cc = $('#pbCancel'); if (cc) cc.onclick = () => { PB.plan = null; renderPermBatch(); };
   const go = $('#pbGo'); if (go) go.onclick = () => pbSend();
+  const pr = $('#pbRed'); if (pr) pr.onclick = () => cbRedOpen({ docs: pbDocs, title: 'All the permit records', send: pbSend, max: 72 });
   const ta = $('#pbComment'); if (ta) ta.onchange = () => { cur.permitTimeline.comment = ta.value; saveLetter(true, true); };
   const cp = $('#pbCopy'); if (cp) cp.onclick = async () => { const t = pbSorted(T.permits).map(p => [p.number, p.work, p.sqft && p.sqft + ' sq. ft.', p.applied && 'applied ' + p.applied, p.issued && 'issued ' + p.issued, p.finaled && 'final ' + p.finaled, p.status].filter(Boolean).join(' · ')).join('\n') + (T.flags.length ? '\n\nTo check:\n' + T.flags.map(f => '- ' + f.text).join('\n') : ''); try { await navigator.clipboard.writeText(t); toast('Copied'); } catch (e) { toast('Could not copy'); } };
   const c2 = $('#pbCopyC'); if (c2) c2.onclick = async () => { try { await navigator.clipboard.writeText($('#pbComment').value); toast('Copied'); } catch (e) { toast('Could not copy'); } };
@@ -4451,8 +4481,9 @@ async function cbRedPage(x, n) {   // the redaction of one page of one packet fi
   RD.pdf = x.pdf; RD.boxes = CBR.boxes[x.d.id] = CBR.boxes[x.d.id] || {}; RD.extra = cur.redactNames || '';
   try { return await redactPage(n, !x.copy); } finally { RD.pdf = keep.pdf; RD.boxes = keep.boxes; RD.extra = keep.extra; } }
 function cbRedClose() { const o = $('#cbRedPane'); if (o) o.remove(); }
-async function cbRedOpen() {
-  cbRedClose(); const pdfjs = await loadPdfJs(); const all = cbDocs();
+async function cbRedOpen(opt) {   // opt = { docs, title, send, max } – the contract packet by default; the permit records use it too
+  opt = opt || { docs: cbDocs, title: 'The whole contract packet', send: cbSend, max: 60 }; CBR.opt = opt;
+  cbRedClose(); const pdfjs = await loadPdfJs(); const all = opt.docs();
   const copies = all.filter(d => /- REDACTED\.pdf$/i.test(d.name)).map(d => d.name.replace(/ - REDACTED\.pdf$/i, '').toLowerCase());
   CBR.docs = [];
   for (const d of all) { const isCopy = /- REDACTED\.pdf$/i.test(d.name); if (!isCopy && copies.includes(d.name.replace(/\.pdf$/i, '').toLowerCase())) continue;
@@ -4461,11 +4492,11 @@ async function cbRedOpen() {
     CBR.docs.push({ d, pdf, copy: isCopy }); }
   const total = CBR.docs.reduce((a, x) => a + x.pdf.numPages, 0);
   const pane = document.createElement('div'); pane.id = 'cbRedPane'; pane.className = 'cbredpane'; document.body.appendChild(pane);
-  const canSend = total <= 60;
-  pane.innerHTML = `<div class="rdsendbar"><b>The whole contract packet, redacted: ${CBR.docs.length} files, ${total} pages – check every page.</b> <span class="rddir">This is exactly what Claude will see: black boxes are painted into the pictures, and no text is sent. Drag on a page to black out anything else (signatures, initials, account numbers).</span>
+  const canSend = total <= (opt.max || 60);
+  pane.innerHTML = `<div class="rdsendbar"><b>${h(opt.title)}, redacted: ${CBR.docs.length} files, ${total} pages – check every page.</b> <span class="rddir">This is exactly what Claude will see: black boxes are painted into the pictures, and no text is sent. Drag on a page to black out anything else (signatures, initials, account numbers).</span>
     <label>Also remove these names <span class="opt">separate with commas – buyers, sellers, agents, escrow, anyone else</span><input id="cbRedNames" value="${h(cur.redactNames || '')}"></label>
     <div class="row"><span>Drag to:</span><div class="seg2"><button type="button" data-cbdm="black" aria-pressed="true">Black box</button><button type="button" data-cbdm="blur" aria-pressed="false">Blur</button></div><button type="button" class="btn ghost small" id="cbRedUndo">Undo last box</button></div>
-    <span class="row">${canSend ? `<button type="button" class="btn primary" id="cbRedGo">Send these ${total} redacted pages to Claude</button>` : '<span class="help warnTxt">More than 60 pages – remove the disclosures from the packet first.</span>'}<button type="button" class="btn ghost" id="cbRedSave">Also save redacted copies (PDF)</button><button type="button" class="btn ghost" id="cbRedClose">Close</button></span>
+    <span class="row">${canSend ? `<button type="button" class="btn primary" id="cbRedGo">Send these ${total} redacted pages to Claude</button>` : `<span class="help warnTxt">More than ${opt.max || 60} pages – too many at once; leave some files out first.</span>`}<button type="button" class="btn ghost" id="cbRedSave">Also save redacted copies (PDF)</button><button type="button" class="btn ghost" id="cbRedClose">Close</button></span>
     <span class="row rdzoom"><span>Page size:</span><button type="button" class="btn ghost small" data-cbz="-" aria-label="Smaller pages">−</button><button type="button" class="btn ghost small" data-cbz="1">One page across</button><button type="button" class="btn ghost small" data-cbz="+" aria-label="Bigger pages">＋</button><button type="button" class="btn ghost small" data-cbz="mini">▴ Hide the directions</button></span></div>
     <div id="cbRedThumbs" class="rdthumbs"></div>`;
   const th = $('#cbRedThumbs'); const bar = pane.querySelector('.rdsendbar');
@@ -4474,10 +4505,11 @@ async function cbRedOpen() {
   pane.addEventListener('wheel', e => { if (!e.ctrlKey || !e.target.closest('#cbRedThumbs')) return; e.preventDefault(); zoomTo((CBR.zoom || 320) * (e.deltaY < 0 ? 1.12 : 1 / 1.12)); }, { passive: false });
   pane.querySelectorAll('[data-cbdm]').forEach(b => b.onclick = () => { CBR.mode = b.dataset.cbdm; pane.querySelectorAll('[data-cbdm]').forEach(x => x.setAttribute('aria-pressed', x === b)); });
   $('#cbRedClose').onclick = cbRedClose;
-  $('#cbRedNames').onchange = e => { cur.redactNames = e.target.value; saveLetter(true, true); cbRedOpen(); };
+  $('#cbRedNames').onchange = e => { cur.redactNames = e.target.value; saveLetter(true, true); cbRedOpen(opt); };
   const draw = async (x, n, cv, cap) => { const { cv: nv, hits } = await cbRedPage(x, n); cv.getContext('2d').drawImage(nv, 0, 0); cap.textContent = `${x.d.name} – page ${n}${x.copy ? ' (your redacted copy)' : ` · ${hits} item${hits === 1 ? '' : 's'} blacked out`}`; };
   for (const x of CBR.docs) for (let n = 1; n <= x.pdf.numPages; n++) {
-    const { cv, hits } = await cbRedPage(x, n); if (!pane.isConnected) return; cv.dataset.doc = x.d.id; cv.dataset.n = n;
+    const wait = document.createElement('p'); wait.className = 'help'; wait.textContent = `Preparing ${x.d.name} – page ${n}… (a scanned page is read on this computer first, a few seconds)`; th.appendChild(wait);
+    const { cv, hits } = await cbRedPage(x, n); wait.remove(); if (!pane.isConnected) return; cv.dataset.doc = x.d.id; cv.dataset.n = n;
     const fig = document.createElement('figure'); fig.innerHTML = `<figcaption>${h(x.d.name)} – page ${n}${x.copy ? ' (your redacted copy)' : ` · ${hits} item${hits === 1 ? '' : 's'} blacked out`}</figcaption>`; fig.prepend(cv); th.appendChild(fig);
     let st = null; cv.onpointerdown = e => { const r = cv.getBoundingClientRect(); st = [(e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height]; cv.setPointerCapture(e.pointerId); };
     cv.onpointerup = async e => { if (!st) return; const r = cv.getBoundingClientRect(); const en = [(e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height]; const b = { x: Math.min(st[0], en[0]), y: Math.min(st[1], en[1]), w: Math.abs(en[0] - st[0]), h: Math.abs(en[1] - st[1]), mode: CBR.mode, t: Date.now() }; st = null;
@@ -4494,7 +4526,7 @@ async function cbRedOpen() {
     for (const x of CBR.docs) { const cvs = [...th.querySelectorAll(`canvas[data-doc="${x.d.id}"]`)]; cvs.forEach(cv => { const sc = Math.min(1, 1400 / Math.max(cv.width, cv.height)); let c2 = cv; if (sc < 1) { c2 = document.createElement('canvas'); c2.width = Math.round(cv.width * sc); c2.height = Math.round(cv.height * sc); c2.getContext('2d').drawImage(cv, 0, 0, c2.width, c2.height); }
         pics.push({ file: x.d.name, n: +cv.dataset.n, data: c2.toDataURL('image/jpeg', 0.72).split(',')[1] }); });
       plan.push({ d: x.d, pages: x.pdf.numPages, text: [], imgs: cvs.map(cv => +cv.dataset.n) }); }
-    cbSend({ plan, pics }); };
+    opt.send({ plan, pics }); };
 }
 
 /* =====================================================================
