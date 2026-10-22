@@ -5,6 +5,7 @@
    until it is in the box.
    ===================================================================== */
 const CMT_BOXES = [
+  ['cAssign', 'Assignment', 'Assignment information and scope of work commentary', 5000],   // SFREP's box under Assignment Information (her inspection-limits paragraph); from My comments – nothing to draft
   ['cSubjPrior', 'SubjectPriorSalesAndTransferHistory', 'Analysis of prior sale and transfer history – subject', 4000],
   ['cCompPrior', 'ComparablesPriorSalesAndTransferHistory', 'Analysis of prior sale and transfer history – comparable sales', 4000],
   ['cSite', 'Site', 'Site commentary', 4000],
@@ -41,6 +42,6 @@ function cmtDraft(J, k) { const S = subjFacts(J), F = reportFrom(J), o = orderOf
   return ''; }
 function cmtBoxesHTML(J) { const R = R0(J);
   return `<section><h3>Comments for SFREP <small>boxes that came in empty – draft from your data, then edit</small></h3>
-    ${CMT_BOXES.map(([k, , l, max]) => `<label class="fld"><span>${l} <button type="button" class="btn sm" data-cmtdraft="${k}">Draft it</button></span><textarea class="txt" rows="3" maxlength="${max}" data-rpt="${k}">${esc(R[k] || '')}</textarea></label>`).join('')}</section>`; }
+    ${CMT_BOXES.map(([k, , l, max]) => `<label class="fld"><span>${l} ${k === 'cAssign' ? '<small class="muted">use 📋 My comments below</small>' : `<button type="button" class="btn sm" data-cmtdraft="${k}">Draft it</button>`}</span><textarea class="txt" rows="3" maxlength="${max}" data-rpt="${k}">${esc(R[k] || '')}</textarea></label>`).join('')}</section>`; }
 document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('[data-cmtdraft]'); if (!b || !app.job) return; const k = b.dataset.cmtdraft; const R = R0(app.job);
   if (R[k] && !confirm('Replace your text in this box with a new draft?')) return; R[k] = cmtDraft(app.job, k); save(); const c = document.getElementById('reportCard'); if (c) c.innerHTML = reportHTML(app.job); });
