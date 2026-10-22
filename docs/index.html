@@ -238,6 +238,7 @@ nav.shared .headLbl { font-weight: 800; color: #5b2a86; font-size: 13px; letter-
 nav.shared button { font: inherit; font-size: 15px; border: 1px solid var(--line); background: #fff; border-radius: 9px; padding: 6px 12px; cursor: pointer; font-weight: 600; }
 nav.shared button[aria-current="true"] { background: #1f3a68; color: #fff; border-color: #1f3a68; }
 nav.octo { border: 2px solid #1f3a68; border-radius: 14px; padding: 6px 8px; background: #f4f7fb; }
+.nroute { margin-top: 6px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 13px; } .nroute select { font-size: 13px; max-width: 100%; } .nroute textarea { flex-basis: 100%; width: 100%; font-size: 14px; } .nroute.ok { color: #1d6b3a; }
 nav.octo .octoFile { font-weight: 700; margin-right: 6px; color: #1f3a68; display: inline-flex; flex-direction: column; line-height: 1.2; }
 nav.octo .octoFile .tNo, #gnTitle .tNo { font-size: .8em; font-weight: 600; color: #4a5d78; }
 #gnTitle .gnSub { display: flex; flex-direction: column; font-size: .72em; margin-top: 4px; line-height: 1.25; }
@@ -721,6 +722,7 @@ nav.tabs button[aria-selected="true"] { background: var(--look-navy) !important;
       <li>After a document is read, its tag changes so you never do it twice: <b>✓ read by Claude</b> (green outline) once Claude has read it – also for permit files read together; <b>3 to accept or reject</b> (orange) while suggestions are waiting; and <b>✓ done · 2 accepted · filled in: Legal description</b> (solid green) when every suggestion is accepted or rejected, naming what it filled in on the order.</li>
       <li>Uploading a file with the same name as one already in the order <b>replaces</b> it – you never get two copies. Its sticky notes and accepted entries stay. (Orders that already had a file twice are cleaned up when you open them.)</li>
       <li>Drop every file for the order into the <b>Documents</b> box, or click <b>Choose files</b>. Each one is sorted by kind; change the kind with its drop-down if it guessed wrong.</li>
+      <li><b>Facts accepted from the documents › Notes:</b> under each note, <b>Add to ▾</b> suggests where it belongs (Site, Subject property, Prior sales – subject, Assignment and scope of work, Extraordinary assumptions, Market) – change it if you like. <b>✏ Edit</b> opens the wording to change before it goes; <b>Add</b> sends it. Extraordinary assumptions are added right away on the order; the comment boxes get it the next time you open the Comp genie for this order (once – then edit it there). <b>Undo</b> takes it back if the Comp genie has not used it yet. “Keep it here as a note only” leaves it in this list.</li>
       <li><b>Plat map</b> (assessor parcel map, under Public record): an exhibit only – it is not read. Drop it in Documents (sorted by itself when the file name or page says plat, parcel map, assessor's map or tract map; otherwise pick Plat map in its drop-down). The Comp genie's <b>Maps and exhibits</b> card brings in page 1 by itself and puts it in the report's Site section (Property boundaries). Untick “Put it in the SFREP report” to leave it out, or use your own picture instead.</li>
       <li>Click a file name to open it. Click <b>Read</b> to open the reader (next section). <b>Remove</b> takes it out of the order.</li>
       <li><b>Search:</b> type a word in "Search every document…" and press Enter or <b>Search</b>. It looks through the text of every document, your sticky notes and your accepted entries. Click a result to open that page with the word highlighted.</li>
@@ -1130,7 +1132,7 @@ nav.tabs button[aria-selected="true"] { background: var(--look-navy) !important;
 </div>
 <div id="toast" role="status" hidden></div>
 <script>
-const BUILD='o1-1022-1934';
+const BUILD='o1-1022-1938';
 const G = (() => {
 /* ---------------- small helpers ---------------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -3593,8 +3595,36 @@ async function searchDocs(q) {
 function renderFacts() {
   renderStickies();
   const box = $('#factList'); if (!box) return; const F = (cur && cur.facts) || [];
-  box.innerHTML = F.length ? `<h4>Facts accepted from the documents</h4><table class="facts">${F.map(f => `<tr><th>${h(f.label)}</th><td>${h(f.value)} <small class="muted">${h(f.doc)}${f.page ? ', p. ' + f.page : ''}</small></td></tr>`).join('')}</table>` : '';
+  const opt = (f, sug) => NOTE_TO.map(([k, l]) => `<option value="${k}" ${k === sug ? 'selected' : ''}>${h(l)}${k && k === noteDest(f.value) ? ' (suggested)' : ''}</option>`).join('');
+  const act = f => { if (!NOTE_KEYS.includes(f.key)) return '';
+    if (f.sent) return `<div class="nroute ok">✓ Added to <b>${h(noteToLabel(f.sent.to))}</b>${f.sent.to === 'ea' ? '' : ' – it goes into that box in the Comp genie when you open it'} <button type="button" class="btn ghost small" data-nundo="${f.id}">Undo</button></div>`;
+    return `<div class="nroute"><label>Add to <select data-nto="${f.id}">${opt(f, noteDest(f.value))}</select></label> <button type="button" class="btn ghost small" data-nedit="${f.id}">✏ Edit</button> <button type="button" class="btn small" data-nadd="${f.id}">Add</button>
+      <textarea data-ntext="${f.id}" rows="3" hidden>${h(f.value)}</textarea></div>`; };
+  box.innerHTML = F.length ? `<h4>Facts accepted from the documents</h4><table class="facts">${F.map(f => `<tr><th>${h(f.label)}</th><td>${h(f.value)} <small class="muted">${h(f.doc)}${f.page ? ', p. ' + f.page : ''}</small>${act(f)}</td></tr>`).join('')}</table>` : '';
+  box.querySelectorAll('[data-nedit]').forEach(b => b.onclick = () => { const t = box.querySelector(`[data-ntext="${b.dataset.nedit}"]`); t.hidden = !t.hidden; if (!t.hidden) t.focus(); });
+  box.querySelectorAll('[data-nadd]').forEach(b => b.onclick = () => { const id = b.dataset.nadd; const f = cur.facts.find(x => x.id === id); if (!f) return;
+    const to = box.querySelector(`[data-nto="${id}"]`).value; const text = box.querySelector(`[data-ntext="${id}"]`).value.trim();
+    if (!to) { toast('Pick where it goes first (or leave it here as a note)'); return; } if (!text) { toast('There is no text to add'); return; }
+    if (to === 'ea') { const el = $('#f_ea'); if (el) { el.value = (el.value.trim() ? el.value.trim() + '\n\n' : '') + text; } cur = readForm(); }
+    const f2 = cur.facts.find(x => x.id === id); f2.sent = { to, text, at: Date.now() }; saveLetter(true, true); renderFacts(); toast('Added to ' + noteToLabel(to)); });
+  box.querySelectorAll('[data-nundo]').forEach(b => b.onclick = () => { const f = cur.facts.find(x => x.id === b.dataset.nundo); if (!f || !f.sent) return;
+    if (f.sent.to === 'ea') { const el = $('#f_ea'); if (el) { el.value = el.value.replace(f.sent.text, '').replace(/\n{3,}/g, '\n\n').trim(); cur = readForm(); } }
+    else if (f.sent.applied) toast('It is already in the Comp genie box – delete it there if you do not want it', 8000);
+    delete f.sent; saveLetter(true, true); renderFacts(); });
 }
+/* her ask (Oct 22 2026): a note read from a document can be sent – after her look and edit – to the box where it belongs.
+   The Comp genie adds it to that comment box once (her click here is the OK); nothing is sent by itself. */
+const NOTE_KEYS = ['notes', 'other'];
+const NOTE_TO = [['', 'Keep it here as a note only'], ['cSite', '2 Subject › Site commentary'], ['cSubject', '2 Subject › Subject property commentary'],
+  ['cSubjPrior', '2 Subject › Prior sales and transfers – subject'], ['cAssign', '2 Subject › Assignment and scope of work commentary'],
+  ['ea', '1 Intake › Scope of work › Extraordinary assumptions'], ['cMarket', '3 Market › Market commentary']];
+const noteToLabel = k => (NOTE_TO.find(x => x[0] === k) || [, k])[1];
+function noteDest(t) { t = String(t || '');
+  if (/\b(sold|sale|transfer|recorded|grant deed|foreclos|escrow)\b/i.test(t)) return 'cSubjPrior';
+  if (/flood|FEMA|FIRM|lot (is|size)|acre|easement|hazard|seismic|overlay|fire|zon(e|ing)|site|topograph|access|water|sewer|septic|well\b/i.test(t)) return 'cSite';
+  if (/bedroom|bathroom|sq ?ft|square feet|year built|permit|remodel|addition|garage|ADU|condition|quality/i.test(t)) return 'cSubject';
+  if (/market|median|inventory|days on market/i.test(t)) return 'cMarket';
+  return ''; }
 
 /* ---------- AI settings (stay in this browser) ---------- */
 const aiKey = () => { try { return localStorage.getItem('aa.claudeKey') || ''; } catch (e) { return ''; } };

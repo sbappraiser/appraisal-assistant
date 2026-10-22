@@ -158,8 +158,36 @@ async function searchDocs(q) {
 function renderFacts() {
   renderStickies();
   const box = $('#factList'); if (!box) return; const F = (cur && cur.facts) || [];
-  box.innerHTML = F.length ? `<h4>Facts accepted from the documents</h4><table class="facts">${F.map(f => `<tr><th>${h(f.label)}</th><td>${h(f.value)} <small class="muted">${h(f.doc)}${f.page ? ', p. ' + f.page : ''}</small></td></tr>`).join('')}</table>` : '';
+  const opt = (f, sug) => NOTE_TO.map(([k, l]) => `<option value="${k}" ${k === sug ? 'selected' : ''}>${h(l)}${k && k === noteDest(f.value) ? ' (suggested)' : ''}</option>`).join('');
+  const act = f => { if (!NOTE_KEYS.includes(f.key)) return '';
+    if (f.sent) return `<div class="nroute ok">✓ Added to <b>${h(noteToLabel(f.sent.to))}</b>${f.sent.to === 'ea' ? '' : ' – it goes into that box in the Comp genie when you open it'} <button type="button" class="btn ghost small" data-nundo="${f.id}">Undo</button></div>`;
+    return `<div class="nroute"><label>Add to <select data-nto="${f.id}">${opt(f, noteDest(f.value))}</select></label> <button type="button" class="btn ghost small" data-nedit="${f.id}">✏ Edit</button> <button type="button" class="btn small" data-nadd="${f.id}">Add</button>
+      <textarea data-ntext="${f.id}" rows="3" hidden>${h(f.value)}</textarea></div>`; };
+  box.innerHTML = F.length ? `<h4>Facts accepted from the documents</h4><table class="facts">${F.map(f => `<tr><th>${h(f.label)}</th><td>${h(f.value)} <small class="muted">${h(f.doc)}${f.page ? ', p. ' + f.page : ''}</small>${act(f)}</td></tr>`).join('')}</table>` : '';
+  box.querySelectorAll('[data-nedit]').forEach(b => b.onclick = () => { const t = box.querySelector(`[data-ntext="${b.dataset.nedit}"]`); t.hidden = !t.hidden; if (!t.hidden) t.focus(); });
+  box.querySelectorAll('[data-nadd]').forEach(b => b.onclick = () => { const id = b.dataset.nadd; const f = cur.facts.find(x => x.id === id); if (!f) return;
+    const to = box.querySelector(`[data-nto="${id}"]`).value; const text = box.querySelector(`[data-ntext="${id}"]`).value.trim();
+    if (!to) { toast('Pick where it goes first (or leave it here as a note)'); return; } if (!text) { toast('There is no text to add'); return; }
+    if (to === 'ea') { const el = $('#f_ea'); if (el) { el.value = (el.value.trim() ? el.value.trim() + '\n\n' : '') + text; } cur = readForm(); }
+    const f2 = cur.facts.find(x => x.id === id); f2.sent = { to, text, at: Date.now() }; saveLetter(true, true); renderFacts(); toast('Added to ' + noteToLabel(to)); });
+  box.querySelectorAll('[data-nundo]').forEach(b => b.onclick = () => { const f = cur.facts.find(x => x.id === b.dataset.nundo); if (!f || !f.sent) return;
+    if (f.sent.to === 'ea') { const el = $('#f_ea'); if (el) { el.value = el.value.replace(f.sent.text, '').replace(/\n{3,}/g, '\n\n').trim(); cur = readForm(); } }
+    else if (f.sent.applied) toast('It is already in the Comp genie box – delete it there if you do not want it', 8000);
+    delete f.sent; saveLetter(true, true); renderFacts(); });
 }
+/* her ask (Oct 22 2026): a note read from a document can be sent – after her look and edit – to the box where it belongs.
+   The Comp genie adds it to that comment box once (her click here is the OK); nothing is sent by itself. */
+const NOTE_KEYS = ['notes', 'other'];
+const NOTE_TO = [['', 'Keep it here as a note only'], ['cSite', '2 Subject › Site commentary'], ['cSubject', '2 Subject › Subject property commentary'],
+  ['cSubjPrior', '2 Subject › Prior sales and transfers – subject'], ['cAssign', '2 Subject › Assignment and scope of work commentary'],
+  ['ea', '1 Intake › Scope of work › Extraordinary assumptions'], ['cMarket', '3 Market › Market commentary']];
+const noteToLabel = k => (NOTE_TO.find(x => x[0] === k) || [, k])[1];
+function noteDest(t) { t = String(t || '');
+  if (/\b(sold|sale|transfer|recorded|grant deed|foreclos|escrow)\b/i.test(t)) return 'cSubjPrior';
+  if (/flood|FEMA|FIRM|lot (is|size)|acre|easement|hazard|seismic|overlay|fire|zon(e|ing)|site|topograph|access|water|sewer|septic|well\b/i.test(t)) return 'cSite';
+  if (/bedroom|bathroom|sq ?ft|square feet|year built|permit|remodel|addition|garage|ADU|condition|quality/i.test(t)) return 'cSubject';
+  if (/market|median|inventory|days on market/i.test(t)) return 'cMarket';
+  return ''; }
 
 /* ---------- AI settings (stay in this browser) ---------- */
 const aiKey = () => { try { return localStorage.getItem('aa.claudeKey') || ''; } catch (e) { return ''; } };

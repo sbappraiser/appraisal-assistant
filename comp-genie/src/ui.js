@@ -37,7 +37,7 @@ window.addEventListener('message', async e => {   // the Appraisal Assistant sho
   if (e.origin !== location.origin || !e.data || e.data.type !== 'aa-refresh') return;
   app.orders = await readOrders();
   if (e.data.order && (!app.job || app.job.orderId !== e.data.order || app.home)) { const o = app.orders.find(x => x.id === e.data.order); if (o) { app.home = false; await jobFromOrder(o); await loadPhotos(); } }
-  if (e.data.order && app.job && app.job.orderId === e.data.order) { const o = app.orders.find(x => x.id === e.data.order); if (o) await pullWorkfile(o); }
+  if (e.data.order && app.job && app.job.orderId === e.data.order) { const o = app.orders.find(x => x.id === e.data.order); if (o) { await pullWorkfile(o); await applyOrderNotes(o); } }
   if (!e.data.order && !app.job) app.home = true;
   if (e.data.go && app.job) { genieGo(e.data.go); return; }
   render();
@@ -65,6 +65,13 @@ function readOrderDoc(id) { // one stored document (its file) from the Appraisal
     r.onsuccess = () => { const d = r.result; if (!d.objectStoreNames.contains('docs')) { d.close(); res(null); return; } const q = d.transaction('docs').objectStore('docs').get(id); q.onsuccess = () => { d.close(); res(q.result || null); }; q.onerror = () => { d.close(); res(null); }; }; });
 }
 /* her iPad Workfile package dropped in the order's Documents (Oct 19 2026): the subject comes in here once, and again when a newer one is dropped */
+/* her ask (Oct 22 2026): notes she sent from the hub's "Facts accepted" (Add to …) go into that comment box once; Undo in the hub
+   before this runs keeps them out. Her click in the hub is the OK – the text is hers to edit here afterwards. */
+async function applyOrderNotes(o) { if (!app.job || !o) return; const J = app.job; if (J.orderId !== o.id) return; const R = R0(J); J.noteDone = J.noteDone || {}; const added = [];
+  for (const f of (o.facts || [])) { const s = f.sent; if (!s || !s.text || !s.to || s.to === 'ea') continue; const key = f.id + '|' + s.at; if (J.noteDone[key]) continue;
+    let base = String(R[s.to] || '').trim(); if (!base && s.to === 'cMarket') { const F = reportFrom(J); base = String((F.market && F.market.general) || '').trim(); }
+    R[s.to] = (base ? base + '\n\n' : '') + s.text.trim(); J.noteDone[key] = Date.now(); added.push(s.to); }
+  if (added.length) { await saveNow(); const nm = k => ((typeof CMT_BOXES !== 'undefined' && CMT_BOXES.find(b => b[0] === k)) || [, , k])[2]; toast('Added from your documents: ' + [...new Set(added)].map(nm).join(', '), 8000); if (typeof rptRedraw === 'function') try { rptRedraw(); } catch (e) {} } }
 async function pullWorkfile(o, quiet) {
   const ds = ((o && o.docs) || []).filter(d => d.type === 'ipadWorkfile').sort((a, b) => String(b.added || '').localeCompare(String(a.added || ''))); const d = ds[0]; if (!d || !app.job) return false;
   const key = d.id + '|' + (d.added || ''); if (app.job.inspDoc === key) return false;
@@ -156,7 +163,7 @@ async function jobFromOrder(o) {
   if (o.crs && !j.subject.crs) j.subject.crs = crsCanon(o.crs);
   j.subject.listings = o.listings || []; j.fileNo = o.fileNo || '';
   app.sel = null; await saveNow(); await loadPhotos(); toast('Opened the assignment for order ' + orderName(o));
-  await pullWorkfile(o);
+  await pullWorkfile(o); await applyOrderNotes(o);
   { const M = orderMicro(o); if (M && !microIn(j, M)) { const had = j.comps.some(c => c.use); await pullMicro(o, true); const g = had ? 0 : j.comps.filter(c => c.use).length; toast('Opened the assignment for order ' + orderName(o) + ' and added your Search Criteria search (' + M.file + ')' + (g ? ` – its ${g} listing${g > 1 ? 's are' : ' is'} on the grid to start. Next: upload a CRS report for each (Add comps).` : ''), 9000); } }
 }
 async function newJob(name) {
