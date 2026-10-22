@@ -233,18 +233,18 @@ async function redactPage(n, redact) { // → canvas with the page painted, sens
   await pg.render({ canvasContext: g, viewport: vp }).promise; let hits = 0;
   let orig = null; if (redact) { orig = document.createElement('canvas'); orig.width = cv.width; orig.height = cv.height; orig.getContext('2d').drawImage(cv, 0, 0); }
   if (redact) { const terms = sensitiveTerms(); const tc = await pg.getTextContent(); g.fillStyle = '#000';
-    tc.items.forEach(it => { const s = it.str; if (!s.trim()) return; const per = it.width / Math.max(1, s.length); const [x, y] = vp.convertToViewportPoint(it.transform[4], it.transform[5]); const hgt = Math.max(8, Math.abs(it.transform[3]) * sc);
+    tc.items.forEach(it => { const s = it.str; if (!s.trim()) return; const per = it.width / Math.max(1, s.length); const [x, y] = vp.convertToViewportPoint(it.transform[4], it.transform[5]); const hgt = Math.max(6, Math.min(Math.abs(it.transform[3]) || 99, it.height || 99) * sc);   /* DocuSign stamps carry a tall font box – the black box must not spill onto the line below */
       const spans = []; s.replace(PATTERN, (m, off) => { spans.push([off, m.length]); return m; });
       s.replace(/[A-Za-z0-9@.'’-]{3,}/g, (w, off) => { if (terms.has(w.replace(/[.'’]+$/, '').toLowerCase())) spans.push([off, w.length]); return w; });
-      spans.forEach(([o, l]) => { g.fillRect(x + (o - 1) * per * sc - 2, y - hgt - 1, (l + 2) * per * sc + 4, hgt * 1.3 + 2); hits++; }); });
-    hits += rdMore(g, cv, vp, sc, tc, orig); }
+      spans.forEach(([o, l]) => { g.fillRect(x + (o - 2) * per * sc - 2, y - hgt - 1, (l + 3) * per * sc + 4, hgt * 1.3 + 2); hits++; }); });
+    hits += await rdMore(g, cv, vp, sc, tc, orig, pg); }
   (RD.boxes[n] || []).forEach(b => { const X = b.x * cv.width, Y = b.y * cv.height, W = Math.max(2, b.w * cv.width), H = Math.max(2, b.h * cv.height);
     if (b.mode === 'blur') { pixelate(g, X, Y, W, H); } else { g.fillStyle = '#000'; g.fillRect(X, Y, W, H); } hits++; });
   return { cv, hits };
 }
-function rdMore(g, cv, vp, sc, tc, orig) {
+async function rdMore(g, cv, vp, sc, tc, orig, pg) {
   const f = readForm(); const subj = new Set(String([f.address, f.city, f.county, 'Santa Barbara', 'Montecito', 'Goleta', 'Carpinteria', 'Summerland'].join(' ')).toLowerCase().split(/[\s,]+/).filter(w => w.length > 1));
-  const I = tc.items.filter(it => it.str && it.str.trim()).map(it => { const [x, y] = vp.convertToViewportPoint(it.transform[4], it.transform[5]); const h = Math.max(8, Math.abs(it.transform[3]) * sc); return { s: it.str, x, y, w: Math.max(4, it.width * sc), h }; });
+  const I = tc.items.filter(it => it.str && it.str.trim()).map(it => { const [x, y] = vp.convertToViewportPoint(it.transform[4], it.transform[5]); const h = Math.max(6, Math.min(Math.abs(it.transform[3]) || 99, it.height || 99) * sc); return { s: it.str, x, y, w: Math.max(4, it.width * sc), h }; });
   const all = I.map(i => i.s).join(' '); const scrambled = all.length > 200 && (all.match(/[A-Za-z]{3,}/g) || []).join('').length / all.length < 0.25;
   let n = 0; const box = (X, Y, W, H) => { g.fillStyle = '#000'; g.fillRect(X, Y, W, H); n++; };
   const black = it => box(it.x - 2, it.y - it.h - 1, it.w + 4, it.h * 1.3 + 2);
@@ -255,8 +255,25 @@ function rdMore(g, cv, vp, sc, tc, orig) {
     if (RD_LABEL_END.test(it.s)) { const m = it.s.match(/:\s*(.+)$/); if (m && rdLooksLikeName(m[1], subj)) black(it); }
     if (RD_SIGN.test(it.s)) { if (/initials/i.test(it.s)) box(it.x + it.w, it.y - it.h * 1.2, 150 * sc, it.h * 1.8); else box(it.x - 4, it.y - it.h - 34 * sc, Math.max(it.w, 210 * sc), 34 * sc); }
   });
-  /* prices, dates and percents stay readable */
-  if (orig) I.forEach(it => { const mm = it.s.match(RD_PUTBACK) || []; if (!mm.length || mm.join('').length < it.s.trim().length * 0.5) return; const X = Math.max(0, it.x - 2), Y = Math.max(0, it.y - it.h - 1), W = Math.min(cv.width - X, it.w + 4), H = Math.min(cv.height - Y, it.h * 1.3 + 2); if (W > 0 && H > 0) g.drawImage(orig, X, Y, W, H, X, Y, W, H); });
+  /* her ask (Oct 22 2026): "more careful with signatures and names on a buyer or seller line" –
+     (1) DocuSign / eSign captions and the signature under them; (2) pictures (signatures, initials) drawn on a line that has a typed
+     date or name on it, or next to a Buyer / Seller / Signature label – pdf.js tells where each picture is drawn on the page. */
+  I.forEach(it => { if (/docu\s?signed by|signed by:|esigned|e-signed|verified by|authentisign|dotloop verified|signature verified/i.test(it.s)) box(it.x - 4, it.y - it.h - 6, Math.max(it.w + 8, 230 * sc), it.h + 46 * sc); });
+  I.forEach(it => { if (/^[0-9A-F]{10,}\.{0,3}$/.test(it.s.trim())) black(it); });   // the signature's ID under it
+  try { const pdfjs = await loadPdfJs(); const OPS = pdfjs.OPS; const ol = await pg.getOperatorList(); const mul = (m, n) => [m[0] * n[0] + m[2] * n[1], m[1] * n[0] + m[3] * n[1], m[0] * n[2] + m[2] * n[3], m[1] * n[2] + m[3] * n[3], m[0] * n[4] + m[2] * n[5] + m[4], m[1] * n[4] + m[3] * n[5] + m[5]];
+    let ctm = [1, 0, 0, 1, 0, 0]; const stack = []; const pics = [];
+    ol.fnArray.forEach((fn, i) => { const a = ol.argsArray[i];
+      if (fn === OPS.save) stack.push(ctm.slice()); else if (fn === OPS.restore) ctm = stack.pop() || [1, 0, 0, 1, 0, 0]; else if (fn === OPS.transform) ctm = mul(ctm, a);
+      else if (fn === OPS.paintFormXObjectBegin && a && a[0]) { stack.push(ctm.slice()); ctm = mul(ctm, a[0]); } else if (fn === OPS.paintFormXObjectEnd) ctm = stack.pop() || ctm;
+      else if (fn === OPS.paintImageXObject || fn === OPS.paintInlineImageXObject || fn === OPS.paintImageMaskXObject) { const pts = [[0, 0], [1, 0], [0, 1], [1, 1]].map(([u, v]) => vp.convertToViewportPoint(ctm[0] * u + ctm[2] * v + ctm[4], ctm[1] * u + ctm[3] * v + ctm[5]));
+        const xs = pts.map(p => p[0]), ys = pts.map(p => p[1]); pics.push({ x: Math.min(...xs), y: Math.min(...ys), w: Math.max(...xs) - Math.min(...xs), h: Math.max(...ys) - Math.min(...ys) }); } });
+    const near = (p, it) => Math.abs((p.y + p.h / 2) - (it.y - it.h / 2)) < Math.max(p.h, it.h) * 1.6 + 6 * sc;
+    const anchors = I.filter(it => /^(buyers?|sellers?|buyer'?s? signature|seller'?s? signature|signature|initials?|by|date)\s*:?$/i.test(it.s.trim()) || /\b\d{1,2}\/\d{1,2}\/\d{2,4}\b/.test(it.s) || (rdCleanItem(it.s) && rdLooksLikeName(it.s, subj)));
+    pics.forEach(p => { if (p.w < 6 || p.h < 4 || p.w > cv.width * 0.6 || p.h > cv.height * 0.12) return; if (anchors.some(it => near(p, it))) box(p.x - 3, p.y - 3, p.w + 6, p.h + 6); }); } catch (e) { console.warn('pictures on the page', e); }
+  /* prices, dates, percents and the subject's own address stay readable (her ask Oct 22 2026: half of the address kept getting covered) */
+  const am = String(f.address || '').match(/^\s*(\d+[A-Za-z]?)\s+([A-Za-z]+)/); const zip = (String(f.address || '') + ' ' + String(f.zip || '')).match(/\b(9\d{4})\b/); const city = String(f.city || '').trim().toLowerCase();
+  const isAddr = t => { const l = String(t).toLowerCase(); return !!((am && am[2].length > 3 && l.includes(am[2].toLowerCase())) || (zip && l.includes(zip[1])) || (city.length > 3 && l.includes(city) && /\b(ca|california)\b/.test(l))); };
+  if (orig) I.forEach(it => { const mm = it.s.match(RD_PUTBACK) || []; if (!isAddr(it.s) && (!mm.length || mm.join('').length < it.s.trim().length * 0.5)) return; const X = Math.max(0, it.x - 1), Y = Math.max(0, it.y - it.h * 0.95), W = Math.min(cv.width - X, it.w + 2), H = Math.min(cv.height - Y, it.h * 1.2); if (W > 0 && H > 0) g.drawImage(orig, X, Y, W, H, X, Y, W, H); });
   RD_PUTBACK.lastIndex = 0; return n;
 }
 function scanNote() {   // a scanned page: offer Claude right here when this order allows it, else say what to change
