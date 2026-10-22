@@ -9,7 +9,7 @@ async function start() {
   try { if (navigator.storage && navigator.storage.persist) await navigator.storage.persist(); } catch (e) {} // ask Chrome to keep this data, never clear it to free space
   const arch = await DB.get('kv', 'archive'); if (arch && arch.data) archiveIndex(arch.data);
   const cort = await DB.get('kv', 'cort'); setCort(cort ? cort.rows : []);
-  await revLoad(); await refLoad();
+  await revLoad(); await refLoad(); if (typeof rdbLoad === 'function') await rdbLoad();
   app.jobs = (await DB.all('jobs')).sort((a, b) => b.updated - a.updated);
   const last = await DB.get('kv', 'lastJob');
   app.job = ((POP || CPOP) && app.jobs.find(j => j.id === (POP || CPOP).job)) || app.jobs.find(j => last && j.id === last.v) || app.jobs[0] || null;

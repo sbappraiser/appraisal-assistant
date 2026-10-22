@@ -19,6 +19,7 @@ function dbViewHTML() {
     ['Construction cost database', cost ? ok(true, `${cost.projects.length} projects · ${cost.lines.length.toLocaleString()} budget lines${cost.decisions ? ' · your decisions applied' : ''}`) : ok(false, 'not loaded'),
       'Your contractors’ budgets: cost per square foot by area, quality and kind of project.', 'Cost approach › cost new and soft costs',
       add('Add the cost database (Excel .xlsx)', '.xlsx') + (cost ? ' <button class="btn" data-dbcopen="cost">Look inside</button>' : '')],
+    ...(typeof rdbCardHTML === 'function' ? [rdbCardHTML()] : []),
     ['MLS market statistics', '<span class="dbst">in the Appraisal Assistant</span>', 'Monthly market numbers for the market conditions section.', 'Order › Market tab (macro → micro)', ''],
     ['Your comments and standard wording', '<span class="dbst">in the Appraisal Assistant</span>', 'Your comment library (OneNote) and the standard paragraphs you reuse.', 'Every comment box (My comments), engagement letters', '']];
   return `<header class="top"><h1>Database center</h1><span class="pill ver">Version ${typeof BUILD !== 'undefined' ? BUILD : ''}</span><span class="grow"></span></header>

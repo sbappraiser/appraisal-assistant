@@ -7,8 +7,8 @@
    - INTEGRITY: duplicates, records missing their key facts, and signs of two properties mixed together (one APN with two
      different addresses) are listed so she can check them.
    ===================================================================== */
-const DBC_CONFIRM = { cort: 'CORT weekly closings', landSales: 'Land sales', costDb: 'Construction cost database' };
-const dbcKey = { cort: r => [apnKey(r.apn) || '', r.saleDate || r.recDate || '', r.doc || ''].join('|'), landSales: r => String(r.id || '') };
+const DBC_CONFIRM = { cort: 'CORT weekly closings', landSales: 'Land sales', costDb: 'Construction cost database', rentDb: 'rental database' };
+const dbcKey = { cort: r => [apnKey(r.apn) || '', r.saleDate || r.recDate || '', r.doc || ''].join('|'), landSales: r => String(r.id || ''), rentDb: r => (typeof rdbKey === 'function' ? rdbKey(r) : String(r.addr || '')) };
 const dbcRows = (id, rec) => !rec ? [] : id === 'cort' ? (rec.rows || []) : id === 'costDb' ? (((rec.v || {}).projects) || []) : (Array.isArray(rec.v) ? rec.v : []);
 const dbcLabel = r => r ? (r.addr || r.address || r.name || r.project || r.apn || r.id || '').toString().slice(0, 60) : '';
 const dbcClean = r => JSON.stringify(r, (k, v) => k.startsWith('_') ? undefined : v);
@@ -32,17 +32,19 @@ async function dbcConfirm(id, oldRec, newRec) {
 /* --- look inside: a read-only table of any database --- */
 const DBV2 = { id: null, q: '', sort: null, desc: false, page: 0 };
 function dbcSource(id) { if (id === 'cort') return app.cort || []; if (id === 'land') return app.land || []; if (id === 'cost') return (app.costDb && app.costDb.projects) || [];
-  if (id === 'arch') return ARCH.loaded ? ARCH.rows.map((_, i) => i) : []; return []; }
+  if (id === 'arch') return ARCH.loaded ? ARCH.rows.map((_, i) => i) : [];
+  if (id === 'rent') return (typeof RDB !== 'undefined' ? RDB.list : []).map(r => { const x = rdbLast(r) || {}; return { address: r.addr + (r.unit ? ' #' + r.unit : ''), city: r.city, zip: r.zip, beds: r.beds, baths: r.baths, gla: r.gla, cond: r.cond, last_rent: x.rent || '', as_of: rdbMY(x.date), report: x.report || '', rents_seen: (r.rents || []).filter(y => y.rent).length, origin: r.origin, source: r.src, mls: r.mls }; });
+  return []; }
 const dbcRow = (id, x) => id === 'arch' ? archRow(x) : x;
 function dbcCols(id, rows) { const pref = { cort: ['saleDate', 'addr', 'apn', 'salePrice', 'doc', 'buyer', 'seller', 'financing', 'period'], land: ['addr', 'apn', 'saleDate', 'salePrice', 'acres', 'sf', 'area', 'zone', 'view'],
-    arch: ['address', 'apn', 'sale_date', 'sale_price', 'gla', 'record_role', 'from_report', 'entered_date'], cost: ['name', 'project', 'year', 'area', 'quality', 'kind'] }[id] || [];
+    arch: ['address', 'apn', 'sale_date', 'sale_price', 'gla', 'record_role', 'from_report', 'entered_date'], cost: ['name', 'project', 'year', 'area', 'quality', 'kind'], rent: ['address', 'city', 'beds', 'baths', 'gla', 'cond', 'last_rent', 'as_of', 'report', 'rents_seen', 'origin', 'source'] }[id] || [];
   const seen = new Set(); rows.slice(0, 200).forEach(x => Object.keys(dbcRow(id, x)).forEach(k => { if (!k.startsWith('_')) seen.add(k); }));
   return [...pref.filter(k => seen.has(k)), ...[...seen].filter(k => !pref.includes(k))].slice(0, 12); }
 function dbcViewHTML() { const id = DBV2.id; const all = dbcSource(id); const cols = dbcCols(id, all); const W = DBV2.q.toLowerCase().split(/\s+/).filter(Boolean);
   let rows = all.map(x => dbcRow(id, x)); if (W.length) rows = rows.filter(r => { const t = cols.map(c => r[c]).join(' ').toLowerCase(); return W.every(w => t.includes(w)); });
   if (DBV2.sort) { const k = DBV2.sort; rows.sort((a, b) => { const x = a[k], y = b[k]; const c = typeof x === 'number' && typeof y === 'number' ? x - y : String(x ?? '').localeCompare(String(y ?? ''), undefined, { numeric: true }); return DBV2.desc ? -c : c; }); }
   const per = 100, pages = Math.max(1, Math.ceil(rows.length / per)); DBV2.page = Math.min(DBV2.page, pages - 1); const show = rows.slice(DBV2.page * per, DBV2.page * per + per);
-  const name = { cort: 'CORT weekly closings', land: 'Land sales', arch: 'Comp archive', cost: 'Construction cost database – projects' }[id];
+  const name = { cort: 'CORT weekly closings', land: 'Land sales', arch: 'Comp archive', cost: 'Construction cost database – projects', rent: 'My rental database' }[id];
   const cell = v => v == null ? '' : typeof v === 'number' ? (v > 1000 ? v.toLocaleString() : String(v)) : esc(String(v).slice(0, 80));
   DBV2.rows = rows; DBV2.cols = cols;
   return `<div class="sheet dbcview"><div class="row"><h2 style="margin:0">${esc(name)}</h2><span class="muted">${rows.length.toLocaleString()} of ${all.length.toLocaleString()} records · read only</span><span class="grow"></span>
@@ -71,6 +73,7 @@ function dbcIntegrity() { const out = [];
     out.push({ name, id, n: rows.length, dup, miss, need, mixed, missLbl }); };
   check('CORT weekly closings', 'cort', app.cort || [], dbcKey.cort, ['apn', 'saleDate', 'salePrice']);
   check('Land sales', 'land', app.land || [], r => String(r.id || ''), ['salePrice']);
+  if (typeof RDB !== 'undefined' && RDB.list.length) check('My rental database', 'rent', RDB.list, rdbKey, ['addr', 'city']);
   if (ARCH.loaded) { const rows = []; for (let i = 0; i < ARCH.rows.length; i++) rows.push(archRow(i)); check('Comp archive', 'arch', rows, () => '', ['apn'], r => r.record_role === 'subject', [n => n === 1 ? 'subject record is missing its APN' : 'subject records are missing an APN', 'every subject has an APN (comps used only as comparables do not need one)']); }   // her rule Oct 21 2026: an archive comp has no APN; a subject does
   return out; }
 function dbcIntegrityHTML() { const L = dbcIntegrity(); if (!L.length) return '';

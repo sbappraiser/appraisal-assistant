@@ -5,14 +5,14 @@
      before is kept and the change is logged – one click undoes the last change (My databases › Recent changes).
    - Each database is checked when My databases opens (does it read, are the records whole).
    ===================================================================== */
-const SAFE_DBS = { cort: 'CORT weekly closings', landSales: 'Land sales', landEdits: 'Your land sale edits', costDb: 'Construction cost database', costOut: 'Budgets you left out' };
+const SAFE_DBS = { cort: 'CORT weekly closings', landSales: 'Land sales', landEdits: 'Your land sale edits', costDb: 'Construction cost database', costOut: 'Budgets you left out', rentDb: 'Rental database' };
 const SAFE = { persisted: null, log: [] };
 const safeCount = (id, v) => { if (!v) return 0; if (id === 'cort') return (v.rows || []).length; if (id === 'costDb') return ((v.v || {}).projects || []).length; const x = v.v; return Array.isArray(x) ? x.length : x && typeof x === 'object' ? Object.keys(x).length : 0; };
 (() => { const put = DB.put.bind(DB);
   DB.put = async (store, obj) => {
     /* show first, then change (her rule Oct 22 2026): CORT, land sales and the cost database wait for her OK; Cancel puts everything back */
     if (store === 'kv' && obj && typeof DBC_CONFIRM !== 'undefined' && DBC_CONFIRM[obj.id] && !SAFE.restoring && typeof dbcConfirm === 'function') { const old0 = await DB.get('kv', obj.id);
-      if (old0 && !(await dbcConfirm(obj.id, old0, obj))) { if (obj.id === 'cort' && typeof setCort === 'function') setCort(old0.rows || []); if (obj.id === 'landSales') app.land = old0.v || []; if (obj.id === 'costDb') app.costDb = old0.v || null;
+      if (old0 && !(await dbcConfirm(obj.id, old0, obj))) { if (obj.id === 'cort' && typeof setCort === 'function') setCort(old0.rows || []); if (obj.id === 'landSales') app.land = old0.v || []; if (obj.id === 'costDb') app.costDb = old0.v || null; if (obj.id === 'rentDb' && typeof RDB !== 'undefined') RDB.list = old0.v || [];
         try { if (typeof render === 'function') render(); } catch (e) {} throw new Error('Not changed – you cancelled, so your ' + DBC_CONFIRM[obj.id] + ' is as it was.'); } }
     if (store === 'kv' && obj && SAFE_DBS[obj.id] && !SAFE.restoring) { try { const old = await DB.get('kv', obj.id);
         if (old) { const a = safeCount(obj.id, old), b = safeCount(obj.id, obj);
