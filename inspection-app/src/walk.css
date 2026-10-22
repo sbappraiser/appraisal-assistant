@@ -12,7 +12,7 @@
 .wk-big { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
 .wk-b { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; min-height: 120px; border: 3px solid #000; border-radius: 16px; background: #fff; font: 700 20px var(--font); color: #000; }
 .wk-b svg { width: 46px; height: 46px; }
-.wk-b.cam { background: #fff3e0; } .wk-b.sk { background: #eef4ff; }
+.wk-b.cam { background: #fde2ec; } .wk-b.sk { background: #eef4ff; }
 .wk-b.mic.on { background: #e00000; color: #fff; border-color: #900; animation: wkpulse 1.4s infinite; }
 @keyframes wkpulse { 50% { box-shadow: 0 0 0 10px rgba(224,0,0,.18); } }
 .wk-interim { margin: -4px 0 0; padding: 10px 12px; border-radius: 10px; background: #fff7d6; border: 2px dashed #b38600; font-size: 17px; }
@@ -47,7 +47,7 @@
 .wsk-bar { position: absolute; right: 10px; top: 10px; display: flex; flex-direction: row-reverse; justify-content: flex-start; gap: 8px; align-items: center; z-index: 30; flex-wrap: wrap; max-width: calc(100% - 20px); }
 .wsk-b { display: flex; flex-direction: column; align-items: center; width: 60px; height: 52px; border: 3px solid #000; border-radius: 14px; background: #fff; font: 700 13px var(--font); color: #000; justify-content: center; gap: 2px; box-shadow: 0 2px 8px rgba(0,0,0,.2); }
 .wsk-b svg { width: 24px; height: 24px; } .wsk-b.on { background: #e00000; color: #fff; }
-.wsk-place { border: 2px solid #000; border-radius: 999px; background: #fff3e0; padding: 6px 12px; font: 600 14px var(--font); color: #000; box-shadow: 0 2px 8px rgba(0,0,0,.2); }
+.wsk-place { border: 2px solid #000; border-radius: 999px; background: #fde2ec; padding: 6px 12px; font: 600 14px var(--font); color: #000; box-shadow: 0 2px 8px rgba(0,0,0,.2); }
 .wsk-interim { flex-basis: 100%; background: #fff7d6; border: 2px dashed #b38600; border-radius: 10px; padding: 6px 10px; font-size: 15px; max-width: 520px; }
 .wk-how { border: 2px solid #000; border-radius: 12px; padding: 8px 14px; background: #fffbe6; } .wk-how summary { font-weight: 700; cursor: pointer; } .wk-how ol { margin: 8px 0 4px; padding-left: 22px; display: flex; flex-direction: column; gap: 6px; }
 

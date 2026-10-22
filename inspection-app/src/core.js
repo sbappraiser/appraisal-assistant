@@ -124,6 +124,7 @@ function normalize(ins) {
   if (!ins.lists.kitchens.length) ins.lists.kitchens.push({ id: uid(), level: 'LevelOne' });
   if (!ins.data.property.state) ins.data.property.state = 'CA';
   if (!ins.data.property.estate) ins.data.property.estate = 'FeeSimple';
+  propDefaults(ins.data.property);
   if (!ins.data.site.apnDesc) ins.data.site.apnDesc = 'LandWithDwelling';
   // v3 interview: old per-item "year" boxes become the 15-year checklist; free-typed years become picker values
   { const iv = ins.data.interview; const now = new Date().getFullYear();
@@ -324,3 +325,8 @@ async function deliver(blob, name) {
   });
 }
 const safeName = s => String(s || '').replace(/[\\/:*?"<>|#%]+/g, '-').replace(/\s+/g, ' ').trim().slice(0, 80) || 'Inspection';
+
+/* her defaults (Oct 21 2026): Native American lands No (none in her area); homeowner responsible for all exterior maintenance Yes once the
+   property is Detached, not a PUD and not a condominium / cooperative – only while those are unanswered, so her own answer always stays */
+function propDefaults(p) { if (!p) return; if (p.native === undefined) p.native = false;
+  if (p.hoExt === undefined && p.attach === 'Detached' && p.pud === false && p.project === false) p.hoExt = true; }
