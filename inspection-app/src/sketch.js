@@ -480,9 +480,9 @@ function jumpCorner() { // nearest corner to the cursor; press again for the nex
   SK.cursor = [...list[SK.jumpIdx]]; ensureVisible(SK.cursor); draw(); renderPanel();
 }
 function setCursor(ft) { SK.cursor = [Math.round(ft[0] * 10) / 10, Math.round(ft[1] * 10) / 10]; SK.cursorOrig = null; SK.cursorJumped = false; SK.jumpIdx = 0; }
-function ensureVisible(pt) { const [X, Y] = toScr(pt); const W = cv.clientWidth, H = cv.clientHeight; if (X < 40 || Y < 40 || X > W - 40 || Y > H - 40) centreOn(pt); }
+function ensureVisible(pt) { const [X, Y] = toScr(pt); const { W, H } = viewBox(); if (X < 40 || Y < 40 || X > W - 40 || Y > H - 40) centreOn(pt); }
 function centreOn(pt) { const { W, H } = viewBox(); SK.view = { ...SK.view, ox: W / 2 - pt[0] * SK.view.s, oy: H / 2 - pt[1] * SK.view.s }; saveViewSoon(); draw(); }
-function viewBox() { const r = cv.parentElement.getBoundingClientRect(); return { W: r.width || cv.clientWidth, H: r.height || cv.clientHeight }; }
+function viewBox() { const r = cv.parentElement.getBoundingClientRect(); const P = document.getElementById('skPanel'); const ph = P ? P.getBoundingClientRect().height : 0; return { W: r.width || cv.clientWidth, H: Math.max(120, (r.height || cv.clientHeight) - ph) }; }
 function centreNow() {   // her ask (Oct 22): center what you are drawing, else all your areas on this level, in the visible drawing space
   sizeCanvas(); const { W, H } = viewBox(); const top = 56;   // keep clear of the totals box
   const fit = (pts, zoomOutOnly) => { const xs = pts.map(p => p[0]), ys = pts.map(p => p[1]); const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
@@ -490,7 +490,8 @@ function centreNow() {   // her ask (Oct 22): center what you are drawing, else 
     const s = zoomOutOnly ? Math.min(SK.view.s, fitS) : fitS; SK.view = { s, ox: W / 2 - (x0 + w / 2) * s, oy: top + (H - top) / 2 - (y0 + h / 2) * s }; saveViewSoon(); draw(); };
   const a = curArea(); if (a && a.pts.length) return fit(a.pts.length > 1 ? shape(a) : a.pts, true);
   if (SK.sel && (SK.sel.type === 'area' || SK.sel.type === 'wall')) { const ar = SK.sk.areas.find(x => x.id === SK.sel.id); if (ar) return fit(shape(ar), true); }
-  const all = SK.sk.areas.filter(x => here(x) && x.pts.length).flatMap(x => x.pts.length > 1 ? shape(x) : x.pts);
+  if (SK.mode === 'iwall') { const w = [...IW().filter(here).flatMap(x => [x.a, x.b]), ...(SK.iw && SK.iw.start ? [SK.iw.start] : [])]; if (w.length) return fit(w, true); }
+  const all = [...SK.sk.areas.filter(x => here(x) && x.pts.length).flatMap(x => x.pts.length > 1 ? shape(x) : x.pts), ...IW().filter(here).flatMap(x => [x.a, x.b]), ...SK.sk.labels.filter(here).map(l => [l.x, l.y]), ...(SK.sk.symbols || []).filter(here).map(y => [y.x, y.y])];
   if (all.length) return fit(all, false);
   if (SK.cursor) return centreOn(SK.cursor);
   fitView(); draw();
@@ -592,8 +593,8 @@ function finishArea(closed) {
 }
 function backspace() {
   if (SK.entry) { SK.entry = SK.entry.slice(0, -1); renderPanel(); return; }
-  if (curArea()) return backspaceWall();   // drawing: take off the last wall
-  return doUndo();   // her ask (Oct 22): ⌫ and Undo are one button – a digit first, then the last wall or the last step
+  if (curArea()) return backspaceWall();   // drawing: take off the last wall (↶ Undo is its own button – her Oct 22 call)
+  return toast('Nothing to erase – use ↶ Undo to undo the last step');
 }
 function backspaceWall() {
   let a = curArea();
@@ -810,8 +811,7 @@ function renderShell() {
     <button class="btn icon" id="skMenu" aria-label="Menu">☰</button>
   </header>
   <div class="sklevels" id="skLevels"></div>
-  <div class="skwrap"><canvas id="skCanvas"></canvas><div class="skinfo" id="skInfo"></div></div>
-  <section class="skpanel" id="skPanel"></section>
+  <div class="skwrap"><canvas id="skCanvas"></canvas><div class="skinfo" id="skInfo"></div><section class="skpanel float" id="skPanel"></section></div>
   <div class="sheet-bg" id="skSheetBg" hidden><div class="sheet" id="skSheet"></div></div>`;
   cv = document.getElementById('skCanvas'); ctx = cv.getContext('2d');
   cv.addEventListener('pointerdown', onDown); cv.addEventListener('pointermove', onMove); cv.addEventListener('pointerup', onUp); cv.addEventListener('pointercancel', onUp);
@@ -866,7 +866,7 @@ function skTray() { if (SK.tray === undefined) { let v = null; try { v = localSt
 function setTray(t) { SK.tray = t; try { localStorage.setItem('skTray', t); } catch (e) {} }
 function openHelp() { openSheet(`<h3>How to use the sketch</h3><div class="calc">
   <p><b>Tools at the bottom.</b> When you are not drawing: ＋ New area, Aa Label, ◫ Symbol, ◜ Door, ┼ Interior wall, ⟳ Rotate, ⌖ Center and ↶ Undo. Press <b>＋</b>, pick the area type and tap where it starts – the drawing pad comes up: keypad, arrows (∠ Angle opens the angle circle), ✓ Save (closes the area), 🛑 Stop (leaves it open), ⌒ Curve and ⌖ Center. Save or Stop brings back the main bar.</p>
-  <p><b>Drawing walls:</b> + New area, tap where it starts (or press and hold a corner and drag), type a length and tap an arrow. ∠ Angle opens the angle circle. Tap the green start to close. ⌫ removes the last digit, then the last wall; when you are not drawing it undoes the last step (↷ Redo is in ☰).</p>
+  <p><b>Drawing walls:</b> + New area, tap where it starts (or press and hold a corner and drag), type a length and tap an arrow. ∠ Angle opens the angle circle. Tap the green start to close. ⌫ removes the last digit, then the last wall. ↶ Undo undoes the last step (↷ Redo is in ☰).</p>
   <p><b>Changing things:</b> tap a wall to change its length or curve it; tap an area to change its type (Properties), turn, copy or delete it; drag a label to move it; tap empty space for the cursor. Drag an area, label or symbol to move it.</p>
   <p><b>Moving around:</b> two fingers to zoom and move. ◎ centers on what you are working on. Blue dots line up with other corners (☰ › Line-up dots).</p>
   <p><b>☰ menu:</b> save to the inspection, redo, add a level or page, copy this level to another level (a second story you can still change), text size, underlay, versions.</p>
@@ -923,7 +923,7 @@ function renderPanel() {
   ${drawPad ? `<div class="pad">
     <div class="keys">
       <div class="entry" id="skEntry">${ent ? esc(ent) + ' ft' : 'length'}</div>
-      ${['7','8','9','4','5','6','1','2','3','.','0'].map(k => `<button class="key" data-k="${k}">${k}</button>`).join('')}<button class="key bs" id="skBs" title="Back: the last digit, then undo the last step">⌫</button>
+      ${['7','8','9','4','5','6','1','2','3','.','0'].map(k => `<button class="key" data-k="${k}">${k}</button>`).join('')}<button class="key bs" id="skBs" title="Backspace: the last digit, then the last wall">⌫</button>
     </div>
     ${SK.dial ? `<div class="dialbox">${dialSvg()}<div class="dlread" id="dlRead"></div>
       <div class="dlrow"><button class="btn primary" id="dlDraw">Draw wall</button><button class="btn" id="dlClose">Arrows</button></div>
@@ -936,11 +936,11 @@ function renderPanel() {
       ${SK.mode === 'iwall' ? '' : SK.mode === 'start' ? `<button class="btn primary big ico" id="skStartHere2" ${SK.cursor ? '' : 'disabled'} title="Start the area here"><span>📍</span><small>Start</small></button>` : ''}
       ${SK.mode === 'iwall' ? '<button class="btn big ico save" id="iwDone2" title="Done with interior walls"><span>✓</span><small>Done</small></button>' : `<button class="btn big ico save" id="skClose" ${a ? '' : 'disabled'} title="Save – close the area and go back"><span>✓</span><small>Save</small></button>
       <button class="btn big ico" id="${a ? 'skDone' : 'skCancelStart'}" title="${a ? 'Stop – leave the area open and go back' : 'Cancel – go back'}"><span class="stopsign"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><polygon points="7,1 17,1 23,7 23,17 17,23 7,23 1,17 1,7" fill="#d40000" stroke="#fff" stroke-width="1.6"/><polygon points="7,1 17,1 23,7 23,17 17,23 7,23 1,17 1,7" fill="none" stroke="#000" stroke-width=".8"/><text x="12" y="15.2" text-anchor="middle" font-size="6.6" font-weight="700" font-family="Arial,sans-serif" fill="#fff">STOP</text></svg></span><small>Stop</small></button>`}
-      <button class="btn big ico" id="skCurveT" ${curveOk ? '' : 'disabled'} title="Curve the last wall (or the wall you tapped)"><span>⌒</span><small>Curve</small></button><button class="btn big ico" id="skCenter" title="Center what you are drawing, or all your areas"><span>⌖</span><small>Center</small></button>
+      <button class="btn big ico" id="skUndoD" title="Undo the last step (Redo is in ☰)"><span>↶</span><small>Undo</small></button><button class="btn big ico" id="skCurveT" ${curveOk ? '' : 'disabled'} title="Curve the last wall (or the wall you tapped)"><span>⌒</span><small>Curve</small></button><button class="btn big ico" id="skCenter" title="Center what you are drawing, or all your areas"><span>⌖</span><small>Center</small></button>
     </div>
   </div>` : ''}`;
   { const d2 = document.getElementById('iwDone2'); if (d2) d2.onclick = () => { SK.mode = 'select'; SK.iw = null; draw(); renderPanel(); }; }
-  { const u = document.getElementById('skUndo'); if (u) u.onclick = doUndo; }
+  { const u = document.getElementById('skUndo'); if (u) u.onclick = doUndo; const u2 = document.getElementById('skUndoD'); if (u2) u2.onclick = doUndo; }
   { const ct = document.getElementById('skCurveT'); if (ct) ct.onclick = () => { const ca = curArea(); if (ca && ca.pts.length >= 2) return startCurve(ca, ca.pts.length - 2); if (sel && sel.type === 'wall') return startCurve(SK.sk.areas.find(x => x.id === sel.id), sel.i); toast('Tap a wall first, or draw one'); }; }
   { const rt = document.getElementById('skRotT'); if (rt) rt.onclick = () => { if (sel && (sel.type === 'area' || sel.type === 'symbol')) return toast('Use Turn above to turn the selected item'); if (!SK.sk.areas.length) return toast('Nothing drawn yet'); SK.rotC = null; SK.sel = { type: 'all' }; SK.cursor = null; renderPanel(); }; }
   const on = (id, fn) => { const b = document.getElementById(id); if (b) b.onclick = fn; };

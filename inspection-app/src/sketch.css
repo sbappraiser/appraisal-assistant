@@ -117,3 +117,7 @@ body.working .skinfo { opacity: .85; }
 .btn.ico .stopsign { line-height: 0; } .btn.ico .stopsign svg { width: 24px; height: 24px; display: block; }
 .mainbar { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; padding-top: 2px; } .btn.ico.save { background: #e5f4e4; border-color: #1e7a3c; } .btn.ico.save span { color: #1e7a3c; font-weight: 800; }
 @media (max-width: 520px) { .mainbar { grid-template-columns: repeat(4, 1fr); } }
+
+/* her Oct 22 photo: the drawing fills the screen and the tools float on top of it */
+.skwrap .skpanel.float { position: absolute; left: 0; right: 0; bottom: 0; z-index: 3; background: rgba(250,250,250,.86); -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); border-top: 2px solid #000; max-height: 70%; overflow-y: auto; }
+.skwrap .skpanel.float .key, .skwrap .skpanel.float .entry { background: rgba(255,255,255,.95); } .skwrap .skpanel.float .key.arr { background: rgba(238,244,255,.95); } .skwrap .skpanel.float .key.bs { background: #ffe0e0; } .skwrap .skpanel.float .key.angle { background: #fff7d6; }
