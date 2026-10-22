@@ -411,3 +411,4 @@ body:not(.gridbox):not(.popgrid) #gridCard .tablewrap{position:sticky;top:var(--
 .inspdrop{gap:10px;align-items:center;margin:4px 0 6px}
 .card,section[id]{scroll-margin-top:calc(var(--toph,0px) + 10px)}
 .rptbands>section>div.fld:has(textarea){grid-column:1/-1}.rptneed a.rptgo{color:inherit;text-decoration:underline;cursor:pointer}
+header.top h1 small{font-size:.5em;font-weight:600;color:#5b2a86;margin-left:6px;letter-spacing:.02em}

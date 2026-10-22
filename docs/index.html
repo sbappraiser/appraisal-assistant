@@ -233,6 +233,7 @@ mark.blank{background:#fff3a8;padding:0 2px;border-radius:3px}.cmt textarea{widt
 /* the octopus (her structure, Oct 22 2026): shared places, then the nine tentacles of the order */
 nav.tabs { display: none !important; }
 nav.shared, nav.octo, nav.t1sub { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 6px 0; }
+nav.shared .headLbl { font-weight: 800; color: #5b2a86; font-size: 13px; letter-spacing: .06em; text-transform: uppercase; margin-right: 2px; }
 nav.shared button { font: inherit; font-size: 15px; border: 1px solid var(--line); background: #fff; border-radius: 9px; padding: 6px 12px; cursor: pointer; font-weight: 600; }
 nav.shared button[aria-current="true"] { background: #1f3a68; color: #fff; border-color: #1f3a68; }
 nav.octo { border: 2px solid #1f3a68; border-radius: 14px; padding: 6px 8px; background: #f4f7fb; }
@@ -242,6 +243,7 @@ nav.octo button .tn { display: inline-grid; place-items: center; width: 22px; he
 nav.octo button[aria-current="true"] { background: #1f3a68; color: #fff; border-color: #1f3a68; box-shadow: 0 2px 0 #f2c94c; }
 nav.octo button .tck:not(:empty) { font-style: normal; color: #fff; background: #1e8e3e; border-radius: 50%; width: 18px; height: 18px; display: inline-grid; place-items: center; font-size: 12px; }
 nav.octo.noorder button:not([data-tent="1"]) { opacity: .5; }
+nav.octo button.cg { border-bottom: 4px solid #b9a3e0; }
 nav.t1sub { padding-left: 10px; }
 nav.t1sub button { font: inherit; font-size: 14px; border: 1px solid var(--line); background: #fff; border-radius: 8px; padding: 4px 10px; cursor: pointer; }
 nav.t1sub button[aria-current="true"] { border-color: #1f3a68; color: #1f3a68; font-weight: 700; background: #eef4ff; }
@@ -338,7 +340,7 @@ nav.tabs button[aria-selected="true"] { background: var(--look-navy) !important;
     <button type="button" data-tab="wording" aria-selected="false">Standard wording</button>
     <button type="button" data-tab="help" aria-selected="false">Help</button>
   </nav>
-  <nav class="shared" aria-label="Always here"><button type="button" data-go="home">Home</button><button type="button" data-go="library">Library</button><button type="button" data-go="comments">Comments</button><button type="button" data-go="dbs">Database center</button><button type="button" data-go="settings">Settings</button><button type="button" data-go="help">Help</button></nav>
+  <nav class="shared" aria-label="The head of the octopus – tools for every section"><span class="headLbl" title="The head of the octopus: the tools every tentacle uses">Head</span><button type="button" data-go="home">Home</button><button type="button" data-go="library">Library</button><button type="button" data-go="comments">Common responses</button><button type="button" data-go="dbs">Databases</button><button type="button" data-go="claude">Claude</button><button type="button" data-go="settings">Settings</button><button type="button" data-go="help">Help</button></nav>
   <nav class="octo" aria-label="The report, tentacle by tentacle"><span class="octoFile" id="octoFile"></span>
     <button type="button" data-tent="1"><span class="tn">1</span>Intake<i class="tck"></i></button><button type="button" data-tent="2"><span class="tn">2</span>Subject<i class="tck"></i></button><button type="button" data-tent="3"><span class="tn">3</span>Market<i class="tck"></i></button><button type="button" data-tent="4"><span class="tn">4</span>Sales comparison<i class="tck"></i></button><button type="button" data-tent="5"><span class="tn">5</span>Cost<i class="tck"></i></button><button type="button" data-tent="6"><span class="tn">6</span>Income<i class="tck"></i></button><button type="button" data-tent="7"><span class="tn">7</span>Reconciliation<i class="tck"></i></button><button type="button" data-tent="8"><span class="tn">8</span>Review and wrap-up<i class="tck"></i></button><button type="button" data-tent="9"><span class="tn">9</span>Exhibits<i class="tck"></i></button></nav>
   <nav class="t1sub" id="t1sub" hidden aria-label="Intake"><button type="button" data-go="letter">This order</button><button type="button" data-go="saved">All orders</button><button type="button" data-go="new">New order</button><button type="button" data-go="contacts">Clients</button><button type="button" data-go="books">Bookkeeping</button><button type="button" data-go="wording">Letter templates and wording</button></nav>
@@ -582,14 +584,18 @@ nav.tabs button[aria-selected="true"] { background: var(--look-navy) !important;
   <div class="hmpanel" id="bkAll"></div>
 </section>
 <section class="panel" id="panel-library" hidden>
-  <div class="listHead"><div><h2>Library</h2><p class="help">Your reference documents, searchable, in one place. Coming next in the build: Fannie Mae's F-1 (URAR guide), A-1 (fields and choices), D-1 samples and UAD FAQs; Selling Guide sections; USPAP with its FAQs and Advisory Opinions (your own purchased copy – it is copyrighted); your clients' guidelines. Each question's ⓘ will open the matching F-1 line.</p></div></div>
+  <div class="listHead"><div><h2>Library</h2><p class="help">Your reference documents, searchable, in one place. Coming next in the build: Fannie Mae's UAD 3.6 guidance (F-1 URAR guide, A-1 fields and choices, D-1 samples, FAQs) and the UAD 2.6 guidelines; Selling Guide and other rules; USPAP with its FAQs and Advisory Opinions (your own purchased copy – it is copyrighted); your clients' guidelines. Each question's ⓘ will open the matching F-1 line.</p></div></div>
   <ul class="liblinks"><li><a href="https://singlefamily.fanniemae.com" target="_blank" rel="noopener">Fannie Mae Single-Family</a> – UAD 3.6, the Selling Guide</li><li><a href="https://appraisalfoundation.org" target="_blank" rel="noopener">The Appraisal Foundation</a> – USPAP</li></ul>
 </section>
-<section class="panel" id="panel-settings" hidden>
-  <div class="listHead"><div><h2>Settings</h2><p class="help">Your data folder and password lock, Claude, and where the other settings are.</p></div></div>
-  <div class="hmpanel" id="abCardSet"></div>
+<section class="panel" id="panel-claude" hidden>
+  <div class="listHead"><div><h2>Claude</h2><p class="help">Claude helps in every tentacle. Where you will find it:</p></div></div>
+  <div class="card setcard"><ul><li><b>✍ Help me write</b> under each comment box – clearer UAD 3.6 / USPAP wording, no biased words; you decide whether to use it.</li><li><b>Read with Claude</b> in an order's Documents – reads a scanned contract, title report or permit file.</li><li><b>Draft it</b> beside comment boxes – drafts from your own data.</li><li>Orders marked AI use <b>No</b> send nothing; <b>Redacted</b> removes names, phones and e-mails first.</li></ul></div>
   <div class="card setcard" id="setAi"></div>
-  <div class="card setcard"><h3>More settings</h3><ul><li>Grid look, starting points, lines shown, pop-out grid: in the Comp genie, ⚙ Settings at the top (tentacle 4).</li><li>Your writing rules for Help me write: “My writing rules” under any comment box.</li><li>Letter wording: Intake › Letter templates and wording.</li></ul></div>
+</section>
+<section class="panel" id="panel-settings" hidden>
+  <div class="listHead"><div><h2>Settings</h2><p class="help">Your data folder and password lock, and where the other settings are. The Claude key is under Head › Claude.</p></div></div>
+  <div class="hmpanel" id="abCardSet"></div>
+  <div class="card setcard"><h3>More settings</h3><ul><li>Grid look, starting points, lines shown, pop-out grid: ⚙ Settings at the top of the Comp genie pages (tentacles 3–6).</li><li>Your writing rules for Help me write: “My writing rules” under any comment box.</li><li>Letter wording: Intake › Letter templates and wording.</li></ul></div>
 </section>
 <section class="panel" id="panel-help" hidden>
   <div class="wording help-page">
@@ -599,6 +605,7 @@ nav.tabs button[aria-selected="true"] { background: var(--look-navy) !important;
     <details open><summary>The octopus – how the Appraisal Assistant is laid out</summary><ol>
       <li><b>Top right, always there:</b> Home · Library · Comments (your comment library) · Database center · Settings (data folder, password lock, Claude) · Help.</li>
       <li><b>The blue bar is the open order, tentacle by tentacle,</b> in the order you work: <b>1 Intake</b> (this order's documents, engagement letter, assignment and scope; also All orders, New order, Clients, Bookkeeping, Letter templates) · <b>2 Subject</b> (inspection and subject details) · <b>3 Market</b> (market tab, then comp selection) · <b>4 Sales comparison</b> (comp data, grid, support, comment) · <b>5 Cost</b> · <b>6 Income</b> (only when you develop it) · <b>7 Reconciliation</b> · <b>8 Review and wrap-up</b> (review genie, pre-check, SFREP export) · <b>9 Exhibits</b> (maps, photos).</li>
+      <li><b>The Comp genie</b> is the help for the four tentacles that use data, databases and comparables – 3 Market, 4 Sales comparison, 5 Cost, 6 Income (purple underline). 2 Subject, 7 Reconciliation, 8 Review and wrap-up and 9 Exhibits are tentacles of the Appraisal Assistant. The <b>Head</b> (top right) holds the tools for every section: Library, Common responses, Databases, Claude, Settings, Help.</li>
       <li>A green ✓ on a tentacle means everything in it is done. Tentacles 2 and 4–9 open inside this window; their numbered steps underneath carry the same tentacle number.</li>
       <li>Click a tentacle with no order open and it asks you to open one first (1 Intake › All orders, or New order).</li>
       <li>Being built next: each answer in one home only (tentacle 2 for highest and best use, assumptions and conditions), then the Library and the Database center. The plan is your doc “The Octopus – where everything lives”.</li></ol></details>
@@ -1016,7 +1023,7 @@ nav.tabs button[aria-selected="true"] { background: var(--look-navy) !important;
 </div>
 <div id="toast" role="status" hidden></div>
 <script>
-const BUILD='o1-1022-0337';
+const BUILD='o1-1022-0359';
 const G = (() => {
 /* ---------------- small helpers ---------------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -5593,24 +5600,25 @@ function octoMark() {
   for (let t = 2; t <= 9; t++) { const L = S.filter(x => +x.n === t); if (L.length) done[t] = L.every(x => x.done); }
   document.querySelectorAll('nav.octo [data-tent]').forEach(b => { const i = b.querySelector('.tck'); if (i) i.textContent = done[+b.dataset.tent] ? '✓' : ''; });
   const g = $('#gnTitle'); if (g && tab === 'genie' && OCTO.t > 1) g.textContent = OCTO.t + ' · ' + OCTO_NAMES[OCTO.t] + (on ? ' – ' + [cur.fileNo, typeof street === 'function' ? street(cur) : ''].filter(Boolean).join(' ') : '');
-  const gh = $('#gnHelp'); if (gh && tab === 'genie') gh.textContent = OCTO.t > 1 ? 'Worked in the Comp genie, inside the Appraisal Assistant – the numbered steps under it belong to this tentacle and the ones after it.' : 'The Comp genie for the order that is open.';
+  const gh = $('#gnHelp'); if (gh && tab === 'genie') gh.textContent = OCTO.t >= 3 && OCTO.t <= 6 ? 'With the Comp genie – your data, databases and comparables for this section.' : OCTO.t > 1 ? 'Part of the Appraisal Assistant. The numbered steps underneath carry each tentacle\'s number.' : 'The Comp genie for the order that is open.';
+  const mt = $('#mkTitle'); if (mt) mt.innerHTML = '3 · Market <small style="font-size:.55em;color:#5b2a86">Comp genie</small>';
 }
 function octoSettings() {   // the data folder card (drawn here while Settings is open) and the Claude settings (moved here, one copy)
-  const ai = document.getElementById('aiSettingsBox'), sa = $('#setAi'); if (ai && sa && ai.parentNode !== sa) sa.appendChild(ai);
+  const ai = document.getElementById('aiSettingsBox'), sa = $('#setAi');   /* #setAi is on the Claude page */ if (ai && sa && ai.parentNode !== sa) sa.appendChild(ai);
   if (typeof abRender === 'function') abRender(); }
 document.addEventListener('click', e => {
   const tb = e.target.closest && e.target.closest('nav.octo [data-tent]'); if (tb) { octoGo(tb.dataset.tent); return; }
   const g = e.target.closest && e.target.closest('nav.shared [data-go], nav.t1sub [data-go]'); if (g) { const t = g.dataset.go;
     if (t === 'new') { if (typeof startNewOrder === 'function') startNewOrder(); OCTO.t = 1; octoMark(); return; }
     if (t === 'letter' && !octoHasOrder()) { showTab('saved'); octoMark(); return; }
-    showTab(t); if (t === 'settings') octoSettings(); octoMark(); return; }
+    showTab(t); if (t === 'settings' || t === 'claude') octoSettings(); octoMark(); return; }
   const m = e.target.closest && e.target.closest('[data-octogo]'); if (m) octoGo(3, m.dataset.octogo);
 });
 window.addEventListener('message', e => { if (e.origin !== location.origin || !e.data || e.data.type !== 'aa-path') return; OCTO.steps = { order: e.data.order, list: e.data.steps || [] }; octoMark(); });
 /* every tab change marks the octopus */
-(() => { const st = showTab; showTab = function (t) { const r = st.apply(this, arguments); try { if (t === 'settings') octoSettings(); octoMark();
+(() => { const st = showTab; showTab = function (t) { const r = st.apply(this, arguments); try { if (t === 'settings' || t === 'claude') octoSettings(); octoMark();
     if (t === 'market') { const mb = $('#panel-market'); if (mb && !mb.querySelector('.mkocto')) mb.insertAdjacentHTML('afterbegin', '<div class="mkocto"><span class="help" style="margin:0">Tentacle 3 also holds comp selection:</span><button type="button" class="btn small" data-octogo="sel">3 · Comp selection →</button></div>'); } } catch (e) {} return r; }; })();
-setTimeout(octoMark, 300);
+setTimeout(() => { document.querySelectorAll('nav.octo [data-tent]').forEach(b => { if (+b.dataset.tent >= 3 && +b.dataset.tent <= 6) { b.classList.add('cg'); b.title = 'With the Comp genie – your data, databases and comparables'; } }); octoMark(); }, 300);
 
 /* =====================================================================
    "My comments" on every comment box (her ask Oct 21 2026: "if I am in the highest and best use section, I click

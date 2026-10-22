@@ -390,7 +390,7 @@ function renderPage() {
   root.dataset.stage = J.stage || (J.comps.some(c => c.use) ? 'workbook' : J.comps.length ? 'micro' : 'setup');
   const ON = (...st) => st.includes(root.dataset.stage);   /* her ask (Oct 21 2026, "slow to load"): only the step she is on is built – the others were built and hidden on every redraw */
   root.innerHTML = `
-  <header class="top"><h1>Comp Genie</h1><span class="pill ver" title="The Comp genie version – after Ctrl+R it should match the one I tell you">Version ${typeof BUILD !== 'undefined' ? BUILD : ''}</span>
+  <header class="top"><h1>${pageName(root.dataset.stage)}</h1><span class="pill ver" title="The Comp genie version – after Ctrl+R it should match the one I tell you">Version ${typeof BUILD !== 'undefined' ? BUILD : ''}</span>
     <span class="pill ${ARCH.loaded ? 'ok' : 'warn'}">${ARCH.loaded ? `Archive: ${ARCH.rows.length.toLocaleString()} records` : 'Archive not loaded'}</span>${archPhotoPill()}
     <span class="pill">${app.cort.length ? `CORT: ${app.cort.length} sales` : 'No CORT table'}</span><span class="pill" title="Your land sale and construction cost databases (shared with the cost approach)">${(app.land || []).length ? `Land sales: ${app.land.length}` : 'No land sales'} · ${app.costDb ? `Costs: ${app.costDb.projects.length} projects` : 'No cost database'}</span>
     <details class="adddb setmenu"><summary class="btn sm" title="Your settings – the look, the grid, how notes show">⚙ Settings</summary><div class="adddbm">
@@ -1099,3 +1099,8 @@ function inspCardHTML(J) { const I = J.subject.insp;
 /* open a numbered step: its page, then scroll to it */
 function genieGo(k, quiet) { const x = pathSteps(app.job).find(y => y.k === k); if (!x || !x.st) return; app.pathAt = k; app.job.stage = x.st; app.home = false; save();
   if (quiet) return; render.top = true; render(); setTimeout(() => { const c = document.querySelector(x.sel); if (c) c.scrollIntoView({ block: 'start' }); }, 150); }
+
+/* her note Oct 22 2026: "Comp genie" is the help for the four sections that use data, databases and comparables (3 Market, 4 Sales comparison,
+   5 Cost, 6 Income). The subject, final reconciliation, review and exhibits are tentacles of the Appraisal Assistant, not the Comp genie. */
+const PAGE_NAMES = { setup: '2 · Subject property', micro: '3 · Market <small>Comp genie</small>', workbook: '4 · Sales comparison <small>Comp genie</small>', cost: '5 · Cost approach <small>Comp genie</small>', income: '6 · Income approach <small>Comp genie</small>', recon: '7 · Final reconciliation', final: '8 · Review and wrap-up', exhibits: '9 · Exhibits' };
+const pageName = st => PAGE_NAMES[st] || 'Comp Genie';
