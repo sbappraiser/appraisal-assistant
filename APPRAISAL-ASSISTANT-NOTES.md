@@ -846,3 +846,4 @@ Decisions (her, Oct 19–20): "Exterior of dwelling" instead of left/right/side 
 - SameProjectAsSubjectIndicator for condo/PUD comps from the project names.
 - Tested st220 (comp nodes, subject on the Berkeley full report, xml check clean, pre-check items).
 - Still to do in 4: Same builder (new construction only), green certification names/ratings for comps, the comp "Other – describe" fields, price per bedroom/unit (2–4 units only).
+- Her rule (Oct 21 2026): the exterior walls/trim, foundation, roof and windows condition lines stay off unless an appraisal needs one (e.g. a comp needed a new roof); labeled "only when needed" and never saved on by default unless she does.
