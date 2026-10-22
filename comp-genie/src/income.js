@@ -20,7 +20,7 @@ function incomeDraft(J) { const K = incomeJob(J), X = incomeCalc(J);
   t += ' Single-family homes in this market are typically purchased for owner occupancy, so the income approach is given less weight than the sales comparison approach.';
   return t.slice(0, 5000); }
 function incomeHTML(J) {
-  const o = typeof orderOf === 'function' ? orderOf(J) : null; const on = J.incomeOn ?? !!(o && (o.apIncome || o.rent));
+  const o = typeof orderOf === 'function' ? orderOf(J) : null; const R0x = R0(J); const on = J.incomeOn ?? (R0x.sowIncome === 'true' || (!R0x.sowIncome && !!(o && (o.apIncome || o.rent))));
   if (!on) return `<div class="row"><h2 style="margin:0">Income approach and rent survey</h2><span class="grow"></span><button class="btn sm" data-inc="on">Develop the income approach</button></div><p class="help">Not developed for this assignment${o ? ` (the order says it ${o.apIncome ? 'is' : 'is not'} needed)` : ''}. Opens a rent survey (comparable rentals, mapped) and a gross rent multiplier.</p>`;
   const K = incomeJob(J), X = incomeCalc(J); const nf = v => blank(v) || v === '' ? '' : Math.round(+v).toLocaleString();
   const rrow = (r, i) => `<tr><td><input type="checkbox" data-rt="${r.id}|use" ${r.use ? 'checked' : ''}></td><td>Rental ${i + 1}</td><td><input class="txt sm" data-rt="${r.id}|addr" value="${esc(r.addr || '')}" placeholder="Address" style="width:13em"><input class="txt xs" data-rt="${r.id}|city" value="${esc(r.city || '')}" placeholder="City" style="width:7em"></td>

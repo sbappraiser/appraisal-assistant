@@ -67,7 +67,7 @@ function precheckGrid(J) { if (!RC) return rcRun(() => precheckGrid(J));
     if (R.priorSvc === 'true' && !String(R.priorSvcText || '').trim()) out.push({ sev: 'Must fix', msg: 'Prior services is Yes – describe the services (Report details).' });
     if (R.listedYear !== 'true' && R.listedYear !== 'false' && F.listedYear === undefined) out.push({ sev: 'Must fix', msg: 'Answer "Subject listed for sale in the past year?" (Report details › Prior services and certifications).' });
     [['sowCost', 'Cost approach developed?'], ['sowIncome', 'Income approach developed?'], ['sowRent', 'Rent schedule included?'], ['sowAddlUser', 'Intended users besides the client?']].forEach(([k, l]) => { if (R[k] !== 'true' && R[k] !== 'false' && F[k] === undefined) out.push({ sev: 'Must fix', msg: `Scope of work: answer "${l}" (Report details).` }); });
-    if (blank(num(String(R.opinion || '').replace(/[$,\s]/g, '')))) out.push({ sev: 'Must fix', msg: 'Opinion of market value is blank (Report details › Value and reconciliation) – it is the value on page 1 of the report.', hint: blank(G.value) ? '' : 'The grey ' + money(G.value) + ' there is only your sales comparison value as a hint – type your final value.' });   /* her Oct 21 import: page 1 Opinion of Market Value was blank */
+    if (blank(rptOpinion(J))) out.push({ sev: 'Must fix', msg: 'Opinion of market value is blank (Report details › Value and reconciliation) – it is the value on page 1 of the report.', hint: blank(G.value) ? '' : 'The grey ' + money(G.value) + ' there is only your sales comparison value as a hint – type your final value.' });   /* her Oct 21 import: page 1 Opinion of Market Value was blank */
     if (blank(String(R.reconNote || '').trim())) out.push({ sev: 'Must fix', msg: 'Reconciliation comment is blank (Report details › Value and reconciliation) – 3.6 requires it (Reconciliation of Market Value).' });
     const RX = typeof RE === 'function' ? RE(J) : R;
     if (sowLen(RX) > 2500) out.push({ sev: 'Must fix', msg: `Additional scope of work is ${sowLen(RX).toLocaleString()} characters – 3.6 allows 2,500 for the scope, extraordinary assumptions and hypothetical conditions together (Report details).` });
@@ -149,7 +149,8 @@ async function precheckRun(J, wantExport) {
 }
 
 /* her ask (Oct 21 2026): each pre-check line takes her to the place to fix it – the step, then the box (scrolled to and outlined) */
-function preGo(J, x) { const m = String(x.msg || ''); const byUse = n => usedComps(J).find(c => +c.use === +n);
+function preGo(J, x) { const g = preGo0(J, x); if (g && g.label === 'Report details' && typeof rptLateMsg === 'function' && !rptLateMsg(String(x.msg || ''))) { g.stage = 'micro'; g.label = 'Assignment, scope and site'; } return g; }
+function preGo0(J, x) { const m = String(x.msg || ''); const byUse = n => usedComps(J).find(c => +c.use === +n);
   let r;
   if ((r = m.match(/^Comp (\d+): Construction method/))) { const c = byUse(r[1]); if (c) return { stage: 'workbook', sel: `[data-gfact="${c.id}|constr"]`, label: 'comp ' + c.use + ' construction method' }; }
   if ((r = m.match(/^Comp (\d+): (Street surface|View range|Energy efficient|exterior quality|exterior condition|interior quality|interior condition)/))) { const c = byUse(r[1]); const id = { 'Street surface': 'streetAccess', 'View range': 'view', 'Energy efficient': 'energy', 'exterior quality': 'extQ', 'exterior condition': 'extC', 'interior quality': 'intQ', 'interior condition': 'intC' }[r[2]]; if (c) return { stage: 'workbook', sel: `[data-gfact="${c.id}|${id}"]`, show: id, label: 'comp ' + c.use + ' ' + r[2].toLowerCase() }; }

@@ -14,7 +14,7 @@ let aiText = store.get('aiText', null);
 let cur = null;           // the letter being edited
 let clientCount = 1;
 
-const NEW_FIELDS = { hbuLegal: false, hbuPhys: false, hbuFin: false, hbuMax: false, hbuPresent: '', hbuNote: '', sowNote: '', rightsNot: '', signDate: '', jurisdiction: '', street: '', city: '', state: 'CA', zip: '', zip4: '', stage: 'New', inspDate: '', inspTime: '', effDate: '', unit: '', apn: '', county: '', lat: '', lon: '', owner: '', legal: '', borrower: '',
+const NEW_FIELDS = { hbuLegal: false, hbuPhys: false, hbuFin: false, hbuMax: false, hbuPresent: '', hbuNote: '', sowNote: '', addlCond: '', addlCondText: '', rightsNot: '', signDate: '', jurisdiction: '', street: '', city: '', state: 'CA', zip: '', zip4: '', stage: 'New', inspDate: '', inspTime: '', effDate: '', unit: '', apn: '', county: '', lat: '', lon: '', owner: '', legal: '', borrower: '',
   lenderDiff: false, govAgency: '', investorId: '', reportForm: '', lenderCo: '', lenderAddr1: '', lenderAddr2: '', loanNo: '', amcUsed: false, amcCo: '', amcAddr1: '', amcAddr2: '', amcLic: '', amcState: 'CA', amcExp: '', amcFee: '', amcRef: '', notes: '', todos: '', invNo: '', invDate: '', invAmt: '', paidDate: '', paidMethod: '', paidAmt: '', paidRef: '' };
 function blankLetter() {
   return { ...NEW_FIELDS, docs: [], crs: null, listings: [], permits: null, created: new Date().toISOString(), id: uid(), status: 'Client letter', reportForm: 'uad36', fileNo: '', orderDate: todayISO(), dueDate: '', aiUse: '', orderDoc: null, agreeDate: todayISO(), type: 'uadPurchase', clients: [{}], address: '', propType: 'sfr', propTypeOther: '',
@@ -584,7 +584,7 @@ function oSetup() { if (oSetup.done) return; oSetup.done = true;
   document.querySelectorAll('#panel-letter [data-otab]').forEach(b => b.onclick = () => { OTAB = b.dataset.otab; if (cur) cur.otab = OTAB; oRender(cur); window.scrollTo({ top: 0 }); });
   $('#oNext').onclick = () => { const t = document.querySelector('nav.tabs [data-tab="genie"]'); if (t) t.click(); };
   $('#hbuAll').onclick = () => { ['Legal', 'Phys', 'Fin', 'Max'].forEach(k => { $('#f_hbu' + k).checked = true; }); $('#f_hbuPresent').value = 'true'; update(); };
-  ['#f_hbuLegal', '#f_hbuPhys', '#f_hbuFin', '#f_hbuMax', '#f_hbuPresent', '#f_hbuNote', '#f_sowNote'].forEach(id => { const el = $(id); if (el) { el.addEventListener('input', update); el.addEventListener('change', update); } }); }
+  ['#f_hbuLegal', '#f_hbuPhys', '#f_hbuFin', '#f_hbuMax', '#f_hbuPresent', '#f_hbuNote', '#f_sowNote', '#f_addlCond', '#f_addlCondText'].forEach(id => { const el = $(id); if (el) { el.addEventListener('input', update); el.addEventListener('change', update); } }); }
 function oDone(f) { const D = f.docs || [], has = t => D.some(d => d.type === t);
   return { docs: D.length > 0, letter: has('clientLetter') || has('myLetter') || !!f.letterMade || ['Sent', 'Signed'].includes(f.status),
     scope: !!(f.apSales || f.apCost || f.apIncome) && ((f.hbuLegal && f.hbuPhys && f.hbuFin && f.hbuMax) || !!String(f.hbuNote || '').trim()) }; }

@@ -25,6 +25,7 @@ const CPK_BOX = [
   ['textarea[data-rpt="cSite"]', 'Site', /^site(?! value)|zoning|hazard|flood|fire|views?\b/i],
   ['textarea[data-rpt="cSubject"]', 'Subject property', /subject|improvement|functional|energy|green|ansi/i],
   ['textarea[data-rpt="cMarket"], textarea[data-mcx="summary"]', 'Market', /market(?! boundar)|price trend/i],
+  ['textarea[data-mk="general"]', 'Market', /market(?! boundar)|price trend/i],
   ['textarea[data-mk="comment"]', 'Price trends', /price trend|market commentary|market condition/i],
   ['textarea[data-mk="boundary"]', 'Market area boundary', /boundar|neighborhood|market area/i],
   ['textarea[data-mk="criteria"]', 'Search criteria', /criteria|comparable search|search/i],

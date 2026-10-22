@@ -46,4 +46,4 @@ const CMT_TIP = '<p class="help">Write only what the fields cannot show – revi
 document.addEventListener('input', e => { const t = e.target; if (!t || t.tagName !== 'TEXTAREA' || !t.maxLength || t.maxLength < 0) return; const lab = t.closest('label'); const c = lab && lab.querySelector('.cmtcnt'); if (!c) return;
   const max = t.maxLength; c.textContent = `${t.value.length.toLocaleString()} / ${max.toLocaleString()} characters`; c.classList.toggle('warnTxt', t.value.length >= max); });
 document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('[data-cmtdraft]'); if (!b || !app.job) return; const k = b.dataset.cmtdraft; const R = R0(app.job);
-  if (R[k] && !confirm('Replace your text in this box with a new draft?')) return; R[k] = cmtDraft(app.job, k); save(); const c = document.getElementById('reportCard'); if (c) c.innerHTML = reportHTML(app.job); });
+  if (R[k] && !confirm('Replace your text in this box with a new draft?')) return; R[k] = cmtDraft(app.job, k); save(); rptRedraw(); });

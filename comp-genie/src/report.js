@@ -43,7 +43,7 @@ function clientNeeds(J) { const o = orderOf(J); if (!o) return []; const F = o.l
   const open = (o.reqs || []).filter(r => !r.done).length; if (open) out.push({ k: 'reqs', t: `${open} client requirement${open > 1 ? 's' : ''} not ticked yet (hub › Order › Client requirements)`, warn: true });
   return out; }
 const clientNeedsHTML = J => { const L = clientNeeds(J); return L.length ? `<div class="cneeds"><b>The client's letter asks for:</b> ${L.map(x => `<span class="cneed${x.warn ? ' warn' : ''}">${esc(x.t)}</span>`).join(' ')}</div>` : ''; };
-function zoneTable() { if (!app.zoneDesc) { app.zoneDesc = {}; DB.get('kv', 'zoneDesc').then(r => { app.zoneDesc = (r && r.v) || {}; const c = $('#reportCard'); if (c && app.job) c.innerHTML = reportHTML(app.job); }); } return app.zoneDesc; }
+function zoneTable() { if (!app.zoneDesc) { app.zoneDesc = {}; DB.get('kv', 'zoneDesc').then(r => { app.zoneDesc = (r && r.v) || {}; if (app.job) rptRedraw(); }); } return app.zoneDesc; }
 
 /* what the order, the inspection and the CRS already say (shown grey until she types her own) */
 function reportFrom(J) {
@@ -59,25 +59,27 @@ function reportFrom(J) {
     insp: I.inspType || 'InteriorAndExterior', market: (o.market && o.market.uad) || null, contract: o.uad || null, hasOrder: !!o.id,
     sowCost: o.id ? !!o.apCost : undefined, sowIncome: o.id ? !!o.apIncome : undefined, sowRent: o.id ? !!o.rent : undefined, sowAddlUser: o.id ? !!String(o.otherUsers || '').trim() : undefined,
     /* her Order › Scope of work tab (Oct 21 2026): highest and best use, added scope, extraordinary assumptions, hypothetical conditions */
-    hbu: { legal: !!o.hbuLegal, phys: !!o.hbuPhys, fin: !!o.hbuFin, max: !!o.hbuMax }, hbuPresent: o.hbuPresent || '', hbuNote: o.hbuNote || '', sowNote: o.sowNote || '', eaNote: o.ea || '', hcNote: o.hc || '',
+    hbu: { legal: !!o.hbuLegal, phys: !!o.hbuPhys, fin: !!o.hbuFin, max: !!o.hbuMax }, hbuPresent: o.hbuPresent || '', hbuNote: o.hbuNote || '', sowNote: o.sowNote || '', eaNote: o.ea || '', hcNote: o.hc || '', addlCond: o.addlCond || '', addlCondText: o.addlCondText || '',
     listedYear: o.listing === 'listed' || o.listing === 'contract' ? true : undefined, priorHits: priorHits(J, o.effDate || o.inspDate || o.dod || J.subject.eff || '') };
 }
 const rv = (J, k) => { const R = R0(J), F = reportFrom(J); return blank(R[k]) ? F[k] : R[k]; };
 /* her answers here, or the order's Scope of work tab where she left one blank (read-only copy for checking and export) */
-function RE(J) { const R = R0(J), F = reportFrom(J); const o = { ...R }; ['hbuNote', 'hbuPresent', 'sowNote', 'eaNote', 'hcNote'].forEach(k => { if (blank(R[k]) && !blank(F[k])) o[k] = F[k]; });
+function RE(J) { const R = R0(J), F = reportFrom(J); const o = { ...R }; ['hbuNote', 'hbuPresent', 'sowNote', 'eaNote', 'hcNote', 'addlCond', 'addlCondText'].forEach(k => { if (blank(R[k]) && !blank(F[k])) o[k] = F[k]; });
   o.hbu = Object.values(R.hbu || {}).some(Boolean) ? R.hbu : (Object.values(F.hbu || {}).some(Boolean) ? F.hbu : (R.hbu || {})); return o; }
 
 /* her exposure-time rule (Oct 19 2026): count only the days a comp was on the market at a reasonable price – from its last price
    reduction to the pending / contingent date; a comp that was never reduced counts its days on market */
 function expRows(J) {
   return usedComps(J).map(c => { const C = compFacts(c, J); const d = redDaysOf(C) ?? C.redDays; const dom = num(C.dom);
-    return { c, title: compTitle(c), use: c.use, lastRed: C.lastRed, days: d !== null ? d : dom, from: d !== null ? 'since the last price reduction' : 'days on market (no reduction)', dom }; }).filter(r => r.days !== null && r.days !== undefined && !isNaN(r.days));
+    const lp = num(C.listPrice) || num(C.origList), sp = num(C.price);   // her ask Oct 22 2026: show when a comp sold over the list price
+    return { c, title: compTitle(c), use: c.use, lastRed: C.lastRed, days: d !== null ? d : dom, from: d !== null ? 'since the last price reduction' : 'days on market (no reduction)', dom, lp, sp, ratio: lp && sp ? sp / lp : null }; }).filter(r => r.days !== null && r.days !== undefined && !isNaN(r.days));
 }
 function expHelpHTML(J) {
   const L = expRows(J); if (!L.length) return '<p class="help">Your comps’ days on market at a reasonable price show here once the grid has comps (last price reduction from the MLS printout).</p>';
   const ds = L.map(r => r.days).sort((a, b) => a - b); const lo = ds[0], hi = ds[ds.length - 1], med = ds[Math.floor((ds.length - 1) / 2)];
   return `<div class="exphelp"><p class="help"><b>Days on the market at a reasonable price</b> (your rule: an overpriced period does not count – from the last price reduction to pending; no reduction = days on market)</p>
-    <table class="mini"><tr><th>Comp</th><th>Last price reduction</th><th class="r">Days</th><th></th></tr>${L.map(r => `<tr><td>${r.use}. ${esc(r.title)}</td><td>${r.lastRed ? esc(showDate(r.lastRed)) : '–'}</td><td class="r">${r.days}</td><td><small class="muted">${esc(r.from)}${r.lastRed && r.dom ? ' · ' + r.dom + ' total' : ''}</small></td></tr>`).join('')}</table>
+    <table class="mini"><tr><th>Comp</th><th>Last price reduction</th><th class="r">Days</th><th class="r">List price</th><th class="r">Sale price</th><th class="r">Sale / list</th><th></th></tr>${L.map(r => `<tr><td>${r.use}. ${esc(r.title)}</td><td>${r.lastRed ? esc(showDate(r.lastRed)) : '–'}</td><td class="r">${r.days}</td><td class="r">${r.lp ? money(r.lp) : '–'}</td><td class="r">${r.sp ? money(r.sp) : '–'}</td><td class="r">${r.ratio ? `${r.ratio > 1 ? '<b>' : ''}${(r.ratio * 100).toFixed(1)}%${r.ratio > 1 ? ' over list</b>' : ''}` : '–'}</td><td><small class="muted">${esc(r.from)}${r.lastRed && r.dom ? ' · ' + r.dom + ' total' : ''}</small></td></tr>`).join('')}</table>
+    ${(() => { const R = L.filter(r => r.ratio), over = R.filter(r => r.ratio > 1); return R.length ? `<p class="help">${over.length ? `<b>${over.length} of ${R.length} sold over the list price</b> (${over.map(r => 'comp ' + r.use).join(', ')}) – a sign of competing offers and a short exposure time.` : `None of the ${R.length} sold over the list price.`} Median sale / list ${(R.map(r => r.ratio).sort((a, b) => a - b)[Math.floor((R.length - 1) / 2)] * 100).toFixed(1)}%.</p>` : ''; })()}
     <p>Range <b>${lo}–${hi} days</b> · median ${med} <button class="btn sm" data-act="exp-use" data-lo="${lo}" data-hi="${hi}">Use ${lo} to ${hi}</button></p></div>`;
 }
 /* prior services: her archive (subject records) and her orders for the same address in the 3 years before the effective date */
@@ -89,15 +91,15 @@ function priorHits(J, eff0) {
     const d = String(o.effective || o.inspDate || o.orderDate || o.created || '').slice(0, 10); if (d && d >= from && d < eff) out.push(`order ${o.fileNo || ''} (${showDate(d)}${o.stage ? ', ' + o.stage : ''})`.replace('order  (', 'order (')); });
   return out;
 }
-function reportHTML(J) {
+function reportHTML(J, part) {   // part: 'early' (Assignment, scope and site – right after the inspection) | 'late' (value and reconciliation) | all
   const R = R0(J), F = reportFrom(J), G = G0(J), H = RE(J).hbu, RX = RE(J);
   const inp = (k, ph, w) => `<input class="txt" data-rpt="${k}" value="${esc(R[k] ?? '')}" placeholder="${esc(F[k] || ph || '')}"${w ? ` style="width:${w}"` : ''}>`;
   const sel = (k, list, def, note = 'from the order') => `<select data-rpt="${k}"><option value="">${def ? esc((list.find(x => x[0] === def) || [, ''])[1]) + ' (' + note + ')' : '—'}</option>${list.map(([v, l]) => `<option value="${v}"${R[k] === v ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select>`;
   const yn = (k, def) => `<select data-rpt="${k}"><option value="">${def === true ? 'Yes' : def === false ? 'No' : '—'}${def !== undefined ? ' (usual)' : ''}</option><option value="true"${R[k] === 'true' ? ' selected' : ''}>Yes</option><option value="false"${R[k] === 'false' ? ' selected' : ''}>No</option></select>`;
   const M = F.market;
   /* her ask (Oct 21 2026): she did not see this was hers to fill in – a clear banner with what is still missing (from the pre-check), bigger type */
-  const need = typeof precheckGrid === 'function' ? precheckGrid(J).filter(x => x.sev === 'Must fix' && typeof preGo === 'function' && (preGo(J, x) || {}).label === 'Report details') : [];
-  return `<h2>Report details <small>– yours to fill in before you export</small></h2>
+  const need = typeof precheckGrid === 'function' ? precheckGrid(J).filter(x => x.sev === 'Must fix' && typeof preGo === 'function' && (preGo0(J, x) || {}).label === 'Report details') : [];
+  const out = `<h2>Report details <small>– yours to fill in before you export</small></h2>
   <div class="rptneed ${need.length ? 'warn' : 'done'}">${need.length ? `<b>${need.length} answer${need.length > 1 ? 's' : ''} still needed here:</b><ul>${need.map(x => `<li>${esc(x.msg.replace(/\s*\(Report details[^)]*\)\.?/, '').replace(/ – it is the value on page 1 of the report\./, ' – the value on page 1 of the report.'))}</li>`).join('')}</ul>` : '<b>✓ Everything the report needs here is answered.</b>'}
     <span class="rptkey"><span class="k own">your entry</span> <span class="k sug">suggested – type over it or leave it</span></span></div>
   ${clientNeedsHTML(J)}
@@ -128,6 +130,8 @@ function reportHTML(J) {
       <label class="fld"><span>Government agency appraisal (FHA, VA, USDA)?</span>${yn('sowGov', false)}${R.sowGov === 'true' ? ` ${sel('govType', [['FHA', 'FHA'], ['VA', 'VA'], ['USDA', 'USDA']], '')}` : ''}</label>
       <label class="fld"><span>Intended users besides the client?</span>${yn('sowAddlUser', F.sowAddlUser)}</label>
       <label class="fld"><span>Additional scope of work?</span>${yn('sowAddlScope', sowAny(RX) ? true : false)}</label>
+      <label class="fld"><span>Additional client-requested conditions? <small class="muted">(from the order – e.g. a value under a marketing-time limit)</small></span>${yn('addlCond', F.addlCond === 'true' ? true : false)}</label>
+      ${RX.addlCond === 'true' ? `<label class="fld"><span>Describe them <small class="muted">(2,500 characters)</small></span><textarea class="txt" rows="2" maxlength="2500" data-rpt="addlCondText" placeholder="${esc(F.addlCondText ? 'From the order: ' + F.addlCondText : 'The conditions the client asked for')}">${esc(R.addlCondText || '')}</textarea></label>` : ''}
       <label class="fld"><span>Scope of work – what you did beyond the standard <small class="muted">(shares 2,500 characters with the two boxes below)</small></span><textarea class="txt" rows="3" maxlength="2500" data-rpt="sowNote" placeholder="${esc(F.sowNote ? 'From the order’s Scope of work: ' + F.sowNote : 'e.g. Exterior photos of the comps were taken from the street; the subject\'s permits were reviewed at the County.')}">${esc(R.sowNote || '')}</textarea></label></section>
     <section><h3>Extraordinary assumptions and hypothetical conditions <small>go to SFREP in Additional Scope of Work</small></h3>
       <label class="fld"><span>Extraordinary assumptions</span><textarea class="txt" rows="3" maxlength="2500" data-rpt="eaNote" placeholder="${esc(F.eaNote ? 'From the order’s Scope of work: ' + F.eaNote : 'e.g. The owner-reported permits for the 2010 remodel are assumed accurate; if not, the value could change.')}">${esc(R.eaNote || '')}</textarea></label>
@@ -152,25 +156,25 @@ function reportHTML(J) {
       <label class="fld"><span>Is this a reconsideration of value?</span>${yn('reconsider', false)}</label>
       <label class="fld"><span>Subject listed for sale in the past year?</span>${yn('listedYear', F.listedYear)}</label></section>
     <section><h3>Value and reconciliation</h3>
-      <label class="fld"><span>Opinion of market value</span>${inp('opinion', !blank(G.value) ? money(G.value) + ' (sales comparison)' : '$')}</label>
+      ${rptIndHTML(J)}
+      <label class="fld"><span>Opinion of market value</span>${inp('opinion', !blank(G.value) ? money(Math.round(num(G.value))) + ' (sales comparison)' : '$')}</label>
       <label class="fld"><span>Market value condition</span>${sel('vcond', VCOND, 'AsIs', 'usual')}</label>
       <label class="fld"><span>Reasonable exposure time (days)</span>${inp('expLow', 'from', '6em')} to ${inp('expHigh', 'to', '6em')}</label>
       ${expHelpHTML(J)}
-      <label class="fld"><span>Additional client-requested conditions?</span>${yn('addlCond', false)}</label>
-      ${R.addlCond === 'true' ? `<label class="fld"><span>Describe them <small class="muted">(2,500 characters)</small></span><textarea class="txt" rows="2" maxlength="2500" data-rpt="addlCondText">${esc(R.addlCondText || '')}</textarea></label>` : ''}
       ${['Income', 'Cost'].map(A => { const off = R['sow' + A] === 'false' || (blank(R['sow' + A]) && F['sow' + A] === false); if (!off) return ''; const k = 'excl' + A;
         return `<label class="fld"><span>${A} approach not developed – reason</span>${sel(k, EXCL_REASONS.filter(x => A === 'Cost' || !/Depreciation|Land/.test(x[0])), 'NotNecessaryForCredibleResults', 'usual')}${R[k] === 'Other' ? ` <input class="txt" data-rpt="${k}Other" maxlength="225" value="${esc(R[k + 'Other'] || '')}" placeholder="Describe (225 characters)">` : ''}</label>`; }).join('')}
       <label class="fld"><span>Reconciliation comment ${cmtCount(String(R.reconNote || ''), 5000)}</span><textarea class="txt" rows="3" maxlength="5000" data-rpt="reconNote">${esc(R.reconNote || '')}</textarea></label></section>
-    <section><h3>Market <small>from the hub's Market tab</small></h3>
+    <section><h3>Market <small>on the Appraisal Assistant's Market tab</small></h3>
       ${M ? `<table class="mini"><tr><th>Look back</th><td>${esc(M.L)} months</td></tr><tr><th>Actives</th><td>${esc(M.activeN)}${M.activeN ? ` · ${money(M.activeLow)} / ${money(M.activeMed)} / ${money(M.activeHigh)} · median DOM ${esc(Math.round(M.activeDom))}` : ''}</td></tr>
         <tr><th>Pendings</th><td>${esc(M.pendingN)}</td></tr><tr><th>Sales</th><td>${esc(M.salesN)}${M.salesN ? ` · ${money(M.saleLow)} / ${money(M.saleMed)} / ${money(M.saleHigh)}` : ''}</td></tr>
         <tr><th>Demand / supply</th><td>${esc({ Shortage: 'Shortage', InBalance: 'In balance', OverSupply: 'Oversupply' }[M.supply] || '—')}</td></tr><tr><th>Marketing time</th><td>${esc({ UnderThreeMonths: 'Under 3 months', ThreeToSixMonths: '3 to 6 months', OverSixMonths: 'Over 6 months' }[M.mktime] || '—')}</td></tr><tr><th>Distressed competition</th><td>${M.distress === 'true' ? 'Yes' : M.distress === 'false' ? 'No' : '—'}</td></tr>
         <tr><th>Boundary</th><td>${M.boundary ? '✓' : '<b class="warnTxt">missing</b>'}</td></tr><tr><th>Search criteria</th><td>${M.criteria ? '✓' : '<b class="warnTxt">missing</b>'}</td></tr><tr><th>Price trend comment</th><td>${M.comment ? '✓ ' + M.comment.length.toLocaleString() + ' characters' : '<b class="warnTxt">missing</b>'}</td></tr></table>
         <p class="help">These go into the Market section. To change them, open the order's Market tab in the Appraisal Assistant, then come back here.</p>`
       : `<p class="help">${F.hasOrder ? 'Nothing yet. In the Appraisal Assistant open this order › <b>Market</b> tab: drop your SBMLS market-area search CSV (the micro market: actives, pendings and sales in the look-back period) and, once a month, the SBMLS monthly statistics PDF (the macro market). Check the boundary, criteria and price-trend comment, then come back here.' : 'Link this assignment to an order to bring in the Market section.'}</p>`}
-      ${cmtBoxHTML(J, 'cMarket')}
+      ${M && M.general ? `<p class="help">Market commentary: ✓ ${M.general.length.toLocaleString()} characters (Market tab).</p>` : '<p class="help">Market commentary: write it on the Market tab, under the Price Trend commentary.</p>'}${R.cMarket ? cmtBoxHTML(J, 'cMarket') + '<small class="muted">You typed this here before; it is used instead of the Market tab’s. Clear it to use the Market tab’s.</small>' : ''}
       ${F.contract && (F.contract.price || F.contract.cdate) ? `<p class="help">Sales contract (from the document reader): ${esc(money(num(String(F.contract.price).replace(/[$,]/g, ''))))}${F.contract.cdate ? ' · ' + esc(F.contract.cdate) : ''} – goes into the contract section.</p>` : ''}</section>
   </div>`;
+  return part ? rptPart(J, out, part) : out;
 }
 
 function hbuDraft(J) {
@@ -182,8 +186,8 @@ document.addEventListener('change', e => {
   const t = e.target; if (!app.job) return; const R = R0(app.job);
   if (t.dataset.rpt) { const k = t.dataset.rpt, v = t.value.trim(); if (v === '') delete R[k]; else R[k] = k === 'zone' ? v.toUpperCase() : t.tagName === 'TEXTAREA' ? t.value : v;
     if (k === 'zoneDesc' && v) { const code = rv(app.job, 'zone').toUpperCase(); if (code) { zoneTable()[code] = v; DB.put('kv', { id: 'zoneDesc', v: app.zoneDesc }); } }
-    save(); if (['assign', 'zone', 'allRights', 'rightsType', 'sowGov', 'addlCond', 'sowIncome', 'sowCost', 'exclIncome', 'exclCost', 'sowNote', 'eaNote', 'hcNote', 'addlCert'].includes(k) || /^cert\d$/.test(k)) { const c = $('#reportCard'); if (c) c.innerHTML = reportHTML(app.job); }
-    else { const b = document.querySelector('#reportCard .rptneed'); if (b) { const d = document.createElement('div'); d.innerHTML = reportHTML(app.job); const nb = d.querySelector('.rptneed'); if (nb) b.replaceWith(nb); } }   /* the 'still needed' list follows her answers */
+    save(); if (['assign', 'zone', 'allRights', 'rightsType', 'sowGov', 'addlCond', 'sowIncome', 'sowCost', 'exclIncome', 'exclCost', 'sowNote', 'eaNote', 'hcNote', 'addlCert'].includes(k) || /^cert\d$/.test(k)) rptRedraw();
+    else [['#setupCard', 'early'], ['#reportCard', 'late']].forEach(([id, pt]) => { const b = document.querySelector(id + ' .rptneed'); if (b) { const d = document.createElement('div'); d.innerHTML = reportHTML(app.job, pt); const nb = d.querySelector('.rptneed'); if (nb) b.replaceWith(nb); } });   /* the 'still needed' list follows her answers */
     return; }
   if (t.dataset.hbu) { R.hbu[t.dataset.hbu] = t.checked; save(); }
 });
@@ -192,13 +196,13 @@ document.addEventListener('click', async e => { const b = e.target.closest && e.
   const mine = ((await DB.get('kv', 'myCerts')) || {}).v; const L = mine && mine.length ? mine : CERT_AI;
   if (certList(R).length && !confirm('Replace the certifications in these boxes with your usual ones?')) return;
   for (let i = 1; i <= CERT_N; i++) delete R['cert' + i]; L.slice(0, CERT_N).forEach((t, i) => R['cert' + (i + 1)] = t); R.addlCert = 'true'; save();
-  const c = $('#reportCard'); if (c) c.innerHTML = reportHTML(app.job); toast(mine && mine.length ? 'Your usual certifications are in' : 'Your three Appraisal Institute certifications are in – edit them, then “Save these as my usual”'); });
+  rptRedraw(); toast(mine && mine.length ? 'Your usual certifications are in' : 'Your three Appraisal Institute certifications are in – edit them, then “Save these as my usual”'); });
 document.addEventListener('click', e => {
   const b = e.target.closest('[data-act="hbu-all"],[data-act="hbu-draft"],[data-act="exp-use"]'); if (!b || !app.job) return; const R = R0(app.job);
   if (b.dataset.act === 'exp-use') { R.expLow = b.dataset.lo; R.expHigh = b.dataset.hi; }
   if (b.dataset.act === 'hbu-all') { HBU_TESTS.forEach(([k]) => R.hbu[k] = true); R.hbuPresent = 'true'; }
   if (b.dataset.act === 'hbu-draft') { if (R.hbuNote && !confirm('Replace your comment with a new draft?')) return; R.hbuNote = hbuDraft(app.job); }
-  save(); const c = $('#reportCard'); if (c) c.innerHTML = reportHTML(app.job);
+  save(); rptRedraw();
 });
 
 /* element order for the items added Oct 19 2026 that the D-1 sample does not show (A-1 order: alphabetical within the container) */
@@ -248,8 +252,8 @@ function writeReportXML(doc, NS, J, SUBJ, VA, SVC) {
     set(rd, 'AppraiserPriorServicesPerformedIndicator', tf('priorSvc')); if (R.priorSvc === 'true' && R.priorSvcText) set(rd, 'AppraiserPriorServicesPerformedDescription', R.priorSvcText.slice(0, 1250));
     set(child(SUBJ, 'LISTING_INFORMATION_SUMMARY'), 'ListedWithinPreviousYearIndicator', fb('listedYear', F.listedYear));
     if (SVC) set(child(SVC, 'SERVICE_DETAIL'), 'ServiceType', 'Valuation');
-    const rdet = path(VR, 'VALUATION_RECONCILIATION', 'VALUATION_RECONCILIATION_DETAIL'); set(rdet, 'AdditionalClientRequestedConditionsIndicator', fb('addlCond', false));
-    if (R.addlCond === 'true' && R.addlCondText) set(rdet, 'AdditionalClientRequestedConditionsCommentDescription', R.addlCondText.slice(0, 2500)); }
+    const rdet = path(VR, 'VALUATION_RECONCILIATION', 'VALUATION_RECONCILIATION_DETAIL'); { const X = RE(J); set(rdet, 'AdditionalClientRequestedConditionsIndicator', X.addlCond === 'true' ? 'true' : 'false');   // her answer, else the order's (her ask Oct 22 2026: it belongs in the order)
+    if (X.addlCond === 'true' && X.addlCondText) set(rdet, 'AdditionalClientRequestedConditionsCommentDescription', String(X.addlCondText).slice(0, 2500)); } }
   set(path(SUBJ, 'PROPERTY_VALUATIONS', 'PROPERTY_VALUATION', 'PROPERTY_VALUATION_DETAIL'), 'PropertyValuationMethodType', R.vmethod || 'TraditionalAppraisal');
   // reconciliation
   const rs = path(VR, 'VALUATION_RECONCILIATION', 'VALUATION_RECONCILIATION_SUMMARY');
@@ -257,7 +261,7 @@ function writeReportXML(doc, NS, J, SUBJ, VA, SVC) {
   const rsd = child(rs, 'VALUATION_RECONCILIATION_SUMMARY_DETAIL');
   const eff = isoDate(rv(J, 'eff')) || rv(J, 'eff'); set(rsd, 'AppraisalReportEffectiveDate', eff);
   if (!blank(R.expLow) || !blank(R.expHigh)) { set(rsd, 'MarketingOrExposureHighRangeDaysCount', num(R.expHigh)); set(rsd, 'MarketingOrExposureLowRangeDaysCount', num(R.expLow)); set(rsd, 'MarketingOrExposureTimeType', 'ReasonableExposureTime'); }
-  const op = num(String(R.opinion || '').replace(/[$,\s]/g, '')); set(rsd, 'OpinionOfValueAmount', op === null ? null : Math.round(op));
+  const op = rptOpinion(J); set(rsd, 'OpinionOfValueAmount', op === null ? null : Math.round(op));
   /* A-1 1300.0002 / .0004: the reason an approach was not developed (SFREP showed Reason for Exclusion red) */
   [['Income', 'INCOME_APPROACH'], ['Cost', 'COST_APPROACH']].forEach(([A, tag]) => { const off = R['sow' + A] === 'false' || (blank(R['sow' + A]) && F['sow' + A] === false); if (!off) return;   // only when the approach is answered No
     const why = R['excl' + A] || 'NotNecessaryForCredibleResults'; const e = path(VR, 'APPROACH_TO_VALUE', tag, 'VALUATION_APPROACH_EXCLUSION_REASONS', 'VALUATION_APPROACH_EXCLUSION_REASON');
@@ -276,7 +280,7 @@ function writeReportXML(doc, NS, J, SUBJ, VA, SVC) {
   if (HBU_TESTS.some(([k]) => H[k]) || R.hbuPresent) { const hb = child(SITE, 'HIGHEST_AND_BEST_USE');
     set(hb, 'FinanciallyFeasibleIndicator', String(!!H.fin)); set(hb, 'LegallyPermissibleIndicator', String(!!H.legal)); set(hb, 'MaximallyProductiveIndicator', String(!!H.max)); set(hb, 'PhysicallyPossibleIndicator', String(!!H.phys)); set(hb, 'SiteHighestBestUseIndicator', R.hbuPresent || null); }
   comment('HighestAndBestUse', R.hbuNote, 4000);
-  if (typeof CMT_BOXES !== 'undefined') CMT_BOXES.forEach(([k, cat, , max]) => comment(cat, String(R[k] || '').trim(), max));   // her comment boxes for SFREP (cmtdraft.js)
+  if (typeof CMT_BOXES !== 'undefined') CMT_BOXES.forEach(([k, cat, , max]) => comment(cat, String(R[k] || (k === 'cMarket' && F.market && F.market.general) || '').trim(), max));   // market commentary: the hub's Market tab unless she typed one here   // her comment boxes for SFREP (cmtdraft.js)
   // usable lot area in the site comment (it cannot be a site influence)
   const S = subjFacts(J);
   if (!blank(S.usable)) { const VC = child(VR, 'VALUATION_COMMENTARIES'); const line = `Usable Lot Area/Utility: ${(+S.usable).toFixed(2)} ac.`;
@@ -317,3 +321,30 @@ function writeReportXML(doc, NS, J, SUBJ, VA, SVC) {
       const m = String(a2 || '').match(/^(.*?),\s*([A-Z]{2})\s+(\d{5})/); if (a1 && m) { const ad = path(P, 'ADDRESSES', 'ADDRESS'); set(ad, 'AddressLineText', a1); set(ad, 'CityName', m[1]); set(ad, 'PostalCode', m[3]); set(ad, 'StateCode', m[2]); }
       set(path(P, 'ROLES', 'ROLE', 'ROLE_DETAIL'), 'PartyRoleType', role); }); }
 }
+
+/* Report details in two places (her ask Oct 22 2026: assignment, scope, EA/HC, H&BU, subject and site, prior services "much earlier in the assignment";
+   site questions and comments together): 'early' = card #setupCard right after the inspection (step 5), 'late' = value, reconciliation, transfer history
+   and the market status in Review and export */
+const RPT_EARLY = ['Assignment', 'Scope of work', 'Extraordinary assumptions and hypothetical conditions', 'Highest and best use', 'Subject and site', 'Prior services and certifications', 'Market'];
+const RPT_LATE = ['Prior sale and transfer history', 'Value and reconciliation'];
+const rptLateMsg = m => /opinion of market value|reconciliation|exposure time|market value condition|transfer|client-requested/i.test(m);
+function rptPart(J, html, part) {
+  const a = html.indexOf('<div class="rptgrid">'); const body = html.slice(a + '<div class="rptgrid">'.length, html.lastIndexOf('</div>'));
+  const secs = body.split(/(?=<section><h3>)/).filter(x => x.startsWith('<section><h3>')).map(x => [x.match(/^<section><h3>([^<]*)/)[1].trim(), x.trim()]);
+  const L = (part === 'early' ? RPT_EARLY : RPT_LATE).map(t => (secs.find(([n]) => n === t) || [])[1]).filter(Boolean);
+  const need = typeof precheckGrid === 'function' ? precheckGrid(J).filter(x => x.sev === 'Must fix' && typeof preGo === 'function' && (preGo0(J, x) || {}).label === 'Report details' && (part === 'late') === rptLateMsg(x.msg)) : [];
+  const banner = `<div class="rptneed ${need.length ? 'warn' : 'done'}">${need.length ? `<b>${need.length} answer${need.length > 1 ? 's' : ''} still needed here:</b><ul>${need.map(x => `<li>${esc(x.msg.replace(/\s*\(Report details[^)]*\)\.?/, ''))}</li>`).join('')}</ul>` : '<b>✓ Everything needed here is answered.</b>'}
+    <span class="rptkey"><span class="k own">your entry</span> <span class="k sug">suggested – type over it or leave it</span></span></div>`;
+  const F = reportFrom(J);
+  return (part === 'early' ? `<h2>Assignment, scope and site <small>– answer these early; they go to SFREP when you export</small></h2>${banner}${clientNeedsHTML(J)}<p class="help">${F.hasOrder ? 'Suggested entries come from the order, your inspection or the CRS report. Type over any of them.' : 'This assignment is not linked to an order, so nothing is filled from the Appraisal Assistant. Open it from the order (Comp genie button on the order page) to fill the assignment, client and market.'}</p>`
+    : `<h2>Reconciliation <small>– after the sales comparison, cost and income approaches</small></h2>${banner}`) + `<div class="rptgrid rptbands">${L.join('\n')}</div>`; }
+/* the value of each approach, filled in from its own section (her ask Oct 22 2026) */
+function rptIndications(J) { const G = G0(J), R = R0(J), o = (app.orders || []).find(x => x.id === J.orderId) || null; const T = f => { try { return f(); } catch (e) { return null; } };
+  const costOn = J.costOn ?? (R.sowCost === 'true' || (!R.sowCost && !!(o && o.apCost))); const incOn = J.incomeOn ?? (R.sowIncome === 'true' || (!R.sowIncome && !!(o && (o.apIncome || o.rent))));
+  const sca = num(G.value), cost = costOn ? T(() => num(costJob(J).value) || costCalc(J).rounded) : null, inc = incOn ? T(() => { const v = num(incomeJob(J).value); if (v) return v; const X = incomeCalc(J); return X.ind ? Math.round(X.ind / 1000) * 1000 : null; }) : null;
+  return [['Sales comparison', sca, true], ['Cost', cost, costOn], ['Income', inc, incOn]]; }
+const rptOpinion = J => { const v = num(String(R0(J).opinion || '').replace(/[$,\s]/g, '')); return !blank(v) ? v : (num(G0(J).value) || null); };   // her typed value, else the sales comparison value
+function rptIndHTML(J) { const L = rptIndications(J);
+  return `<table class="mini rptind"><tr><th colspan="2">Indicated value by</th></tr>${L.map(([n, v, on]) => `<tr><th>${n} approach</th><td>${!on ? '<span class="muted">not developed</span>' : v ? '<b>' + money(Math.round(v)) + '</b>' : '<span class="warnTxt">not finished yet</span>'}</td></tr>`).join('')}</table>
+    <p class="help">Filled in from each approach. The opinion of value below starts as the sales comparison value – type your reconciled value over it.</p>`; }
+function rptRedraw() { const J = app.job; if (!J) return; const a = $('#setupCard'), b = $('#reportCard'); if (a && a.innerHTML) a.innerHTML = reportHTML(J, 'early'); if (b && b.innerHTML) b.innerHTML = reportHTML(J, 'late'); }
