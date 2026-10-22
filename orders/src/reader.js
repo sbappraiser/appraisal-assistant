@@ -396,7 +396,7 @@ function contractDraft(docId) {   // her model "ANALYSIS OF THE SALES CONTRACT" 
   const rv = cur.review[docId], total = rv.packetTotal || (RD.pdf ? RD.pdf.numPages : null);   /* the whole packet's pages when she used the packet's parts */ const v = k => fval(docId, k).join('; ');
   const parts = rv.parts || []; const out = ['ANALYSIS OF THE SALES CONTRACT', '[Arm\'s length sale.]'];
   const ps = partsSentence(parts, total); out.push(ps ? ps.replace(/^I received a /, 'The client uploaded a ') : `The client uploaded a ${total ? total + '-page ' : ''}document which contains [the purchase contract].`);
-  if (v('price')) out.push(`The final negotiated sales price is ${v('price')}${v('acceptDate') ? ', with an acceptance date of ' + v('acceptDate') : ''}.`); else if (v('acceptDate')) out.push(`The acceptance date is ${v('acceptDate')}.`);
+  if (v('acceptDate')) out.push(`The contract was signed on ${v('acceptDate')}.`);   /* her rule: the price has its own Contract Price box – never in this text */
   out.push(v('entity') ? `${v('entity').replace(/\.$/, '')}. It is assumed that the signer is legally authorized to sign for the owner of record.` : 'According to the contract, the seller is [seller] and it is signed by [signer]. It is assumed that [he/she] is the legally authorized signer for the owner of record.');
   const lc = v('loanCont'), ac = v('apprCont'); const no = x => /^no\b|waived|removed|none/i.test(x);
   if (lc || ac) { if (lc && ac && no(lc) && no(ac)) out.push('There is no loan nor appraisal contingency[, but the borrower reserves the right to obtain a loan].');
