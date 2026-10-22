@@ -422,6 +422,7 @@ function draw() {
     ctx.setLineDash([3, 5]); ctx.strokeStyle = 'rgba(30,110,220,.35)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(FX, FY); ctx.lineTo(X, Y); ctx.stroke(); ctx.setLineDash([]);
     ctx.fillStyle = d.closes ? '#0fa84a' : '#1e6edc'; ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(X, Y, 8, 0, 7); ctx.fill(); ctx.stroke();
     ctx.font = '600 12px system-ui'; ctx.textAlign = 'center'; const t = r1(d.L).toFixed(1) + "'"; const w = ctx.measureText(t).width; ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.fillRect(X - w / 2 - 2, Y - 25, w + 4, 15); ctx.fillStyle = d.closes ? '#0a7a35' : '#1e4fa0'; ctx.fillText(t, X, Y - 13); });
+  if (SK.showDots !== false && (SK.mode === 'start' || (SK.mode === 'select' && !SK.drawId))) { const seen = new Set(); ctx.lineWidth = 2; cornersHere().forEach(p => { const k = Math.round(p[0] * 10) + ',' + Math.round(p[1] * 10); if (seen.has(k)) return; seen.add(k); const [X, Y] = toScr(p); ctx.fillStyle = SK.mode === 'start' ? '#1e6edc' : 'rgba(30,110,220,.55)'; ctx.strokeStyle = '#fff'; ctx.beginPath(); ctx.arc(X, Y, SK.mode === 'start' ? 7 : 5, 0, 7); ctx.fill(); ctx.stroke(); }); }
   if (SK.dragPrev && SK.dragPrev.guide) { const [GX, GY] = toScr(SK.dragPrev.guide), [EX, EY] = toScr(SK.dragPrev.pt); ctx.setLineDash([6, 5]); ctx.strokeStyle = '#1e6edc'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(GX, GY); ctx.lineTo(EX, EY); ctx.stroke(); ctx.setLineDash([]); }
   if (SK.dragPrev) { const d = SK.dragPrev; const [X1, Y1] = toScr(d.from), [X2, Y2] = toScr(d.pt); ctx.strokeStyle = '#ff7a00'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(X1, Y1); ctx.lineTo(X2, Y2); ctx.stroke();
     const L = wallLen(d.from, d.pt); ctx.font = '700 20px system-ui'; ctx.textAlign = 'left'; const t = `${r1(L).toFixed(1)}'${d.snap === 'corner' ? ' → corner' : d.snap === 'dot' ? ' · on dot' : d.snap === 'align' ? ' · lined up' : d.snap === '45' ? ' · ' + Math.round(d.ang) + '°' : ''}`; const w = ctx.measureText(t).width;
@@ -470,7 +471,7 @@ function snapPoint(ft) { // existing corners first, then the 0.5 ft grid
 }
 
 /* ---------- corners, cursor and centring ---------- */
-const cornersHere = () => SK.sk.areas.filter(a => here(a)).flatMap(a => a.pts);
+const cornersHere = () => [...SK.sk.areas.filter(a => here(a)).flatMap(a => a.pts), ...SK.sk.areas.filter(a => PG(a) === SK.pg && a.level !== SK.level).flatMap(a => a.pts)];   // other levels too (her Oct 22 ask)
 function nearCorner(ft, px) { const tol = px / SK.view.s; let best = null; cornersHere().forEach(p => { const d = Math.hypot(p[0] - ft[0], p[1] - ft[1]); if (d < tol && (!best || d < best.d)) best = { d, p }; }); return best && best.p; }
 function jumpCorner() { // nearest corner to the cursor; press again for the next nearest
   if (!SK.cursor) return toast('Tap the sketch to drop the cursor first');
@@ -865,7 +866,7 @@ function renderInfo() {
 function skTray() { if (SK.tray === undefined) { let v = null; try { v = localStorage.getItem('skTray'); } catch (e) {} SK.tray = v === null ? 'draw' : v; } return SK.tray; }
 function setTray(t) { SK.tray = t; try { localStorage.setItem('skTray', t); } catch (e) {} }
 function openHelp() { openSheet(`<h3>How to use the sketch</h3><div class="calc">
-  <p><b>Tools at the bottom.</b> When you are not drawing: ＋ New area, Aa Label, ◫ Symbol, ◜ Door, ┼ Interior wall, ⟳ Rotate, ⌖ Center and ↶ Undo. Press <b>＋</b>, pick the area type and tap where it starts – the drawing pad comes up: keypad, arrows (∠ Angle opens the angle circle), ✓ Save (closes the area), 🛑 Stop (leaves it open), ⌒ Curve and ⌖ Center. Save or Stop brings back the main bar.</p>
+  <p><b>Tools at the bottom.</b> When you are not drawing: ＋ New area, Aa Label, ◫ Symbol, ◜ Door, ┼ Interior wall, ⟳ Rotate, ⌖ Center and ↶ Undo. Press <b>＋</b>, pick the area type and tap where it starts – the drawing pad comes up: keypad, arrows (∠ Angle opens the angle circle), ⬠ Close (closes the area), ✓ Save (saves the sketch and totals to the inspection), 🛑 Stop (leaves the area open), ↶ Undo, ⌒ Curve and ⌖ Center. Close or Stop brings back the main bar.</p>
   <p><b>Drawing walls:</b> + New area, tap where it starts (or press and hold a corner and drag), type a length and tap an arrow. ∠ Angle opens the angle circle. Tap the green start to close. ⌫ removes the last digit, then the last wall. ↶ Undo undoes the last step (↷ Redo is in ☰).</p>
   <p><b>Changing things:</b> tap a wall to change its length or curve it; tap an area to change its type (Properties), turn, copy or delete it; drag a label to move it; tap empty space for the cursor. Drag an area, label or symbol to move it.</p>
   <p><b>Moving around:</b> two fingers to zoom and move. ◎ centers on what you are working on. Blue dots line up with other corners (☰ › Line-up dots).</p>
@@ -942,13 +943,13 @@ function renderPanel() {
     </div>`}
     <div class="acts">
       ${SK.mode === 'iwall' ? '' : SK.mode === 'start' ? `<button class="btn primary big ico" id="skStartHere2" ${SK.cursor ? '' : 'disabled'} title="Start the area here"><span>📍</span><small>Start</small></button>` : ''}
-      ${SK.mode === 'iwall' ? '<button class="btn big ico save" id="iwDone2" title="Done with interior walls"><span>✓</span><small>Done</small></button>' : `<button class="btn big ico save" id="skClose" ${a ? '' : 'disabled'} title="Save – close the area and go back"><span>✓</span><small>Save</small></button>
+      ${SK.mode === 'iwall' ? '<button class="btn big ico save" id="iwDone2" title="Done with interior walls"><span>✓</span><small>Done</small></button>' : `<button class="btn big ico" id="skClose" ${a && a.pts.length >= 3 ? '' : 'disabled'} title="Close the area (the last wall goes back to the start) and go back"><span>⬠</span><small>Close</small></button><button class="btn big ico save" id="skSaveD" title="Save the sketch and its totals to the inspection"><span>✓</span><small>Save</small></button>
       <button class="btn big ico" id="${a ? 'skDone' : 'skCancelStart'}" title="${a ? 'Stop – leave the area open and go back' : 'Cancel – go back'}"><span class="stopsign"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><polygon points="7,1 17,1 23,7 23,17 17,23 7,23 1,17 1,7" fill="#d40000" stroke="#fff" stroke-width="1.6"/><polygon points="7,1 17,1 23,7 23,17 17,23 7,23 1,17 1,7" fill="none" stroke="#000" stroke-width=".8"/><text x="12" y="15.2" text-anchor="middle" font-size="6.6" font-weight="700" font-family="Arial,sans-serif" fill="#fff">STOP</text></svg></span><small>Stop</small></button>`}
       <button class="btn big ico" id="skUndoD" title="Undo the last step (Redo is in ☰)"><span>↶</span><small>Undo</small></button><button class="btn big ico" id="skCurveT" ${curveOk ? '' : 'disabled'} title="Curve the last wall (or the wall you tapped)"><span>⌒</span><small>Curve</small></button><button class="btn big ico" id="skCenter" title="Center what you are drawing, or all your areas"><span>⌖</span><small>Center</small></button>
     </div>
   </div>` : ''}`;
   { const d2 = document.getElementById('iwDone2'); if (d2) d2.onclick = () => { SK.mode = 'select'; SK.iw = null; draw(); renderPanel(); }; }
-  { const u = document.getElementById('skUndo'); if (u) u.onclick = doUndo; const u2 = document.getElementById('skUndoD'); if (u2) u2.onclick = doUndo; }
+  { const sv = document.getElementById('skSaveD'); if (sv) sv.onclick = sendNow; const u = document.getElementById('skUndo'); if (u) u.onclick = doUndo; const u2 = document.getElementById('skUndoD'); if (u2) u2.onclick = doUndo; }
   { const ct = document.getElementById('skCurveT'); if (ct) ct.onclick = () => { const ca = curArea(); if (ca && ca.pts.length >= 2) return startCurve(ca, ca.pts.length - 2); if (sel && sel.type === 'wall') return startCurve(SK.sk.areas.find(x => x.id === sel.id), sel.i); toast('Tap a wall first, or draw one'); }; }
   { const rt = document.getElementById('skRotT'); if (rt) rt.onclick = () => { if (sel && (sel.type === 'area' || sel.type === 'symbol')) return toast('Use Turn above to turn the selected item'); if (!SK.sk.areas.length) return toast('Nothing drawn yet'); SK.rotC = null; SK.sel = { type: 'all' }; SK.cursor = null; renderPanel(); }; }
   const on = (id, fn) => { const b = document.getElementById(id); if (b) b.onclick = fn; };

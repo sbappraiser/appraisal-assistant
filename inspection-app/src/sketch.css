@@ -137,3 +137,9 @@ body.working .skinfo { opacity: .85; }
   .dialbox .dlrow .btn.sm { padding: 1px 4px; font-size: 12px; min-height: 28px; }
   body.dialon .key { min-height: 32px; font-size: 18px; } body.dialon .entry { min-height: 28px; font-size: 16px; }
 }
+
+/* Oct 22: smaller symbol buttons so ⬠ Close fits (iPad and iPhone) */
+.btn.big.ico { min-height: 40px; padding: 1px 2px; border-width: 2px; border-radius: 8px; } .btn.ico span { font-size: 18px; } .btn.ico small { font-size: 10px; }
+.btn.ico .stopsign svg { width: 20px; height: 20px; }
+@media (min-width: 700px) { .acts:has(.ico) { grid-column: 1 / -1; } .btn.big.ico { min-height: 44px; } .btn.ico span { font-size: 20px; } .btn.ico small { font-size: 11px; } }
+@media (max-width: 520px) { .btn.big.ico { min-height: 38px; } .btn.ico span { font-size: 17px; } .btn.ico .stopsign svg { width: 18px; height: 18px; } }
