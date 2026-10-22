@@ -110,8 +110,10 @@ body.working .skinfo { opacity: .85; }
 @media (max-width: 520px) { .ctx .hint { display: none; } .key { min-height: 36px; } .key.arr { min-height: 36px; font-size: 20px; } .btn.big { min-height: 36px; } .skbar .saved { max-width: 92px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; } }
 
 /* Oct 22 (her ask): one row of symbol buttons under the keypad */
-.acts:has(.ico) { grid-template-columns: repeat(5, 1fr) !important; }
+.acts:has(.ico) { grid-template-columns: none !important; grid-auto-flow: column; grid-auto-columns: 1fr; }
 .btn.ico { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; padding: 2px 4px; line-height: 1.05; }
 .btn.ico span { font-size: 22px; } .btn.ico small { font-size: 11px; font-weight: 700; color: inherit; margin: 0; }
 @media (max-width: 520px) { .acts:has(.ico) { grid-column: 1 / -1; } .btn.ico span { font-size: 20px; } }
 .btn.ico .stopsign { line-height: 0; } .btn.ico .stopsign svg { width: 24px; height: 24px; display: block; }
+.mainbar { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; padding-top: 2px; } .btn.ico.save { background: #e5f4e4; border-color: #1e7a3c; } .btn.ico.save span { color: #1e7a3c; font-weight: 800; }
+@media (max-width: 520px) { .mainbar { grid-template-columns: repeat(4, 1fr); } }
