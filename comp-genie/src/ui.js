@@ -268,7 +268,7 @@ async function ingest(files) {
         else if (!first.text.trim()) notes.push(f.name + ': this is a scan (a picture, no text). If it is a CORT printout, send it to Claude for now to add it to your CORT table.');
         else notes.push(f.name + ': not a PDF the genie knows (MLS printout or CRS report).');
       } else notes.push(f.name + ': file type not used here');
-    } catch (e) { console.error(e); notes.push(f.name + ': could not read – ' + (e.message || e)); }
+    } catch (e) { console.error(e); notes.push(f.name + (/^Not changed/.test(e.message || '') ? ': ' : ': could not read – ') + (e.message || e)); }
   }
   app.busy = ''; save(); render(); if (notes.length) showNotes(notes, app.batch.slice(), app.crsChoices.slice());
 }

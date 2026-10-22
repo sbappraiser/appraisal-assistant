@@ -415,3 +415,6 @@ header.top h1 small{font-size:.5em;font-weight:600;color:#5b2a86;margin-left:6px
 .optset{border:1px solid #dde3ea;border-radius:8px;margin:8px 0;padding:6px 10px;display:flex;flex-wrap:wrap;gap:4px 16px}.optset legend{font-weight:700}
 .revs{grid-column:1/-1;margin:8px 0}.revrow{display:grid;grid-template-columns:9em 14em 1fr auto;gap:8px;align-items:start;margin:6px 0}
 .f1q{display:inline-grid;place-items:center;width:18px;height:18px;border-radius:50%;border:1.5px solid #1f5fa8;color:#1f5fa8;font-size:12px;font-weight:700;cursor:pointer;margin-left:4px;vertical-align:1px}.f1q:hover{background:#eef4ff}
+.dbcask{max-width:640px}.dbcsum li{margin:4px 0}.dbcsum ul{font-size:14px;color:#334}
+.dbcview{max-width:min(1300px,96vw);width:96vw}.dbctab{max-height:62vh;overflow:auto}.dbctab th{position:sticky;top:0;background:#eef2f7;cursor:pointer;white-space:nowrap}.dbctab td{white-space:nowrap;max-width:260px;overflow:hidden;text-overflow:ellipsis}
+.dbcint{margin:8px 0;line-height:1.7}.dbcmix{margin:4px 0 0 18px;font-size:14px}
