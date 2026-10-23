@@ -48,7 +48,7 @@ const info = await fr.evaluate(async () => { const J = app.job; const sold = J.c
 log('4 comps:', JSON.stringify(info));
 await fr.evaluate(() => { const J = app.job, G = G0(J); const vals = usedComps(J).map(c => { try { return adjustedPrice(c, J); } catch (e) { return num(V(c, 'salePrice')); } }).filter(Boolean); G.value = Math.round((vals.reduce((a, b) => a + b, 0) / (vals.length || 1)) / 5000) * 5000 || 2000000; G.note = 'TEST: the comparables bracket the subject; most weight to comp 1.'; save(); render(); });
 // ---- 5 Cost ----
-await fr.evaluate(() => { const J = app.job; J.costOn = true; const K = costJob(J); if (K.lines[0]) K.lines[0].rate = 650; K.effAge = 20; if (K.site[0]) K.site[0].amt = 60000; J.land = { use: [], f: {}, value: 1200000, comment: 'TEST: site value by allocation.' }; K.siteMethod = 'Allocation'; save(); render(); });
+await fr.evaluate(() => { const J = app.job; J.costOn = true; const K = costJob(J); if (K.lines[0]) { K.lines[0].rate = 650; if (!K.lines[0].area) K.lines[0].area = 1839; } K.effAge = 20; if (K.site[0]) K.site[0].amt = 60000; J.land = { use: [], f: {}, value: 1200000, comment: 'TEST: site value by allocation.' }; K.siteMethod = 'Allocation'; save(); render(); });
 // ---- 7 Reconciliation, 8 certifications ----
 await fr.evaluate(() => { const R = R0(app.job); R.expLow = 30; R.expHigh = 90; R.reconNote = 'TEST: most weight to the sales comparison approach.'; R.addlCert = 'false'; R.priorSvc = 'false'; R.reconsider = 'false'; save(); rptRedraw && rptRedraw(); });
 // ---- 9 Exhibits: location map ----

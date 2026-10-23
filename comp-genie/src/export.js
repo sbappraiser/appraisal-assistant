@@ -82,7 +82,7 @@ function buildCompXML(PROPS, RELS, DSS, c, n, job) {
   const g = k => V(c, k);
   // ADDRESS
   const ad = X(P, 'ADDRESS'); XV(ad, 'AddressLineText', g('addr')); if (g('unit')) { XV(ad, 'AddressUnitDesignatorType', 'Unit'); XV(ad, 'AddressUnitIdentifier', g('unit')); }
-  XV(ad, 'CityName', g('city') || ARCH.zipCity[g('zip')] || ''); XV(ad, 'PostalCode', zip9(c)); XV(ad, 'StateCode', 'CA');
+  XV(ad, 'CityName', g('city') || ARCH.zipCity[g('zip')] || ZIP_CITY[String(g('zip') || '').slice(0, 5)] || ''); XV(ad, 'PostalCode', zip9(c)); XV(ad, 'StateCode', 'CA');
   // CAR_STORAGES
   const cs = X(P, 'CAR_STORAGES'); let any = false;
   const VS = c.edit && Array.isArray(c.edit.vs) && c.edit.vs.length ? c.edit.vs : null;   // her ▾ pick rows: every type, with attachment / driveway surface (Oct 20 2026)

@@ -14,6 +14,7 @@ function archTier(note, L, rating) {
    ===================================================================== */
 
 /* ---------------- 1. Your comp archive (converted from ACI) ---------------- */
+const ZIP_CITY = { '93101': 'Santa Barbara', '93103': 'Santa Barbara', '93105': 'Santa Barbara', '93108': 'Santa Barbara', '93109': 'Santa Barbara', '93110': 'Santa Barbara', '93111': 'Santa Barbara', '93117': 'Goleta', '93013': 'Carpinteria', '93067': 'Summerland', '93014': 'Carpinteria', '93102': 'Santa Barbara', '93106': 'Santa Barbara', '93118': 'Goleta' };   // comp city when the MLS file has none and the archive is not loaded (Oct 22 2026: SFREP showed ', CA 93110')
 const ARCH = { loaded: false, cols: [], rows: [], sales: {}, byAddr: new Map(), byApn: new Map(), streets: [], zipCity: {} };
 function archiveIndex(data) {
   ARCH.cols = data.cols; ARCH.rows = data.rows; ARCH.sales = data.sales || {}; ARCH.built = data.built; ARCH.loaded = true;

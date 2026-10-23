@@ -560,7 +560,7 @@ function notUsedXML(PROPS, job) { let k = 0;
   job.comps.filter(c => c.notUsed && c.notUsed.report && !c.use).forEach(c => { const N = c.notUsed; const g = x => V(c, x); k++;
     const P = X(PROPS, 'PROPERTY', { ValuationUseType: 'PropertyAnalyzedNotUsed' });
     const ad = X(P, 'ADDRESS'); XV(ad, 'AddressLineText', g('addr')); if (g('unit')) { XV(ad, 'AddressUnitDesignatorType', 'Unit'); XV(ad, 'AddressUnitIdentifier', g('unit')); }
-    XV(ad, 'CityName', g('city') || ARCH.zipCity[g('zip')] || ''); XV(ad, 'PostalCode', zip9(c)); XV(ad, 'StateCode', 'CA');
+    XV(ad, 'CityName', g('city') || ARCH.zipCity[g('zip')] || ZIP_CITY[String(g('zip') || '').slice(0, 5)] || ''); XV(ad, 'PostalCode', zip9(c)); XV(ad, 'StateCode', 'CA');
     XV(X(X(P, 'COMPARABLE'), 'COMPARABLE_DETAIL'), 'PropertyOrdinalNumber', k);
     const s = String(g('status') || (g('salePrice') ? 'Closed' : '')); const lst = /closed|sold|settled/i.test(s) ? 'SettledSale' : /pending|escrow|contingent/i.test(s) ? 'Pending' : /active|coming/i.test(s) ? 'Active' : s ? 'OffMarket' : null;
     if (lst) XV(X(X(X(P, 'LISTING_INFORMATIONS'), 'LISTING_INFORMATION'), 'LISTING_INFORMATION_DETAIL'), 'ListingStatusType', lst);
