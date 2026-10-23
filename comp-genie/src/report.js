@@ -460,7 +460,7 @@ function t2XML(J, R, SUBJ, VR, child, add, set, path, doc, NS) { const v = k => 
   if (v('encr') === 'true' && v('encrType')) enc('Encroachment', en => { const e = path(en, 'ENCROACHMENTS', 'ENCROACHMENT'); set(e, 'EncroachmentType', v('encrType')); if (v('encrType') === 'Other') set(e, 'EncroachmentTypeOtherDescription', v('encrTypeOther').slice(0, 45));
     if (v('encrDir')) set(e, 'EncroachmentDirectionType', v('encrDir')); if (v('encrImpact')) set(e, 'ValueMarketabilityImpactType', v('encrImpact')); if (v('encrDesc')) set(e, 'EncroachmentDescription', v('encrDesc').slice(0, 140)); });
   const PD = child(SUBJ, 'PROPERTY_DETAIL');
-  set(PD, 'ConstructionStatusType', v('constr') || 'Complete');
+  if ((v('constr') && v('constr') !== 'Complete') || ((PD.getElementsByTagName('NewConstructionIndicator')[0] || {}).textContent === 'true')) set(PD, 'ConstructionStatusType', v('constr') || 'Complete');   // Fannie's D-1 samples leave it out for an existing home; SFREP showed 'Complete' red (Oct 22 2026)
   if (rv(J, 'allRights') !== 'false') set(PD, 'MineralRightsLeasedIndicator', v('minLeased') || 'false');
   if (v('nonArmsNote')) set(path(SUBJ, 'SALES_CONTRACTS', 'SALES_CONTRACT', 'SALES_CONTRACT_DETAIL'), 'NonArmsLengthCommentText', v('nonArmsNote').slice(0, 1250));
   if ((v('listedYear') || X.listedYear) === 'true') { const LD = path(SUBJ, 'LISTING_INFORMATIONS', 'LISTING_INFORMATION', 'LISTING_INFORMATION_DETAIL'); const d = k => { const x = isoDate(v(k)); return x || null; }, amt = k => { const n = num(v(k).replace(/[$,\s]/g, '')); return blank(n) ? null : Math.round(n); };

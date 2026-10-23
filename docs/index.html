@@ -1176,7 +1176,7 @@ nav.tabs button[aria-selected="true"] { background: var(--look-navy) !important;
 </div>
 <div id="toast" role="status" hidden></div>
 <script>
-const BUILD='o1-1023-0237';
+const BUILD='o1-1023-0415';
 const G = (() => {
 /* ---------------- small helpers ---------------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -1584,7 +1584,7 @@ function mlsCanon(raw, G, g) {
   const cpN = Math.max(0, ...(G['Parking/Garage'] || []).map(x => (x.match(/^Cpt #(\d+)/) || [])[1] || 0).map(Number)) || null;
   const uncN = Math.max(0, ...(G['Parking/Garage'] || []).map(x => (x.match(/^Unc #(\d+)/) || [])[1] || 0).map(Number)) || null;
   const garType = has('Parking/Garage', /^Attached$/) ? 'Attached' : has('Parking/Garage', /^Detached$/) ? 'Detached' : '';
-  const acres = num(g('Apx # Acres')), lotSf = num(g('Apx Lot SqFt'));
+  const acres = num(g('Apx # Acres')); let lotSf = num(g('Apx Lot SqFt')); if (lotSf && lotSf < 1000 && acres >= 0.05) lotSf = Math.round(acres * 43560);   // agent typed acres in the sq ft box (24-693: 99.75 sq ft, 2.29 acres)
   const typ = g('TYP'); const condoDet = has('Condo/CO-OP/PUD', /^Detached$/), condoAtt = has('Condo/CO-OP/PUD', /^Attached$/);
   const saleTypeTxt = [...(G['Pub Listing Details'] || []), ...(G['Pvt Listing Details'] || [])].filter(x => !/^(None|Standard)$/.test(x));
   const saleType = saleTypeTxt.some(x => /REO|Bank Owned|Foreclosure/i.test(x)) ? 'REO' : saleTypeTxt.some(x => /Short/i.test(x)) ? 'Short' : saleTypeTxt.some(x => /Probate|Court|Conservator/i.test(x)) ? 'CrtOrd' : saleTypeTxt.some(x => /Estate|Trust/i.test(x)) ? 'Estate' : saleTypeTxt.some(x => /Bankruptcy/i.test(x)) ? 'CrtOrd' : (status === 'Closed' ? 'ArmLth' : '');
@@ -1691,7 +1691,7 @@ function pdfCanon(p) {
     terms: d['Terms'] || '', concessionsOffered: d['Seller Consider Concessions'] || '',
     sfSource: sfSrc(d['Source']), gla: num(d['Total SqFt.']), mainSf: num(d['Main House SqFt']), yearBuilt: num(d['Year Built']),
     beds: num(d['Total Bedrooms']), full: num(d['Total Full Baths']), half: num(d['Total Half Baths']), acres: num(d['Apx # Acres']),
-    siteSf: num(d['Apx Lot SqFt']) || (num(d['Apx # Acres']) ? Math.round(num(d['Apx # Acres']) * 43560) : null),
+    siteSf: (num(d['Apx Lot SqFt']) >= 1000 || !(num(d['Apx # Acres']) >= 0.05) ? num(d['Apx Lot SqFt']) : null) || (num(d['Apx # Acres']) ? Math.round(num(d['Apx # Acres']) * 43560) : null),
     lat: num(d['Geo Lat']), lon: num(d['Geo Lon']), style: d['Style'] || '', mlsCondition: d['Condition'] || '', viewTypes: d['View'] || '', topo: d['Location/Topo'] || '',
     parkingText: d['Parking/Garage'] || '', ...parkingCounts(d['Parking/Garage'] || ''), heatCool: [d['Heating'], d['Cooling']].filter(Boolean).join(' / '), heating: d['Heating'] || '', cooling: d['Cooling'] || '',
     zoning: d['Zoning'] || '', water: d['Water/Sewer'] || '',
