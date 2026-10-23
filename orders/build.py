@@ -16,7 +16,7 @@ js += '\n' + (root / 'comp-genie/src/look.js').read_text() + "\nwindow.lookFileN
 tpl = (src / 'template.html').read_text(); assert '</style>\n</head>' in tpl
 html = tpl.replace('</style>\n</head>', (root / 'comp-genie/src/look.css').read_text() + '\n</style>\n</head>', 1).replace('/*JS*/', js)
 (out / 'index.html').write_text(html)
-for f in (root / 'brand').glob('*.png'): shutil.copy(f, out / f.name)   # the octopus logo and app icons (her logo, Oct 22 2026)
+for f in list((root / 'brand').glob('*.png')) + list((root / 'brand').glob('*.webmanifest')): shutil.copy(f, out / f.name)   # the octopus logo and app icons (her logo, Oct 22 2026)
 for f in ['pdf.min.mjs', 'pdf.worker.min.mjs', 'pdfjs-LICENSE.txt']: shutil.copy(root / 'inspection-app' / f, out / f)
 for d in ['wasm', 'standard_fonts']: shutil.copytree(root / 'vendor' / 'pdfjs' / d, out / d, dirs_exist_ok=True)  # scanned PDFs (JBIG2/JPEG 2000) and non-embedded fonts
 print('docs/index.html', len(html), BUILD)
