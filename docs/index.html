@@ -166,6 +166,7 @@ ul.hits2 { margin: 0; padding-left: 18px; } ul.hits2 li { margin: 4px 0; } ul.hi
 div.homecard { cursor: default; } .homecard b { font: 600 22px var(--display, var(--ui)); } .homecard span { color: var(--muted); } .homecard.primary { background: var(--accent-fill); color: var(--accent-ink); border-color: #000; } .homecard.primary span { color: var(--accent-ink); opacity: .9; }
 button.homecard:hover { border-color: var(--accent); } .hmrow { display: grid; grid-template-columns: 90px 1fr auto; gap: 8px; text-align: left; border: 0; border-bottom: 1px solid var(--line); background: none; padding: 7px 2px; font: inherit; color: var(--ink); cursor: pointer; } .hmrow:hover { background: var(--accent-soft); } .hmrow small { color: var(--muted); }
 .wzsteps { display: flex; gap: 8px; list-style: none; padding: 0; margin: 0 0 12px; flex-wrap: wrap; } .wzsteps li { padding: 6px 12px; border-radius: 99px; background: var(--panel); border: 1px solid var(--line); color: var(--muted); font: 600 13px var(--ui); } .wzsteps li.on { background: var(--accent-fill); color: var(--accent-ink); border-color: #000; } .wzsteps li.done { color: var(--ink); border-color: var(--go); } .wzsteps li.done::before { content: "✓"; display: inline-grid; place-items: center; width: 1.2em; height: 1.2em; margin-right: 5px; border-radius: 50%; background: var(--go); color: #fff; font-weight: 900; font-size: .85em; }
+.wzmine { display: grid; gap: 8px; padding: 10px 12px; margin: 6px 0; border: 1px solid var(--line, #d9dde3); border-radius: 8px; } .wzmine .eyebrow { margin-top: 4px; }
 .wzq { display: grid; gap: 6px; padding: 8px 0; } .wzq > span { font: 600 14px var(--ui); }
 .slots { display: grid; gap: 10px; } .slot { display: flex; gap: 12px; align-items: flex-start; justify-content: space-between; border: 1.5px dashed var(--line); border-radius: 10px; padding: 12px 14px; background: var(--field); } .slot.over { border-color: var(--accent); background: var(--accent-soft); }
 .slot > div { display: grid; gap: 2px; min-width: 0; } .slot small { color: var(--muted); } .slot ul { margin: 6px 0 0; padding-left: 18px; font-size: 13.5px; } .slot label.btn input { display: none; }
@@ -375,7 +376,7 @@ nav.tabs button[aria-selected="true"] { background: var(--look-navy) !important;
  <div class="desk">
   <div class="leftCol">
     <p class="missing" id="missing"></p>
-    <p class="help sheetHint" id="sheetHint">This is a preview of your letter. Type in the fields below it – the letter changes as you type.</p>
+    <p class="help sheetHint" id="sheetHint">This is a preview of your letter. The questions are in the form below it – the letter changes as you type. <button type="button" class="btn small" onclick="document.getElementById('letterForm').scrollIntoView({behavior:'smooth'})">Go to the questions ↓</button></p>
     <div class="paperWrap" id="paperWrap"><article id="sheet" aria-label="Letter preview"></article></div>
     <div id="clientView" hidden></div>
     <div id="orderSummary" hidden></div>
@@ -530,7 +531,7 @@ nav.tabs button[aria-selected="true"] { background: var(--look-navy) !important;
   </div>
   <div class="previewCol">
     <div class="bar"><span class="fname"><span class="savedAt" data-saved></span><span id="fileName"></span></span>
-      <a class="btn ghost" id="genieLink" href="../comp-genie/" target="aa-genie">Comp genie</a><button type="button" class="btn ghost" id="btnNew">New order</button><button type="button" class="btn ghost" id="btnIpadOne" title="Saves a file with just this order – put it in OneDrive, then open it in the inspection app on the iPad">Send this order to the iPad</button><button type="button" class="btn" id="btnSave">Save order</button><button type="button" class="btn primary" id="btnDocx">Download Word letter</button><button type="button" class="btn" id="btnPdf">Save as PDF</button></div>
+      <a class="btn ghost" id="genieLink" href="../comp-genie/" target="aa-genie">Comp genie</a><button type="button" class="btn ghost" id="btnSteps" onclick="reopenSteps()" title="Back to step 1 of the New order steps for this order – nothing is lost">↩ Back to the order steps</button><button type="button" class="btn ghost" id="btnNew">New order</button><button type="button" class="btn ghost" id="btnIpadOne" title="Saves a file with just this order – put it in OneDrive, then open it in the inspection app on the iPad">Send this order to the iPad</button><button type="button" class="btn" id="btnSave">Save order</button><button type="button" class="btn primary" id="btnDocx">Download Word letter</button><button type="button" class="btn" id="btnPdf">Save as PDF</button></div>
     <fieldset id="docsSet"><legend>Documents – upload everything here <span class="opt" id="docCount"></span></legend>
       <div class="drop big" id="dropZone">
         <div><span class="eyebrow">Drop the files here, or click Choose files</span>
@@ -705,6 +706,8 @@ nav.tabs button[aria-selected="true"] { background: var(--look-navy) !important;
     <details><summary>Start a new order</summary><ol>
       <li>On <b>Home</b>, click <b>New order</b>.</li>
       <li><b>1 · Order:</b> type the <b>street address</b> only (with the unit, e.g. #3), then Tab to <b>City</b>, <b>State</b>, <b>ZIP</b> and <b>+4</b>. City and ZIP are drop-down lists of the places you work (Santa Barbara County first, then Ventura County) – click and scroll with the mouse wheel. Not in the list? Pick <b>Other – type it</b>. Picking a ZIP fills the city, and Goleta, Carpinteria, Summerland or Montecito fill their ZIP; you can change either. When you upload the CRS report, it puts in the USPS form of the address with the ZIP+4. The file number fills in by your rule: the first 4 consonants of the street name (short names like Bath or Hill keep their first 4 letters), the house number, the unit if any, and the report count. 1729 Bath St → <b>Bath1729-1</b>; unit B → <b>Bath1729-b-1</b>; 223 W. Arrellaga St #3 → <b>Arrl223-3-1</b>. If you have done this property before in the assistant (or an old order is numbered the ACI way, like Bath1729a or Bath1729b), the count goes up: <b>Bath1729-2</b>. You can always type over it. Answer three questions: did the client send an engagement letter or will you write one, is it a purchase, and is the property listed now or in the last 12 months. Click <b>Next</b>.</li>
+      <li><b>Going back:</b> click a finished step's name at the top of the steps (1 · Order, 2 · Documents) to return to it. From the order page, click <b>↩ Back to the order steps</b> (next to New order) to go back to step 1 for the order that is open – nothing you typed or uploaded is lost.</li>
+      <li><b>Writing your own letter?</b> In step 1, click <b>I will write one</b>. More questions open right there: <b>Assignment type</b> (for example Date of death – estate tax), the <b>name of the decedent</b> and <b>date of death</b> for past-date work, the <b>purpose</b> when the type asks for one, and the <b>client</b> (start typing a name and a saved client fills the rest). The purchase question is skipped for non-lender work. Everything you type goes straight into the order and the letter.</li>
       <li><b>2 · Documents:</b> drop each file in its box – client’s engagement letter, CRS report, legal description, MLS listing with history, purchase contract with counters and addenda (as many PDFs as you have), preliminary title report, and anything else under <b>Other documents</b>. Each file is read as you add it, and checked against the property address: a file for another property is marked ⚠ and nothing is filled in from it.</li>
       <li><b>3 · Check:</b> see what was filled in. The client’s letter sets the client, loan number, borrower, due date, fee, report form, rent schedule, and <b>AI use</b>: a ban (for example “no AI without prior authorization”) sets No AI; confidentiality wording sets Yes – only with confidential information removed; nothing sets Yes. You can change any of it on the order.</li>
       <li>Click <b>Read</b> next to the prelim or contract to summarize it, then <b>Open the order</b> – or, if you are writing the letter, <b>Next: write my engagement letter</b>.</li>
@@ -816,6 +819,7 @@ nav.tabs button[aria-selected="true"] { background: var(--look-navy) !important;
       <li>Every attachment is added to the order as its own document – sorted by kind and read like any other upload (an engagement letter, a permit, a contract) – with “from the email …” in its note. Small pictures such as signature logos are left out.</li>
       <li>It is all kept in this browser on this computer, with the order (and in Back up). Nothing is sent anywhere.</li></ol></details>
     <details><summary>Engagement letter</summary><ol>
+      <li>The letter preview is at the top of the Engagement letter page and the questions are in the form below it. Click <b>Go to the questions ↓</b> just above the preview to jump down to them.</li>
       <li>On <b>Order &amp; letter</b>, the letter preview on the left fills in from the order. Fill the scope, fee and delivery sections.</li>
       <li>The letter on the left is a preview. Type in the fields below it; the letter changes as you type. Clicking the preview takes you to the client fields.</li>
       <li>Client: start typing the name (or firm) – your saved clients pop up; pick one and the address, phone and email fill in. A new client is added to your list when you save.</li>
@@ -1172,7 +1176,7 @@ nav.tabs button[aria-selected="true"] { background: var(--look-navy) !important;
 </div>
 <div id="toast" role="status" hidden></div>
 <script>
-const BUILD='o1-1022-2340';
+const BUILD='o1-1023-0237';
 const G = (() => {
 /* ---------------- small helpers ---------------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -5297,6 +5301,12 @@ function renderHome() {
   }
   wire();
 }
+function reopenSteps() {   // her request, Oct 22 2026: a way back to the beginning of the New order steps for the order that is open
+  if (!cur) return; cur = readForm(); const w = cur.wizard = cur.wizard || {};
+  if (!w.letter) w.letter = $('#f_status').value === 'Client letter' ? 'client' : 'mine';
+  if (!w.form) w.form = $('#f_reportForm').value;
+  WZ.step = 1; WZ.shown = 0; showTab('new'); renderWizard();
+}
 function startNewOrder() {
   if (cur && hasContent(readForm())) saveLetter(true);
   cur = blankLetter(); cur.wizard = { letter: '', purchase: '', listed: '' }; writeForm(cur); render(); WZ.step = 1; showTab('new'); renderWizard(); setTimeout(() => $('#wzFile') && $('#wzFile').focus(), 50);
@@ -5319,24 +5329,28 @@ const SLOTS = [
 function renderWizard() {
   const box = $('#newBody'); if (!box || !cur) return; const w = cur.wizard = cur.wizard || {}; const f = readForm();
   const steps = ['Order', 'Documents', 'Check'];
-  const head = `<ol class="wzsteps">${steps.map((s, i) => `<li class="${WZ.step === i + 1 ? 'on' : WZ.step > i + 1 ? 'done' : ''}">${i + 1} · ${s}</li>`).join('')}</ol>`;
+  const head = `<ol class="wzsteps">${steps.map((s, i) => `<li class="${WZ.step === i + 1 ? 'on' : WZ.step > i + 1 ? 'done' : ''}">${WZ.step > i + 1 ? `<button type="button" class="lnk" data-wzgo="${i + 1}" title="Go back to this step">${i + 1} · ${s}</button>` : `${i + 1} · ${s}`}</li>`).join('')}</ol>`;
+  if (WZ.shown !== WZ.step) { WZ.shown = WZ.step; setTimeout(() => window.scrollTo(0, 0), 0); }   // each step opens at the top (Oct 22 2026 – step 2 opened scrolled down and looked empty)
+  setTimeout(() => box.querySelectorAll('[data-wzgo]').forEach(b => b.onclick = () => { WZ.step = +b.dataset.wzgo; saveLetter(true); renderWizard(); }), 0);
   if (WZ.step === 1) {
     box.innerHTML = head + `<section class="mkcard"><div class="grid3"><label>File number<input id="wzFile" value="${h(f.fileNo)}" placeholder="your file number"></label>
 </div>${addrRowHTML('wz_', readAddr('f_'))}
       <p class="help" id="wzFileNote"></p>
       <p class="help">Type the street address (with the unit, e.g. #3). City and ZIP: pick them, or leave them for the CRS report to fill in the USPS form with the ZIP+4. The address is used to check that every document you upload is for this property.</p>
       ${q('letter', 'Engagement letter', [['client', 'The client sent one (lender / AMC order)'], ['mine', 'I will write one']])}
+      ${w.letter === 'mine' ? wzMineHTML() : ''}
       ${q('form', 'Report form format', [['uad36', 'UAD 3.6 (Traditional)'], ['uad26', 'UAD 2.6 (Legacy)'], ['gpar', 'GPAR'], ['other', 'Other']])}
-      ${q('purchase', 'Is this a purchase?', [['yes', 'Yes'], ['no', 'No']])}
+      ${w.letter === 'mine' && !(TYPES[$('#f_type').value] || {}).uad ? '' : q('purchase', 'Is this a purchase?', [['yes', 'Yes'], ['no', 'No']])}
       ${q('listed', 'Is the property listed now, or was it in the last 12 months?', [['yes', 'Yes'], ['no', 'No'], ['unsure', 'Not sure']])}
-      <div class="row"><button type="button" class="btn primary" id="wzNext1">Next: documents →</button><button type="button" class="btn ghost" id="wzCancel">Cancel</button></div></section>`;
+      <div class="row"><button type="button" class="btn primary" id="wzNext1">Next: documents →</button><button type="button" class="btn ghost" id="wzCancel">Cancel</button><span class="warnTxt" id="wzNeed1" role="alert"></span></div></section>`;
     const sync = () => { $('#f_fileNo').value = $('#wzFile').value; { const v = readAddr('wz_'); writeAddr('f_', v); $('#f_address').value = joinAddr(v); } update(); };
     $('#wzFile').oninput = () => { w.fileTyped = true; sync(); };
     const addrIn = () => { if (!w.fileTyped || !$('#wzFile').value.trim()) { const sug = suggestFileNo($('#wz_street').value); $('#wzFile').value = sug; $('#wzFileNote').textContent = sug ? 'Made from your rule: street letters + house number' + (/-[2-9]\d*$/.test(sug) ? ' – you have appraised this property before in the assistant, so this is report ' + sug.split('-').pop() : '') + '. Change it if needed.' : ''; } sync(); };
     wireAddr('wz_', () => { addrIn(); });
     box.querySelectorAll('[data-wq]').forEach(b => b.onclick = () => { w[b.dataset.wq] = b.dataset.v; if (b.dataset.wq === 'form') { $('#f_reportForm').value = b.dataset.v; cur.formPicked = true; cur.formNamePicked = false; syncVisibility(); } renderWizard(); });
+    if (w.letter === 'mine') wzMineWire();
     $('#wzCancel').onclick = () => { showTab('home'); renderHome(); };
-    $('#wzNext1').onclick = () => { if (!w.letter) { toast('Choose who writes the engagement letter'); return; }
+    $('#wzNext1').onclick = () => { if (!w.letter) { $('#wzNeed1').textContent = '↑ First choose who writes the engagement letter: “The client sent one” or “I will write one”.'; toast('Choose who writes the engagement letter'); return; }
       if (w.letter === 'client') { $('#f_status').value = 'Client letter'; } else { $('#f_status').value = 'Drafted'; cur.letterMode = 'mine'; }
       if (w.purchase === 'no' && $('#f_type').value === 'uadPurchase') { $('#f_type').value = 'uadOther'; applyTypeDefaults(); }
       if (w.listed === 'yes' && $('#f_listing').value === 'omit') $('#f_listing').value = 'listed';
@@ -5367,9 +5381,10 @@ function renderWizard() {
   const V = { stop: ['No AI on this job', 'The client’s letter restricts AI (for example “no AI without prior authorization”), so this order is set to <b>No AI</b>. Nothing will be sent anywhere.'], look: ['AI only with confidential information removed', 'The letter limits sharing confidential or personal information but does not ban AI, so this order is set to <b>Yes – only with confidential information removed</b>.'], clear: ['AI allowed', 'Nothing in the letter limits AI or sharing of information, so this order is set to <b>Yes – no restriction</b>.'] };
   if (f.orderDoc && f.orderDoc.verdict) { const v = V[f.orderDoc.verdict]; al.push(`<div class="alert ${f.orderDoc.verdict}"><b>${v[0]}</b><p>${v[1]} Check the marked paragraphs on the order page; you can change the setting there.</p></div>`); }
   (f.docs || []).filter(d => d.warn).forEach(d => al.push(`<div class="alert stop"><b>Check the property</b><p>${h(d.name)}: ${h(d.warn)}</p><p><button type="button" class="btn small danger" data-wzdel="${d.id}">Remove this file from the order</button> <small>if it belongs to another property or was added by mistake</small></p></div>`));
-  const facts = [['File number', f.fileNo], ['Property', f.address], ['APN', f.apn], ['Owner of record', f.owner], ['Client', ((f.clients || [])[0] || {}).company || ((f.clients || [])[0] || {}).name], ['Assignment type', (TYPES[f.type] || {}).label], ['Report due', f.dueDate && longDate(f.dueDate)], ['Fee', f.fee && '$' + f.fee], ['Loan number', f.loanNo], ['Borrower', f.borrower]].filter(r => r[1]);
+  const facts = [['File number', f.fileNo], ['Property', f.address], ['APN', f.apn], ['Owner of record', f.owner], ['Client', ((f.clients || [])[0] || {}).company || ((f.clients || [])[0] || {}).name], ['Assignment type', (TYPES[f.type] || {}).label], [((TYPES[f.type] || {}).dateLabels || ['Name of decedent'])[0], (TYPES[f.type] || {}).retro && f.decedent], [((TYPES[f.type] || {}).dateLabels || ['', 'Date of death'])[1], (TYPES[f.type] || {}).retro && f.dod && longDate(f.dod)], ['Purpose', (TYPES[f.type] || {}).purpose && f.purpose], ['Report due', f.dueDate && longDate(f.dueDate)], ['Fee', f.fee && '$' + f.fee], ['Loan number', f.loanNo], ['Borrower', f.borrower]].filter(r => r[1]);
   const need = []; if (!f.address) need.push('the property address'); if (w.letter === 'client' && !(f.docs || []).some(d => d.type === 'clientLetter')) need.push('the client’s engagement letter');
   if (!(f.docs || []).some(d => d.type === 'crs')) need.push('the CRS report'); if (w.purchase === 'yes' && !(f.docs || []).some(d => d.type === 'contract')) need.push('the purchase contract'); if (w.listed === 'yes' && !(f.docs || []).some(d => d.type === 'mls')) need.push('the MLS listing with history');
+  { const T = TYPES[f.type] || {}; if (T.retro && !f.dod) need.push(((T.dateLabels || ['', 'Date of death'])[1]).toLowerCase()); if (w.letter === 'mine' && !((f.clients || [])[0] || {}).name && !((f.clients || [])[0] || {}).company) need.push('the client'); }
   if (!f.inspDate) need.push('the inspection date'); if (!f.aiUse) need.push('AI use on this job');
   const toRead = (f.docs || []).filter(d => ['contract', 'prelim', 'counter', 'addendum', 'leaseback', 'permitsPdf', 'condoQ', 'ccrs', 'hoaBudget', 'disclosures', 'budget'].includes(d.type));
   box.innerHTML = head + `<section class="mkcard"><h3>${h([f.fileNo, street(f)].filter(Boolean).join(' – ') || 'New order')}</h3>${al.join('')}
@@ -5381,6 +5396,27 @@ function renderWizard() {
   $('#wzDone').onclick = () => { saveLetter(true); showTab('letter'); window.scrollTo(0, 0); };
   const wl = $('#wzLetter'); if (wl) wl.onclick = () => { cur.letterMode = 'mine'; saveLetter(true); showTab('letter'); update(); setTimeout(() => { const c = document.querySelector('#clients'); if (c) c.scrollIntoView({ behavior: 'smooth' }); }, 80); };
   box.querySelectorAll('[data-wzread]').forEach(b => b.onclick = () => openReader(b.dataset.wzread));
+}
+/* "I will write one": ask the assignment type, the dates it needs, the purpose and the client right here (her request, Oct 22 2026 –
+   a date-of-death order went through the steps without asking for the client or the decedent). Each box writes straight into the order form. */
+function wzMineHTML() {
+  const T = TYPES[$('#f_type').value] || {}; const L = T.dateLabels || ['Name of decedent', 'Date of death'];
+  const v = id => h(($('#' + id) || {}).value || '');
+  return `<div class="wzmine"><label>Assignment type<select id="wz_type">${$('#f_type').innerHTML}</select></label>
+    ${T.retro ? `<div class="grid2"><label>${h(L[0])}${['divorceRetro', 'otherRetro', 'taxAppeal'].includes($('#f_type').value) ? ' <span class="opt">optional</span>' : ''}<input id="wz_decedent" value="${v('f_decedent')}"></label><label>${h(L[1])}<input id="wz_dod" type="date" value="${v('f_dod')}"></label></div><p class="help">The effective date of value is the ${h(L[1].toLowerCase())}.</p>` : ''}
+    ${T.purpose ? `<label>Purpose, in your words <span class="opt">finishes “to assist the Client in …”</span><input id="wz_purpose" value="${v('f_purpose')}"></label>` : ''}
+    <span class="eyebrow">Client</span>
+    <div class="grid2"><label>Name<input id="wz_c_name" list="clientNames" autocomplete="off" value="${v('c0_name')}" placeholder="start typing – saved clients pop up"></label><label>Company or firm <span class="opt">optional</span><input id="wz_c_company" list="clientCos" autocomplete="off" value="${v('c0_company')}"></label>
+      <label>Street address<input id="wz_c_addr1" autocomplete="off" value="${v('c0_addr1')}"></label><label>City, state, ZIP<input id="wz_c_addr2" autocomplete="off" value="${v('c0_addr2')}"></label>
+      <label>Phone<input id="wz_c_phone" autocomplete="off" value="${v('c0_phone')}"></label><label>Email<input id="wz_c_email" type="email" autocomplete="off" value="${v('c0_email')}"></label></div>
+    <p class="help">Co-trustees, siblings and other intended users: add them on the Engagement letter page (+ Add another client).</p></div>`;
+}
+function wzMineWire() {
+  const sel = $('#wz_type'); sel.value = $('#f_type').value;
+  sel.onchange = () => { $('#f_type').value = sel.value; $('#f_type').dispatchEvent(new Event('change')); if ($('#f_status').value === 'Client letter') $('#f_status').value = 'Drafted'; cur.letterMode = 'mine'; renderWizard(); };
+  [['wz_decedent', 'f_decedent'], ['wz_dod', 'f_dod'], ['wz_purpose', 'f_purpose'], ...CLIENT_KEYS.map(k => ['wz_c_' + k, 'c0_' + k])].forEach(([a, b]) => { const el = $('#' + a), to = $('#' + b); if (!el || !to) return;
+    el.addEventListener('input', () => { to.value = el.value; update(); });
+    el.addEventListener('change', () => { if (a === 'wz_c_name' || a === 'wz_c_company') { const x = contacts.find(c => (c[a.slice(5)] || '').trim().toLowerCase() === el.value.trim().toLowerCase()); if (x) { CLIENT_KEYS.forEach(k => { const t = $('#c0_' + k), s2 = $('#wz_c_' + k); if (t) t.value = x[k] || ''; if (s2) s2.value = x[k] || ''; }); } } to.value = el.value; update(); }); });
 }
 function q(key, label, opts) { const v = (cur.wizard || {})[key]; return `<div class="wzq"><span>${h(label)}</span><div class="seg2">${opts.map(([k, l]) => `<button type="button" data-wq="${key}" data-v="${k}" aria-pressed="${v === k}">${h(l)}</button>`).join('')}</div></div>`; }
 async function wzAdd(slot, files) { files = [...files]; if (!files.length) return; const st = $('#wzStatus'); if (st) st.textContent = 'Reading ' + files.length + ' file' + (files.length > 1 ? 's' : '') + '…'; await addDocs(files, slot === 'other' ? undefined : slot); }

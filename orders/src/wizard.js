@@ -47,6 +47,12 @@ function renderHome() {
   }
   wire();
 }
+function reopenSteps() {   // her request, Oct 22 2026: a way back to the beginning of the New order steps for the order that is open
+  if (!cur) return; cur = readForm(); const w = cur.wizard = cur.wizard || {};
+  if (!w.letter) w.letter = $('#f_status').value === 'Client letter' ? 'client' : 'mine';
+  if (!w.form) w.form = $('#f_reportForm').value;
+  WZ.step = 1; WZ.shown = 0; showTab('new'); renderWizard();
+}
 function startNewOrder() {
   if (cur && hasContent(readForm())) saveLetter(true);
   cur = blankLetter(); cur.wizard = { letter: '', purchase: '', listed: '' }; writeForm(cur); render(); WZ.step = 1; showTab('new'); renderWizard(); setTimeout(() => $('#wzFile') && $('#wzFile').focus(), 50);
@@ -69,24 +75,28 @@ const SLOTS = [
 function renderWizard() {
   const box = $('#newBody'); if (!box || !cur) return; const w = cur.wizard = cur.wizard || {}; const f = readForm();
   const steps = ['Order', 'Documents', 'Check'];
-  const head = `<ol class="wzsteps">${steps.map((s, i) => `<li class="${WZ.step === i + 1 ? 'on' : WZ.step > i + 1 ? 'done' : ''}">${i + 1} · ${s}</li>`).join('')}</ol>`;
+  const head = `<ol class="wzsteps">${steps.map((s, i) => `<li class="${WZ.step === i + 1 ? 'on' : WZ.step > i + 1 ? 'done' : ''}">${WZ.step > i + 1 ? `<button type="button" class="lnk" data-wzgo="${i + 1}" title="Go back to this step">${i + 1} · ${s}</button>` : `${i + 1} · ${s}`}</li>`).join('')}</ol>`;
+  if (WZ.shown !== WZ.step) { WZ.shown = WZ.step; setTimeout(() => window.scrollTo(0, 0), 0); }   // each step opens at the top (Oct 22 2026 – step 2 opened scrolled down and looked empty)
+  setTimeout(() => box.querySelectorAll('[data-wzgo]').forEach(b => b.onclick = () => { WZ.step = +b.dataset.wzgo; saveLetter(true); renderWizard(); }), 0);
   if (WZ.step === 1) {
     box.innerHTML = head + `<section class="mkcard"><div class="grid3"><label>File number<input id="wzFile" value="${h(f.fileNo)}" placeholder="your file number"></label>
 </div>${addrRowHTML('wz_', readAddr('f_'))}
       <p class="help" id="wzFileNote"></p>
       <p class="help">Type the street address (with the unit, e.g. #3). City and ZIP: pick them, or leave them for the CRS report to fill in the USPS form with the ZIP+4. The address is used to check that every document you upload is for this property.</p>
       ${q('letter', 'Engagement letter', [['client', 'The client sent one (lender / AMC order)'], ['mine', 'I will write one']])}
+      ${w.letter === 'mine' ? wzMineHTML() : ''}
       ${q('form', 'Report form format', [['uad36', 'UAD 3.6 (Traditional)'], ['uad26', 'UAD 2.6 (Legacy)'], ['gpar', 'GPAR'], ['other', 'Other']])}
-      ${q('purchase', 'Is this a purchase?', [['yes', 'Yes'], ['no', 'No']])}
+      ${w.letter === 'mine' && !(TYPES[$('#f_type').value] || {}).uad ? '' : q('purchase', 'Is this a purchase?', [['yes', 'Yes'], ['no', 'No']])}
       ${q('listed', 'Is the property listed now, or was it in the last 12 months?', [['yes', 'Yes'], ['no', 'No'], ['unsure', 'Not sure']])}
-      <div class="row"><button type="button" class="btn primary" id="wzNext1">Next: documents →</button><button type="button" class="btn ghost" id="wzCancel">Cancel</button></div></section>`;
+      <div class="row"><button type="button" class="btn primary" id="wzNext1">Next: documents →</button><button type="button" class="btn ghost" id="wzCancel">Cancel</button><span class="warnTxt" id="wzNeed1" role="alert"></span></div></section>`;
     const sync = () => { $('#f_fileNo').value = $('#wzFile').value; { const v = readAddr('wz_'); writeAddr('f_', v); $('#f_address').value = joinAddr(v); } update(); };
     $('#wzFile').oninput = () => { w.fileTyped = true; sync(); };
     const addrIn = () => { if (!w.fileTyped || !$('#wzFile').value.trim()) { const sug = suggestFileNo($('#wz_street').value); $('#wzFile').value = sug; $('#wzFileNote').textContent = sug ? 'Made from your rule: street letters + house number' + (/-[2-9]\d*$/.test(sug) ? ' – you have appraised this property before in the assistant, so this is report ' + sug.split('-').pop() : '') + '. Change it if needed.' : ''; } sync(); };
     wireAddr('wz_', () => { addrIn(); });
     box.querySelectorAll('[data-wq]').forEach(b => b.onclick = () => { w[b.dataset.wq] = b.dataset.v; if (b.dataset.wq === 'form') { $('#f_reportForm').value = b.dataset.v; cur.formPicked = true; cur.formNamePicked = false; syncVisibility(); } renderWizard(); });
+    if (w.letter === 'mine') wzMineWire();
     $('#wzCancel').onclick = () => { showTab('home'); renderHome(); };
-    $('#wzNext1').onclick = () => { if (!w.letter) { toast('Choose who writes the engagement letter'); return; }
+    $('#wzNext1').onclick = () => { if (!w.letter) { $('#wzNeed1').textContent = '↑ First choose who writes the engagement letter: “The client sent one” or “I will write one”.'; toast('Choose who writes the engagement letter'); return; }
       if (w.letter === 'client') { $('#f_status').value = 'Client letter'; } else { $('#f_status').value = 'Drafted'; cur.letterMode = 'mine'; }
       if (w.purchase === 'no' && $('#f_type').value === 'uadPurchase') { $('#f_type').value = 'uadOther'; applyTypeDefaults(); }
       if (w.listed === 'yes' && $('#f_listing').value === 'omit') $('#f_listing').value = 'listed';
@@ -117,9 +127,10 @@ function renderWizard() {
   const V = { stop: ['No AI on this job', 'The client’s letter restricts AI (for example “no AI without prior authorization”), so this order is set to <b>No AI</b>. Nothing will be sent anywhere.'], look: ['AI only with confidential information removed', 'The letter limits sharing confidential or personal information but does not ban AI, so this order is set to <b>Yes – only with confidential information removed</b>.'], clear: ['AI allowed', 'Nothing in the letter limits AI or sharing of information, so this order is set to <b>Yes – no restriction</b>.'] };
   if (f.orderDoc && f.orderDoc.verdict) { const v = V[f.orderDoc.verdict]; al.push(`<div class="alert ${f.orderDoc.verdict}"><b>${v[0]}</b><p>${v[1]} Check the marked paragraphs on the order page; you can change the setting there.</p></div>`); }
   (f.docs || []).filter(d => d.warn).forEach(d => al.push(`<div class="alert stop"><b>Check the property</b><p>${h(d.name)}: ${h(d.warn)}</p><p><button type="button" class="btn small danger" data-wzdel="${d.id}">Remove this file from the order</button> <small>if it belongs to another property or was added by mistake</small></p></div>`));
-  const facts = [['File number', f.fileNo], ['Property', f.address], ['APN', f.apn], ['Owner of record', f.owner], ['Client', ((f.clients || [])[0] || {}).company || ((f.clients || [])[0] || {}).name], ['Assignment type', (TYPES[f.type] || {}).label], ['Report due', f.dueDate && longDate(f.dueDate)], ['Fee', f.fee && '$' + f.fee], ['Loan number', f.loanNo], ['Borrower', f.borrower]].filter(r => r[1]);
+  const facts = [['File number', f.fileNo], ['Property', f.address], ['APN', f.apn], ['Owner of record', f.owner], ['Client', ((f.clients || [])[0] || {}).company || ((f.clients || [])[0] || {}).name], ['Assignment type', (TYPES[f.type] || {}).label], [((TYPES[f.type] || {}).dateLabels || ['Name of decedent'])[0], (TYPES[f.type] || {}).retro && f.decedent], [((TYPES[f.type] || {}).dateLabels || ['', 'Date of death'])[1], (TYPES[f.type] || {}).retro && f.dod && longDate(f.dod)], ['Purpose', (TYPES[f.type] || {}).purpose && f.purpose], ['Report due', f.dueDate && longDate(f.dueDate)], ['Fee', f.fee && '$' + f.fee], ['Loan number', f.loanNo], ['Borrower', f.borrower]].filter(r => r[1]);
   const need = []; if (!f.address) need.push('the property address'); if (w.letter === 'client' && !(f.docs || []).some(d => d.type === 'clientLetter')) need.push('the client’s engagement letter');
   if (!(f.docs || []).some(d => d.type === 'crs')) need.push('the CRS report'); if (w.purchase === 'yes' && !(f.docs || []).some(d => d.type === 'contract')) need.push('the purchase contract'); if (w.listed === 'yes' && !(f.docs || []).some(d => d.type === 'mls')) need.push('the MLS listing with history');
+  { const T = TYPES[f.type] || {}; if (T.retro && !f.dod) need.push(((T.dateLabels || ['', 'Date of death'])[1]).toLowerCase()); if (w.letter === 'mine' && !((f.clients || [])[0] || {}).name && !((f.clients || [])[0] || {}).company) need.push('the client'); }
   if (!f.inspDate) need.push('the inspection date'); if (!f.aiUse) need.push('AI use on this job');
   const toRead = (f.docs || []).filter(d => ['contract', 'prelim', 'counter', 'addendum', 'leaseback', 'permitsPdf', 'condoQ', 'ccrs', 'hoaBudget', 'disclosures', 'budget'].includes(d.type));
   box.innerHTML = head + `<section class="mkcard"><h3>${h([f.fileNo, street(f)].filter(Boolean).join(' – ') || 'New order')}</h3>${al.join('')}
@@ -131,6 +142,27 @@ function renderWizard() {
   $('#wzDone').onclick = () => { saveLetter(true); showTab('letter'); window.scrollTo(0, 0); };
   const wl = $('#wzLetter'); if (wl) wl.onclick = () => { cur.letterMode = 'mine'; saveLetter(true); showTab('letter'); update(); setTimeout(() => { const c = document.querySelector('#clients'); if (c) c.scrollIntoView({ behavior: 'smooth' }); }, 80); };
   box.querySelectorAll('[data-wzread]').forEach(b => b.onclick = () => openReader(b.dataset.wzread));
+}
+/* "I will write one": ask the assignment type, the dates it needs, the purpose and the client right here (her request, Oct 22 2026 –
+   a date-of-death order went through the steps without asking for the client or the decedent). Each box writes straight into the order form. */
+function wzMineHTML() {
+  const T = TYPES[$('#f_type').value] || {}; const L = T.dateLabels || ['Name of decedent', 'Date of death'];
+  const v = id => h(($('#' + id) || {}).value || '');
+  return `<div class="wzmine"><label>Assignment type<select id="wz_type">${$('#f_type').innerHTML}</select></label>
+    ${T.retro ? `<div class="grid2"><label>${h(L[0])}${['divorceRetro', 'otherRetro', 'taxAppeal'].includes($('#f_type').value) ? ' <span class="opt">optional</span>' : ''}<input id="wz_decedent" value="${v('f_decedent')}"></label><label>${h(L[1])}<input id="wz_dod" type="date" value="${v('f_dod')}"></label></div><p class="help">The effective date of value is the ${h(L[1].toLowerCase())}.</p>` : ''}
+    ${T.purpose ? `<label>Purpose, in your words <span class="opt">finishes “to assist the Client in …”</span><input id="wz_purpose" value="${v('f_purpose')}"></label>` : ''}
+    <span class="eyebrow">Client</span>
+    <div class="grid2"><label>Name<input id="wz_c_name" list="clientNames" autocomplete="off" value="${v('c0_name')}" placeholder="start typing – saved clients pop up"></label><label>Company or firm <span class="opt">optional</span><input id="wz_c_company" list="clientCos" autocomplete="off" value="${v('c0_company')}"></label>
+      <label>Street address<input id="wz_c_addr1" autocomplete="off" value="${v('c0_addr1')}"></label><label>City, state, ZIP<input id="wz_c_addr2" autocomplete="off" value="${v('c0_addr2')}"></label>
+      <label>Phone<input id="wz_c_phone" autocomplete="off" value="${v('c0_phone')}"></label><label>Email<input id="wz_c_email" type="email" autocomplete="off" value="${v('c0_email')}"></label></div>
+    <p class="help">Co-trustees, siblings and other intended users: add them on the Engagement letter page (+ Add another client).</p></div>`;
+}
+function wzMineWire() {
+  const sel = $('#wz_type'); sel.value = $('#f_type').value;
+  sel.onchange = () => { $('#f_type').value = sel.value; $('#f_type').dispatchEvent(new Event('change')); if ($('#f_status').value === 'Client letter') $('#f_status').value = 'Drafted'; cur.letterMode = 'mine'; renderWizard(); };
+  [['wz_decedent', 'f_decedent'], ['wz_dod', 'f_dod'], ['wz_purpose', 'f_purpose'], ...CLIENT_KEYS.map(k => ['wz_c_' + k, 'c0_' + k])].forEach(([a, b]) => { const el = $('#' + a), to = $('#' + b); if (!el || !to) return;
+    el.addEventListener('input', () => { to.value = el.value; update(); });
+    el.addEventListener('change', () => { if (a === 'wz_c_name' || a === 'wz_c_company') { const x = contacts.find(c => (c[a.slice(5)] || '').trim().toLowerCase() === el.value.trim().toLowerCase()); if (x) { CLIENT_KEYS.forEach(k => { const t = $('#c0_' + k), s2 = $('#wz_c_' + k); if (t) t.value = x[k] || ''; if (s2) s2.value = x[k] || ''; }); } } to.value = el.value; update(); }); });
 }
 function q(key, label, opts) { const v = (cur.wizard || {})[key]; return `<div class="wzq"><span>${h(label)}</span><div class="seg2">${opts.map(([k, l]) => `<button type="button" data-wq="${key}" data-v="${k}" aria-pressed="${v === k}">${h(l)}</button>`).join('')}</div></div>`; }
 async function wzAdd(slot, files) { files = [...files]; if (!files.length) return; const st = $('#wzStatus'); if (st) st.textContent = 'Reading ' + files.length + ' file' + (files.length > 1 ? 's' : '') + '…'; await addDocs(files, slot === 'other' ? undefined : slot); }
