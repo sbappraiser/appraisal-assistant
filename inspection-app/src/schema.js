@@ -1077,3 +1077,45 @@ const COMMENT_TARGETS = [
   { id: 'project', title: 'Project Commentary (condo / co-op / PUD)', fid: '18.0xx', lim: 2500, uad: 'ValuationCommentText' },
   { id: 'qc', title: 'Reconciliation of Overall Quality and Condition', fid: '15.010', lim: 5000, uad: 'ValuationCommentText' },
 ];
+
+/* ===== Quick / Complex inspection and first yes/no questions (her review page, Oct 23 2026) =====
+   Quick hides the "Complex only" questions; Never hides a question for good (its old answers stay in the data).
+   Each gate is one yes/no question first; the rest of that section shows only on Yes. */
+const MODE_COMPLEX = new Set(['driveFeat', 'topoMore', 'well', 'landArea', 'landFeat', 'walks', 'whCount', 'tanks', 'tankGal', 'solarCost', 'sysOk', 'utilOk', 'utilMore', 'countsOk', 'stairs.shape', 'stairs.rail']);
+const MODE_NEVER = new Set(['streetFeat', 'laundry', 'stalls', 'atticObs', 'rooms.loftAccess', 'bedrooms.ensuite', 'bedrooms.closet', 'defects.costSrc', 'defects.costDate']);
+const IS_QUICK = ins => !!(ins && ins.data && ins.data.property && ins.data.property.mode === 'Quick');
+const GATES = [   // [section, group, gate key, question, follow-up keys, UAD fields set to None on No]
+  ['amenities', 'land', 'landYes', 'Is there landscaping you want to describe?', ['landArea', 'landFeat', 'landSys', 'hardscape', 'fenceMat', 'walks'], {}],
+  ['amenities', 'rec', 'recYes', 'Are there recreation or outdoor-living amenities (courts, outdoor kitchen, fire pit, horse facilities…)?', ['rec', 'outdoor', 'equestrian', 'equine', 'stalls'], {}],
+  ['systems', 'wh', 'whSeen', 'Did you see the water heater?', ['wh', 'whCount', 'whStrap', 'whRecirc'], {}],
+  ['systems', 'mech', 'mechYes', 'Are there other mechanical or water systems (water softener, filtration, sump pump, storage tanks…)?', ['mech', 'tanks', 'tankGal'], {}],
+  ['systems', 'energy', 'renewYes', 'Is there solar or other renewable energy?', ['renew', 'renewOth', 'solarOwn', 'solarOwnOth', 'solarFin', 'solarKw', 'solarYear', 'solarCost'], { renew: ['None'] }],
+  ['systems', 'energy', 'effYes', 'Are there energy-efficiency items, building certifications or efficiency ratings (battery, generator, EV charging, LEED, HERS…)?', ['eff', 'battery', 'certs', 'certsOth', 'ratings', 'ratingsOth', 'effImpact'], { certs: ['None'], ratings: ['None'] }],
+  ['systems', 'smart', 'smartYes', 'Is there smart-home, security or technology equipment?', ['smart', 'security', 'tech'], {}],
+  ['interview', 'updates', 'updYes', 'Has anything been remodeled, updated or replaced?', ['kitYear', 'kitScope', 'bathYear', 'bathScope', 'roofYear', 'recent15'], {}],
+];
+const GATE_OF = {}; GATES.forEach(g => g[4].forEach(k => { GATE_OF[g[0] + '.' + k] = g[2]; }));
+(() => {
+  const wrap = (f, key) => { const orig = f.show; const gate = GATE_OF[key];
+    if (MODE_NEVER.has(key)) { f.show = () => false; f.req = false; return; }
+    if (!gate && !MODE_COMPLEX.has(key)) return;
+    f.show = (d, ins) => (!gate || (d || {})[gate] === true) && !(MODE_COMPLEX.has(key) && IS_QUICK(ins)) && (orig ? orig(d, ins) : true); };
+  SECTIONS.forEach(sec => sec.groups.forEach(g => (g.fields || []).forEach(f => { if (f && f.k) wrap(f, MODE_NEVER.has(f.k) || MODE_COMPLEX.has(f.k) ? f.k : sec.id + '.' + f.k); })));
+  // section keys that are also gated: re-run with the section-qualified key for the gate
+  SECTIONS.forEach(sec => sec.groups.forEach(g => (g.fields || []).forEach(f => { if (f && f.k && GATE_OF[sec.id + '.' + f.k] && !f._gated) { const orig = f.show, gate = GATE_OF[sec.id + '.' + f.k]; f.show = (d, ins) => (d || {})[gate] === true && (orig ? orig(d, ins) : true); f._gated = true; } })));
+  Object.keys(LISTS).forEach(n => (LISTS[n].fields || []).forEach(f => { if (f && f.k) wrap(f, n + '.' + f.k); }));
+  GATES.forEach(([s, gid, k, l, follow]) => { const sec = SECTIONS.find(x => x.id === s), g = sec && sec.groups.find(x => x.id === gid); if (!g) return;
+    const at = g.fields.findIndex(f => f && follow.includes(f.k)); g.fields.splice(Math.max(0, at), 0, { k, l, t: 'yn', req: true, gate: true }); });
+  const as = SECTIONS.find(x => x.id === 'property').groups.find(x => x.id === 'assign');
+  as.fields.unshift({ k: 'mode', l: 'Inspection type', t: 'one', req: true, o: opts('Quick', 'Complex'), remind: 'Quick hides the questions you marked "Complex only" (driveway features, topography detail, well use, landscaping detail, water heaters, tanks, solar cost, stairs, interview confirmations). Switch at any time; answers are kept.' });
+})();
+/* an older inspection, or one filled by dictation: a gate with answers behind it is Yes; only "None" answers make it No */
+function gateFix(ins) { if (!ins || !ins.data) return;
+  GATES.forEach(([s, , k, , follow, none]) => { const d = ins.data[s]; if (!d || d[k] !== undefined) return;
+    const vals = follow.map(f => d[f]).filter(v => v !== undefined && v !== null && v !== '' && !(Array.isArray(v) && !v.length));
+    if (!vals.length) return; const allNone = vals.every(v => Array.isArray(v) && v.length === 1 && v[0] === 'None');
+    d[k] = !allNone; if (allNone) d['_gAuto_' + k] = true; }); }
+/* her No answer fills the UAD "None" for her; Yes clears only what No filled */
+function gateSet(ins, sec, k) { const g = GATES.find(x => x[0] === sec && x[2] === k); if (!g) return; const d = ins.data[sec]; const none = g[5];
+  if (d[k] === false) { Object.entries(none).forEach(([f, v]) => { if (d[f] === undefined || (Array.isArray(d[f]) && !d[f].length)) { d[f] = v.slice(); d['_gAuto_' + k] = true; } }); }
+  else if (d['_gAuto_' + k]) { Object.keys(none).forEach(f => { if (JSON.stringify(d[f]) === JSON.stringify(none[f])) delete d[f]; }); delete d['_gAuto_' + k]; } }

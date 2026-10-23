@@ -124,7 +124,7 @@ function normalize(ins) {
   if (!ins.lists.kitchens.length) ins.lists.kitchens.push({ id: uid(), level: 'LevelOne' });
   if (!ins.data.property.state) ins.data.property.state = 'CA';
   if (!ins.data.property.estate) ins.data.property.estate = 'FeeSimple';
-  propDefaults(ins.data.property);
+  propDefaults(ins.data.property); if (typeof gateFix === 'function') gateFix(ins);
   { const I = ins.data.interior; if (I) { if (I.atticAcc === undefined && I.attic !== undefined) I.atticAcc = I.attic === true ? I.atticAccess !== 'None / Sealed' : false;   // older inspections (before Oct 23 2026)
     if (I.atticAcc === true) { I.attic = true; I._atticAuto = true; } } }
   if (!ins.data.site.apnDesc) ins.data.site.apnDesc = 'LandWithDwelling';

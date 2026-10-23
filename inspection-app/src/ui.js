@@ -16,7 +16,7 @@ const groupShown = (g, sec, ins) => tabShown(sec, ins) && (!g.showGroup || g.sho
 async function writeNow() { await DB.put('inspections', JSON.parse(JSON.stringify(app.ins))); }
 function save() {
   if (!app.ins) return;
-  deriveFromInterview(app.ins);
+  deriveFromInterview(app.ins); gateFix(app.ins);
   app.ins.updated = Date.now();
   clearTimeout(app.saving); setSaved('Saving…');
   app.saving = setTimeout(async () => {
@@ -730,6 +730,7 @@ function bind(root) {
     else { const arr = new Set(obj[f.k] || []); if (arr.has(v)) arr.delete(v); else { if (v === 'None' || v === 'No Fire Hazard Zone') arr.clear(); else { arr.delete('None'); arr.delete('No Fire Hazard Zone'); } arr.add(v); } obj[f.k] = [...arr]; }
     if (f.k === 'view' && obj.viewPrimary && !(obj.view || []).includes(obj.viewPrimary)) delete obj.viewPrimary;
     if (['attach', 'pud', 'project'].includes(f.k)) propDefaults(app.ins.data.property);
+    if (f.gate) gateSet(app.ins, Object.keys(app.ins.data).find(s => app.ins.data[s] === obj) || '', f.k);   // first yes/no question of a section (Oct 23 2026)
     if (f.k === 'atticAcc') { if (obj.atticAcc === true) obj.attic = true; else if (obj._atticAuto) obj.attic = undefined; obj._atticAuto = obj.atticAcc === true; }   // an accessible attic is an attic (UAD 8.017); No asks whether there is a sealed one   // her ask Oct 21 2026: a detached house, not PUD, not condo → the owner keeps up the outside
     save(); renderTab();
   });
