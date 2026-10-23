@@ -168,12 +168,13 @@ async function openInspection2(id, tab) {
       <div class="title"><b id="tTitle"></b> <i class="tent" title="Tentacle 2 of the Octopus – the subject">2 · Subject</i><span id="tAddr"></span></div>
       <span class="saved" id="saved">Saved ✓</span>
       <button class="icon-btn" id="saveBtn">Save</button>
+      <div class="bar-tools">
       <button class="icon-btn" id="ovWalk" aria-label="Walk-through">🚶<span class="bl"> Walk-through</span></button>
       <button class="icon-btn" id="ovDict" aria-label="Dictate">🎤<span class="bl"> Dictate</span></button>
       <button class="icon-btn" id="ovBtns" aria-label="All buttons">▦<span class="bl"> Buttons</span></button>
       <button class="icon-btn" id="jumpBtn" aria-label="Search">🔍<span class="bl"> Search</span></button>
       <button class="icon-btn sk-btn" id="sketchBtn" aria-label="Sketch">✏️<span class="bl"> OctoSketch</span></button>
-      ${hcBtn()}<button class="icon-btn" id="insStore">Storage check</button>
+      ${hcBtn()}<button class="icon-btn" id="insStore">Storage check</button></div>
       <button class="attn-pill" id="attnPill"></button></div>
     <nav class="tabs" id="tabs" role="tablist"></nav></header>
   <main id="main"></main>`;

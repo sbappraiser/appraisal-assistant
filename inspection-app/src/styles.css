@@ -470,3 +470,12 @@ input.txt:focus, select.txt:focus, textarea.txt:focus { background: #fff4b0 !imp
 .ov-cw { display: flex; align-items: center; gap: 14px; width: 100%; padding: 14px 16px; border-radius: 14px; border: 3px solid #1f3f66; background: #1f3f66; color: #fff; font: inherit; text-align: left; cursor: pointer; -webkit-appearance: none; appearance: none; }
 .ov-cw svg { width: 46px; height: 46px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .ov-cw b { display: block; font-size: 1.3rem; } .ov-cw small { font-size: .95rem; opacity: .9; }
+
+/* her ask Oct 23 2026: the iPhone header matches the mockup – labeled buttons, three to a row */
+.bar-tools { display: contents; }
+@media (max-width: 520px) {
+  .bar-tools { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; flex: 1 1 100%; order: 5; }
+  .bar-tools .icon-btn { width: 100%; justify-content: center; padding: 6px 4px; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bar-tools .bl { display: inline; }
+  .attn-pill { order: 4; }
+}
