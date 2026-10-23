@@ -40,11 +40,11 @@ const OV_BTNS = [
   { id: 'ext', grp: 'Main dwelling', t: 'Exterior', icon: 'front', sub: 'Rear & side photos too', parts: [['front', null], ['exterior', null]] },
   { id: 'int', grp: 'Main dwelling', t: 'Interior', icon: 'interior', sub: 'Smoke & CO · attic', parts: [['interior', null]] },
   { id: 'sys', grp: 'Main dwelling', t: 'Systems & features', icon: 'systems', sub: 'Heating · cooling · water heater · smart home', parts: [['systems', ['hvac', 'wh', 'mech', 'smart']]] },
-  { id: 'energy', grp: 'Main dwelling', t: 'Green & energy efficiency', icon: 'energy', sub: 'Solar · battery · ratings', parts: [['systems', ['energy']]] },
-  { id: 'disaster', grp: 'Main dwelling', t: 'Disaster mitigation', icon: 'disaster', sub: 'Water heater strapping · retrofit', parts: [['interview', ['disaster']], ['systems', ['wh']]] },
   { id: 'garage', grp: 'Main dwelling', t: 'Garage & parking', icon: 'garage', parts: [['garage', null]] },
-  { id: 'defects', grp: 'Main dwelling', t: 'Defects', icon: 'defects', parts: [['defects', null]] },
   { id: 'qc', grp: 'Main dwelling', t: 'Quality & condition', icon: 'wrapup', sub: 'Functional obsolescence · notes', parts: [['condition', null]] },
+  { id: 'disaster', grp: 'Main dwelling', t: 'Disaster mitigation', icon: 'disaster', sub: 'Water heater strapping · retrofit', parts: [['interview', ['disaster']], ['systems', ['wh']]] },
+  { id: 'energy', grp: 'Main dwelling', t: 'Green & energy efficiency', icon: 'energy', sub: 'Solar · battery · ratings', parts: [['systems', ['energy']]] },
+  { id: 'defects', grp: 'Main dwelling', t: 'Defects', icon: 'defects', parts: [['defects', null]] },
   { id: 'adu', grp: 'Other buildings', t: 'ADUs', icon: 'adu', parts: [['buildings', ['adu']]], count: ins => ins.lists.adus.length },
   { id: 'outb', grp: 'Other buildings', t: 'Outbuildings', icon: 'outb', parts: [['buildings', ['outb']]], count: ins => ins.lists.outbuildings.length },
   { id: 'sketch', grp: 'Other', t: 'OctoSketch', icon: 'sketch', act: 'sketch' },
@@ -69,14 +69,13 @@ function renderOverview() {
   const P = ins.data.property || {};
   const tile = b => { const shown = !b.show || b.show(ins); const miss = shown ? ovMissing(b, issues) : 0;
     const n = b.count ? b.count(ins) : null; const title = b.t + (n !== null ? ` (${n})` : '');
-    const sub = !shown ? b.off : b.act === 'sketch' ? (ovSketchSf(ins) || 'Not drawn yet') : n === 0 ? 'None yet – tap Add a building' : (b.sub || '');
+    const sub = !shown ? b.off : b.act === 'sketch' ? (ovSketchSf(ins) || 'Not drawn yet') : n === 0 ? 'None yet – tap to add one' : (b.sub || '');
     const st = !shown ? '' : miss ? `<span class="ov-badge" aria-label="${miss} missing">${miss}</span>` : (b.tab === 'photos' || b.tab === 'export' || b.act || n === 0) ? '' : '<span class="ov-ok" aria-label="Complete">✓</span>';
     return `<button class="ov-tile${shown ? '' : ' off'}${miss ? ' miss' : ''}" data-ov="${b.id}"${shown ? '' : ' disabled'}>${st}<svg viewBox="0 0 24 24" aria-hidden="true">${OV_ICON[b.icon]}</svg><b>${esc(title)}</b><small>${esc(shown ? (miss ? miss + ' missing' + (sub ? ' · ' + sub : '') : sub) : sub)}</small></button>`; };
-  const add = `<button class="ov-tile add" data-ovadd="1"><svg viewBox="0 0 24 24" aria-hidden="true">${OV_ICON.add}</svg><b>Add a building</b><small>ADU · outbuilding</small></button>`;
   const type = [P.legal && P.legal !== 'None' ? P.legal : (P.pud ? 'PUD' : 'Single family'), P.attach, P.mode].filter(Boolean).join(' · ');
   const cwb = `<button class="ov-cw" data-ovcw="1"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="13" cy="4" r="2"/><path d="m9 21 2-6 2 2v4M7 12l2-4 4 1 3 3M11 15l-2-3"/></svg><span><b>Complex walk</b><small>${P.mode === 'Complex' ? 'For this large property – tap what you see as you walk' : 'For large properties – street, driveway, then go anywhere'}</small></span></button>`;
   return `<div class="ov">${cwb}<p class="ov-lead">Tap a button and its questions slide in. ${esc(type)}. The 🚶 walk-through keeps your own order.</p>
-    ${OV_GROUPS.map(g => `<section class="ov-group"><h2>${esc(g)}${g === 'Assignment' ? ' <small>answer first – it sets up the rest</small>' : ''}</h2><div class="ov-grid">${OV_BTNS.filter(b => b.grp === g).map(tile).join('')}${g === 'Other buildings' ? add : ''}</div></section>`).join('')}
+    ${OV_GROUPS.map(g => `<section class="ov-group"><h2>${esc(g)}${g === 'Assignment' ? ' <small>answer first – it sets up the rest</small>' : ''}</h2><div class="ov-grid">${OV_BTNS.filter(b => b.grp === g).map(tile).join('')}</div></section>`).join('')}
     <p class="ov-classic"><button class="btn sm" data-ovclassic="1">Show the classic tabs</button></p></div>`;
 }
 function renderOvButton(id) {
