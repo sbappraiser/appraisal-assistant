@@ -115,8 +115,8 @@ template. SFREP import: Home → Import Forms. XML must follow XSD element order
    refining until she says it is settled.
 2. **Desktop sketch in tentacle 2** (proposed construction from architectural plans; reuse the iPad
    sketch with the floor-plan underlay; totals + image to the subject) – after item 1.
-3. **Waiting on her:** SFREP import of the test file "TEST Test6-1 5464 Berkeley Rd – Full report
-   SFREP.zip"; try the flood and wildfire maps live; try Adjustment methods compared on a live order;
+3. **Waiting on SFREP (Charles Jones, charles@sfrep.com):** she sent Oct 22 the D-1 SF1 sample + list – import drops the Add Other line entirely (her Usable Lot Area/Utility) and the unit / misc amenity adjustment amounts (comp counts DO arrive). Berkeley Test6 imported Oct 22: still to check by hover – red Dimensions and red $0 grid boxes (see notes g2-1023-0426).
+   **Waiting on her:** try the flood and wildfire maps live; try Adjustment methods compared on a live order;
    ACI menu screenshots / an .RPS file; what the YouTube link showed; old rent survey PDFs (optional).
 4. Done Oct 22: accessibility, water frontage, outbuilding utilities sent; 2.6 condo formats. Still open:
    ADU line in the rent schedule. Starter comments doc for her review:
