@@ -331,7 +331,9 @@ const safeName = s => String(s || '').replace(/[\\/:*?"<>|#%]+/g, '-').replace(/
 /* her defaults (Oct 21 2026): Native American lands No (none in her area); homeowner responsible for all exterior maintenance Yes once the
    property is Detached, not a PUD and not a condominium / cooperative – only while those are unanswered, so her own answer always stays */
 function propDefaults(p) { if (!p) return; if (p.native === undefined) p.native = false;
-  if (p.hoExt === undefined && p.attach === 'Detached' && p.pud === false && p.project === false) p.hoExt = true; }
+  /* her rule (Oct 23 2026): not a condo, PUD or co-op → site owned in common = No and owner responsible for all exterior maintenance = Yes.
+     Only fills blanks – her own answer always stays. */
+  if (p.pud === false && p.project === false) { if (p.siteCommon === undefined) p.siteCommon = false; if (p.hoExt === undefined) p.hoExt = true; } }
 
 /* the same app on her iPhone (Oct 22 2026): say iPhone instead of iPad in what she reads */
 const DEVICE = /iPhone/.test(navigator.userAgent) ? 'iPhone' : 'iPad';
