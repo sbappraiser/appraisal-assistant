@@ -8,4 +8,5 @@ with tempfile.NamedTemporaryFile('w', suffix='.js', delete=False) as t: t.write(
 chk = subprocess.run(['node', '--check', t.name], capture_output=True, text=True)
 if chk.returncode: raise SystemExit('SCRIPT ERROR – not built:\n' + chk.stderr[:1500])
 (out / 'index.html').write_text(html)
+for f in pathlib.Path('brand').glob('*.png'): shutil.copy(f, out / f.name)   # the octopus logo and icons
 print('index.html', len(html), BUILD)

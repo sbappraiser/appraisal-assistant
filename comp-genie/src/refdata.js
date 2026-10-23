@@ -1,8 +1,8 @@
 /* =====================================================================
-   Her reference databases, shared by the Comp genie and the cost approach (her rule, Oct 19 2026)
+   Her reference databases, shared by OctoSleuth and the cost approach (her rule, Oct 19 2026)
    · Land sales  – her workbook "Land Sales by Market Area.xlsx" (older copies with a Neighborhood column still read) (her reports + CORT vacant land + her own)
    · Construction costs – her Construction_Cost_Database.xlsx (32 local contractor budgets, CCCI-indexed)
-   Both are dropped on the Comp genie page once and kept in this browser (kv 'landSales', 'costDb'),
+   Both are dropped on OctoSleuth page once and kept in this browser (kv 'landSales', 'costDb'),
    like the archive and the CORT table. Nothing is uploaded anywhere.
    ===================================================================== */
 /* ---- a small .xlsx reader: cell values as Excel last saved them (cached formula results) ---- */

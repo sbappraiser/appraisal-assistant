@@ -153,14 +153,14 @@ async function readDoc(meta, file) { // turns the readable kinds into facts; not
       const E = await readEmail(file); const rec = await ODB.get('docs', meta.id); if (rec) { rec.pagesText = [emailText(E)]; rec.scanPages = []; rec.email = { from: E.from, to: E.to, cc: E.cc, date: E.date && !isNaN(E.date) ? E.date.toISOString() : '', subject: E.subject, text: E.text, files: E.files.map(f => f.name) }; await ODB.put('docs', rec); }
       meta.textState = 'text'; meta.note = 'email' + (E.from ? ' from ' + E.from.replace(/\s*<[^>]*>/, '') : '') + (E.date && !isNaN(E.date) ? ', ' + E.date.toLocaleDateString() : '') + (E.subject ? ' · “' + E.subject.slice(0, 60) + '”' : '') + (E.files.length ? ' · ' + E.files.length + ' attachment' + (E.files.length > 1 ? 's' : '') + ' added below' : '');
       E.files.forEach(f => { f._fromEmail = E.subject || meta.name; }); (EMAIL_ATTACH = EMAIL_ATTACH || []).push(...E.files.filter(f => f.size > 0 && !/^image\d*\.(png|gif|jpe?g)$/i.test(f.name) || f.size > 60000));   /* small inline logos are left out */
-    } else if (meta.type === 'ipadWorkfile') {   // her inspection from the iPad: kept with the order; the Comp genie takes the subject from it
+    } else if (meta.type === 'ipadWorkfile') {   // her inspection from the iPad: kept with the order; OctoSleuth takes the subject from it
       try { const z = await G.readZip(file); const b = z.get('inspection-backup.json'); if (!b) { meta.note = 'no inspection inside – export the Workfile package on the iPad'; return; }
         const ins = (JSON.parse(new TextDecoder().decode(b)) || {}).inspection || {}; const P = (ins.data && ins.data.property) || {};
-        meta.note = 'iPad inspection' + (P.inspDate ? ' of ' + (G.showDate ? G.showDate(P.inspDate) : P.inspDate) : '') + (P.addr ? ' · ' + P.addr : '') + ' · the Comp genie tab takes the subject from it';
+        meta.note = 'iPad inspection' + (P.inspDate ? ' of ' + (G.showDate ? G.showDate(P.inspDate) : P.inspDate) : '') + (P.addr ? ' · ' + P.addr : '') + ' · OctoSleuth tab takes the subject from it';
         if (P.addr && $('#f_address').value.trim() && !sameStreet(P.addr, $('#f_address').value)) meta.warn = 'This inspection is for ' + P.addr + ', not ' + street(readForm()) + '.';
         if (P.inspDate && !$('#f_inspDate').value) { const d = G.isoDate(P.inspDate) || P.inspDate; if (/^\d{4}-\d\d-\d\d$/.test(d)) $('#f_inspDate').value = d; } } catch (e) { meta.note = 'could not open the zip: ' + (e.message || e); }
     } else if (meta.type === 'plat') {   // an exhibit only (her rule): not read – a picture of page 1 is kept for the report's Site section
-      const prev = await planPreview(file, meta.page || 1); if (prev) { const rec = await ODB.get('docs', meta.id); rec.preview = prev.src; rec.pages = prev.pages; await ODB.put('docs', rec); meta.pages = prev.pages; meta.note = 'exhibit – the Comp genie puts it in the report (Site section)'; }
+      const prev = await planPreview(file, meta.page || 1); if (prev) { const rec = await ODB.get('docs', meta.id); rec.preview = prev.src; rec.pages = prev.pages; await ODB.put('docs', rec); meta.pages = prev.pages; meta.note = 'exhibit – OctoSleuth puts it in the report (Site section)'; }
     } else if (meta.type === 'floorplan') {
       const prev = await planPreview(file, meta.page || 1); if (prev) { const rec = await ODB.get('docs', meta.id); rec.preview = prev.src; rec.pages = prev.pages; await ODB.put('docs', rec); meta.pages = prev.pages; meta.note = 'ready for the iPad'; }
     }
@@ -205,8 +205,8 @@ async function fillTextStates() {   // older documents: look once, then show the
 }
 function textChip(d) {
   if (d.type === 'email') return '<span class="chip ok" title="Read here: from, to, date, subject and text are searchable; its attachments are separate documents">✓ read here</span>';
-  if (d.type === 'plat') return '<span class="chip ok" title="An exhibit only – not read. The Comp genie puts page 1 into the report’s Site section (Maps and exhibits card).">✓ exhibit</span>';
-  if (d.type === 'ipadWorkfile') return '<span class="chip ok" title="Open the Comp genie tab: the subject column fills from this inspection (once; again when you drop a newer one)">✓ for the Comp genie</span>';
+  if (d.type === 'plat') return '<span class="chip ok" title="An exhibit only – not read. OctoSleuth puts page 1 into the report’s Site section (Maps and exhibits card).">✓ exhibit</span>';
+  if (d.type === 'ipadWorkfile') return '<span class="chip ok" title="Open OctoSleuth tab: the subject column fills from this inspection (once; again when you drop a newer one)">✓ for OctoSleuth</span>';
   const st = d.textState || ''; if (!st) return '';
   if (st === 'text') return `<span class="chip ok" title="${AUTO_READ.includes(d.type) ? 'Read here when you uploaded it – what it filled in is listed next to the name.' : 'Click Read: the reader suggests what to use and you accept or reject each one. Nothing is sent anywhere.'}">${AUTO_READ.includes(d.type) ? '✓ read here' : '✓ text – click Read'}</span>`;
   if (st === 'scan') return '<span class="chip warn" title="A picture of the pages: nothing can be read here. Click Read to send it to Claude (when this order allows AI), or open it in Acrobat, use Scan &amp; OCR › Recognize text, save, and upload it again.">scan – needs Claude or Acrobat</span>';

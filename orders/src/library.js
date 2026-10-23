@@ -90,7 +90,7 @@ document.addEventListener('drop', e => { if (!$('#panel-library') || $('#panel-l
 /* read the list when the Library is opened (the storage is ready by then) */
 (() => { const st = showTab; showTab = function (t) { const r = st.apply(this, arguments); if (t === 'library') libLoad().then(libRender).catch(e => console.warn('library', e)); return r; }; })();
 
-/* "ⓘ" in the Comp genie (or any page): open the Library at a F-1 field number (her ask Oct 22 2026) */
+/* "ⓘ" in OctoSleuth (or any page): open the Library at a F-1 field number (her ask Oct 22 2026) */
 async function libLookup(q, kind) { showTab('library'); if (typeof octoMark === 'function') octoMark(); await libLoad(); await libSearch(String(q || ''), kind || '');
   const t = document.querySelector('#libBody h3'); if (t) t.scrollIntoView({ block: 'start' }); }
 window.addEventListener('message', e => { if (e.origin !== location.origin || !e.data || e.data.type !== 'aa-lib') return; libLookup(e.data.q, e.data.kind); });

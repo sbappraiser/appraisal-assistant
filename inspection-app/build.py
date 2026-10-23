@@ -7,7 +7,7 @@ t=(src/'template.html').read_text().replace('/*CSS*/',css).replace('/*JS*/',js)
 # artifact preview: page content only
 (out/'preview.html').write_text(t.replace('<!--PWA-->',''))
 # hosted app: full document with manifest
-pwa='<link rel="manifest" href="manifest.json"><link rel="apple-touch-icon" href="icon-512.png">'
+pwa='<link rel="manifest" href="manifest.json"><link rel="apple-touch-icon" href="icon-180.png"><link rel="icon" type="image/png" href="icon-64.png">'
 full='<!doctype html>\n<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">\n'+t.replace('<!--PWA-->',pwa).replace('<div id="app">','</head><body><div id="app">',1)+'\n</body></html>'
 (out/'index.html').write_text(full)
 print(len(full))

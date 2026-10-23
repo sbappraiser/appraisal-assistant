@@ -74,3 +74,7 @@ nav.tabs button[aria-selected="true"] { background: var(--look-navy) !important;
 #lookFile .lfName { display: inline-flex; align-items: center; gap: 4px; vertical-align: middle; }
 #lookFile .lfT { display: inline-flex; flex-direction: column; line-height: 1.15; }
 #lookFile .lfT small { font-weight: 600; font-size: .78em; opacity: .8; }
+
+/* her octopus logo (Oct 22 2026) */
+.brandLogo { width: 36px; height: 36px; border-radius: 8px; vertical-align: middle; margin-right: 10px; flex: none; }
+.brand h1, header.top { display: flex; align-items: center; }

@@ -1,7 +1,7 @@
 /* =====================================================================
    Report details for the full report (Oct 16 2026).
    Fills the parts of the 3.6 report that are not in the iPad inspection or the grid:
-   assignment (from the order in the Appraisal Assistant), legal description, zoning,
+   assignment (from the order in the Octopus), legal description, zoning,
    number of parcels, all rights included, highest and best use, market (from the
    hub's Market tab), contract (from the hub's document reader), value and dates.
    She decides every answer; the card only pre-fills what the order already says.
@@ -107,7 +107,7 @@ function reportHTML(J, part) {   // part: 'early' (Assignment, scope and site �
   <div class="rptneed ${need.length ? 'warn' : 'done'}">${need.length ? `<b>${need.length} answer${need.length > 1 ? 's' : ''} still needed here:</b><ul>${need.map(x => `<li>${esc(x.msg.replace(/\s*\(Report details[^)]*\)\.?/, '').replace(/ – it is the value on page 1 of the report\./, ' – the value on page 1 of the report.'))}</li>`).join('')}</ul>` : '<b>✓ Everything the report needs here is answered.</b>'}
     <span class="rptkey"><span class="k own">your entry</span> <span class="k sug">suggested – type over it or leave it</span></span></div>
   ${clientNeedsHTML(J)}
-  <p class="help">${F.hasOrder ? 'Grey entries come from the order in the Appraisal Assistant, your inspection or the CRS report. Type over any of them.' : 'This assignment is not linked to an order, so nothing is filled from the Appraisal Assistant. Open it from the order (Comp genie button on the order page) to fill the assignment, client and market.'}</p>
+  <p class="help">${F.hasOrder ? 'Grey entries come from the order in the Octopus, your inspection or the CRS report. Type over any of them.' : 'This assignment is not linked to an order, so nothing is filled from the Octopus. Open it from the order (OctoSleuth button on the order page) to fill the assignment, client and market.'}</p>
   <div class="rptgrid">
     <section><h3>Assignment <small>from 1 Intake</small></h3>
       ${F.hasOrder ? `<table class="mini rptfrom">${[['Client', rv(J, 'client')], ['Lender', rv(J, 'lender')], ['AMC', rv(J, 'amc')], ['File number', rv(J, 'fileNo')], ['Assignment reason', (ASSIGN.find(x => x[0] === rv(J, 'assign')) || [, rv(J, 'assign')])[1]]].map(([l, v]) => `<tr><th>${l}</th><td>${v ? esc(v) : '<span class="muted">—</span>'}</td></tr>`).join('')}</table>
@@ -202,13 +202,13 @@ function reportHTML(J, part) {   // part: 'early' (Assignment, scope and site �
       ${['Income', 'Cost'].map(A => { const off = R['sow' + A] === 'false' || (blank(R['sow' + A]) && F['sow' + A] === false); if (!off) return ''; const k = 'excl' + A;
         return `<label class="fld"><span>${A} approach not developed – reason</span>${sel(k, EXCL_REASONS.filter(x => A === 'Cost' || !/Depreciation|Land/.test(x[0])), 'NotNecessaryForCredibleResults', 'usual')}${R[k] === 'Other' ? ` <input class="txt" data-rpt="${k}Other" maxlength="225" value="${esc(R[k + 'Other'] || '')}" placeholder="Describe (225 characters)">` : ''}</label>`; }).join('')}
       <label class="fld"><span>Reconciliation comment ${cmtCount(String(R.reconNote || ''), 5000)}</span><textarea class="txt" rows="3" maxlength="5000" data-rpt="reconNote">${esc(R.reconNote || '')}</textarea></label></section>
-    <section><h3>Market <small>on the Appraisal Assistant's Market tab</small></h3>
+    <section><h3>Market <small>on the Octopus's Market tab</small></h3>
       ${M ? `<table class="mini"><tr><th>Look back</th><td>${esc(M.L)} months</td></tr><tr><th>Actives</th><td>${esc(M.activeN)}${M.activeN ? ` · ${money(M.activeLow)} / ${money(M.activeMed)} / ${money(M.activeHigh)} · median DOM ${esc(Math.round(M.activeDom))}` : ''}</td></tr>
         <tr><th>Pendings</th><td>${esc(M.pendingN)}</td></tr><tr><th>Sales</th><td>${esc(M.salesN)}${M.salesN ? ` · ${money(M.saleLow)} / ${money(M.saleMed)} / ${money(M.saleHigh)}` : ''}</td></tr>
         <tr><th>Demand / supply</th><td>${esc({ Shortage: 'Shortage', InBalance: 'In balance', OverSupply: 'Oversupply' }[M.supply] || '—')}</td></tr><tr><th>Marketing time</th><td>${esc({ UnderThreeMonths: 'Under 3 months', ThreeToSixMonths: '3 to 6 months', OverSixMonths: 'Over 6 months' }[M.mktime] || '—')}</td></tr><tr><th>Distressed competition</th><td>${M.distress === 'true' ? 'Yes' : M.distress === 'false' ? 'No' : '—'}</td></tr>
         <tr><th>Boundary</th><td>${M.boundary ? '✓' : '<b class="warnTxt">missing</b>'}</td></tr><tr><th>Search criteria</th><td>${M.criteria ? '✓' : '<b class="warnTxt">missing</b>'}</td></tr><tr><th>Price trend comment</th><td>${M.comment ? '✓ ' + M.comment.length.toLocaleString() + ' characters' : '<b class="warnTxt">missing</b>'}</td></tr></table>
-        <p class="help">These go into the Market section. To change them, open the order's Market tab in the Appraisal Assistant, then come back here.</p>`
-      : `<p class="help">${F.hasOrder ? 'Nothing yet. In the Appraisal Assistant open this order › <b>Market</b> tab: drop your SBMLS market-area search CSV (the micro market: actives, pendings and sales in the look-back period) and, once a month, the SBMLS monthly statistics PDF (the macro market). Check the boundary, criteria and price-trend comment, then come back here.' : 'Link this assignment to an order to bring in the Market section.'}</p>`}
+        <p class="help">These go into the Market section. To change them, open the order's Market tab in the Octopus, then come back here.</p>`
+      : `<p class="help">${F.hasOrder ? 'Nothing yet. In the Octopus open this order › <b>Market</b> tab: drop your SBMLS market-area search CSV (the micro market: actives, pendings and sales in the look-back period) and, once a month, the SBMLS monthly statistics PDF (the macro market). Check the boundary, criteria and price-trend comment, then come back here.' : 'Link this assignment to an order to bring in the Market section.'}</p>`}
       ${M && M.general ? `<p class="help">Market commentary: ✓ ${M.general.length.toLocaleString()} characters (Market tab).</p>` : '<p class="help">Market commentary: write it on the Market tab, under the Price Trend commentary.</p>'}${R.cMarket ? cmtBoxHTML(J, 'cMarket') + '<small class="muted">You typed this here before; it is used instead of the Market tab’s. Clear it to use the Market tab’s.</small>' : ''}
       ${F.contract && (F.contract.price || F.contract.cdate) ? `<p class="help">Sales contract (from the document reader): ${esc(money(num(String(F.contract.price).replace(/[$,]/g, ''))))}${F.contract.cdate ? ' · ' + esc(F.contract.cdate) : ''} – goes into the contract section.</p>` : ''}</section>
   </div>`;
@@ -383,7 +383,7 @@ function rptPart(J, html, part) {
   const banner = `<div class="rptneed ${need.length ? 'warn' : 'done'}">${need.length ? `<b>${need.length} answer${need.length > 1 ? 's' : ''} still needed here:</b><ul>${need.map(x => `<li><a href="#" class="rptgo" data-rptgo="${esc(x.msg)}" title="Go there">${esc(x.msg.replace(/\s*\(Report details[^)]*\)\.?/, ''))}</a></li>`).join('')}</ul>` : '<b>✓ Everything needed here is answered.</b>'}
     <span class="rptkey"><span class="k own">your entry</span> <span class="k sug">suggested – type over it or leave it</span></span></div>`;
   const F = reportFrom(J);
-  return (part === 'early' ? `<h2>Assignment, scope and site <small>– answer these early; they go to SFREP when you export</small></h2>${banner}${clientNeedsHTML(J)}<p class="help">${F.hasOrder ? 'Suggested entries come from the order, your inspection or the CRS report. Type over any of them.' : 'This assignment is not linked to an order, so nothing is filled from the Appraisal Assistant. Open it from the order (Comp genie button on the order page) to fill the assignment, client and market.'}</p>`
+  return (part === 'early' ? `<h2>Assignment, scope and site <small>– answer these early; they go to SFREP when you export</small></h2>${banner}${clientNeedsHTML(J)}<p class="help">${F.hasOrder ? 'Suggested entries come from the order, your inspection or the CRS report. Type over any of them.' : 'This assignment is not linked to an order, so nothing is filled from the Octopus. Open it from the order (OctoSleuth button on the order page) to fill the assignment, client and market.'}</p>`
     : part === 'comps' ? `<h2>Comparable transfer history</h2>`
     : part === 'certs' ? `<h2>Prior services and certifications</h2>${banner}`
     : `<h2>Reconciliation <small>– after the sales comparison, cost and income approaches</small></h2>${banner}`) + `<div class="rptgrid rptbands">${L.join('\n')}</div>`; }

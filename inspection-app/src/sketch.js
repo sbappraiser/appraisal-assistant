@@ -818,7 +818,7 @@ function renderShell() {
   document.getElementById('app').innerHTML = `
   <header class="skbar">
     <button class="btn" id="skBack">‹ Back</button>
-    <div class="sktitle"><b>${esc(p.fileName || 'Sketch')}</b><span>${esc([p.addr, p.unit].filter(Boolean).join(' '))}</span></div>
+    <img class="brandLogo" src="logo-96.png" alt="" width="28" height="28"><div class="sktitle"><b>OctoSketch${p.fileName ? ' · ' + esc(p.fileName) : ''}</b><span>${esc([p.addr, p.unit].filter(Boolean).join(' '))}</span></div>
     <span class="saved" id="skSaved">Saved ✓</span>
     <button class="btn icon" id="skInfoBtn" title="How to use the sketch" aria-label="How to use the sketch">ⓘ</button>
     <button class="btn icon" id="skMenu" aria-label="Menu">☰</button>

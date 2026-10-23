@@ -50,4 +50,4 @@ async function vaultLockOld() { if (!VAULT.on || !AB.dir) return; if (!confirm('
     if (sub) { const L = []; for await (const [nm, hd] of sub.entries()) if (hd.kind === 'file' && !/\.locked$/.test(nm)) L.push(nm); for (const nm of L) await one(sub, nm); }
     toast(`${n} earlier file${n === 1 ? '' : 's'} locked${bad ? ` · ${bad} left as they were (the check failed)` : ''}.`, 7000); } catch (e) { toast('Could not lock them all: ' + (e.message || e), 7000); }
   abRender(); }
-try { const bc = new BroadcastChannel('aa-save'); bc.onmessage = () => { if (typeof abSoon === 'function') abSoon(); }; } catch (e) {}   // the Comp genie says when it saved, so its work is backed up too
+try { const bc = new BroadcastChannel('aa-save'); bc.onmessage = () => { if (typeof abSoon === 'function') abSoon(); }; } catch (e) {}   // OctoSleuth says when it saved, so its work is backed up too

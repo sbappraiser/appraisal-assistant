@@ -58,7 +58,7 @@ function cpkAttach() { document.querySelectorAll(CPK_BOX.map(b => b[0]).join(','
 document.addEventListener('focusin', async e => { const ta = e.target; if (!ta || ta.tagName !== 'TEXTAREA' || !ta.dataset.cpk) return; const B = cpkBoxOf(ta); if (!B) return;
   if (!CPK.lib) await cpkLoad(); const w = ta.nextElementSibling; const ch = w && w.querySelector('.cpkchips'); if (!ch) return;
   const { sec, title } = cpkFor(B); const L = [...sec, ...title];
-  ch.innerHTML = !(CPK.lib || []).length ? '<small class="muted">Type here, or add your comment library in the Appraisal Assistant › My comments to pull in standard comments.</small>'
+  ch.innerHTML = !(CPK.lib || []).length ? '<small class="muted">Type here, or add your comment library in the Octopus › My comments to pull in standard comments.</small>'
     : L.length ? `<small class="cpklead">Type, or click one of your ${cpkEsc(B[1].toLowerCase())} comments:</small> ${L.slice(0, 8).map(x => `<button type="button" class="cpkchip" data-cpkins="${cpkEsc(x.id)}" data-cpkto="${cpkEsc(cpkKey(ta))}" title="${cpkEsc(x.text.slice(0, 300))}">${cpkEsc(x.title)}</button>`).join('')}${L.length > 8 ? ` <button type="button" class="cpkchip more" data-cmtpick="${cpkEsc(cpkKey(ta))}">all ${L.length} …</button>` : ''}`
     : `<small class="muted">No ${cpkEsc(B[1].toLowerCase())} comments in your library yet – type it, or 📋 My comments to look in every section.</small>`;
   ch.hidden = false; });
@@ -80,7 +80,7 @@ function cpkRender() {
   const item = x => `<div class="cpki"><div class="row"><b>${cpkEsc(x.title)}</b><small class="vt v${String(x.ver).replace('.', '')}">${x.ver === 'both' ? '2.6 and 3.6' : 'UAD ' + cpkEsc(x.ver)}</small><small class="muted">${cpkEsc(x.section)}</small><span class="grow"></span><button class="btn sm primary" data-cpkins="${cpkEsc(x.id)}">${full ? 'Add it' : 'Use this'}</button>${full ? `<button class="btn sm" data-cpkins="${cpkEsc(x.id)}" data-cpkrep="1">Replace my text</button>` : ''}</div><div class="cpkt">${hi(x.text.slice(0, 900))}${x.text.length > 900 ? '…' : ''}</div></div>`;
   const shown = groups.reduce((n, g) => n + g[1].length, 0);
   m.innerHTML = `<div class="cpkbox" role="dialog"><div class="row"><b>My comments${B ? ' – ' + cpkEsc(B[1]) : ''}</b><span class="grow"></span><button class="btn sm" data-cpk="close">Close</button></div>
-    ${!(CPK.lib || []).length ? '<p class="help">Your comment library is empty in this browser. In the Appraisal Assistant, open <b>My comments</b> and import your comments first.</p>' : `
+    ${!(CPK.lib || []).length ? '<p class="help">Your comment library is empty in this browser. In the Octopus, open <b>My comments</b> and import your comments first.</p>' : `
     <div class="row"><input id="cpkQ" class="txt" placeholder="Search, e.g. legally permissible, view, net adjustment" value="${cpkEsc(CPK.q)}">
       ${B ? `<label class="chk"><input type="checkbox" data-cpk="all" ${CPK.all ? 'checked' : ''}> show every section</label>` : ''}
       <label class="chk"><input type="checkbox" data-cpk="26" ${CPK.also26 ? 'checked' : ''}> also UAD 2.6 comments (${n26})</label></div>

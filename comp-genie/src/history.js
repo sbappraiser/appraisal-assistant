@@ -51,7 +51,7 @@ async function histVersions(c) {
     out.push({ kind: 'arch', id: 'a' + a.rec, rec: a.rec, report: a.report || '(report name not kept)', date: a.entered || '', form: v.quality || v.condition ? 'UAD 2.6' : 'GPAR / older form (word ratings)',
       role: a.role === 'subject' ? 'Subject of the report' : a.role === 'comparable' ? 'Comparable' : (a.role || 'Record'), vals: v, filled: histFilled(v), chosen: archChosen(c) && archChosen(c).rec === a.rec,
       alsoIn: (a.also || []).length ? a.also.map(x => (x.report || '?') + (x.entered ? ' (' + showDate(x.entered) + ')' : '')) : null }); });
-  // 3.6 assignments here in the Comp genie
+  // 3.6 assignments here in OctoSleuth
   const jobs = await DB.all('jobs'); const seenJobs = new Set();
   jobs.forEach(j => (j.comps || []).forEach(o => { if (j.id === app.job.id && o.id === c.id) return; if (!histSameProp(c, o)) return;
     const vals = Object.fromEntries(FIELDS.map(f => [f.k, V(o, f.k)]).filter(([, v]) => !blank(v))); seenJobs.add(j.name);

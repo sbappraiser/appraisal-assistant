@@ -20,8 +20,8 @@ function dbViewHTML() {
       'Your contractors’ budgets: cost per square foot by area, quality and kind of project.', 'Cost approach › cost new and soft costs',
       add('Add the cost database (Excel .xlsx)', '.xlsx') + (cost ? ' <button class="btn" data-dbcopen="cost">Look inside</button>' : '')],
     ...(typeof rdbCardHTML === 'function' ? [rdbCardHTML()] : []),
-    ['MLS market statistics', '<span class="dbst">in the Appraisal Assistant</span>', 'Monthly market numbers for the market conditions section.', 'Order › Market tab (macro → micro)', ''],
-    ['Your comments and standard wording', '<span class="dbst">in the Appraisal Assistant</span>', 'Your comment library (OneNote) and the standard paragraphs you reuse.', 'Every comment box (My comments), engagement letters', '']];
+    ['MLS market statistics', '<span class="dbst">in the Octopus</span>', 'Monthly market numbers for the market conditions section.', 'Order › Market tab (macro → micro)', ''],
+    ['Your comments and standard wording', '<span class="dbst">in the Octopus</span>', 'Your comment library (OneNote) and the standard paragraphs you reuse.', 'Every comment box (My comments), engagement letters', '']];
   return `<header class="top"><h1>Database center</h1><span class="pill ver">Version ${typeof BUILD !== 'undefined' ? BUILD : ''}</span><span class="grow"></span></header>
   <p class="help">The files that feed every assignment. Add files with the buttons, or drop them anywhere on this page – each one is recognized by what is in it and filed in the right database. <b>Nothing changes until you say so</b>: you see what a file would add, change or remove first, and the version before is kept for undo. Everything stays on this computer. Files for one assignment (engagement letter, contract, CRS report, plans, the iPad workfile) go in that order's <b>① Documents</b> instead.</p>
   <div class="dbcards">${cards.map(([t, st, what, where, btn]) => `<section class="card dbcard"><h2>${t} ${st}</h2><p>${what}</p><p class="dbuse"><b>Used in:</b> ${where}</p>${btn ? `<div class="row">${btn}</div>` : ''}</section>`).join('')}</div>

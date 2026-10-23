@@ -149,7 +149,7 @@ function wbBar(J, all) {
 }
 function popHTML(J) {
   const all = usedComps(J); const L = all.slice(POP.from - 1, POP.to);
-  const allc = POP.to >= 99; return `<header class="top pop"><h1>Comp Genie</h1><span class="pill">${esc(J.name)}</span><span class="pill">${allc ? `All ${all.length} comps` : `Comps ${POP.from}–${POP.to}`}</span><span class="grow"></span>
+  const allc = POP.to >= 99; return `<header class="top pop"><h1>OctoSleuth</h1><span class="pill">${esc(J.name)}</span><span class="pill">${allc ? `All ${all.length} comps` : `Comps ${POP.from}–${POP.to}`}</span><span class="grow"></span>
     ${allc ? '' : `<button class="btn sm" data-wbpage="-3">◀ ${Math.max(1, POP.from - 3)}–${Math.max(3, POP.to - 3)}</button><button class="btn sm" data-wbpage="3">${POP.from + 3}–${POP.to + 3} ▶</button>`}<small>stays in step with your other windows</small></header>
     <section class="card" id="gridCard">${L.length ? gridHTML(J) : `<p class="help">No comps ${POP.from}–${POP.to} on the grid yet.</p>`}</section>`;
 }

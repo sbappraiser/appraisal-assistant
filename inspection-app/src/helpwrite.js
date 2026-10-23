@@ -4,14 +4,14 @@
    and adding none. She reads the suggestion and picks "Use this" or "Keep mine"; nothing is replaced on its own.
    Her rules: AI only per the order's AI setting (No AI = nothing is sent; Redacted = names, phones and e-mails
    are taken out first); her own comment library (no order) sends only the text in the box, phones and e-mails removed.
-   Shared by the Appraisal Assistant (hub) and the Comp genie – same file in both builds.
+   Shared by the Octopus (hub) and OctoSleuth – same file in both builds.
    ===================================================================== */
 const HW_SEL = [
   // hub
   'textarea[data-ce="text"]', 'textarea[data-mk="comment"]', 'textarea[data-mk="boundary"]', 'textarea[data-mk="criteria"]', 'textarea[data-mcx="summary"]', '#pbComment', '#f_ea', '#f_hc', '#f_extra', '#f_rightsNot',
   // iPad inspection app: the section summaries (your added comment, or the final wording when you edit it)
   'textarea[data-comment]', 'textarea[data-final]',
-  // comp genie
+  // OctoSleuth
   '#drText', 'textarea[data-gnote]', 'textarea[data-landc]', 'textarea[data-ck="comment"]', 'textarea[data-ik="comment"]', 'textarea[data-rpt="reconNote"]', 'textarea[data-rpt="hbuNote"]', 'textarea[data-rpt="sowNote"]', 'textarea[data-rpt="priorSvcText"]', 'textarea[data-rpt="addlCondText"]', 'textarea[data-rpt="rightsNot"]'].join(',');
 const HW_BIAS = /\b(pride of ownership|desirable|undesirable|safe (?:area|neighborhood|community|street)|unsafe|crime|dangerous|exclusive|prestigious|upscale|elite|family[- ]friendly|young famil(?:y|ies)|kids|singles|retirees|elderly|seniors|church\w*|synagogue|mosque|ethnic\w*|integrated|diverse|master (?:bed(?:room)?|bath|suite)|man cave|handicap(?:ped)?|wheelchair[- ]bound|good (?:neighborhood|area|location)|bad (?:neighborhood|area)|neighborhood)\b/gi;
 const hwKey = () => { try { return localStorage.getItem('aa.claudeKey') || ''; } catch (e) { return ''; } };
@@ -65,9 +65,9 @@ async function hwRun(ta, box) {
   if (!draft) return say('Type what you want to say first, in your own words – then tap Help me write.');
   const mode = hwOrderAi(ta);
   if (mode === 'No') return say('This order is set to <b>No AI</b>, so nothing is sent. Change the order’s AI use to Yes or Redacted to use Help me write.', 'warn');
-  if (!hwKey()) { if (typeof app !== 'undefined' && app.ins) { say(`No Claude key on this iPad yet. Paste it once (the same key as on your computer – Appraisal Assistant › Standard wording › AI settings). It stays on this iPad only.<div class="hw-row" style="margin-top:6px"><input type="password" class="txt hw-key" placeholder="sk-ant-…" style="flex:1;min-width:200px"><button type="button" class="btn sm hw-keysave">Save key</button></div>`, 'warn');
+  if (!hwKey()) { if (typeof app !== 'undefined' && app.ins) { say(`No Claude key on this iPad yet. Paste it once (the same key as on your computer – Octopus Appraisal Assistant › Standard wording › AI settings). It stays on this iPad only.<div class="hw-row" style="margin-top:6px"><input type="password" class="txt hw-key" placeholder="sk-ant-…" style="flex:1;min-width:200px"><button type="button" class="btn sm hw-keysave">Save key</button></div>`, 'warn');
       const b = box.querySelector('.hw-keysave'); if (b) b.onclick = () => { const v = (box.querySelector('.hw-key').value || '').trim(); if (!/^sk-/.test(v)) { alert('That does not look like a Claude key (it starts with sk-).'); return; } try { localStorage.setItem('aa.claudeKey', v); } catch (e) {} hwRun(ta, box); }; return; }
-    return say('No Claude key is saved on this computer. Add it in the Appraisal Assistant › Standard wording › AI settings.', 'warn'); }
+    return say('No Claude key is saved on this computer. Add it in the Octopus › Standard wording › AI settings.', 'warn'); }
   if (typeof navigator !== 'undefined' && navigator.onLine === false) return say('No internet here – Help me write needs a connection. Your draft is saved; try again when you have signal.', 'warn');
   const lim = +ta.getAttribute('maxlength') || 0; const text = hwScrub(draft, mode);
   say('Claude is writing…');

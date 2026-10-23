@@ -144,3 +144,5 @@ body.working .skinfo { opacity: .85; }
 @media (min-width: 700px) { .acts:has(.ico) { grid-column: 1 / -1; } .btn.big.ico { min-height: 44px; } .btn.ico span { font-size: 20px; } .btn.ico small { font-size: 11px; } }
 @media (max-width: 520px) { .btn.big.ico { min-height: 38px; } .btn.ico span { font-size: 17px; } .btn.ico .stopsign svg { width: 18px; height: 18px; } }
 .btn.dlgo { background: #1e7a3c; border-color: #0a4d27; color: #fff; }
+
+.skbar .brandLogo { width: 28px; height: 28px; border-radius: 6px; margin: 0 4px 0 8px; flex: none; }

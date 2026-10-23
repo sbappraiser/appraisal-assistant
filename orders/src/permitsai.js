@@ -196,7 +196,7 @@ document.addEventListener('click', async e => {
   if (t.id === 'pbQCopy') { try { await navigator.clipboard.writeText(document.getElementById('pbQDraft').value); toast('Copied'); } catch (x) { toast('Could not copy'); } return; }
   if (t.id === 'pbQUse') { const v = document.getElementById('pbQDraft').value.trim(); if (!v) return; Q.draft = v;
     (cur.facts = cur.facts || []).push({ id: uid(), docId: '', doc: 'Permit questions', type: 'permitsPdf', key: 'notes', label: 'Permit comment', value: v, by: 'you', at: new Date().toISOString(), sent: { to: 'cSubject', text: v, at: Date.now() } });
-    saveLetter(true, true); renderFacts(); toast('Added – it goes into Subject property commentary in the Comp genie (once); edit it there', 7000); return; }
+    saveLetter(true, true); renderFacts(); toast('Added – it goes into Subject property commentary in OctoSleuth (once); edit it there', 7000); return; }
   if (cur.aiUse !== 'Yes' && cur.aiUse !== 'Redacted') { toast('AI use on this order is ' + (cur.aiUse || 'not set')); return; }
   const pics = []; if (t.id === 'pbAsk') { const want = [...document.querySelectorAll('[data-pbqf]:checked')].map(x => (T.files || [])[+x.dataset.pbqf]);
     if (want.length) { const r = await ODB.get('kv', 'pbpics:' + cur.id); const all = (r && r.v) || []; all.filter(p => want.includes(p.file)).slice(0, PB_MAX_IMG).forEach(p => pics.push(p)); if (!pics.length) toast('The pages were not kept from the last reading – read the permits again first'); } }

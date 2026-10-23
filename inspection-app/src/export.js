@@ -441,7 +441,7 @@ function buildMISMO(ins, imgName) {
     const gp = getC('project'); if (gp) { const c = X(VC, 'VALUATION_COMMENTARY'); V(c, 'ValuationAnalysisCategoryType', 'Project'); V(c, 'ValuationCommentText', gp); }
   }
   if ((d.condition.valCond || []).length) { const vcs = X(X(X(VR, 'VALUATION_RECONCILIATION'), 'VALUATION_RECONCILIATION_SUMMARY'), 'VALUATION_CONDITIONS'); (d.condition.valCond.includes('AsIs') ? ['AsIs'] : d.condition.valCond).forEach(v => V(X(vcs, 'VALUATION_CONDITION'), 'PropertyValuationConditionalConclusionType', v)); }
-  { const vs = X(X(VR, 'VALUATION_SOFTWARE_SYSTEMS'), 'VALUATION_SOFTWARE_SYSTEM'); V(vs, 'ValuationSoftwareProductName', 'UAD Field Inspection (iPad)'); V(vs, 'ValuationSoftwareProductVersionIdentifier', typeof BUILD !== 'undefined' ? BUILD : '1'); V(vs, 'ValuationSoftwareVendorName', 'Jennifer Heath, LLC (in-house)'); }
+  { const vs = X(X(VR, 'VALUATION_SOFTWARE_SYSTEMS'), 'VALUATION_SOFTWARE_SYSTEM'); V(vs, 'ValuationSoftwareProductName', 'Octopus Mobile Appraisal Assistant'); V(vs, 'ValuationSoftwareProductVersionIdentifier', typeof BUILD !== 'undefined' ? BUILD : '1'); V(vs, 'ValuationSoftwareVendorName', 'Jennifer Heath, LLC (in-house)'); }
 
   take(() => true).forEach(p => push(p, 'SupplementalExhibit'));   // last: anything still not placed
 
@@ -452,7 +452,7 @@ function buildMISMO(ins, imgName) {
   { const W = typeof otherWords === 'function' ? otherWords(ins) : {};   // every "Other" gets its describe words (Oct 22 2026)
     const walk = n => { n.kids.forEach(walk); n.kids.slice().forEach(k => { if (k.text !== 'Other' || !/Type$/.test(k.tag) || !W[k.tag]) return; const t = k.tag + 'OtherDescription'; if (n.kids.some(x => x.tag === t)) return; const d = new XN(t); d.text = W[k.tag]; n.kids.splice(n.kids.indexOf(k) + 1, 0, d); }); };
     walk(root); }
-  return xsdSortXML('<?xml version="1.0" encoding="UTF-8"?>\n<!--Subject inspection data exported by UAD Field Inspection for import into Appraise-It Pro (Home > Import Forms).-->\n' + xmlOut(root));   // schema (XSD) element order, Oct 20 2026
+  return xsdSortXML('<?xml version="1.0" encoding="UTF-8"?>\n<!--Subject inspection data exported by Octopus Mobile Appraisal Assistant for import into Appraise-It Pro (Home > Import Forms).-->\n' + xmlOut(root));   // schema (XSD) element order, Oct 20 2026
 }
 function aduComment(ins, a, i) {
   const t = COMMENT_TARGETS.find(x => x.id === 'adu');

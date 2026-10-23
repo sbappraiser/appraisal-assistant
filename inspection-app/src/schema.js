@@ -201,8 +201,8 @@ const LISTS = {
       { k: 'kitUpd', l: 'Kitchen update status', t: 'one', o: UPDATE, show: it => it.kitchen && it.kitchen !== 'None', req: it => it.kitchen && it.kitchen !== 'None', uad: 'RoomUpdateStatusType' },
       { k: 'kitTime', l: 'Kitchen update time frame', t: 'one', o: TIMEFRAME, show: it => it.kitUpd && it.kitUpd !== 'NotUpdated', req: it => it.kitUpd && it.kitUpd !== 'NotUpdated', uad: 'RoomUpdatedTimeframeType' },
       { k: 'bathUpd', l: 'Overall bathroom update status', t: 'one', o: UN('OverallBathroomsUpdateStatusType'), req: it => (it.fullBaths || 0) + (it.halfBaths || 0) > 0, uad: 'OverallBathroomsUpdateStatusType' },
-      { k: 'iq', l: 'Interior quality', t: 'one', req: true, o: QR, uad: 'InteriorQualityRatingCode' }, { k: 'iqTier', l: 'Interior quality – low / middle / high', help: 'Your notes and the Comp genie only – SFREP gets the whole rating.', t: 'one', o: opts('Low', 'Middle', 'High'), show: d => !!d.iq },
-      { k: 'ic', l: 'Interior condition', t: 'one', req: true, o: CR, uad: 'InteriorConditionRatingCode' }, { k: 'icTier', l: 'Interior condition – low / middle / high', help: 'Your notes and the Comp genie only – SFREP gets the whole rating.', t: 'one', o: opts('Low', 'Middle', 'High'), show: d => !!d.ic },
+      { k: 'iq', l: 'Interior quality', t: 'one', req: true, o: QR, uad: 'InteriorQualityRatingCode' }, { k: 'iqTier', l: 'Interior quality – low / middle / high', help: 'Your notes and OctoSleuth only – SFREP gets the whole rating.', t: 'one', o: opts('Low', 'Middle', 'High'), show: d => !!d.iq },
+      { k: 'ic', l: 'Interior condition', t: 'one', req: true, o: CR, uad: 'InteriorConditionRatingCode' }, { k: 'icTier', l: 'Interior condition – low / middle / high', help: 'Your notes and OctoSleuth only – SFREP gets the whole rating.', t: 'one', o: opts('Low', 'Middle', 'High'), show: d => !!d.ic },
       { k: 'features', l: 'Features', t: 'multi', o: opts('Private Entrance','Private Patio / Yard','Laundry','Fireplace','Loft','Vaulted Ceilings','Mini Split','Furnished','Separate Parking','View') },
       { k: 'defects', l: 'ADU interior defects present?', t: 'yn', req: true, uad: 'UnitInteriorDefectsExistIndicator' },
       { k: 'note', l: 'ADU notes', t: 'note' },
@@ -637,8 +637,8 @@ const SECTIONS = [
       { k: 'note', l: 'Front / exterior notes', t: 'note' },
     ]},
     { id: 'extQC', title: 'Exterior quality & condition', fields: [
-      { k: 'eq', l: 'Exterior quality', t: 'one', req: true, o: QR, uad: 'ExteriorQualityRatingCode' }, { k: 'eqTier', l: 'Exterior quality – low / middle / high', help: 'Your notes and the Comp genie only – SFREP gets the whole rating.', t: 'one', o: opts('Low', 'Middle', 'High'), show: d => !!d.eq },
-      { k: 'ec', l: 'Exterior condition', t: 'one', req: true, o: CR, uad: 'ExteriorConditionRatingCode' }, { k: 'ecTier', l: 'Exterior condition – low / middle / high', help: 'Your notes and the Comp genie only – SFREP gets the whole rating.', t: 'one', o: opts('Low', 'Middle', 'High'), show: d => !!d.ec },
+      { k: 'eq', l: 'Exterior quality', t: 'one', req: true, o: QR, uad: 'ExteriorQualityRatingCode' }, { k: 'eqTier', l: 'Exterior quality – low / middle / high', help: 'Your notes and OctoSleuth only – SFREP gets the whole rating.', t: 'one', o: opts('Low', 'Middle', 'High'), show: d => !!d.eq },
+      { k: 'ec', l: 'Exterior condition', t: 'one', req: true, o: CR, uad: 'ExteriorConditionRatingCode' }, { k: 'ecTier', l: 'Exterior condition – low / middle / high', help: 'Your notes and OctoSleuth only – SFREP gets the whole rating.', t: 'one', o: opts('Low', 'Middle', 'High'), show: d => !!d.ec },
     ], showGroup: (d, ins) => HO_EXT(ins) },
   ]},
 
@@ -871,8 +871,8 @@ const SECTIONS = [
       { k: 'photoAttic', l: 'Attic', t: 'photo', cat: 'UnitInteriorExhibit', show: d => d.attic === true },
     ]},
     { id: 'intQC', title: 'Interior quality, condition & defects', fields: [
-      { k: 'iq', l: 'Interior quality', t: 'one', req: true, o: QR, uad: 'InteriorQualityRatingCode' }, { k: 'iqTier', l: 'Interior quality – low / middle / high', help: 'Your notes and the Comp genie only – SFREP gets the whole rating.', t: 'one', o: opts('Low', 'Middle', 'High'), show: d => !!d.iq },
-      { k: 'ic', l: 'Interior condition', t: 'one', req: true, o: CR, uad: 'InteriorConditionRatingCode' }, { k: 'icTier', l: 'Interior condition – low / middle / high', help: 'Your notes and the Comp genie only – SFREP gets the whole rating.', t: 'one', o: opts('Low', 'Middle', 'High'), show: d => !!d.ic },
+      { k: 'iq', l: 'Interior quality', t: 'one', req: true, o: QR, uad: 'InteriorQualityRatingCode' }, { k: 'iqTier', l: 'Interior quality – low / middle / high', help: 'Your notes and OctoSleuth only – SFREP gets the whole rating.', t: 'one', o: opts('Low', 'Middle', 'High'), show: d => !!d.iq },
+      { k: 'ic', l: 'Interior condition', t: 'one', req: true, o: CR, uad: 'InteriorConditionRatingCode' }, { k: 'icTier', l: 'Interior condition – low / middle / high', help: 'Your notes and OctoSleuth only – SFREP gets the whole rating.', t: 'one', o: opts('Low', 'Middle', 'High'), show: d => !!d.ic },
       { k: 'intDefects', l: 'Dwelling interior defects present?', t: 'yn', req: true, uad: 'UnitInteriorDefectsExistIndicator' },
       { k: 'note', l: 'Interior notes', t: 'note' },
     ]},
@@ -1014,8 +1014,8 @@ const SECTIONS = [
 
   { id: 'condition', title: 'Wrap-up', groups: [
     { id: 'overall', title: 'Overall quality & condition', fields: [
-      { k: 'oq', l: 'Overall quality', t: 'one', req: true, o: QR, uad: 'OverallQualityRatingCode', fid: '15.000' }, { k: 'oqTier', l: 'Overall quality – low / middle / high', help: 'Your notes and the Comp genie only – SFREP gets the whole rating.', t: 'one', o: opts('Low', 'Middle', 'High'), show: d => !!d.oq },
-      { k: 'oc', l: 'Overall condition', t: 'one', req: true, o: CR, uad: 'OverallConditionRatingCode', fid: '15.005' }, { k: 'ocTier', l: 'Overall condition – low / middle / high', help: 'Your notes and the Comp genie only – SFREP gets the whole rating.', t: 'one', o: opts('Low', 'Middle', 'High'), show: d => !!d.oc },
+      { k: 'oq', l: 'Overall quality', t: 'one', req: true, o: QR, uad: 'OverallQualityRatingCode', fid: '15.000' }, { k: 'oqTier', l: 'Overall quality – low / middle / high', help: 'Your notes and OctoSleuth only – SFREP gets the whole rating.', t: 'one', o: opts('Low', 'Middle', 'High'), show: d => !!d.oq },
+      { k: 'oc', l: 'Overall condition', t: 'one', req: true, o: CR, uad: 'OverallConditionRatingCode', fid: '15.005' }, { k: 'ocTier', l: 'Overall condition – low / middle / high', help: 'Your notes and OctoSleuth only – SFREP gets the whole rating.', t: 'one', o: opts('Low', 'Middle', 'High'), show: d => !!d.oc },
       { k: 'valCond', l: 'Market value condition', t: 'multi', req: true, o: opts(['AsIs','As Is'],['SubjectToCompletionPerPlans','Subject to Completion per Plans'],['SubjectToRepair','Subject to Repair'],['SubjectToInspection','Subject to Inspection']), uad: 'PropertyValuationConditionalConclusionType', fid: '1.009', help: 'As Is cannot be combined with the others, and cannot be used when a defect recommends completion, repair or inspection.' },
       { k: 'overallUpd', l: 'Overall update level of the whole dwelling', t: 'one', o: REMODEL, help: 'For the whole house. Kitchen and bath remodels are entered on the Interview tab.' },
     ]},

@@ -3,12 +3,12 @@
    Shared places (Home, Library, Comments, Database center, Settings, Help) and the nine tentacles of the open order:
    1 Intake (this order, all orders, new order, clients, bookkeeping, letter templates) · 2 Subject · 3 Market · 4 Sales comparison ·
    5 Cost · 6 Income · 7 Reconciliation · 8 Review and wrap-up · 9 Exhibits.
-   Tentacles 2 and 4–9 open the Comp genie's pages (inside this window) at that tentacle's step; 3 is the Market tab.
+   Tentacles 2 and 4–9 open OctoSleuth's pages (inside this window) at that tentacle's step; 3 is the Market tab.
    The old tab row stays in the page (hidden) because other code clicks it.
    ===================================================================== */
 const OCTO = { t: 0, steps: {} };
 const OCTO_NAMES = { 1: 'Intake', 2: 'Subject property', 3: 'Market', 4: 'Sales comparison', 5: 'Cost approach', 6: 'Income approach', 7: 'Final reconciliation', 8: 'Review and wrap-up', 9: 'Exhibits' };
-const OCTO_GENIE = { 2: 'insp', 4: 'data', 5: 'cost', 6: 'inc', 7: 'rec', 8: 'out', 9: 'exh' };   // the Comp genie step each tentacle opens on
+const OCTO_GENIE = { 2: 'insp', 4: 'data', 5: 'cost', 6: 'inc', 7: 'rec', 8: 'out', 9: 'exh' };   // OctoSleuth step each tentacle opens on
 const OCTO_T1 = ['letter', 'saved', 'new', 'contacts', 'books', 'wording'];
 const octoHasOrder = () => typeof cur !== 'undefined' && cur && typeof hasContent === 'function' && hasContent(cur);
 function octoGo(t, key) { t = +t;
@@ -27,14 +27,14 @@ function octoMark() {
   const oAddr = on && typeof street === 'function' ? street(cur) : '', oNo = on ? cur.fileNo || '' : '';
   const ttl = (a, n) => (a ? `<span class="tAddr">${hesc(a)}</span>` : '') + (n ? `<span class="tNo">File ${hesc(n)}</span>` : '');
   const f = $('#octoFile'); if (f) f.innerHTML = on ? (ttl(oAddr, oNo) || 'This order') : 'No order open';
-  /* green ✓: tentacle 1 from the order; the others from the Comp genie's steps for this order (it tells this page after each redraw) */
+  /* green ✓: tentacle 1 from the order; the others from OctoSleuth's steps for this order (it tells this page after each redraw) */
   const done = {}; if (on && typeof oDone === 'function') { const d = oDone(cur); done[1] = d.docs && d.letter && d.scope; }
   const S = on && OCTO.steps.order === cur.id ? OCTO.steps.list || [] : [];
   for (let t = 2; t <= 9; t++) { const L = S.filter(x => +x.n === t); if (L.length) done[t] = L.every(x => x.done); }
   document.querySelectorAll('nav.octo [data-tent]').forEach(b => { const i = b.querySelector('.tck'); if (i) i.textContent = done[+b.dataset.tent] ? '✓' : ''; });
   const g = $('#gnTitle'); if (g && tab === 'genie' && OCTO.t > 1) g.innerHTML = hesc(OCTO.t + ' · ' + OCTO_NAMES[OCTO.t]) + (on ? `<span class="gnSub">${ttl(oAddr, oNo)}</span>` : '');
-  const gh = $('#gnHelp'); if (gh && tab === 'genie') gh.textContent = OCTO.t >= 3 && OCTO.t <= 6 ? 'With the Comp genie – your data, databases and comparables for this section.' : OCTO.t > 1 ? 'Part of the Appraisal Assistant. The numbered steps underneath carry each tentacle\'s number.' : 'The Comp genie for the order that is open.';
-  const mt = $('#mkTitle'); if (mt) mt.innerHTML = '3 · Market <small style="font-size:.55em;color:#5b2a86">Comp genie</small>';
+  const gh = $('#gnHelp'); if (gh && tab === 'genie') gh.textContent = OCTO.t >= 3 && OCTO.t <= 6 ? 'With OctoSleuth – your data, databases and comparables for this section.' : OCTO.t > 1 ? 'Part of the Octopus. The numbered steps underneath carry each tentacle\'s number.' : 'OctoSleuth for the order that is open.';
+  const mt = $('#mkTitle'); if (mt) mt.innerHTML = '3 · Market <small style="font-size:.55em;color:#5b2a86">OctoSleuth</small>';
 }
 function octoSettings() {   // the data folder card (drawn here while Settings is open) and the Claude settings (moved here, one copy)
   const ai = document.getElementById('aiSettingsBox'), sa = $('#setAi');   /* #setAi is on the Claude page */ if (ai && sa && ai.parentNode !== sa) sa.appendChild(ai);
@@ -52,7 +52,7 @@ window.addEventListener('message', e => { if (e.origin !== location.origin || !e
 /* every tab change marks the octopus */
 (() => { const st = showTab; showTab = function (t) { const was = OCTO.t; const r = st.apply(this, arguments); if (t === 'help') setTimeout(() => octoHelpAt(was), 50); try { if (t === 'settings' || t === 'claude') octoSettings(); octoMark();
     if (t === 'market') { const mb = $('#panel-market'); if (mb && !mb.querySelector('.mkocto')) mb.insertAdjacentHTML('afterbegin', '<div class="mkocto"><span class="help" style="margin:0">Tentacle 3 also holds comp selection:</span><button type="button" class="btn small" data-octogo="sel">3 · Comp selection →</button></div>'); } } catch (e) {} return r; }; })();
-setTimeout(() => { document.querySelectorAll('nav.octo [data-tent]').forEach(b => { if (+b.dataset.tent >= 3 && +b.dataset.tent <= 6) { b.classList.add('cg'); b.title = 'With the Comp genie – your data, databases and comparables'; } }); octoMark(); }, 300);
+setTimeout(() => { document.querySelectorAll('nav.octo [data-tent]').forEach(b => { if (+b.dataset.tent >= 3 && +b.dataset.tent <= 6) { b.classList.add('cg'); b.title = 'With OctoSleuth – your data, databases and comparables'; } }); octoMark(); }, 300);
 /* Help opens at the tentacle she was in (the map: "Opens at the tentacle you are in") */
 function octoHelpAt(t) { const q = $('#helpSearch'); if (q && q.value) return; const g = document.querySelector(`.help-page .hgroup[data-hg="${t >= 1 && t <= 9 ? t : 'start'}"]`); if (!g) return;
   document.querySelectorAll('.help-page .hgroup').forEach(x => x.classList.toggle('here', x === g)); if (t >= 1 && t <= 9) { const d = g.querySelector('details'); if (d) d.open = true; g.scrollIntoView({ block: 'start' }); } }

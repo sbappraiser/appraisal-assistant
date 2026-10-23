@@ -166,7 +166,7 @@ function renderFacts() {
   const box = $('#factList'); if (!box) return; const F = (cur && cur.facts) || [];
   const opt = (f, sug) => NOTE_TO.map(([k, l]) => `<option value="${k}" ${k === sug ? 'selected' : ''}>${h(l)}${k && k === noteDest(f.value) ? ' (suggested)' : ''}</option>`).join('');
   const act = f => { if (!NOTE_KEYS.includes(f.key)) return '';
-    if (f.sent) return `<div class="nroute ok">✓ Added to <b>${h(noteToLabel(f.sent.to))}</b>${f.sent.to === 'ea' ? '' : ' – it goes into that box in the Comp genie when you open it'} <button type="button" class="btn ghost small" data-nundo="${f.id}">Undo</button></div>`;
+    if (f.sent) return `<div class="nroute ok">✓ Added to <b>${h(noteToLabel(f.sent.to))}</b>${f.sent.to === 'ea' ? '' : ' – it goes into that box in OctoSleuth when you open it'} <button type="button" class="btn ghost small" data-nundo="${f.id}">Undo</button></div>`;
     return `<div class="nroute"><label>Add to <select data-nto="${f.id}">${opt(f, noteDest(f.value))}</select></label> <button type="button" class="btn ghost small" data-nedit="${f.id}">✏ Edit</button> <button type="button" class="btn small" data-nadd="${f.id}">Add</button>
       <textarea data-ntext="${f.id}" rows="3" hidden>${h(f.value)}</textarea></div>`; };
   box.innerHTML = F.length ? `<h4>Facts accepted from the documents</h4><table class="facts">${F.map(f => `<tr><th>${h(f.label)}</th><td>${h(f.value)} <small class="muted">${h(f.doc)}${f.page ? ', p. ' + f.page : ''}</small>${act(f)}</td></tr>`).join('')}</table>` : '';
@@ -178,11 +178,11 @@ function renderFacts() {
     const f2 = cur.facts.find(x => x.id === id); f2.sent = { to, text, at: Date.now() }; saveLetter(true, true); renderFacts(); toast('Added to ' + noteToLabel(to)); });
   box.querySelectorAll('[data-nundo]').forEach(b => b.onclick = () => { const f = cur.facts.find(x => x.id === b.dataset.nundo); if (!f || !f.sent) return;
     if (f.sent.to === 'ea') { const el = $('#f_ea'); if (el) { el.value = el.value.replace(f.sent.text, '').replace(/\n{3,}/g, '\n\n').trim(); cur = readForm(); } }
-    else if (f.sent.applied) toast('It is already in the Comp genie box – delete it there if you do not want it', 8000);
+    else if (f.sent.applied) toast('It is already in OctoSleuth box – delete it there if you do not want it', 8000);
     delete f.sent; saveLetter(true, true); renderFacts(); });
 }
 /* her ask (Oct 22 2026): a note read from a document can be sent – after her look and edit – to the box where it belongs.
-   The Comp genie adds it to that comment box once (her click here is the OK); nothing is sent by itself. */
+   OctoSleuth adds it to that comment box once (her click here is the OK); nothing is sent by itself. */
 const NOTE_KEYS = ['notes', 'other'];
 const NOTE_TO = [['', 'Keep it here as a note only'], ['cSite', '2 Subject › Site commentary'], ['cSubject', '2 Subject › Subject property commentary'],
   ['cSubjPrior', '2 Subject › Prior sales and transfers – subject'], ['cAssign', '2 Subject › Assignment and scope of work commentary'],
@@ -467,11 +467,11 @@ function markFilled(f, type, key, v) {   // what an accepted entry filled in on 
   if (JSON.stringify(cur.uad || {}) !== before) out.push('UAD 3.6 sales contract'); const o = factToOrder(key, v); if (o) out.push(o);
   if (f && out.length) f.filled = out;
 }
-function factToOrder(key, v) {   // an accepted legal description goes into the order's Legal description box (the Comp genie and SFREP use it)
+function factToOrder(key, v) {   // an accepted legal description goes into the order's Legal description box (OctoSleuth and SFREP use it)
   if (!v) return;
   if (key === 'legal') { const el = $('#f_legal'); if (!el) return; el.value = String(v).replace(/\bS(\d{2})(?= (?:FEET|FT)\b)/gi, '5$1').replace(/\s*[^.]*\bredact[^.]*\.?/gi, '').trim();   /* a note about redaction is not part of the legal description */ /* a scan's "S00 FEET" is 500 feet */ cur = readForm(); toast('Legal description is on the order now'); return 'Legal description'; }
   if (key === 'reserve') { const el = $('#f_rightsNot'); if (!el) return; const t = rightsNotText(v);
-    el.value = el.value.trim() && !el.value.includes(t) ? (el.value.trim() + ' ' + t).slice(0, 540) : t; cur = readForm(); toast('Added to "Rights not appraised" on the order. You decide in the Comp genie whether all rights are included.'); return 'Rights not appraised'; }
+    el.value = el.value.trim() && !el.value.includes(t) ? (el.value.trim() + ' ' + t).slice(0, 540) : t; cur = readForm(); toast('Added to "Rights not appraised" on the order. You decide in OctoSleuth whether all rights are included.'); return 'Rights not appraised'; }
 }
 function rightsNotText(v) {   // a short line for UAD 3.6 (540 characters); OCR's S00 → 500
   let t = String(v).replace(/\s+/g, ' ').replace(/\bS(\d{2})\b/g, '5$1').replace(/\bO(\d{2})\b/g, '0$1').trim();
@@ -683,7 +683,7 @@ function readContract(pages, garbled, kind) {
     if (best) add('price', '$' + Math.round(best.v).toLocaleString(), best.p, 'typed-in amount on page ' + best.p + ' – check that it is the final price (counters may change it)'); }
   return S;
 }
-function contractToUad(key, v) {   // accepted entries also fill the UAD 3.6 sales contract boxes (the Comp genie reads them) when those are still empty
+function contractToUad(key, v) {   // accepted entries also fill the UAD 3.6 sales contract boxes (OctoSleuth reads them) when those are still empty
   cur.uad = cur.uad || {}; const U = cur.uad; const money = String(v).match(/\$\s?([\d,]+(?:\.\d\d)?)/);
   if (key === 'price' && !String(U.price || '').trim() && money) U.price = '$' + money[1];
   if (key === 'acceptDate' && !String(U.cdate || '').trim()) { const iso = G.isoDate(String(v).match(/\d{1,2}\/\d{1,2}\/\d{2,4}/)?.[0] || '') || (Date.parse(v) ? new Date(v).toISOString().slice(0, 10) : ''); if (iso) { const [y, m, d] = iso.split('-'); U.cdate = `${m}/${d}/${y}`; } }

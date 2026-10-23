@@ -327,7 +327,7 @@ async function mkAddSearch(file, which, how) {
 /* CRS Data neighborhood sales list (Oct 20 2026). A sale that is also in the MLS search joins that listing (CRS details
    added; a closed MLS row with no sale date gets the recorded sale); the others come in as "CRS only" sales for her to
    check in Flexmls (agent entry errors can keep a listing out of a boundary search). CRS-only sales are not counted in the
-   SBMLS market numbers unless she ticks "Count them"; they all go to the Comp genie. Owner names are never kept. */
+   SBMLS market numbers unless she ticks "Count them"; they all go to OctoSleuth. Owner names are never kept. */
 function mkCrsBoxHTML() {
   const rows = MI().rows || []; const only = rows.filter(r => r.crsOnly), joined = rows.filter(r => !r.crsOnly && r.crs); if (!only.length && !joined.length) return '';
   const inMac = only.filter(r => r.macroMls), notMls = only.filter(r => !r.macroMls), diff = joined.filter(r => mkCrsDiff(r));
@@ -416,9 +416,9 @@ function parseZillowText(t) {   // Zillow "Housing Market Overview" wording
   { const z = t.match(/\b(\d{5})\s*,?\s*(?:CA\s+)?Housing Market/i) || t.match(/home-values\/\d+\/(\d{5})\//); const c = t.match(/([A-Z][A-Za-z .'-]{2,40}),\s*CA Housing Market/); out._place = z ? 'zip:' + z[1] : c ? c[1].trim().replace(/^.*\b(?:Trends|Zillow|PM|AM)\s+/, '') : ''; }
   return out;
 }
-/* sales she removed in the comp genie as outside her boundaries (kv 'genieExcl:<order>', written by the genie): unticked in both searches */
+/* sales she removed in OctoSleuth as outside her boundaries (kv 'genieExcl:<order>', written by OctoSleuth): unticked in both searches */
 let MK_GX = '';
-/* the same keys the comp genie uses (its util.js apnKey / addrKey) */
+/* the same keys OctoSleuth uses (its util.js apnKey / addrKey) */
 const mkApnK = s => { const g = String(s || '').match(/\d+/g) || []; if (g.length === 3 && g.every(x => x.length <= 3)) return g.map(x => x.padStart(3, '0')).join(''); const d = g.join(''); return d.length >= 8 ? d.slice(0, 9) : ''; };
 const MK_DIRS = new Set(['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw', 'north', 'south', 'east', 'west']), MK_SUF = new Set(['rd', 'road', 'dr', 'drive', 'ln', 'lane', 'st', 'street', 'ave', 'avenue', 'av', 'way', 'wy', 'ct', 'court', 'pl', 'place', 'cir', 'circle', 'blvd', 'boulevard', 'ter', 'terrace', 'trl', 'trail', 'pkwy', 'parkway', 'hwy', 'highway', 'loop']);
 const mkAddrK = a => { const m = String(a || '').split(',')[0].match(/^\s*(\d+)\S*\s+(.+)$/); if (!m) return ''; const w = m[2].toLowerCase().replace(/[.'’]/g, '').replace(/\s*(#|unit|apt|ste)\s*\S+$/, '').split(/[^a-z0-9]+/).filter(Boolean);
@@ -428,7 +428,7 @@ async function mkGenieExcl() { if (!cur) return; const id = cur.id; const r = aw
   const hit = row => { const k = { mls: String(row.mls || '').trim(), apn: mkApnK(row.apn) || '', addr: row.addr ? mkAddrK(row.addr) : '' };
     return L.some(x => (k.mls && x.mls && k.mls === x.mls) || (k.apn && x.apn && k.apn === x.apn) || (k.addr && x.addr && k.addr.split('#')[0] === x.addr.split('#')[0])); };
   let n = 0; [M(), MI()].forEach(q => { q.exclude = q.exclude || {}; (q.rows || []).forEach(row => { if (hit(row) && !q.exclude[row.mls]) { q.exclude[row.mls] = true; q.outArea = q.outArea || {}; q.outArea[row.mls] = true; n++; } }); });
-  if (n) { mkChanged(); toast(`${n} listing${n > 1 ? 's' : ''} unticked – removed in the comp genie as outside your boundaries`); mkRender(); } }
+  if (n) { mkChanged(); toast(`${n} listing${n > 1 ? 's' : ''} unticked – removed in OctoSleuth as outside your boundaries`); mkRender(); } }
 function mkRender(redraft) {
   const box = $('#mkBody'); if (!box || !cur) return; const m = M(); mkGenieExcl();
   { const used = new Set([M(), MI()].flatMap(q => String(q.file || '').split(' + ').map(x => x.trim()).filter(Boolean)));   // files used on this tab: filed under the right kind
@@ -439,7 +439,7 @@ function mkRender(redraft) {
   if (redraft || m.comment == null) { if (R.rows.length || Object.keys(MK.stats).length) { if (!m.commentEdited) m.comment = mkCommentDraft(R); if (!m.criteriaEdited) m.criteria = mkCriteriaDraft(R); } }
   const pick = (k, list) => m[k] || R.suggest[{ supply: 'supply', mktime: 'mktime', distress: 'distress' }[k]] || '';
   const sel = (k, list, sug) => `<select data-mk="${k}">${['', ...list.map(x => x[0])].map(v => `<option value="${v}"${pick(k) === v ? ' selected' : ''}>${v ? list.find(x => x[0] === v)[1] : '—'}</option>`).join('')}</select>${sug ? ` <small class="${m[k] && m[k] !== sug ? 'warnTxt' : 'muted'}">suggested: ${h((list.find(x => x[0] === sug) || [, ''])[1])}</small>` : ''}`;
-  { // snapshot for the full report (Comp genie reads it from this order)
+  { // snapshot for the full report (OctoSleuth reads it from this order)
     const U = { eff: R.eff, L: R.L, boundary: m.boundary || '', criteria: m.criteria || '', comment: m.comment || '', general: m.general || '', activeN: R.activeN, activeLow: R.activeLow, activeMed: R.activeMed, activeHigh: R.activeHigh, activeDom: R.activeDom,
       pendingN: R.pendingN, salesN: R.salesN, saleLow: R.saleLow, saleMed: R.saleMed, saleHigh: R.saleHigh, supply: pick('supply'), mktime: pick('mktime'), distress: pick('distress'), sources: (m.sources || ['SBMLS']).filter(x => x !== 'Zillow') };
     if (R.rows.length && JSON.stringify(U) !== JSON.stringify(m.uad)) { m.uad = U; mkChanged(); } }
@@ -484,12 +484,12 @@ function mkRender(redraft) {
     <tr><th>Marketing Time <span class="sfn">(17.022)</span></th><td>${sel('mktime', MKTIME, R.suggest.mktime)}<small class="muted"> ${R.saleDom != null ? `median ${Math.round(R.saleDom)} days on market (cumulative) for the sales` : ''}</small></td></tr>
     <tr><th>Price Trend Source <span class="sfn">(17.018)</span> <small>one per line, 33 characters each</small></th><td><textarea data-mk="sources" rows="2">${h(sources.join('\n'))}</textarea></td></tr>
     <tr><th>Your price-trend conclusion</th><td><select data-mk="trendConcl"><option value="">—</option><option value="increasing"${m.trendConcl === 'increasing' ? ' selected' : ''}>Increasing</option><option value="stable"${m.trendConcl === 'stable' ? ' selected' : ''}>Stable</option><option value="declining"${m.trendConcl === 'declining' ? ' selected' : ''}>Declining</option></select> ${(() => { const sg = mkTrendSuggest(R); return !m.trendConcl && sg ? `<small class="warnTxt">The chart suggests <b>${sg}</b> – the draft uses it until you pick.</small> <button type="button" class="btn small" data-mktrend="${sg}">Use ${sg}</button>` : '<small class="muted">used in the draft</small>'; })()}</td></tr>
-    <tr><td colspan="2"><figure><canvas id="mkG0"></canvas><div class="row"><button type="button" class="btn small" data-png="mkG0">Save picture</button>${(() => { const w = [['market area boundary', mkCompute()], ...(MI().rows.length ? [['competing', R]] : [])].map(([n, X]) => { const d = X.S.map(r => r.saleDate).filter(Boolean).sort()[0]; return d && d > isoAddMonths(X.start, 3) ? `the ${n} search starts ${shortDate(d)}` : ''; }).filter(Boolean); return w.length ? `<p class="help warnTxt">The look-back is ${R.L} months, but ${w.join(' and ')} – export it again for the whole period so the earlier and later sales compare the same span.</p>` : ''; })()}<span class="help"><b>Goes into the SFREP file</b> with Comp genie › Full report (Price Trend Graph); the absorption chart below goes in too (Absorption Rate Graph). Raw medians mix different houses (size, quality, condition, lot, view). Use this to see the direction; for a measured rate that holds those level, open the Comp genie › <b>Market conditions support</b> – it groups your archive sales by usable lot, view, quality and size.</span></div></figure></td></tr>
+    <tr><td colspan="2"><figure><canvas id="mkG0"></canvas><div class="row"><button type="button" class="btn small" data-png="mkG0">Save picture</button>${(() => { const w = [['market area boundary', mkCompute()], ...(MI().rows.length ? [['competing', R]] : [])].map(([n, X]) => { const d = X.S.map(r => r.saleDate).filter(Boolean).sort()[0]; return d && d > isoAddMonths(X.start, 3) ? `the ${n} search starts ${shortDate(d)}` : ''; }).filter(Boolean); return w.length ? `<p class="help warnTxt">The look-back is ${R.L} months, but ${w.join(' and ')} – export it again for the whole period so the earlier and later sales compare the same span.</p>` : ''; })()}<span class="help"><b>Goes into the SFREP file</b> with OctoSleuth › Full report (Price Trend Graph); the absorption chart below goes in too (Absorption Rate Graph). Raw medians mix different houses (size, quality, condition, lot, view). Use this to see the direction; for a measured rate that holds those level, open OctoSleuth › <b>Market conditions support</b> – it groups your archive sales by usable lot, view, quality and size.</span></div></figure></td></tr>
     <tr><th>Price Trend Analysis Commentary <span class="sfn">(17.019)</span></th><td><textarea data-mk="comment" rows="10" maxlength="2500">${h(m.comment || '')}</textarea>${cnt('comment', 2500)}
       <div class="row"><button type="button" class="btn ghost small" data-redraft="comment">Draft again</button><button type="button" class="btn ghost small" data-copy="comment">Copy</button></div>
       <p class="help">Drafted from the numbers on this page in your wording. Edit freely; your edits are kept until you press Draft again.</p></td></tr>
     <tr><th>Market commentary <span class="sfn">(general commentary – Market)</span><br><small>what the numbers above do not show: what drives demand, financing, seasonality</small></th><td><textarea data-mk="general" rows="5" maxlength="5000">${h(m.general || '')}</textarea>${cnt('general', 5000)}
-      <p class="help">Goes to SFREP's Market commentary box when the Comp genie exports. Your standard market paragraphs: click in the box.</p></td></tr></table>
+      <p class="help">Goes to SFREP's Market commentary box when OctoSleuth exports. Your standard market paragraphs: click in the box.</p></td></tr></table>
   </section>
   <section class="mkcard"><h3>4 · Graphs for the report</h3>
     <p class="help">Each one saves as a picture for the report's market exhibits (UAD image types: Price Trend, Absorption Rate).</p>
@@ -503,10 +503,10 @@ function mkRender(redraft) {
     ${st ? mkStatsTable(st[mkSeg()], st.ym) : ''}${(() => { const segW = mkSeg() === 'condo' ? /condo/i : /^(?!.*condo)/i; const w = st && st.warn ? st.warn.filter(x => segW.test(x)) : []; return w.length ? `<p class="help warnTxt">${w.map(h).join(' ')} This month's own totals from its Summary of Stats page were used instead.</p>` : ''; })()}
     ${(cur.docs || []).filter(d => d.type === 'zillow').map(d => `<p class="help mkzold">Zillow page kept with this order: <button type="button" class="lnk" data-zopen="${d.id}">${h(d.name)}</button> <button type="button" class="mkx" data-zdel="${d.id}" title="Remove this file from the order">✕ Remove this file</button></p>`).join('')}
   </section></div>
-  <div class="formEnd"><button type="button" class="btn" id="mkSaveBtn">Save</button><a class="btn primary" id="mkGenie" href="${h(genieURL(cur))}" target="aa-genie">Save and open the Comp genie →</a><button type="button" class="btn ghost" id="mkOrderBtn">Back to the order</button><span class="savedAt" data-saved></span></div>`;
+  <div class="formEnd"><button type="button" class="btn" id="mkSaveBtn">Save</button><a class="btn primary" id="mkGenie" href="${h(genieURL(cur))}" target="aa-genie">Save and open OctoSleuth →</a><button type="button" class="btn ghost" id="mkOrderBtn">Back to the order</button><span class="savedAt" data-saved></span></div>`;
   // graphs
   drawTrendBoth($('#mkG0'), RA, MI().rows.length ? R : null); drawPriceTrend($('#mkG1'), R, !!m.perSf); drawAbsorption($('#mkG2'), R); drawMacro($('#mkG3'), mkSeg());
-  // the price trend and absorption charts go into the SFREP file (Comp genie › Full report): kept with the order as pictures (Oct 20 2026)
+  // the price trend and absorption charts go into the SFREP file (OctoSleuth › Full report): kept with the order as pictures (Oct 20 2026)
   try { const c0 = $('#mkG0'), c2 = $('#mkG2'); const t = c0 ? c0.toDataURL('image/jpeg', 0.9) : '', a = c2 ? c2.toDataURL('image/jpeg', 0.9) : ''; const ch = m.charts || {};
     if ((t || a) && (ch.trend !== t || ch.absorb !== a)) { m.charts = { trend: t, absorb: a, at: new Date().toISOString() }; saveLetter(true, true); } } catch (e) {}
   // wiring

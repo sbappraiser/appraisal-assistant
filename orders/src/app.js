@@ -1,4 +1,4 @@
-/* Appraisal Assistant – orders: intake form, documents, engagement letter, clients, hand-off to the other modules.
+/* Octopus Appraisal Assistant – orders: intake form, documents, engagement letter, clients, hand-off to the other modules.
    Forked from the Engagement Letter Writer; the letter wording still comes from engagement-letter-writer/src. */
 const $ = s => document.querySelector(s);
 const store = {
@@ -262,7 +262,7 @@ function renderLetters() {
       <td class="num">${hesc(f.dueDate ? shortDate(f.dueDate) : '')}</td><td class="num">${hesc(f.inspDate ? shortDate(f.inspDate) : '')}${f.inspTime ? '<small>' + hesc(f.inspTime) + '</small>' : ''}</td>
       <td>${f.aiUse ? `<span class="pill ${f.aiUse === 'No' ? 'no' : 'yes'}">${{ Yes: 'Yes', Redacted: 'Redacted', No: 'No AI' }[f.aiUse]}</span>` : '<span class="pill">?</span>'}</td>
       <td>${hesc(f.status || '')}</td><td class="num">${(f.docs || []).length || ''}</td>
-      <td class="acts"><div class="acts2"><button class="btn small" data-open="${f.id}">Open</button><a class="btn ghost small" href="${genieURL(f)}" target="aa-genie">Comp genie</a><button class="btn ghost small" data-copy="${f.id}">Copy as new</button><button class="btn ghost small danger" data-del="${f.id}">Delete</button></div></td></tr>`).join('')
+      <td class="acts"><div class="acts2"><button class="btn small" data-open="${f.id}">Open</button><a class="btn ghost small" href="${genieURL(f)}" target="aa-genie">OctoSleuth</a><button class="btn ghost small" data-copy="${f.id}">Copy as new</button><button class="btn ghost small danger" data-del="${f.id}">Delete</button></div></td></tr>`).join('')
     : `<tr><td colspan="11" class="empty">${letters.length ? 'No order matches.' : 'No orders yet. Press New order to start one.'}</td></tr>`;
   $('#letterList').querySelectorAll('[data-open]').forEach(b => b.onclick = () => openLetter(b.dataset.open));
   $('#letterList').querySelectorAll('[data-copy]').forEach(b => b.onclick = () => openLetter(b.dataset.copy, true));
@@ -272,9 +272,9 @@ function renderLetters() {
 }
 const genieURL = f => '../comp-genie/?order=' + encodeURIComponent(f.id);
 function renderLinks() { const a = $('#genieLink'); if (a && cur) a.href = genieURL(cur); syncGenieTop(); }
-function syncGenieTop() {   // the top-bar button opens the order you are on (Order or Market tab); elsewhere the Comp genie's own list
+function syncGenieTop() {   // the top-bar button opens the order you are on (Order or Market tab); elsewhere OctoSleuth's own list
   const t = $('#genieTop'); if (!t) return; const onOrder = cur && hasContent(cur) && ['letter', 'market', 'new'].includes(CUR_TAB);
-  t.href = onOrder ? genieURL(cur) : '../comp-genie/'; t.title = onOrder ? 'Open the Comp genie for ' + ([cur.fileNo, street(cur)].filter(Boolean).join(' ') || 'this order') : 'Open the Comp genie';
+  t.href = onOrder ? genieURL(cur) : '../comp-genie/'; t.title = onOrder ? 'Open OctoSleuth for ' + ([cur.fileNo, street(cur)].filter(Boolean).join(' ') || 'this order') : 'Open OctoSleuth';
 }
 function renderContacts() {
   const q = (($('#contactSearch') || {}).value || '').toLowerCase();
@@ -378,9 +378,9 @@ function showTab(t) { CUR_TAB = t; if (t === 'home' && typeof ibRender === 'func
   syncGenieTop(); tabMarks();
   if (t === 'dbs') { const fr = $('#dbsFrame'); if (!fr.dataset.loaded) { fr.dataset.loaded = '1'; fr.src = '../comp-genie/index.html?view=db&embed=1&v=' + Date.now(); } }   // My databases (her ask Oct 21 2026)
   if (t === 'genie') { const on = cur && hasContent(cur); if (on) saveLetter(true, true); const nm = on ? [cur.fileNo, street(cur)].filter(Boolean).join(' ') : '';
-    $('#gnTitle').textContent = 'Comp genie' + (nm ? ' – ' + nm : ''); $('#gnOwn').href = on ? genieURL(cur) : '../comp-genie/';
+    $('#gnTitle').textContent = 'OctoSleuth' + (nm ? ' – ' + nm : ''); $('#gnOwn').href = on ? genieURL(cur) : '../comp-genie/';
     const fr = $('#genieFrame'); const want = on ? cur.id : '';
-    if (!fr.dataset.loaded) { fr.dataset.loaded = '1'; fr.dataset.order = want; fr.src = '../comp-genie/index.html?embed=1&v=' + Date.now() + (want ? '&order=' + encodeURIComponent(want) : '') + (window.GENIE_GO ? '&go=' + window.GENIE_GO : ''); window.GENIE_GO = ''; /* v = always the newest Comp genie, never a cached copy */ }
+    if (!fr.dataset.loaded) { fr.dataset.loaded = '1'; fr.dataset.order = want; fr.src = '../comp-genie/index.html?embed=1&v=' + Date.now() + (want ? '&order=' + encodeURIComponent(want) : '') + (window.GENIE_GO ? '&go=' + window.GENIE_GO : ''); window.GENIE_GO = ''; /* v = always the newest OctoSleuth, never a cached copy */ }
     else { fr.dataset.order = want; setTimeout(() => { try { fr.contentWindow.postMessage({ type: 'aa-refresh', order: want, go: window.GENIE_GO || '' }, location.origin); window.GENIE_GO = ''; } catch (e) {} }, on ? 400 : 0); } }
   if (t === 'books') { $('#bkTitle').textContent = 'Bookkeeping' + (cur && (cur.fileNo || street(cur)) ? ' – ' + [cur.fileNo, street(cur)].filter(Boolean).join(' ') : ''); renderBooks(); const a = $('#bkAll'); if (a) { a.innerHTML = unpaidHTML(); wireUnpaid(a); } }
   if (t === 'market') { $('#mkTitle').textContent = 'Market conditions' + (cur && (cur.fileNo || street(cur)) ? ' – ' + [cur.fileNo, street(cur)].filter(Boolean).join(' ') : ''); mkRender(); }
@@ -391,9 +391,9 @@ async function backup() {
   saveLetter(true, true); toast('Making the backup…');
   const B = await buildBackup(); const lk = typeof VAULT !== 'undefined' && VAULT.on;
   download(lk ? await vaultEnc(B.blob) : new Uint8Array(await B.blob.arrayBuffer()), `Appraisal Assistant backup ${todayISO()}.${lk ? 'locked' : 'zip'}`, lk ? 'application/octet-stream' : 'application/zip');
-  toast(`Backup saved to Downloads: ${B.orders} orders, ${B.clients} clients, ${B.docs} documents` + (B.jobs ? `, ${B.jobs} Comp genie assignments` : ''));
+  toast(`Backup saved to Downloads: ${B.orders} orders, ${B.clients} clients, ${B.docs} documents` + (B.jobs ? `, ${B.jobs} OctoSleuth assignments` : ''));
 }
-/* one backup zip: orders, clients, documents, her lists – and the Comp genie's assignments and settings (same site) */
+/* one backup zip: orders, clients, documents, her lists – and OctoSleuth's assignments and settings (same site) */
 const AB_DOCS = 'Appraisal Assistant documents';   // the automatic backup keeps each document once in this subfolder (Oct 20 2026: daily zips were ~80 MB each, 30 kept)
 async function buildBackup(docsDir) {
   const docs = await ODB.all('docs'); const enc = new TextEncoder();
@@ -416,7 +416,7 @@ async function restore(file, folder) {
     { const u8 = new Uint8Array(await file.slice(0, 64).arrayBuffer()); if (typeof vaultIs === 'function' && vaultIs(u8.length > 36 ? new Uint8Array(await file.arrayBuffer()) : u8)) { const plain = await vaultDec(new Uint8Array(await file.arrayBuffer())); file = new File([plain], file.name.replace(/\.locked$/i, '') + '.zip'); } }   // a locked backup: her password opens it
     if (/\.zip$/i.test(file.name)) { files = await G.readZip(file); const j = files.get('orders.json'); if (!j) throw new Error('That zip is not an Appraisal Assistant backup.'); d = JSON.parse(new TextDecoder().decode(j)); }
     else d = JSON.parse(await file.text());
-    if (!['engagement-letter-writer', 'appraisal-assistant'].includes(d.app)) throw new Error('That file is not an Appraisal Assistant or letter-writer backup.');
+    if (!['engagement-letter-writer', 'appraisal-assistant'].includes(d.app)) throw new Error('That file is not an Octopus Appraisal Assistant or letter-writer backup.');
     const ids = new Set(letters.map(x => x.id)); let nl = 0, nc = 0, nd = 0; const add = [];
     (d.letters || []).forEach(x => { if (!ids.has(x.id)) { const o = { ...NEW_FIELDS, docs: [], ...x }; if (d.app === 'engagement-letter-writer' && !x.stage) o.stage = x.status === 'Signed' ? 'Accepted' : x.status === 'Sent' ? 'Letter sent' : 'New'; letters.push(o); add.push(o); nl++; } });
     (d.contacts || []).forEach(c => { if (!contacts.some(x => x.name === c.name && x.company === c.company)) { contacts.push(c); nc++; } });
@@ -440,7 +440,7 @@ async function restore(file, folder) {
         if (!u8) continue; const { file: _f, ...rest } = m; await ODB.put('docs', { ...rest, blob: new Blob([u8], { type: m.mime || '' }) }); nd++; } }
     contacts.sort((a, b) => (a.name || a.company || '').localeCompare(b.name || b.company || ''));
     store.set('contacts', contacts); store.set('aiText', aiText); renderLetters(); renderContacts();
-    toast(`Restored ${nl} orders, ${nc} clients` + (files ? `, ${nd} documents` : '') + (na ? `, ${na} saved market areas` : '') + (gj ? `, ${gj} Comp genie assignments` : ''), 6000); if (typeof renderHome === 'function') renderHome();
+    toast(`Restored ${nl} orders, ${nc} clients` + (files ? `, ${nd} documents` : '') + (na ? `, ${na} saved market areas` : '') + (gj ? `, ${gj} OctoSleuth assignments` : ''), 6000); if (typeof renderHome === 'function') renderHome();
   } catch (e) { console.error(e); toast(e.message || 'Could not read that file'); }
 }
 
@@ -465,16 +465,16 @@ async function start() {
     const m = String(a.getAttribute('href') || '').match(/[?&]order=([^&]+)/); const id = m && decodeURIComponent(m[1]);
     if (id && (!cur || cur.id !== id) && letters.some(x => x.id === id)) openLetter(id); else if (cur && hasContent(cur)) saveLetter(true);
     setTimeout(() => { showTab('genie'); window.scrollTo(0, 0); }, 30); });
-  window.addEventListener('message', async e => {   // the Comp genie tab asks for an order for an assignment that has none (her Encina assignment, Oct 19 2026)
+  window.addEventListener('message', async e => {   // OctoSleuth tab asks for an order for an assignment that has none (her Encina assignment, Oct 19 2026)
     if (e.origin !== location.origin || !e.data || e.data.type !== 'aa-make-order') return; const S = e.data.subject || {};
     const o = blankLetter(); const nm = String(e.data.fileNo || e.data.name || '').trim();
     o.fileNo = nm && nm !== 'New assignment' ? nm : street({ address: S.addr || '' });
     o.address = [S.addr, S.city, ['CA', S.zip].filter(Boolean).join(' ')].filter(Boolean).join(', '); o.unit = S.unit || ''; o.apn = S.apn || ''; o.lat = S.lat || ''; o.lon = S.lon || '';
-    if (S.eff) { o.effDate = S.eff; o.inspDate = S.eff; } o.stage = 'Inspected'; o.notes = 'Made from the Comp genie assignment "' + (e.data.name || '') + '" – fill in the client, type and fee.';
+    if (S.eff) { o.effDate = S.eff; o.inspDate = S.eff; } o.stage = 'Inspected'; o.notes = 'Made from OctoSleuth assignment "' + (e.data.name || '') + '" – fill in the client, type and fee.';
     o.saved = new Date().toISOString(); o.effective = effectiveDate(o); letters.unshift(o);
     try { await ODB.put('orders', o); } catch (err) { toast('Could not save the order: ' + (err.message || err)); return; }
     renderLetters(); e.source.postMessage({ type: 'aa-order-made', jobId: e.data.jobId, orderId: o.id, fileNo: o.fileNo }, location.origin);
-    toast('Order ' + o.fileNo + ' made from the Comp genie – open it to fill in the client, type and fee', 6000); });
+    toast('Order ' + o.fileNo + ' made from OctoSleuth – open it to fill in the client, type and fee', 6000); });
   document.addEventListener('click', e => { const b = e.target.closest('[data-gotab]'); if (b) { e.preventDefault(); showTab(b.dataset.gotab); window.scrollTo(0, 0); } });
   $('#f_signDate').addEventListener('change', () => { const d = $('#f_signDate').value; if (d && !$('#f_invDate').value) $('#f_invDate').value = d; if (d && !$('#f_invNo').value.trim()) $('#f_invNo').value = invNoOf($('#f_fileNo').value); update(); renderBooks(); });
   $('#letterForm').addEventListener('input', update); ['#f_otherUsers', '#f_userText'].forEach(id => $(id).addEventListener('input', syncVisibility)); $('#letterForm').addEventListener('change', update);
@@ -513,7 +513,7 @@ async function start() {
   const draft = store.get('draft', null); // an unsaved letter left in the old letter writer
   cur = pick ? { ...NEW_FIELDS, ...JSON.parse(JSON.stringify(pick)) } : (!letters.length && draft && draft.id) ? { ...blankLetter(), ...draft } : blankLetter();
   writeForm(cur); render(); renderLetters(); renderContacts();
-  { const tb = new URLSearchParams(location.search).get('tab'); showTab(q && pick ? (['market', 'letter', 'genie'].includes(tb) ? tb : 'letter') : 'home'); }   // the Comp genie's ⓪ Market step opens the order's Market tab
+  { const tb = new URLSearchParams(location.search).get('tab'); showTab(q && pick ? (['market', 'letter', 'genie'].includes(tb) ? tb : 'letter') : 'home'); }   // OctoSleuth's ⓪ Market step opens the order's Market tab
   $('#build').textContent = 'Version ' + BUILD; { const bt = $('#buildTop'); if (bt) bt.textContent = 'Version ' + BUILD; } $('#rdBuild').textContent = BUILD;
   abStart();
   $('#helpSearch').addEventListener('input', e => { const q = e.target.value.trim().toLowerCase(); document.querySelectorAll('.help-page details').forEach(d => { const hit = !q || d.textContent.toLowerCase().includes(q); d.hidden = !hit; d.open = !!q && hit; }); document.querySelectorAll('.help-page .hgroup').forEach(g => { g.hidden = !!q && ![...g.querySelectorAll('details')].some(d => !d.hidden); }); });
@@ -575,7 +575,7 @@ function armDelete(b, run) {
 /* Back to top: shows once the page is scrolled down */
 window.addEventListener('DOMContentLoaded', () => { const b = document.getElementById('toTop'); if (!b) return; const f = () => { b.hidden = window.scrollY < 700; }; window.addEventListener('scroll', f, { passive: true }); f(); b.onclick = () => window.scrollTo({ top: 0, behavior: 'smooth' }); });
 
-/* ===== the order's numbered tabs (her ask Oct 21 2026): ① Documents ② Engagement letter ③ Scope of work, then ④ inspection and comps in the Comp genie ===== */
+/* ===== the order's numbered tabs (her ask Oct 21 2026): ① Documents ② Engagement letter ③ Scope of work, then ④ inspection and comps in OctoSleuth ===== */
 let OTAB = null;
 function oSetup() { if (oSetup.done) return; oSetup.done = true;
   const pc = document.querySelector('#panel-letter .previewCol'), ds = $('#docsSet'); [$('#reqSet'), $('#notesSet')].forEach(fs => { if (fs && pc) pc.appendChild(fs); });   // with the documents

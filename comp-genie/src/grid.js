@@ -725,7 +725,7 @@ async function ingestInspection(files, name) {
 }
 
 /* ---------------- adjustments into the SFREP file ---------------- */
-/* lines the 3.6 grid shows for every comp (F-1 Summary of Rows; D-1 sends a 0 on each) – a 0 goes even when she hides the line in the genie */
+/* lines the 3.6 grid shows for every comp (F-1 Summary of Rows; D-1 sends a 0 on each) – a 0 goes even when she hides the line in OctoSleuth */
 const ZERO_ALWAYS = new Set(['terms', 'xferTerms', 'conc', 'contract', 'sale', 'site', 'nbhd', 'loc', 'view', 'year', 'style', 'constr', 'energy', 'heat', 'cool', 'beds', 'baths', 'gla', 'bsmt', 'bsmtUnf', 'q', 'c', 'garage', 'streetAccess']);
 /* her separate exterior / interior ratings: blank shows the overall rating in grey – that is what goes to SFREP */
 const QC_SUB = { extQ: 'q', extC: 'c', intQ: 'q', intC: 'c' };
@@ -853,7 +853,7 @@ async function buildFullReport(J) {
   const mapFiles = []; { const L = typeof mapsForReport === 'function' ? await mapsForReport(J) : []; if (L.length) { const IMS = child(child(child(SUBJ, 'INSPECTIONS'), 'INSPECTION'), 'IMAGES');
     for (const m of L) { const im = sub.createElementNS(NS, 'IMAGE'); IMS.appendChild(im); leaf(im, 'ImageCaptionCommentDescription', m.cap); leaf(im, 'ImageCategoryType', m.cat); leaf(im, 'ImageFileLocationIdentifier', '\\\\Images\\' + m.file); leaf(im, 'MIMETypeIdentifier', 'image/jpeg');
       mapFiles.push({ name: 'Images/' + m.file, data: m.blob }); } } }
-  const xml = '<?xml version="1.0" encoding="UTF-8"?>\n<!--Subject from the UAD Field Inspection app, comps and adjustment grid from Comp Genie, for import into Appraise-It Pro (Home > Import Forms).-->\n' + (xsdSort(sub.documentElement), new XMLSerializer().serializeToString(sub.documentElement));   // schema (XSD) element order
+  const xml = '<?xml version="1.0" encoding="UTF-8"?>\n<!--Subject from the UAD Field Inspection app, comps and adjustment grid from OctoSleuth, for import into Appraise-It Pro (Home > Import Forms).-->\n' + (xsdSort(sub.documentElement), new XMLSerializer().serializeToString(sub.documentElement));   // schema (XSD) element order
   const entries = [{ name: jobBase() + ' - Full report.xml', data: xml }];
   for (const [k, v] of files) if (/^SFREP\/Images\//i.test(k)) entries.push({ name: k.replace(/^SFREP\//i, ''), data: v });
   for (const c of used) { const fr = frontOf(c); if (fr) { const r = await DB.get('photos', fr.id); if (r) entries.push({ name: 'Images/' + photoName(c), data: r.blob }); } }
@@ -1057,8 +1057,8 @@ function sfrepSheetHTML(J) { const used = usedComps(J), S = subjFacts(J); const 
     <tr><td><span class="bx"></span> Adjusted price</td>${tot.map(t => `<td class="r">${money(Math.round(t.adj))}</td>`).join('')}</tr></tbody></table>
   <ul>${noPhoto.length ? ck(`<b>Comp photos</b>: add a front photo for ${noPhoto.map(c => 'comp ' + c.use + ' (' + esc(compTitle(c)) + ')').join(', ')}.`) : ck('<b>Comp photos</b> came in – check each one shows.')}
     ${ck('<b>Analysis of Prior Sale and Transfer History</b> of the comparable sales is filled in.')}</ul>
-  <h2>Cost approach</h2><ul>${ck('Each cost line, depreciation and the site value match the Comp genie' + (J.costOn ? '' : ' (or the section is answered “not developed”)') + '.')}</ul>
-  <h2>Reconciliation</h2><ul>${ck('<b>Opinion of market value</b> ' + (R.opinion ? money(num(String(R.opinion).replace(/[$,\\s]/g, ''))) : '(blank in the genie – type it)') + ', exposure time and the reconciliation comment.')}
+  <h2>Cost approach</h2><ul>${ck('Each cost line, depreciation and the site value match OctoSleuth' + (J.costOn ? '' : ' (or the section is answered “not developed”)') + '.')}</ul>
+  <h2>Reconciliation</h2><ul>${ck('<b>Opinion of market value</b> ' + (R.opinion ? money(num(String(R.opinion).replace(/[$,\\s]/g, ''))) : '(blank in OctoSleuth – type it)') + ', exposure time and the reconciliation comment.')}
     ${ck('<b>Reason for exclusion</b> for any approach not developed.')}</ul>
   <h2>Certification and signature</h2><ul>${ck('<b>Scope of inspection by appraiser</b> (exterior / interior) and the inspection date.')}${ck('<b>Date of signature and report</b>, then sign.')}${ck('Run SFREP’s own check (UCDP / compliance) and clear what it lists.')}</ul>
   </body></html>`; }

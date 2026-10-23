@@ -288,10 +288,10 @@ function buildCompsMISMO(job, comps) { if (!RC) return rcRun(() => buildCompsMIS
   comps.forEach((c, i) => buildCompXML(PROPS, RELS, DSS, c, i + 1, job));
   notUsedXML(PROPS, job);   // analyzed – not used (UAD 22.17)
   svc.kids = [...svc.kids.filter(k => k !== RELS), RELS]; // UAD order: VALUATION, then RELATIONSHIPS
-  { const vs = X(X(X(va, 'VALUATION_REPORT'), 'VALUATION_SOFTWARE_SYSTEMS'), 'VALUATION_SOFTWARE_SYSTEM'); XV(vs, 'ValuationSoftwareProductName', 'Appraisal Assistant – Comp Genie'); XV(vs, 'ValuationSoftwareProductVersionIdentifier', typeof BUILD !== 'undefined' ? BUILD : '1'); XV(vs, 'ValuationSoftwareVendorName', 'Jennifer Heath, LLC (in-house)'); }   // schema: name + version (or vendor)
+  { const vs = X(X(X(va, 'VALUATION_REPORT'), 'VALUATION_SOFTWARE_SYSTEMS'), 'VALUATION_SOFTWARE_SYSTEM'); XV(vs, 'ValuationSoftwareProductName', 'Octopus Appraisal Assistant – OctoSleuth'); XV(vs, 'ValuationSoftwareProductVersionIdentifier', typeof BUILD !== 'undefined' ? BUILD : '1'); XV(vs, 'ValuationSoftwareVendorName', 'Jennifer Heath, LLC (in-house)'); }   // schema: name + version (or vendor)
   const dc = X(doc, 'DOCUMENT_CLASSIFICATION'); XV(X(X(dc, 'DOCUMENT_CLASSES'), 'DOCUMENT_CLASS'), 'DocumentType', 'AppraisalReport');
   const dcd = X(dc, 'DOCUMENT_CLASSIFICATION_DETAIL'); XV(dcd, 'DocumentFormIssuingEntityNameType', 'FNM_FRE'); XV(dcd, 'DocumentFormIssuingEntityVersionIdentifier', 'September 2024');
-  return xsdSortXML('<?xml version="1.0" encoding="UTF-8"?>\n<!--Sales comparables exported by Comp Genie for import into Appraise-It Pro (Home > Import Forms). Adjustments are yours, from the Comp Genie grid.-->\n' + xmlOut(root));   // schema (XSD) element order
+  return xsdSortXML('<?xml version="1.0" encoding="UTF-8"?>\n<!--Sales comparables exported by OctoSleuth for import into Appraise-It Pro (Home > Import Forms). Adjustments are yours, from OctoSleuth grid.-->\n' + xmlOut(root));   // schema (XSD) element order
 }
 
 /* ---- comps table ---- */

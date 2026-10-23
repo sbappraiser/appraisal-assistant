@@ -407,3 +407,7 @@ input.txt:focus, select.txt:focus, textarea.txt:focus { background: #fff4b0 !imp
 /* Oct 22 iPhone check: the Dictate card grew to the width of its longest line (638 px) – keep everything inside the screen */
 .exp { grid-template-columns: minmax(0, 1fr); } .exp > * { min-width: 0; }
 .dk-walk { flex-wrap: wrap; } .dk-bar, .exp > .row { flex-wrap: wrap; }
+
+/* her octopus logo (Oct 22 2026) */
+.brandLogo { width: 32px; height: 32px; border-radius: 7px; vertical-align: middle; margin-right: 8px; flex: none; }
+.bar .title { display: flex; align-items: center; flex-wrap: wrap; }

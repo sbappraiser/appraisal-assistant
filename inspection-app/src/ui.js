@@ -46,13 +46,13 @@ window.addEventListener('pageshow', e => { if (e.persisted && app.leaving) locat
 
 /* ---------------- Home ---------------- */
 async function renderHome() {
-  app.ins = null; app.returnTo = null; document.querySelectorAll('.return-bar').forEach(e => e.remove()); document.title = 'UAD Field Inspection';
+  app.ins = null; app.returnTo = null; document.querySelectorAll('.return-bar').forEach(e => e.remove()); document.title = 'Octopus Mobile Appraisal Assistant';
   let raw = [];
   try { raw = (await DB.all('inspections')) || []; } catch (e) { showFatal('Could not read saved inspections: ' + (e.message || e), 'home'); }
   const all = raw.map(i => { try { return normalize(i); } catch (e) { i._broken = e.message || String(e); return i; } }).sort((a, b) => (b.updated || 0) - (a.updated || 0));
   const root = $('#app');
   root.innerHTML = `
-  <header class="bar"><div class="bar-row"><div class="title"><b>UAD 3.6 Field Inspection</b><span>${all.length} inspection${all.length === 1 ? '' : 's'} on this iPad · ${(navigator.standalone || matchMedia('(display-mode: standalone)').matches) ? 'opened from the Home Screen icon' : 'opened in Safari'}</span></div>
+  <header class="bar"><div class="bar-row"><div class="title"><img class="brandLogo" src="logo-96.png" alt="" width="32" height="32"><b>Octopus Mobile</b><span>${all.length} inspection${all.length === 1 ? '' : 's'} on this iPad · ${(navigator.standalone || matchMedia('(display-mode: standalone)').matches) ? 'opened from the Home Screen icon' : 'opened in Safari'}</span></div>
     ${hcBtn()}<button class="icon-btn" id="storeBtn">Storage check</button><label class="icon-btn" style="position:relative;overflow:hidden">Restore backup<input id="restoreFile" type="file" accept=".zip,application/zip" style="position:absolute;inset:0;opacity:0"></label></div></header>
   <main>
     ${(navigator.standalone || matchMedia('(display-mode: standalone)').matches) ? '' : '<p class="warn-box">You are in Safari. Inspections made here are kept separately from the Home Screen app – use the Home Screen icon for real work.</p>'}
@@ -162,11 +162,11 @@ async function openInspection2(id, tab) {
   const root = $('#app');
   root.innerHTML = `<header class="bar"><div class="bar-row">
       <button class="icon-btn" id="homeBtn" aria-label="All inspections">‹ All</button>
-      <div class="title"><b id="tTitle"></b> <i class="tent" title="Tentacle 2 of the Appraisal Assistant – the subject">2 · Subject</i><span id="tAddr"></span></div>
+      <div class="title"><b id="tTitle"></b> <i class="tent" title="Tentacle 2 of the Octopus – the subject">2 · Subject</i><span id="tAddr"></span></div>
       <span class="saved" id="saved">Saved ✓</span>
       <button class="icon-btn" id="saveBtn">Save</button>
       <button class="icon-btn" id="jumpBtn" aria-label="Search">🔍<span class="bl"> Search</span></button>
-      <button class="icon-btn sk-btn" id="sketchBtn" aria-label="Sketch">✏️<span class="bl"> Sketch</span></button>
+      <button class="icon-btn sk-btn" id="sketchBtn" aria-label="Sketch">✏️<span class="bl"> OctoSketch</span></button>
       ${hcBtn()}
       <button class="attn-pill" id="attnPill"></button></div>
     <nav class="tabs" id="tabs" role="tablist"></nav></header>
@@ -449,7 +449,7 @@ function extraPhotos(sec) {
   return `<section class="group extra"><div class="extra-photos"><h3>Extra workfile photos – ${esc(sec.title)} ${photoCount(ph.length)}</h3>${photoSlot(slot)}</div></section>`;
 }
 
-/* ---------------- Active orders from the Appraisal Assistant (desktop) ----------------
+/* ---------------- Active orders from the Octopus (desktop) ----------------
    The desktop saves "Active Orders.json"; she opens it here from Files (OneDrive / iCloud Drive).
    Kept in the sketches store: 'orders:active' = the list, 'plan:<order>:<n>' = floor plan pictures. */
 const fmtD = iso => { if (!iso) return ''; const [y, m, d] = String(iso).split('-').map(Number); if (!d) return iso; return new Date(y, m - 1, d).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' }); };
@@ -496,7 +496,7 @@ async function ordersBlock(all) {
       <div class="row">${ins ? `<button class="btn primary" data-open="${ins.id}">Open inspection</button>` : `<button class="btn primary" data-ostart="${esc(o.id)}">Start inspection</button>`}</div></div>`; };
   return `<section class="orders-home"><div class="row" style="align-items:center;justify-content:space-between"><h2>Active orders${rec ? ` <small>from ${esc(new Date(rec.made).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }))}</small>` : ''}</h2>
     <span class="row"><label class="btn" style="position:relative;overflow:hidden">${rec ? 'Get the newer orders file' : 'Get orders (Active Orders file)'}<input id="ordersFile" type="file" style="position:absolute;inset:0;opacity:0"></label>${rec ? '<button class="btn" data-oclear>Clear</button>' : ''}</span></div>
-    ${list.length ? `<div class="cards">${list.map(card).join('')}</div>` : `<p class="help">On the computer, press <b data-keep>Send active orders to the iPad</b> in the Appraisal Assistant (the same file works on the iPhone) and save the file to OneDrive or iCloud Drive. Then tap <b>Get orders</b> here and pick “Active Orders.json” in Files.</p>`}</section>`;
+    ${list.length ? `<div class="cards">${list.map(card).join('')}</div>` : `<p class="help">On the computer, press <b data-keep>Send active orders to the iPad</b> in the Octopus (the same file works on the iPhone) and save the file to OneDrive or iCloud Drive. Then tap <b>Get orders</b> here and pick “Active Orders.json” in Files.</p>`}</section>`;
 }
 async function clearOrders() {
   const all = (await DB.all('sketches')) || [];
@@ -509,8 +509,8 @@ async function loadOrdersFile(file) {
     toast('“' + file.name + '” is the SFREP file – it goes to the computer, not here. To move an inspection to this ' + (typeof DEVICE !== 'undefined' ? DEVICE : 'device') + ', export it as a Workfile on the other device, then tap Restore backup here (or Get orders) and pick the “– Workfile.zip”.', 14000); return; }
   toast('Reading the orders file…');
   try {
-    let d; try { d = JSON.parse(await file.text()); } catch (e) { throw new Error('“' + file.name + '” is not an orders file. Pick “Active Orders.json” or an “Order … .json” file from the Appraisal Assistant.'); }
-    if (d.app !== 'appraisal-assistant' || d.kind !== 'active-orders') throw new Error('That is not an Active Orders file from the Appraisal Assistant.');
+    let d; try { d = JSON.parse(await file.text()); } catch (e) { throw new Error('“' + file.name + '” is not an orders file. Pick “Active Orders.json” or an “Order … .json” file from the Octopus.'); }
+    if (d.app !== 'appraisal-assistant' || d.kind !== 'active-orders') throw new Error('That is not an Active Orders file from the Octopus.');
     const old = await DB.get('sketches', 'orders:active');
     const keep = new Set(); const orders = [];
     const incoming = d.orders || [];
@@ -1138,7 +1138,7 @@ function renderExport() {
   </section>`;
 }
 
-/* UAD 3.6 starter comments under each iPad comment box (Oct 22 2026; the same list as the Appraisal Assistant's Common responses, cmt36data.js) */
+/* UAD 3.6 starter comments under each iPad comment box (Oct 22 2026; the same list as the Octopus's Common responses, cmt36data.js) */
 const STARTER_FID = { accessDesc: ['4.024'], siteFeatures: ['4.066'], siteInfluence: ['4.030', '4.049'], view: ['4.042'], disaster: ['5.001'], energy: ['6.015', '6.016'], exterior: ['8.061'], interior: ['10.061'], adu: ['10.061'],
   outbuilding: ['12.025'], functional: ['11.001'], vehicle: ['13.010'], amenities: ['14.011'], assignment: ['2.061'], qc: ['15.010'] };
 function starterChips(id) { const F = STARTER_FID[id]; if (!F || typeof CMT36 === 'undefined') return ''; const L = CMT36.map((c, k) => [c, k]).filter(([c]) => F.includes(c[2])); if (!L.length) return '';

@@ -1,6 +1,6 @@
 /* =====================================================================
    Order storage – IndexedDB "aa-orders" on sbappraiser.github.io.
-   The comp genie and other desktop modules on the same site read it.
+   OctoSleuth and other desktop modules on the same site read it.
    stores: orders {id,…}, docs {id, orderId, name, type, size, added, blob}, kv {id, v}
    ===================================================================== */
 const ODB = (() => {
@@ -13,7 +13,7 @@ const ODB = (() => {
       if (!has('kv')) d.createObjectStore('kv', { keyPath: 'id' }); };
     r.onsuccess = () => { db = r.result; db.onversionchange = () => { try { db.close(); } catch (e) {} }; res(true); };
     r.onerror = () => rej(r.error || new Error('This browser would not open its storage.'));
-    r.onblocked = () => rej(new Error('Close the other Appraisal Assistant tabs, then reload this one.'));
+    r.onblocked = () => rej(new Error('Close the other Octopus Appraisal Assistant tabs, then reload this one.'));
   });
   const tx = (st, mode, fn) => new Promise((res, rej) => {
     let t; try { t = db.transaction(st, mode); } catch (e) { rej(e); return; }

@@ -1,6 +1,6 @@
 /* =====================================================================
    Section check marks on the tabs (her request, Oct 19 2026): a green ✓ on
-   Order, Market, Comp genie and Bookkeeping when that section of the open
+   Order, Market, OctoSleuth and Bookkeeping when that section of the open
    order is not missing anything. Hover a tab to see what is still needed.
    ===================================================================== */
 function orderMissing(f) {   // the letter's main fields (also shown under the letter as "Still blank: …")
@@ -44,7 +44,7 @@ function needBooks(o) {
   if (o.stage === 'Cancelled') return [];
   const n = []; if (!String(o.invNo || '').trim() || !o.invDate) n.push('the invoice (Make the invoice)'); if (!o.paidDate) n.push('the payment (Mark paid)'); return n;
 }
-/* the Comp genie keeps its own storage on the same site; its grid pre-check for this order is read here (read-only) */
+/* OctoSleuth keeps its own storage on the same site; its grid pre-check for this order is read here (read-only) */
 let GENIE_ST = {};   // orderId → { n: [what is still needed], at }
 function readGenieJobs() {
   return new Promise(res => { let r; try { r = indexedDB.open('appraisal-assistant'); } catch (e) { res([]); return; }
@@ -56,11 +56,11 @@ let genieReadT = 0;
 async function refreshGenieStatus() {
   try { if (indexedDB.databases) { const l = await indexedDB.databases(); if (!l.some(d => d.name === 'appraisal-assistant')) return; } } catch (e) {}
   const jobs = await readGenieJobs(); const st = {};
-  jobs.filter(j => j.orderId).sort((a, b) => (a.updated || 0) - (b.updated || 0)).forEach(j => { st[j.orderId] = j.status || { n: ['open this order in the Comp genie once so it can be checked'] }; });
+  jobs.filter(j => j.orderId).sort((a, b) => (a.updated || 0) - (b.updated || 0)).forEach(j => { st[j.orderId] = j.status || { n: ['open this order in OctoSleuth once so it can be checked'] }; });
   GENIE_ST = st; tabMarks(true);
 }
 function needGenie(o) {
-  const s = GENIE_ST[o.id]; if (!s) return ['not started in the Comp genie yet']; return s.n || [];
+  const s = GENIE_ST[o.id]; if (!s) return ['not started in OctoSleuth yet']; return s.n || [];
 }
 function tabMarks(noRead) {
   if (!noRead && Date.now() - genieReadT > 4000) { genieReadT = Date.now(); refreshGenieStatus(); }

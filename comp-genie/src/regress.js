@@ -132,7 +132,7 @@ async function methWhy(J, k) {
   const show = h => { app.mwhy = { job: J.id, k, html: h }; const sc = document.getElementById('supCard'); if (sc) sc.innerHTML = supHTML(J); };
   let mode = ''; try { const o = typeof orderOf === 'function' ? orderOf(J) : null; mode = (o && o.aiUse) || ''; } catch (e) {}
   if (mode === 'No') return show('<p class="warnTxt">This order is set to <b>No AI</b>, so nothing is sent. Change the order’s AI use to Yes or Redacted to ask Claude.</p>');
-  if (!hwKey()) return show('<p class="warnTxt">No Claude key is saved on this computer. Add it in the Appraisal Assistant › Standard wording › AI settings.</p>');
+  if (!hwKey()) return show('<p class="warnTxt">No Claude key is saved on this computer. Add it in the Octopus › Standard wording › AI settings.</p>');
   if (navigator.onLine === false) return show('<p class="warnTxt">No internet – try again when you are online.</p>');
   const L = METH_LINES.find(x => x[0] === k); const D = methData(J)[k] || {}; const S = subjFacts(J);
   const comps = usedComps(J).map(c => { const F = compFacts(c, J); return { comp: c.use, price: F.price, saleMonth: String(F.sale || '').slice(0, 7), livingSf: F.gla, siteSf: F.site, usableAc: F.usableAc, quality: F.q, condition: F.c, view: F.view, yearBuilt: F.year, fullBaths: F.full, garage: F.garage, pool: F.pool, adu: F.adu ? 'yes' : '' }; });

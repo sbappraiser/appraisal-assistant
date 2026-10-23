@@ -1,7 +1,7 @@
 /* =====================================================================
    Automatic backup (Oct 19 2026 – after Chrome's "delete site data when you close all windows" setting erased
-   her orders and the Comp genie on a restart). She picks a folder once (ideally in OneDrive); every day she
-   uses the Appraisal Assistant a backup zip (orders, clients, documents, her lists, Comp genie assignments)
+   her orders and OctoSleuth on a restart). She picks a folder once (ideally in OneDrive); every day she
+   uses the Octopus a backup zip (orders, clients, documents, her lists, OctoSleuth assignments)
    is written there by itself – today's file is replaced as she works, the last 30 days are kept.
    Chrome keeps the folder permission between visits but may ask again after a restart: then the Home page
    shows one button to allow it. When Chrome comes up empty the Home page offers the newest backup.
@@ -71,12 +71,12 @@ async function abRestoreNewest() {
 /* the card on the Home page */
 function abCardHTML() {
   const empty = !letters.some(realOrder);
-  const last = AB.last && AB.last.orders ? `Last backup <b>${h(longDate(AB.last.date))}</b> at ${h(new Date(AB.last.at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }))} – ${AB.last.orders} orders, ${AB.last.docs} documents${AB.last.jobs ? ', ' + AB.last.jobs + ' Comp genie assignments' : ''}` : '';
+  const last = AB.last && AB.last.orders ? `Last backup <b>${h(longDate(AB.last.date))}</b> at ${h(new Date(AB.last.at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }))} – ${AB.last.orders} orders, ${AB.last.docs} documents${AB.last.jobs ? ', ' + AB.last.jobs + ' OctoSleuth assignments' : ''}` : '';
   let body;
   if (!abSupported()) body = `<p class="help">Automatic backup works in Chrome or Edge on a computer. Use <b>Back up</b> at the top instead.</p>`;
   else if (!AB.dir) body = `<p class="help warnTxt"><b>Automatic backup is off.</b> Your orders live only in this browser – if Chrome clears its site data they are gone. Pick a folder once (a folder in <b>OneDrive</b> is best, so it is also off this computer) and a backup is saved there by itself every day you work.</p><div class="row"><button type="button" class="btn primary" id="abChoose">Choose a backup folder…</button></div>`;
   else if (AB.perm !== 'granted') body = `<p class="help warnTxt"><b>Chrome needs your OK to keep backing up</b> to the folder “${h(AB.dir.name)}” (it asks again after a restart).</p><div class="row"><button type="button" class="btn primary" id="abAllow">Allow today’s backup</button><button type="button" class="btn ghost small" id="abChoose">Choose another folder</button></div>${last ? `<p class="help">${last}</p>` : ''}`;
-  else body = `<p class="help"><span class="ck">✓</span> Backing up to the folder <b>“${h(AB.dir.name)}”</b> – saved again about a minute and a half after each change (in the Appraisal Assistant or the Comp genie), the last ${AB_KEEP} days kept; each document is saved once in its “${AB_DOCS}” folder.${AB.busy ? ' Saving now…' : ''}</p>${last ? `<p class="help">${last}</p>` : ''}${AB.err ? `<p class="help warnTxt">The last backup did not save: ${h(AB.err)}</p>` : ''}<div class="row"><button type="button" class="btn small" id="abNow">Back up now</button><button type="button" class="btn ghost small" id="abChoose">Change folder</button></div>`;
+  else body = `<p class="help"><span class="ck">✓</span> Backing up to the folder <b>“${h(AB.dir.name)}”</b> – saved again about a minute and a half after each change (in the Octopus or OctoSleuth), the last ${AB_KEEP} days kept; each document is saved once in its “${AB_DOCS}” folder.${AB.busy ? ' Saving now…' : ''}</p>${last ? `<p class="help">${last}</p>` : ''}${AB.err ? `<p class="help warnTxt">The last backup did not save: ${h(AB.err)}</p>` : ''}<div class="row"><button type="button" class="btn small" id="abNow">Back up now</button><button type="button" class="btn ghost small" id="abChoose">Change folder</button></div>`;
   const rescue = empty ? `<div class="abempty"><p><b>No orders in this browser.</b> If Chrome cleared its data, bring everything back from your newest backup.</p><button type="button" class="btn primary" id="abRestore">Restore from my backup folder…</button> <small class="muted">or use Restore at the top to pick a backup file</small></div>` : '';
   const lock = !abSupported() ? '' : typeof VAULT !== 'undefined' && VAULT.on
     ? `<p class="help"><span class="ck">✓</span> <b>🔒 Password lock on</b> – your backups in this folder are saved scrambled; only your password opens them (keep it in RoboForm).</p><div class="row">${AB.dir ? '<button type="button" class="btn" id="vaultOld">Lock the earlier backups in this folder</button>' : ''}<button type="button" class="btn ghost" id="vaultOff">Turn the lock off</button></div>`
@@ -91,7 +91,7 @@ function abRender() {
   on('vaultOn', vaultTurnOn); on('vaultOld', vaultLockOld); on('vaultOff', async () => { if (!confirm('Turn the password lock off? Backups from now on are saved unlocked; the locked ones stay locked.')) return; await vaultOff(); abRender(); });
 }
 
-/* ---- the Comp genie's own storage (same site, IndexedDB "appraisal-assistant"): assignments and her settings ---- */
+/* ---- OctoSleuth's own storage (same site, IndexedDB "appraisal-assistant"): assignments and her settings ---- */
 const GENIE_SKIP = new Set(['archive', 'cort', 'lastJob']);   // the archive and CORT table are reloaded from their own files
 function genieDB(create) {
   return new Promise(res => { let r; try { r = indexedDB.open('appraisal-assistant', 1); } catch (e) { res(null); return; }

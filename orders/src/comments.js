@@ -5,7 +5,7 @@
    Every comment carries the UAD version it was written for: the OneNote library came from her
    UAD 2.6 reports, so it imports as 2.6 (her rule – 2.6 wording may not fit 3.6).
    Kept in this browser only (kv 'cmt:lib' = {id: item}); in Back up / Restore; never sent anywhere.
-   The Comp genie reads the same list for its "My comments" picker.
+   OctoSleuth reads the same list for its "My comments" picker.
    item: {id, title, section, text, ver: '2.6' | '3.6' | 'both', src, added, edited}
    ===================================================================== */
 let CMT = {}; const CMT_UI = { q: '', sec: '', ver: '', edit: null, open: {}, grp: (() => { try { return localStorage.getItem('aa.cmtGrp') || ''; } catch (e) { return ''; } })() };
@@ -28,7 +28,7 @@ const cmtGroup = x => (CMT_GROUPS.find(([, r]) => r.test(x.section || '')) || ['
 const cmtGrpOrder = g => { const i = CMT_GROUPS.findIndex(([n]) => n === g); return i < 0 ? 99 : i; };
 const CMT_VER = { '2.6': 'UAD 2.6', '3.6': 'UAD 3.6', both: '2.6 and 3.6' };
 async function cmtLoad() { const r = await ODB.get('kv', 'cmt:lib'); CMT = (r && r.v) || {}; }
-async function cmtSave() { await ODB.put('kv', { id: 'cmt:lib', v: CMT }); try { new BroadcastChannel('aa-cmt').postMessage(1); } catch (e) {} }   // the comment boxes (here and in the Comp genie) read the library again
+async function cmtSave() { await ODB.put('kv', { id: 'cmt:lib', v: CMT }); try { new BroadcastChannel('aa-cmt').postMessage(1); } catch (e) {} }   // the comment boxes (here and in OctoSleuth) read the library again
 const cmtId = (sec, title, text) => { let s = 0; const t = (sec + '|' + title + '|' + String(text).slice(0, 60)).toLowerCase(); for (let i = 0; i < t.length; i++) s = (s * 31 + t.charCodeAt(i)) >>> 0; return 'c' + s.toString(36); };
 const cmtDate = /^(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday),\s+[A-Z][a-z]+\s+\d{1,2},\s+\d{4}/;
 /* a page's text as lines (pieces on the same row joined, top to bottom), with paragraph breaks where the gap is wide */

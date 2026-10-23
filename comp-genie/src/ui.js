@@ -1,5 +1,5 @@
 /* =====================================================================
-   Comp Genie – screens
+   OctoSleuth – screens
    ===================================================================== */
 const app = { job: null, jobs: [], sel: null, cort: [], cortByApn: new Map(), cortByKey: new Map(), photoCache: new Map(), busy: '', confirm: null, sugg: [], showAll: false };
 
@@ -18,10 +18,10 @@ async function start() {
   const oq = new URLSearchParams(location.search).get('order');
   const goq = new URLSearchParams(location.search).get('go');   // the order's ④ button: open on that step
   if (new URLSearchParams(location.search).get('embed')) document.body.classList.add('embed');
-  if (POP) document.body.classList.add('popgrid');   // inside the Appraisal Assistant's Comp genie tab
+  if (POP) document.body.classList.add('popgrid');   // inside the Octopus's OctoSleuth tab
   if (CPOP) app.sel = CPOP.id;
   app.home = !POP && !CPOP && !oq && !new URLSearchParams(location.search).get('job');   // her request (Oct 19 2026): open on the list of assignments, not the last one
-  if (oq) { history.replaceState(null, '', location.pathname); const o = app.orders.find(x => x.id === oq); if (o) await jobFromOrder(o); else toast('That order was not found in this browser. Open the Appraisal Assistant in this same browser (Chrome).', 6000); }
+  if (oq) { history.replaceState(null, '', location.pathname); const o = app.orders.find(x => x.id === oq); if (o) await jobFromOrder(o); else toast('That order was not found in this browser. Open the Octopus in this same browser (Chrome).', 6000); }
   if (goq && app.job) genieGo(goq, true);
   if (!app.job && !app.home) await newJob();
   app.jobs.forEach(j => (j.files || []).forEach(f => { if (!f.id) { f.id = uid(); f.legacy = true; } }));
@@ -31,9 +31,9 @@ async function start() {
   await loadPhotos();
   render();
 }
-window.addEventListener('message', async e => {   // the Appraisal Assistant shows its Comp genie tab again: read the orders again (same site only)
+window.addEventListener('message', async e => {   // the Octopus shows its OctoSleuth tab again: read the orders again (same site only)
   if (e.origin === location.origin && e.data && e.data.type === 'aa-order-made') { const j = app.jobs.find(x => x.id === e.data.jobId); if (j) { j.orderId = e.data.orderId; if (!j.fileNo) j.fileNo = e.data.fileNo || ''; await DB.put('jobs', j); }
-    app.orders = await readOrders(); render(); toast('Made the order ' + (e.data.fileNo || '') + ' in the Appraisal Assistant – it is on its Home and All files lists', 6000); return; }
+    app.orders = await readOrders(); render(); toast('Made the order ' + (e.data.fileNo || '') + ' in the Octopus – it is on its Home and All files lists', 6000); return; }
   if (e.origin !== location.origin || !e.data || e.data.type !== 'aa-refresh') return;
   app.orders = await readOrders();
   if (e.data.order && (!app.job || app.job.orderId !== e.data.order || app.home)) { const o = app.orders.find(x => x.id === e.data.order); if (o) { app.home = false; await jobFromOrder(o); await loadPhotos(); } }
@@ -47,7 +47,7 @@ function setCort(rows) {
   app.cort.forEach((r, i) => { const a = apnKey(r.apn); if (a) { if (!app.cortByApn.has(a)) app.cortByApn.set(a, []); app.cortByApn.get(a).push(i); }
     if (r.addr) { const k = addrKey(r.addr); if (!app.cortByKey.has(k)) app.cortByKey.set(k, []); app.cortByKey.get(k).push(i); } });
 }
-/* ---------------- orders from the Appraisal Assistant (same site, same browser) ---------------- */
+/* ---------------- orders from the Octopus (same site, same browser) ---------------- */
 async function readOrders() { // read-only; never creates the orders storage if the assistant was not used in this browser
   try { if (indexedDB.databases) { const l = await indexedDB.databases(); if (!l.some(d => d.name === 'aa-orders')) return []; } } catch (e) {}
   return new Promise(res => {
@@ -59,7 +59,7 @@ async function readOrders() { // read-only; never creates the orders storage if 
   });
 }
 const ORDER_DONE = ['Delivered', 'Paid', 'Cancelled'];
-function readOrderDoc(id) { // one stored document (its file) from the Appraisal Assistant; read-only
+function readOrderDoc(id) { // one stored document (its file) from the Octopus; read-only
   return new Promise(res => { let r; try { r = indexedDB.open('aa-orders'); } catch (e) { res(null); return; }
     r.onupgradeneeded = () => { try { r.transaction.abort(); } catch (e) {} }; r.onerror = () => res(null);
     r.onsuccess = () => { const d = r.result; if (!d.objectStoreNames.contains('docs')) { d.close(); res(null); return; } const q = d.transaction('docs').objectStore('docs').get(id); q.onsuccess = () => { d.close(); res(q.result || null); }; q.onerror = () => { d.close(); res(null); }; }; });
@@ -120,7 +120,7 @@ async function pullMicro(o, quiet) {
     const text = await readText(new File([rec.blob], d.name));
     if (isCrsExport(text)) { parseCrsExport(text).forEach(r => crsRows.push(r)); continue; }   // a CRS Data neighborhood sales list
     parseMlsCsv(text).forEach(r => by.set(r.mls || (r.addr + '|' + by.size), r)); }
-  if (!by.size && !crsRows.length) { if (!quiet) toast('The search file was not found in the Appraisal Assistant'); return ''; }
+  if (!by.size && !crsRows.length) { if (!quiet) toast('The search file was not found in the Octopus'); return ''; }
   const all = [...by.values()].filter(r => !isOutArea(app.job, r)); const rows = all.filter(r => !M.exclude[r.mls]);   // sales she removed as outside her boundaries stay out
   // her note (Oct 20 2026): a CRS sale that is not in the micro search is often in the macro (Market Area Boundary) MLS search – take its MLS data from there
   const macroRows = []; { const ma = o && o.market; const names = ma && ma.file ? String(ma.file).split(' + ').map(x => x.trim()).filter(Boolean) : [];
@@ -172,11 +172,11 @@ async function newJob(name) {
 }
 let saveT = null;
 function save() { clearTimeout(saveT); saveT = setTimeout(saveNow, 300); }
-function jobStatus(J) {   // for the green check on the Appraisal Assistant's Comp genie tab: what the grid pre-check still finds
+function jobStatus(J) {   // for the green check on the Octopus's OctoSleuth tab: what the grid pre-check still finds
   let n; try { n = precheckGrid(J).filter(x => !/outside the adjusted range/.test(x.msg)).map(x => x.msg); } catch (e) { n = ['the grid could not be checked']; }
   return { n, at: Date.now() };
 }
-async function saveNow() { if (!app.job) return; app.job.updated = Date.now(); app.job.status = jobStatus(app.job); try { (window.__aaBC = window.__aaBC || new BroadcastChannel('aa-save')).postMessage('genie'); } catch (e) {}   /* tells the Appraisal Assistant to back up soon (her data folder) */
+async function saveNow() { if (!app.job) return; app.job.updated = Date.now(); app.job.status = jobStatus(app.job); try { (window.__aaBC = window.__aaBC || new BroadcastChannel('aa-save')).postMessage('genie'); } catch (e) {}   /* tells the Octopus to back up soon (her data folder) */
   if (app.job.orderId && window.parent !== window) { try { window.parent.postMessage({ type: 'aa-genie-status', order: app.job.orderId, n: app.job.status.n }, location.origin); } catch (e) {} }
   await DB.put('jobs', app.job); if (!POP && !CPOP) await DB.put('kv', { id: 'lastJob', v: app.job.id }); wbNotify(); if (!POP && !CPOP) { snapMaybe(app.job); myDbAuto(); } }
 
@@ -261,7 +261,7 @@ async function ingest(files) {
     try {
       app.busy = 'Reading ' + f.name + '…'; renderBusy();
       const low = f.name.toLowerCase();
-      if (low.endsWith('.zip')) { const z = await readZip(f); if (z.has('comp-genie.json')) { backupPick(z, f.name); continue; } if (z.has('orders.json')) { notes.push(f.name + ': this Appraisal Assistant backup has no Comp genie assignments in it – try the backup from the day before'); continue; } notes.push(z.has('inspection-backup.json') ? await ingestInspection(z, f.name) : await ingestPhotos(f, z)); }
+      if (low.endsWith('.zip')) { const z = await readZip(f); if (z.has('comp-genie.json')) { backupPick(z, f.name); continue; } if (z.has('orders.json')) { notes.push(f.name + ': this Appraisal Assistant backup has no OctoSleuth assignments in it – try the backup from the day before'); continue; } notes.push(z.has('inspection-backup.json') ? await ingestInspection(z, f.name) : await ingestPhotos(f, z)); }
       else if (low.endsWith('.csv')) {
         const text = await readText(f); const head = text.slice(0, 2000).toLowerCase();
         if (head.includes('listing number')) notes.push(ingestMls(parseMlsCsv(text), f.name));
@@ -274,7 +274,7 @@ async function ingest(files) {
         if (/APN\/Tax ID|CRS Data|Property Report/i.test(first.text)) { const c = crsCanon(parseCRS(await pdfLines(f))); notes.push(ingestCrs(c, f.name)); }
         else if (/flexmls|MLS #/i.test(first.text)) { const L = await pdfLines(f, (n, t) => { if (n % 20 === 0) { app.busy = `Reading the MLS printout… page ${n} of ${t}`; renderBusy(); } }); notes.push(ingestPdf(parseMlsPdf(L), f.name)); }
         else if (!first.text.trim()) notes.push(f.name + ': this is a scan (a picture, no text). If it is a CORT printout, send it to Claude for now to add it to your CORT table.');
-        else notes.push(f.name + ': not a PDF the genie knows (MLS printout or CRS report).');
+        else notes.push(f.name + ': not a PDF OctoSleuth knows (MLS printout or CRS report).');
       } else notes.push(f.name + ': file type not used here');
     } catch (e) { console.error(e); notes.push(f.name + (/^Not changed/.test(e.message || '') ? ': ' : ': could not read – ') + (e.message || e)); }
   }
@@ -351,7 +351,7 @@ async function ingestJson(f) {
     let added = 0; if (Array.isArray(data.myComps) && data.myComps.length) { const rec = await DB.get('kv', 'mycomps'); const list = (rec && rec.v) || []; data.myComps.forEach(r => { const i = list.findIndex(x => x.key === r.key); if (i < 0) { list.push(r); added++; } else if ((r.saved || 0) > (list[i].saved || 0)) list[i] = r; }); await DB.put('kv', { id: 'mycomps', v: list }); }
     return 'Assignment restored: ' + j.name + (added ? ` · ${added} comp${added === 1 ? '' : 's'} added back to your comp database` : '');
   }
-  throw new Error('not a comp archive or a Comp Genie backup');
+  throw new Error('not a comp archive or an OctoSleuth backup');
 }
 function fillSubjectFrom(r) {
   const s = app.job.subject; ['addr', 'city', 'zip', 'apn'].forEach(k => { if (!s[k] && r[k]) s[k] = r[k]; });
@@ -364,21 +364,21 @@ function homeHTML() {
   const orderOfJ = j => (app.orders || []).find(o => o.id === j.orderId) || null;
   const d = t => t ? new Date(t).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '';
   const open = (app.orders || []).filter(o => !ORDER_DONE.includes(o.stage || 'New')).sort((a, b) => String(b.orderDate || '').localeCompare(String(a.orderDate || '')));
-  return `<header class="top"><h1>Comp Genie</h1><span class="pill ver" title="The Comp genie version – after Ctrl+R it should match the one I tell you">Version ${typeof BUILD !== 'undefined' ? BUILD : ''}</span>
+  return `<header class="top"><img class="brandLogo" src="logo-96.png" alt="" width="36" height="36"><h1>OctoSleuth</h1><span class="pill ver" title="OctoSleuth version – after Ctrl+R it should match the one I tell you">Version ${typeof BUILD !== 'undefined' ? BUILD : ''}</span>
     <span class="pill ${ARCH.loaded ? 'ok' : 'warn'}">${ARCH.loaded ? `Archive: ${ARCH.rows.length.toLocaleString()} records` : 'Archive not loaded'}</span>${archPhotoPill()}
     <span class="pill">${app.cort.length ? `CORT: ${app.cort.length} sales` : 'No CORT table'}</span><span class="pill" title="Your land sale and construction cost databases (shared with the cost approach)">${(app.land || []).length ? `Land sales: ${app.land.length}` : 'No land sales'} · ${app.costDb ? `Costs: ${app.costDb.projects.length} projects` : 'No cost database'}</span><span class="grow"></span>
     <button class="btn" data-act="newjob">New assignment</button>
     ${open.length ? `<select data-act="fromorder" aria-label="Start from an order"><option value="">From an order…</option>${open.map(o => `<option value="${o.id}">${esc(orderName(o))}</option>`).join('')}</select>` : ''}</header>
-  ${(() => { const todo = open.filter(o => !app.jobs.some(j => j.orderId === o.id)); return todo.length ? `<section class="card"><h2>Orders not started here yet</h2><p class="muted">Every open order in the Appraisal Assistant. Click <b>Start</b> and its assignment is made from the order (subject, effective date, your Search Criteria search).</p>
+  ${(() => { const todo = open.filter(o => !app.jobs.some(j => j.orderId === o.id)); return todo.length ? `<section class="card"><h2>Orders not started here yet</h2><p class="muted">Every open order in the Octopus. Click <b>Start</b> and its assignment is made from the order (subject, effective date, your Search Criteria search).</p>
     <table class="tbl homelist"><thead><tr><th>Order</th><th>Subject</th><th>Client</th><th>Status</th><th></th></tr></thead><tbody>${todo.map(o => `<tr><td><b>${esc(o.fileNo || '')}</b></td><td>${esc(o.address || '')}</td><td>${esc(((o.clients || [])[0] || {}).company || ((o.clients || [])[0] || {}).name || '')}</td><td>${esc(o.stage || 'New')}</td><td><button class="btn primary" data-act="startorder" data-id="${o.id}">Start</button></td></tr>`).join('')}</tbody></table></section>` : ''; })()}
   <section class="card"><h2>Your assignments</h2>
     ${app.jobs.length ? `<p class="muted">Click one to open it. To go back to this list later, choose <b>All assignments</b> in the Assignment box at the top.</p>
     <table class="tbl homelist"><thead><tr><th>Assignment</th><th>Subject</th><th>Effective date</th><th>Comps</th><th>Order</th><th>Last changed</th></tr></thead><tbody>
     ${app.jobs.map(j => { const o = orderOfJ(j), S = j.subject || {}; const used = (j.comps || []).filter(c => c.use).length;
-      return `<tr data-act="openjob" data-id="${j.id}" tabindex="0" style="cursor:pointer"><td><b>${esc(jobLabel(j))}</b></td><td>${esc([S.addr, S.city].filter(Boolean).join(', '))}</td><td>${esc(S.eff || '')}</td><td>${(j.comps || []).length}${used ? ` (${used} on the grid)` : ''}</td><td>${o ? esc(o.fileNo || '') + (o.stage ? ' · ' + esc(o.stage) : '') : `<button class="btn small" data-act="mkorder" data-id="${j.id}" title="Add this assignment to the Appraisal Assistant as an order">Make it an order</button>`}</td><td>${esc(d(j.updated))}</td></tr>`; }).join('')}
-    </tbody></table>` : '<p>No assignments yet. Click <b>New assignment</b>, or start one <b>From an order</b> in the Appraisal Assistant.</p>'}
+      return `<tr data-act="openjob" data-id="${j.id}" tabindex="0" style="cursor:pointer"><td><b>${esc(jobLabel(j))}</b></td><td>${esc([S.addr, S.city].filter(Boolean).join(', '))}</td><td>${esc(S.eff || '')}</td><td>${(j.comps || []).length}${used ? ` (${used} on the grid)` : ''}</td><td>${o ? esc(o.fileNo || '') + (o.stage ? ' · ' + esc(o.stage) : '') : `<button class="btn small" data-act="mkorder" data-id="${j.id}" title="Add this assignment to the Octopus as an order">Make it an order</button>`}</td><td>${esc(d(j.updated))}</td></tr>`; }).join('')}
+    </tbody></table>` : '<p>No assignments yet. Click <b>New assignment</b>, or start one <b>From an order</b> in the Octopus.</p>'}
   </section>
-  <footer class="foot">Comp Genie · your data stays on this computer · build ${typeof BUILD !== 'undefined' ? BUILD : ''}</footer>`;
+  <footer class="foot">OctoSleuth · your data stays on this computer · build ${typeof BUILD !== 'undefined' ? BUILD : ''}</footer>`;
 }
 /* every redraw keeps her place on the page (her note, Oct 20 2026: saving a comp to her database jumped to the top);
    the few actions that should go to the top (open an assignment, the start page) scroll there themselves after render */
@@ -390,15 +390,15 @@ function render() { const y = window.scrollY; const W = wrapsSave(); rcRun(rende
 function renderPage() {
   const J = app.job; const root = $('#app');
   if (J && !J.gridManual && J.comps.some(c => c.use) && !gridInDateOrder(J)) { gridDateOrder(J); save(); }   // her rule: the grid is in closing-date order unless she numbered it herself
-  if (CPOP) { const c = J && J.comps.find(x => x.id === CPOP.id); root.innerHTML = c ? `<header class="top pop"><h1>Comp Genie</h1><span class="pill">${esc(J.name)}</span><span class="grow"></span><small>stays in step with your other windows</small></header>` + detailHTML(c) : '<p class="help">That comp is no longer in this assignment.</p>'; document.title = (c ? compTitle(c) : 'Comp') + ' · ' + (J ? J.name : ''); fillImages(); return; }
+  if (CPOP) { const c = J && J.comps.find(x => x.id === CPOP.id); root.innerHTML = c ? `<header class="top pop"><img class="brandLogo" src="logo-96.png" alt="" width="36" height="36"><h1>OctoSleuth</h1><span class="pill">${esc(J.name)}</span><span class="grow"></span><small>stays in step with your other windows</small></header>` + detailHTML(c) : '<p class="help">That comp is no longer in this assignment.</p>'; document.title = (c ? compTitle(c) : 'Comp') + ' · ' + (J ? J.name : ''); fillImages(); return; }
   if (typeof DBV !== 'undefined' && DBV) { root.innerHTML = dbViewHTML(); document.title = 'My databases'; return; }
   if (POP) { root.innerHTML = popHTML(J); document.title = `Comps ${POP.from}–${POP.to} · ${J.name}`; wbUndoBar(); return; }
-  if (app.home || !J) { root.innerHTML = homeHTML(); document.title = 'Comp Genie'; return; }
-  document.title = 'Comp Genie · ' + J.name;
+  if (app.home || !J) { root.innerHTML = homeHTML(); document.title = 'OctoSleuth'; return; }
+  document.title = 'OctoSleuth · ' + J.name;
   root.dataset.stage = J.stage || (J.comps.some(c => c.use) ? 'workbook' : J.comps.length ? 'micro' : 'setup');
   const ON = (...st) => st.includes(root.dataset.stage);   /* her ask (Oct 21 2026, "slow to load"): only the step she is on is built – the others were built and hidden on every redraw */
   root.innerHTML = `
-  <header class="top"><h1>${pageName(root.dataset.stage)}</h1><span class="pill ver" title="The Comp genie version – after Ctrl+R it should match the one I tell you">Version ${typeof BUILD !== 'undefined' ? BUILD : ''}</span>
+  <header class="top"><img class="brandLogo" src="logo-96.png" alt="" width="36" height="36"><h1>${pageName(root.dataset.stage)}</h1><span class="pill ver" title="OctoSleuth version – after Ctrl+R it should match the one I tell you">Version ${typeof BUILD !== 'undefined' ? BUILD : ''}</span>
     <span class="pill ${ARCH.loaded ? 'ok' : 'warn'}">${ARCH.loaded ? `Archive: ${ARCH.rows.length.toLocaleString()} records` : 'Archive not loaded'}</span>${archPhotoPill()}
     <span class="pill">${app.cort.length ? `CORT: ${app.cort.length} sales` : 'No CORT table'}</span><span class="pill" title="Your land sale and construction cost databases (shared with the cost approach)">${(app.land || []).length ? `Land sales: ${app.land.length}` : 'No land sales'} · ${app.costDb ? `Costs: ${app.costDb.projects.length} projects` : 'No cost database'}</span>
     <details class="adddb setmenu"><summary class="btn sm" title="Your settings – the look, the grid, how notes show">⚙ Settings</summary><div class="adddbm">
@@ -427,7 +427,7 @@ function renderPage() {
     <label class="jobsel">Assignment <select data-act="pickjob" id="jobpick"><option value="">All assignments (start page)</option>${app.jobs.map(j => `<option value="${j.id}" ${j.id === J.id ? 'selected' : ''}>${esc(jobLabel(j))}</option>`).join('')}</select></label>
     <button class="btn" data-act="newjob">New assignment</button>
     ${(app.orders || []).some(o => !ORDER_DONE.includes(o.stage || 'New')) ? `<select data-act="fromorder" aria-label="Start from an order"><option value="">From an order…</option>${app.orders.filter(o => !ORDER_DONE.includes(o.stage || 'New')).sort((a, b) => String(b.orderDate || '').localeCompare(String(a.orderDate || ''))).map(o => `<option value="${o.id}">${esc(orderName(o))}</option>`).join('')}</select>` : ''}
-    <button class="btn" data-act="backup" title="Save this assignment to a file">Back up</button><button class="btn" data-act="snaps" title="Every assignment is saved here automatically as you work (every 20 minutes, the last 12 kept, plus one a day for 2 weeks) – bring back an earlier version as a copy">Earlier versions…</button><label class="btn" title="Bring back an assignment from your Appraisal Assistant daily backup (.zip) or a Comp genie backup – as a copy, nothing here is changed">Restore from a backup…<input type="file" accept=".zip,.gz,.json" data-act="files" hidden></label>
+    <button class="btn" data-act="backup" title="Save this assignment to a file">Back up</button><button class="btn" data-act="snaps" title="Every assignment is saved here automatically as you work (every 20 minutes, the last 12 kept, plus one a day for 2 weeks) – bring back an earlier version as a copy">Earlier versions…</button><label class="btn" title="Bring back an assignment from your Octopus Appraisal Assistant daily backup (.zip) or an OctoSleuth backup – as a copy, nothing here is changed">Restore from a backup…<input type="file" accept=".zip,.gz,.json" data-act="files" hidden></label>
     ${app.confirm === 'deljob' ? `<span class="confirm">Delete “${esc(J.name)}”? <button class="btn danger solid" data-act="deljob-yes">Delete</button><button class="btn" data-act="cancel">Keep</button></span>` : `<button class="btn danger" data-act="deljob">Delete</button>`}
   </header>
   ${ARCH.loaded ? '' : `<section class="card notice"><b>Load your comp archive${app.jobs.some(j => j.comps.length) ? ' in this browser' : ' once'}.</b> ${app.jobs.some(j => j.comps.length) ? 'Each browser (Chrome, Firefox, Edge) keeps its own copy, and this one has none yet. ' : ''}Drop <i>Comp Archive.json.gz</i> and <i>CORT Sales.csv</i> anywhere on this page (or <label class="link">choose it<input type="file" multiple data-act="files" hidden></label>). It is saved on this computer only; nothing is uploaded.</section>`}
@@ -439,7 +439,7 @@ function renderPage() {
     <div class="addrow"><div class="sugwrap"><input id="addr" class="txt big" placeholder="Type a comp address, e.g. 1181 Glenview" autocomplete="off" data-act="sugg"><div class="sugg" id="sugg"></div></div>
       <button class="btn primary" data-act="add">Add comp</button></div>
     <p class="help">If the address is in your archive, it fills in at once with every version you have. Then drop files to add to it.</p>
-    ${(() => { const o = (app.orders || []).find(x => x.id === J.orderId); const M = orderMicro(o); if (!o) return `<p class="help">This assignment is not an order in the Appraisal Assistant yet. <button class="btn small" data-act="mkorder" data-id="${J.id}">Make it an order</button></p>`; if (!M) return `<p class="help">No Search Criteria search on this order yet. In the Appraisal Assistant, open the order's <b>Market</b> tab and drop it in box 2; it comes in here.</p>`;
+    ${(() => { const o = (app.orders || []).find(x => x.id === J.orderId); const M = orderMicro(o); if (!o) return `<p class="help">This assignment is not an order in the Octopus yet. <button class="btn small" data-act="mkorder" data-id="${J.id}">Make it an order</button></p>`; if (!M) return `<p class="help">No Search Criteria search on this order yet. In the Octopus, open the order's <b>Market</b> tab and drop it in box 2; it comes in here.</p>`;
       return microIn(J, M) ? `<p class="help"><b class="ok">✓</b> Your Search Criteria search from the order's Market tab is in: <b>${esc(M.file)}</b>${Object.keys(M.exclude).length ? ` (${Object.keys(M.exclude).length} listing${Object.keys(M.exclude).length > 1 ? 's' : ''} you unticked there left out)` : ''}. <button class="lnk" data-act="pullmicro">Bring it in again</button></p>`
         : `<div class="row"><button class="btn primary" data-act="pullmicro">Add your Search Criteria search (${M.n} listings)</button><span class="help">from the order's Market tab: ${esc(M.file)}</span></div>`; })()}
     ${crsNeedHTML(J)}${photoNeedHTML(J)}
@@ -465,7 +465,7 @@ function renderPage() {
   <section class="card st st-final" id="preCard">${ON('final') ? precheckHTML(J) : ''}</section>
   <section class="card st st-final" id="exportCard"><h2>Export</h2>${ON('final') ? exportHTML(J) : ''}</section>
   <section class="card st st-final" id="finalCard">${ON('final') ? finalGridHTML(J) : ''}</section>
-  <footer class="foot">Comp Genie · your data stays on this computer · build ${typeof BUILD !== 'undefined' ? BUILD : ''}</footer>`;
+  <footer class="foot">OctoSleuth · your data stays on this computer · build ${typeof BUILD !== 'undefined' ? BUILD : ''}</footer>`;
   if (window.parent !== window && app.job) try { window.parent.postMessage({ type: 'aa-path', order: app.job.orderId || '', steps: pathSteps(app.job).map(x => ({ n: x.n, done: !!x.done })) }, location.origin); } catch (e) {}   // the octopus menu's green ✓ per tentacle
   fillImages(); mapsRender(); { const t = document.querySelector('.top'); if (t) document.documentElement.style.setProperty('--toph', t.offsetHeight + 'px'); }   // the comp's sticky header sits under the top bar
   if (app.nuAsk && app.nuAskShown !== app.nuAsk && typeof nuAskBox === 'function') { app.nuAskShown = app.nuAsk; const id = app.nuAsk; setTimeout(() => nuAskBox(J, id), 0); }
@@ -516,7 +516,7 @@ function subjectHTML(J) {
   const f = (k, l, w = '') => `<label class="fld ${w}"><span>${l}</span><input class="txt" data-subj="${k}" value="${esc(s[k] ?? '')}"></label>`;
   return `<div class="grid6">${f('addr', 'Address', 'w2')}${f('city', 'City')}${f('zip', 'ZIP')}${f('apn', 'APN')}<label class="fld"><span>Effective date</span><input class="txt" data-subj="eff" placeholder="mm/dd/yyyy" value="${esc(showDate(s.eff) || s.eff || '')}"></label>
     ${f('lat', 'Latitude')}${f('lon', 'Longitude')}<label class="fld"><span>Assignment name</span><input class="txt" data-jobname="1" value="${esc(J.name)}"></label></div>
-    <p class="${s.insp ? 'help' : 'help warnTxt'}">${s.insp ? `<b class="ok">✓</b> Your iPad inspection is in: <b>${esc(s.insp.file || 'workfile')}</b>${s.insp.inspDate ? ' (inspected ' + esc(showDate(s.insp.inspDate)) + ')' : ''} – the subject column uses it. Drop a newer Workfile package on this page to replace it.` : 'Your iPad inspection is not in yet: drop its <b>Workfile package</b> (.zip from OneDrive) anywhere on this page, or put it in the order\'s Documents in the Appraisal Assistant. The Full report for SFREP needs it.'}</p>
+    <p class="${s.insp ? 'help' : 'help warnTxt'}">${s.insp ? `<b class="ok">✓</b> Your iPad inspection is in: <b>${esc(s.insp.file || 'workfile')}</b>${s.insp.inspDate ? ' (inspected ' + esc(showDate(s.insp.inspDate)) + ')' : ''} – the subject column uses it. Drop a newer Workfile package on this page to replace it.` : 'Your iPad inspection is not in yet: drop its <b>Workfile package</b> (.zip from OneDrive) anywhere on this page, or put it in the order\'s Documents in the Octopus. The Full report for SFREP needs it.'}</p>
     <p class="help">Latitude and longitude give each comp its distance and direction. Fill them from the subject's CRS report: <label class="link">choose the subject's CRS PDF<input type="file" accept=".pdf" data-act="subjcrs" hidden></label>${inA ? ` · Your archive has ${inA.length} record${inA.length > 1 ? 's' : ''} for this address.` : ''}</p>`;
 }
 /* Closed sales first (newest closing on top), then pending (newest contract), then active listings (newest list date), then everything else */
@@ -561,7 +561,7 @@ function cellHTML(c, f, s, S, using) {
   const on = using.src === s;
   return `<td class="srccell ${on ? 'on' : ''}" data-pick="${s}" data-field="${f.k}" title="Use the ${esc(SRC[s].name)} value">${esc(fmt(f, v))}</td>`;
 }
-/* MLS listing link (her request): a link pattern she sets up once from one of her own MLS listing pages – nothing is fetched by the Comp genie */
+/* MLS listing link (her request): a link pattern she sets up once from one of her own MLS listing pages – nothing is fetched by OctoSleuth */
 let MLSLINK = ''; DB.get('kv', 'mlsLink').then(r => { MLSLINK = (r && r.v) || ''; }).catch(() => {});
 let MLSSTART = 'https://www.flexmls.com/'; DB.get('kv', 'mlsStart').then(r => { if (r && r.v) MLSSTART = r.v; }).catch(() => {});   /* SBMLS (Flex) has no address per listing: open her MLS once, then paste each number */
 async function mlsGo(n) {
@@ -689,7 +689,7 @@ async function exportPhotos() {
 async function backupJob() {
   const my = await DB.get('kv', 'mycomps');   // her comp database rides along in every backup (Oct 20 2026), so it is never only in this browser
   const blob = await gzipBlob(JSON.stringify({ app: 'comp-genie-job', version: 1, job: app.job, myComps: (my && my.v) || [] }));
-  download(blob, safeName(app.job.name) + ' - Comp Genie backup.json.gz');
+  download(blob, safeName(app.job.name) + ' - OctoSleuth backup.json.gz');
 }
 
 /* ---------------- events ---------------- */
@@ -762,7 +762,7 @@ document.addEventListener('click', async e => {
     case 'newjob': app.home = false; await newJob(); await loadPhotos(); render(); break;
     case 'startorder': { const o = (app.orders || []).find(x => x.id === t.dataset.id); if (!o) break; app.home = false; await jobFromOrder(o); await loadPhotos(); render.top = true; render(); window.scrollTo(0, 0); break; }
     case 'mkorder': { const j = app.jobs.find(x => x.id === t.dataset.id); if (!j) break; if (j.orderId && (app.orders || []).some(o => o.id === j.orderId)) { toast('Already an order'); break; }
-      if (window.parent === window) { toast('Open the Appraisal Assistant, click its Comp genie tab, and click Make it an order there – the order is made by the Appraisal Assistant.', 7000); break; }
+      if (window.parent === window) { toast('Open the Octopus, click its OctoSleuth tab, and click Make it an order there – the order is made by the Octopus.', 7000); break; }
       const S = j.subject || {}; t.disabled = true; t.textContent = 'Making the order…';
       window.parent.postMessage({ type: 'aa-make-order', jobId: j.id, name: j.name, fileNo: j.fileNo || '', subject: { addr: S.addr || '', unit: S.unit || '', city: S.city || '', zip: S.zip || '', apn: S.apn || '', lat: S.lat || '', lon: S.lon || '', eff: S.eff || '' } }, location.origin); break; }
     case 'cpop': { const w = window.open(`?pop=comp&id=${encodeURIComponent(t.dataset.id)}&job=${encodeURIComponent(app.job.id)}`, 'genie-comp-' + t.dataset.id, 'width=1100,height=900'); if (!w) toast('Chrome blocked the window – allow pop-ups for this page', 6000); break; }
@@ -961,9 +961,9 @@ if (!CPOP && !POP && WBC) WBC.addEventListener('message', e => { const d = e.dat
       toast('Next comp with flags: ' + compTitle(next) + ' (comp ' + next.use + ') – press Enter to open it', 6000); }
     else { const cc = document.getElementById('compsCard'); if (cc) cc.scrollIntoView({ behavior: 'smooth', block: 'start' }); toast('No more flags on the comps on your grid ✓', 5000); } }, 150); });
 
-/* her Appraisal Assistant daily backup (.zip with comp-genie.json): pick an assignment saved in it and bring it back as a copy – nothing here is overwritten (Oct 20 2026) */
+/* her Octopus Appraisal Assistant daily backup (.zip with comp-genie.json): pick an assignment saved in it and bring it back as a copy – nothing here is overwritten (Oct 20 2026) */
 function backupPick(z, fname) {
-  let g = null; try { g = JSON.parse(new TextDecoder().decode(z.get('comp-genie.json'))); } catch (e) {} if (!g || !Array.isArray(g.jobs) || !g.jobs.length) { toast('That backup has no Comp genie assignments'); return; }
+  let g = null; try { g = JSON.parse(new TextDecoder().decode(z.get('comp-genie.json'))); } catch (e) {} if (!g || !Array.isArray(g.jobs) || !g.jobs.length) { toast('That backup has no OctoSleuth assignments'); return; }
   const when = t => t ? new Date(t).toLocaleString([], { month: 'numeric', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' }) : '';
   const JL = g.jobs.slice().sort((a, b) => (b.updated || 0) - (a.updated || 0)); const rows = JL.map((j, ix) => { const cs = j.comps || []; return `<tr><td><b>${esc(j.name)}</b><br><small>${esc((j.subject || {}).addr || '')}</small></td><td>${esc(when(j.created))}</td><td>${esc(when(j.updated))}</td><td class="r">${cs.length}</td><td class="r">${cs.filter(c => c.use).length}</td><td class="r">${cs.filter(c => c.src && c.src.crs && !c.src.crs.fromList).length}</td><td><button class="btn sm primary" data-bkrestore="${ix}">Bring back as a copy</button></td></tr>`; }).join('');
   const bg = document.createElement('div'); bg.className = 'sheetbg';
@@ -1009,11 +1009,11 @@ function pathSteps(J) { const U = usedComps(J), G = G0(J), R = R0(J), o = (app.o
     { n: '5', k: 'cost', l: 'Cost approach', sub: costOn ? 'land · cost new · depreciation' : 'not developed', st: 'cost', sel: '#costCard', done: T(() => !costOn || !!(costCalc(J) || {}).ind), todo: 'finish the cost approach' },
     { n: '6', k: 'inc', l: 'Income approach', sub: incOn ? (rentS ? 'rent schedule · GRM' : 'rent survey · GRM') : rentS ? 'rent schedule (1007)' : 'not developed (only with a rent survey)', st: 'income', sel: '#incomeCard', done: T(() => (!incOn || !!(incomeJob(J).value || (incomeCalc(J) || {}).ind)) && (!rentS || !rsCheck(J).some(x => x.sev === 'Must fix'))), todo: 'finish the income approach' },
     { n: '7', k: 'rec', l: 'Reconciliation', sub: 'value from each approach', st: 'recon', sel: '#reportCard', done: !blank(rptOpinion(J)) && !!String(R.reconNote || '').trim(), todo: 'opinion of value and the reconciliation comment' },
-    { n: '8', k: 'out', l: 'Review and export', sub: 'review genie · pre-check · SFREP', st: 'final', sel: '#reviewCard', done: !!J.exportedAt, todo: 'run the pre-check and export to SFREP' },
+    { n: '8', k: 'out', l: 'Review and export', sub: 'review · pre-check · SFREP', st: 'final', sel: '#reviewCard', done: !!J.exportedAt, todo: 'run the pre-check and export to SFREP' },
     { n: '9', k: 'exh', l: 'Exhibits and photos', sub: 'maps · photos', st: 'exhibits', sel: '#mapCard', done: T(() => U.length > 0 && U.every(c => c.front)), todo: 'a front photo for each comp' }]; }
 function stageBarHTML(J) { const st = J.stage || (J.comps.some(c => c.use) ? 'workbook' : 'micro'); const P = pathSteps(J); const cur = app.pathAt && P.find(x => x.k === app.pathAt && x.st === st) ? app.pathAt : (P.find(x => x.st === st) || {}).k;
   const left = P.filter(x => !x.done);
-  return `<nav class="steps path">${P.map(x => x.href ? `<a class="stepb${x.done ? ' done' : ''}" href="${x.href}" target="_top" title="${esc(x.sub)} – in the Appraisal Assistant"><b><span class="pn">${x.n}</span>${x.l}${x.done ? '<i class="pck">✓</i>' : ''}</b><small>${esc(x.sub)}</small></a>`
+  return `<nav class="steps path">${P.map(x => x.href ? `<a class="stepb${x.done ? ' done' : ''}" href="${x.href}" target="_top" title="${esc(x.sub)} – in the Octopus"><b><span class="pn">${x.n}</span>${x.l}${x.done ? '<i class="pck">✓</i>' : ''}</b><small>${esc(x.sub)}</small></a>`
       : x.href === null && x.k === 'market' ? '' : `<button class="stepb${x.k === cur ? ' on' : ''}${x.done ? ' done' : ''}" data-act="path" data-p="${x.k}"><b><span class="pn">${x.n}</span>${x.l}${x.done ? '<i class="pck">✓</i>' : ''}</b><small>${esc(x.sub)}</small></button>`).join('')}</nav>
   ${left.length ? `<p class="stilltodo"><b>Still to do:</b> ${left.map(x => `<a href="#" data-act="path" data-p="${x.k}"><span class="pn sm">${x.n}</span> ${esc(x.todo)}</a>`).join(' · ')}</p>` : '<p class="stilltodo done"><b>✓ Every step is complete.</b></p>'}`; }
 
@@ -1061,7 +1061,7 @@ window.addEventListener('resize', () => { wbFit(); hbarSync(); });
 document.addEventListener('scroll', e => { if (e.target !== document && e.target !== HB && e.target.classList && !e.target.classList.contains('tablewrap')) hbarSync(); }, { capture: true, passive: true });
 
 /* ---- her ask (Oct 20 2026): a sale outside her neighborhood boundaries comes out of the grid, Comps considered and the Market tab's
-   macro and micro searches. It is saved to her comp database first. The genie leaves a note for the Appraisal Assistant (aa-orders kv
+   macro and micro searches. It is saved to her comp database first. OctoSleuth leaves a note for the Octopus (aa-orders kv
    'genieExcl:<order>'); the hub unticks the sale on both searches the next time the order's Market tab is shown. ---- */
 const outKey = r => ({ mls: String(r.mls || '').trim(), apn: apnKey(r.apn || '') || '', addr: r.addr ? addrKey(r.addr) : '' });
 function isOutArea(J, r) { const L = (J && J.outArea) || []; if (!L.length) return false; const k = outKey(r);
@@ -1081,7 +1081,7 @@ async function outOfArea(J, cid) {
   if (app.sel === cid) app.sel = null; WB.cur = null;
   let noted = false; if (J.orderId) { const old = (await readOrderKv('genieExcl:' + J.orderId)) || {}; const list = [...((old.v && old.v.items) || old.items || []), ...items]; noted = await writeOrderKv('genieExcl:' + J.orderId, { items: list, at: new Date().toISOString() }); }
   save(); render();
-  toast(`${base.label}: saved to your comp database and removed – outside your boundaries.` + (noted ? ' The Market tab unticks it in the macro and micro searches.' : J.orderId ? '' : ' (This assignment has no order in the Appraisal Assistant, so there is no Market tab to change.)'), 8000);
+  toast(`${base.label}: saved to your comp database and removed – outside your boundaries.` + (noted ? ' The Market tab unticks it in the macro and micro searches.' : J.orderId ? '' : ' (This assignment has no order in the Octopus, so there is no Market tab to change.)'), 8000);
 }
 /* Ctrl+Z on the grid (in a box or not) asks first */
 function wbRemoveAsk(J, cid) {
@@ -1115,7 +1115,7 @@ function inspCardHTML(J) { const I = J.subject.insp;
 function genieGo(k, quiet) { const x = pathSteps(app.job).find(y => y.k === k); if (!x || !x.st) return; app.pathAt = k; app.job.stage = x.st; app.home = false; save();
   if (quiet) return; render.top = true; render(); setTimeout(() => { const c = document.querySelector(x.sel); if (c) c.scrollIntoView({ block: 'start' }); }, 150); }
 
-/* her note Oct 22 2026: "Comp genie" is the help for the four sections that use data, databases and comparables (3 Market, 4 Sales comparison,
-   5 Cost, 6 Income). The subject, final reconciliation, review and exhibits are tentacles of the Appraisal Assistant, not the Comp genie. */
-const PAGE_NAMES = { setup: '2 · Subject property', micro: '3 · Market <small>Comp genie</small>', workbook: '4 · Sales comparison <small>Comp genie</small>', cost: '5 · Cost approach <small>Comp genie</small>', income: '6 · Income approach <small>Comp genie</small>', recon: '7 · Final reconciliation', final: '8 · Review and wrap-up', exhibits: '9 · Exhibits' };
-const pageName = st => PAGE_NAMES[st] || 'Comp Genie';
+/* her note Oct 22 2026: "OctoSleuth" is the help for the four sections that use data, databases and comparables (3 Market, 4 Sales comparison,
+   5 Cost, 6 Income). The subject, final reconciliation, review and exhibits are tentacles of the Octopus, not OctoSleuth. */
+const PAGE_NAMES = { setup: '2 · Subject property', micro: '3 · Market <small>OctoSleuth</small>', workbook: '4 · Sales comparison <small>OctoSleuth</small>', cost: '5 · Cost approach <small>OctoSleuth</small>', income: '6 · Income approach <small>OctoSleuth</small>', recon: '7 · Final reconciliation', final: '8 · Review and wrap-up', exhibits: '9 · Exhibits' };
+const pageName = st => PAGE_NAMES[st] || 'OctoSleuth';
