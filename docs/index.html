@@ -879,6 +879,11 @@ nav.tabs button[aria-selected="true"] { background: var(--look-navy) !important;
       <li>Invoices and payments are part of each order, so <b>Back up</b> keeps them.</li></ol></details>
     </section>
     <section class="hgroup" data-hg="2"><h3>2 · Subject</h3><p class="help">At the property: the iPad walk-through (photos, dictation, sketch). Back at the office: Subject details – legal and rights, site, improvements, contract and history, highest and best use, approaches, assumptions and conditions.</p>
+    <details><summary>Quick or Complex inspection (Octopus Mobile)</summary><ol>
+      <li>The first question of each inspection is <b>Inspection type</b>: <b>Quick</b> (tract house, condo) or <b>Complex</b> (Montecito, custom homes). You can switch at any time; nothing you answered is lost.</li>
+      <li><b>Quick</b> hides the questions you marked "Complex only": driveway features, topography detail, well use, landscaped area and features, walks, number of water heaters, water storage tanks, solar cost, stair shape and railing, and the interview confirmations.</li>
+      <li>Some sections start with one yes/no question and show the rest only on Yes: accessible attic, landscaping you want to describe, recreation and outdoor living, did you see the water heater, other mechanical or water systems, solar, other energy items, smart home and security, and remodels. A No on solar fills UAD Renewable energy = None; a No on other energy items fills certifications and ratings = None.</li>
+      <li>Questions you marked "Never" (street features, laundry, horse stalls, attic observed, loft access, en suite, closets, repair estimate source and date) are no longer asked. To change any of these choices, tell Claude.</li></ol></details>
     <details><summary>Walk-through on the iPad (photo, talk and sketch together)</summary><ol>
       <li>Update first: open the inspection app from its Home Screen icon, swipe it closed, open it again. The start screen shows <b>6w</b> (or later) at the bottom.</li>
       <li>Tap an inspection (or <b>Start inspection</b> on an order) to open it. <b>🚶 Walk-through</b> is the first tab in the black bar, left of 🎤 Dictate.</li>
@@ -1181,7 +1186,7 @@ nav.tabs button[aria-selected="true"] { background: var(--look-navy) !important;
 </div>
 <div id="toast" role="status" hidden></div>
 <script>
-const BUILD='o1-1023-0502';
+const BUILD='o1-1023-1451';
 const G = (() => {
 /* ---------------- small helpers ---------------- */
 const $ = (s, r = document) => r.querySelector(s);
