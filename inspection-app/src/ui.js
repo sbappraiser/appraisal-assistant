@@ -2,7 +2,7 @@
 const app = { ins: null, tab: 'property', open: new Set(), groups: {}, cur: null, confirm: null, saving: null, ovrOpen: null, appl: null, missIdx: 0, undo: null };
 const EXTRA_TABS = [{ id: 'photos', title: 'Photos' }, { id: 'summaries', title: 'Summaries' }, { id: 'attention', title: 'Needs Attention' }, { id: 'export', title: 'Save & Export' }];
 const tabShown = (sec, ins) => !sec.showTab || !!sec.showTab(ins || app.ins);
-const ALL_TABS_FULL = () => [{ id: 'walk', title: '🚶 Walk-through' }, { id: 'dictate', title: '🎤 Dictate' }, ...SECTIONS.filter(s => tabShown(s)).map(s => ({ id: s.id, title: s.title })), ...EXTRA_TABS];
+const ALL_TABS_FULL = () => [{ id: 'overview', title: '▦ Buttons' }, { id: 'walk', title: '🚶 Walk-through' }, { id: 'dictate', title: '🎤 Dictate' }, ...SECTIONS.filter(s => tabShown(s)).map(s => ({ id: s.id, title: s.title })), ...EXTRA_TABS];
 const ALL_TABS = () => { const T = ALL_TABS_FULL(); if (typeof dkWalk !== 'function' || !dkWalk()) return T;   // walk-through mode (6r)
   const keep = new Set(['walk', 'dictate', 'photos', 'attention', app.tab]); return [...T.filter(t => keep.has(t.id)), { id: 'alltabs', title: '☰ All tabs' }]; };
 const CAM_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>';
@@ -56,6 +56,8 @@ async function renderHome() {
     ${hcBtn()}<button class="icon-btn" id="storeBtn">Storage check</button><label class="icon-btn" style="position:relative;overflow:hidden">Restore backup<input id="restoreFile" type="file" accept=".zip,application/zip" style="position:absolute;inset:0;opacity:0"></label></div></header>
   <main>
     ${(navigator.standalone || matchMedia('(display-mode: standalone)').matches) ? '' : '<p class="warn-box">You are in Safari. Inspections made here are kept separately from the Home Screen app – use the Home Screen icon for real work.</p>'}
+    <div class="hbig"><button class="hbig-b primary" id="bigNew"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v9M7.5 12h9"/></svg><b>New inspection</b><small>From an order sent from the Octopus, or start blank</small></button>
+      <label class="hbig-b"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7.5h6l2 2h10v9.5H3z"/><path d="M3 7.5V5h6l2 2.5"/></svg><b>Open existing</b><small>Below, or import a Workfile or orders file from OneDrive</small><input id="bigOpen" type="file" accept=".zip,.json,application/zip,application/json"></label></div>
     ${await homeList(all)}
     ${!DB.persistent ? '<p class="warn-box">This browser is not letting the app save to the iPad. Open the app from its Home Screen icon so inspections are kept.</p>' : ''}
     <p class="app-ver">Version ${typeof BUILD !== 'undefined' ? esc(BUILD) : '?'}</p>
@@ -77,6 +79,7 @@ async function renderHome() {
   root.querySelectorAll('[data-ostart]').forEach(b => b.onclick = () => startFromOrder(b.dataset.ostart));
   root.querySelectorAll('[data-oclear]').forEach(b => b.onclick = async () => { if (!b.dataset.armed) { b.dataset.armed = 1; b.textContent = 'Tap again to clear the list'; return; } await clearOrders(); toast('Orders list cleared (your inspections are kept)'); renderHome(); });
   $('#storeBtn').onclick = storageCheck;
+  { const bn = $('#bigNew'); if (bn) bn.onclick = () => { const f = $('#newForm'); if (f) { f.hidden = false; f.scrollIntoView({ behavior: 'smooth', block: 'center' }); setTimeout(() => $('#nAddr') && $('#nAddr').focus(), 300); } }; const bo = $('#bigOpen'); if (bo) bo.onchange = e => { const f = e.target.files[0]; if (f) loadOrdersFile(f); }; }
   root.querySelectorAll('[data-backup]').forEach(b => b.onclick = async () => {
     const ins = all.find(x => x.id === b.dataset.backup); if (!ins) return;
     app.ins = ins; try { await doExport('workfile', b); } finally { app.ins = null; }
@@ -157,17 +160,20 @@ async function openInspection(id, tab) {
 }
 async function openInspection2(id, tab) {
   const ins = normalize(await DB.get('inspections', id)); app.ins = ins;
-  app.tab = (tab && (SECTIONS.some(x => x.id === tab) || EXTRA_TABS.some(x => x.id === tab) || tab === 'walk' || tab === 'dictate')) ? tab : 'property';
+  app.tab = (tab && (SECTIONS.some(x => x.id === tab) || EXTRA_TABS.some(x => x.id === tab) || tab === 'walk' || tab === 'dictate' || tab === 'overview' || String(tab).startsWith('b:'))) ? tab : 'overview';
   if (typeof wkResolvePending === 'function' && wkResolvePending(ins)) { ins.updated = Date.now(); try { await DB.put('inspections', JSON.parse(JSON.stringify(ins))); } catch (e) {} } app.open = new Set(); app.groups = {}; app.cur = null; app.confirm = null; app.appl = null;
   const root = $('#app');
   root.innerHTML = `<header class="bar"><div class="bar-row">
-      <button class="icon-btn" id="homeBtn" aria-label="All inspections">‹ All</button>
+      <button class="icon-btn" id="homeBtn" aria-label="Home – all inspections">‹ Home</button>
       <div class="title"><b id="tTitle"></b> <i class="tent" title="Tentacle 2 of the Octopus – the subject">2 · Subject</i><span id="tAddr"></span></div>
       <span class="saved" id="saved">Saved ✓</span>
       <button class="icon-btn" id="saveBtn">Save</button>
+      <button class="icon-btn" id="ovWalk" aria-label="Walk-through">🚶<span class="bl"> Walk-through</span></button>
+      <button class="icon-btn" id="ovDict" aria-label="Dictate">🎤<span class="bl"> Dictate</span></button>
+      <button class="icon-btn" id="ovBtns" aria-label="All buttons">▦<span class="bl"> Buttons</span></button>
       <button class="icon-btn" id="jumpBtn" aria-label="Search">🔍<span class="bl"> Search</span></button>
       <button class="icon-btn sk-btn" id="sketchBtn" aria-label="Sketch">✏️<span class="bl"> OctoSketch</span></button>
-      ${hcBtn()}
+      ${hcBtn()}<button class="icon-btn" id="insStore">Storage check</button>
       <button class="attn-pill" id="attnPill"></button></div>
     <nav class="tabs" id="tabs" role="tablist"></nav></header>
   <main id="main"></main>`;
@@ -176,6 +182,8 @@ async function openInspection2(id, tab) {
   $('#jumpBtn').onclick = openJump;
   $('#sketchBtn').onclick = async () => { const b = $('#sketchBtn'); b.textContent = 'Saving…'; const url = 'sketch.html?ins=' + encodeURIComponent(app.ins.id) + '&tab=' + encodeURIComponent(app.tab || 'interior'); try { await saveNow(); } catch (e) {} app.leaving = true; clearTimeout(app.saving); DB.close(); b.textContent = 'Opening…'; location.href = url; };
   $('#attnPill').onclick = () => goTab('attention');
+  $('#insStore').onclick = storageCheck;
+  $('#ovWalk').onclick = () => goTab('walk'); $('#ovDict').onclick = () => goTab('dictate'); $('#ovBtns').onclick = () => { goTab('overview'); window.scrollTo(0, 0); };
   renderTab();
 }
 function refreshChrome() {
@@ -187,6 +195,7 @@ function refreshChrome() {
   const byTab = {}; issues.forEach(x => { if (x.sev === 'Required' || x.sev === 'Photo') byTab[x.tab] = (byTab[x.tab] || 0) + 1; });
   $('#tabs').innerHTML = ALL_TABS().map(t => `<button class="tab" role="tab" aria-selected="${t.id === app.tab}" data-tab="${t.id}">${esc(t.title)}${byTab[t.id] ? `<span class="dot">${byTab[t.id]}</span>` : (SECTIONS.some(s => s.id === t.id) ? '<span class="dot done">✓</span>' : '')}</button>`).join('');
   $('#tabs').querySelectorAll('[data-tab]').forEach(b => b.onclick = () => goTab(b.dataset.tab));
+  { const hide = !app.classic && (app.tab === 'overview' || String(app.tab).startsWith('b:')); $('#tabs').hidden = hide; $('#tabs').style.display = hide ? 'none' : ''; }
   const sel = $('#tabs [aria-selected="true"]');
   if (sel) { const nav = $('#tabs'); nav.scrollLeft = sel.offsetLeft - nav.clientWidth / 2 + sel.offsetWidth / 2; }
 }
@@ -209,9 +218,9 @@ function scrollToEl(id) {
 
 /* Subsection (group) open state, per tab */
 function groupIssues(sec, g, ins = app.ins) { return computeIssues(ins).filter(x => !ins.overrides[x.key] && x.tab === sec.id && x.group === g.id && (x.sev === 'Required' || x.sev === 'Photo')); }
-function ensureGroups(sec) {
-  if (app.groups[sec.id]) return app.groups[sec.id];
-  const set = new Set(); const vis = sec.groups.filter(g => groupShown(g, sec, app.ins));
+function ensureGroups(sec, only) {
+  if (app.groups[sec.id]) { const S = app.groups[sec.id]; if (only && ![...S].some(id => only.includes(id))) { const f = sec.groups.find(g => only.includes(g.id) && groupShown(g, sec, app.ins)); if (f) { S.add(f.id); app.cur = f.id; } } return S; }
+  const set = new Set(); const vis = sec.groups.filter(g => groupShown(g, sec, app.ins) && (!only || only.includes(g.id)));
   const first = vis[0]; // first visit to a tab: start at its first subsection
   if (first) { set.add(first.id); app.cur = first.id; }
   app.groups[sec.id] = set; return set;
@@ -226,13 +235,15 @@ function renderTab2() {
   const y = window.scrollY; refreshChrome(); const main = $('#main');
   const sec = SECTIONS.find(s => s.id === app.tab);
   if (sec) main.innerHTML = legend() + renderSection(sec) + extraPhotos(sec);
+  else if (app.tab === 'overview') main.innerHTML = renderOverview();
+  else if (String(app.tab).startsWith('b:')) main.innerHTML = renderOvButton(app.tab.slice(2));
   else if (app.tab === 'dictate') main.innerHTML = renderDictate();
   else if (app.tab === 'walk') main.innerHTML = renderWalk();
   else if (app.tab === 'photos') main.innerHTML = renderGallery();
   else if (app.tab === 'summaries') main.innerHTML = renderSummaries();
   else if (app.tab === 'attention') main.innerHTML = renderAttention();
   else if (app.tab === 'export') main.innerHTML = renderExport();
-  bind(main); if (app.tab === 'dictate') bindDictate(main); if (app.tab === 'walk') { bindWalk(main); setTimeout(wkMicState, 0); } fillThumbs(main); window.scrollTo(0, y);
+  bind(main); if (app.tab === 'overview' || String(app.tab).startsWith('b:')) bindOverview(main); if (app.tab === 'dictate') bindDictate(main); if (app.tab === 'walk') { bindWalk(main); setTimeout(wkMicState, 0); } fillThumbs(main); window.scrollTo(0, y);
   returnBar();
   syncBar();
 }
@@ -316,9 +327,9 @@ function openJump() {
 }
 
 /* ---------------- Sections ---------------- */
-function renderSection(sec) {
-  const ins = app.ins; const openSet = ensureGroups(sec);
-  const vis = sec.groups.filter(g => groupShown(g, sec, ins));
+function renderSection(sec, only) {
+  const ins = app.ins; const openSet = ensureGroups(sec, only);
+  const vis = sec.groups.filter(g => groupShown(g, sec, ins) && (!only || only.includes(g.id)));
   return vis.map((g, gi) => {
     const open = openSet.has(g.id); const miss = groupIssues(sec, g).length;
     const n = g.list ? ins.lists[g.list].length : 0;
@@ -333,7 +344,7 @@ function renderSection(sec) {
       body = `${fieldsHtml ? `<div class="fields two">${fieldsHtml}</div>` : ''}${showList ? renderList(g.list) : ''}
         <div class="gfoot"><button class="btn donecheck" data-donegroup="${g.id}" data-next="${next ? next.id : ''}"><span class="gcheck sm ${green ? 'on' : ''}" aria-hidden="true">✓</span><span>Done with ${esc(g.title)}</span></button></div>`;
     }
-    return `<section class="group ${open ? 'open' : 'closed'} ${app.cur === g.id && open ? 'current' : ''}" id="grp-${g.id}">
+    return `<section data-secid="${sec.id}" class="group ${open ? 'open' : 'closed'} ${app.cur === g.id && open ? 'current' : ''}" id="grp-${g.id}">
       <div class="ghead-row"><button class="gcheck ${green ? 'on' : ''}" data-check="${g.id}" aria-pressed="${green}" aria-label="${green ? 'Reviewed' : 'Mark reviewed'}">✓</button><button class="ghead" data-group="${g.id}" aria-expanded="${open}"><span class="chev">${open ? '▾' : '▸'}</span><span class="gtitle">${esc(g.title)}</span>${g.list ? `<span class="count">${n} added</span>` : ''}${status}</button></div>
       ${body}</section>`;
   }).join('');
@@ -701,25 +712,25 @@ function itemOf(el) { return app.ins.lists[el.dataset.list].find(x => x.id === e
 function bind(root) {
   const nm = $('#nextMiss'); if (nm) nm.onclick = nextMissing;
   root.querySelectorAll('[data-group]').forEach(b => b.onclick = () => {
-    const sec = SECTIONS.find(s => s.id === app.tab); const set = ensureGroups(sec); const id = b.dataset.group;
+    const sec = secOfEl(b); const set = ensureGroups(sec); const id = b.dataset.group;
     if (set.has(id)) set.delete(id); else { set.add(id); app.cur = id; }
     saveNow(); renderTab(); if (set.has(id)) scrollToEl('grp-' + id);
   });
   root.querySelectorAll('[data-check]').forEach(b => b.onclick = () => {
-    const ins = app.ins; ins.reviewed = ins.reviewed || {}; const k = app.tab + ':' + b.dataset.check;
-    const sec = SECTIONS.find(s => s.id === app.tab); const g = sec.groups.find(x => x.id === b.dataset.check); const miss = groupIssues(sec, g).length;
+    const ins = app.ins; ins.reviewed = ins.reviewed || {}; const sec = secOfEl(b); const k = sec.id + ':' + b.dataset.check; const g = sec.groups.find(x => x.id === b.dataset.check); const miss = groupIssues(sec, g).length;
     if (ins.reviewed[k] && !miss) delete ins.reviewed[k]; else ins.reviewed[k] = true;
     if (miss) toast(`${miss} item${miss > 1 ? 's' : ''} still missing – the check turns green when ${miss > 1 ? 'they are' : 'it is'} filled`);
     save(); renderTab();
   });
   root.querySelectorAll('[data-donegroup]').forEach(b => b.onclick = () => {
-    const mark = b.querySelector('.gcheck'); const miss = groupIssues(SECTIONS.find(s => s.id === app.tab), SECTIONS.find(s => s.id === app.tab).groups.find(x => x.id === b.dataset.donegroup)).length;
+    const mark = b.querySelector('.gcheck'); const miss = groupIssues(secOfEl(b), secOfEl(b).groups.find(x => x.id === b.dataset.donegroup)).length;
     if (mark && !miss) mark.classList.add('on'); b.disabled = true;
     setTimeout(() => doneGroup(b), miss ? 0 : 280);
   });
   function doneGroup(b) {
-    const sec = SECTIONS.find(s => s.id === app.tab); const set = ensureGroups(sec);
-    set.delete(b.dataset.donegroup); app.ins.reviewed = app.ins.reviewed || {}; app.ins.reviewed[app.tab + ':' + b.dataset.donegroup] = true; saveNow();
+    const sec = secOfEl(b); const set = ensureGroups(sec);
+    set.delete(b.dataset.donegroup); app.ins.reviewed = app.ins.reviewed || {}; app.ins.reviewed[sec.id + ':' + b.dataset.donegroup] = true; saveNow();
+    if (String(app.tab).startsWith('b:') && !b.dataset.next) { toast('Done with ' + ((ovBtn(app.tab.slice(2)) || {}).t || 'this button')); goTab('overview'); window.scrollTo(0, 0); return; }
     if (b.dataset.next) { set.add(b.dataset.next); app.cur = b.dataset.next; renderTab(); scrollToEl('grp-' + b.dataset.next); }
     else { const i = SECTIONS.findIndex(s => s.id === app.tab); goTab(SECTIONS[i + 1] ? SECTIONS[i + 1].id : 'attention'); }
   }

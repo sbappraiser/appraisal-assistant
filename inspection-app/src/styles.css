@@ -411,3 +411,31 @@ input.txt:focus, select.txt:focus, textarea.txt:focus { background: #fff4b0 !imp
 /* her octopus logo (Oct 22 2026) */
 .brandLogo { width: 32px; height: 32px; border-radius: 7px; vertical-align: middle; margin-right: 8px; flex: none; }
 .bar .title { display: flex; align-items: center; flex-wrap: wrap; }
+
+/* ===== the button page and home buttons (her layout, Oct 23 2026) ===== */
+.ov { display: grid; gap: 18px; padding-bottom: 30px; }
+.ov-lead { margin: 4px 0 0; color: #4f5b6e; }
+.ov-group h2 { margin: 0 0 10px; font-size: 1.2rem; color: #1f3f66; }
+.ov-group h2 small { font-weight: 400; font-size: .8rem; color: #4f5b6e; }
+.ov-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 12px; }
+.ov-tile { position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px; min-height: 140px; padding: 18px 10px 12px; background: #fff; border: 2px solid #cfe3d6; border-radius: 14px; font: inherit; color: #14213a; cursor: pointer; text-align: center; -webkit-appearance: none; appearance: none; }
+.ov-tile.miss { border-color: #e7b3ae; }
+.ov-tile.off { background: #eef1f5; border: 2px dashed #b8c1ce; color: #5d6776; cursor: default; }
+.ov-tile.add { border-style: dashed; border-color: #1f3f66; }
+.ov-tile svg { width: 44px; height: 44px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.ov-tile b { font-size: 1.05rem; line-height: 1.2; }
+.ov-tile small { font-size: .82rem; color: #4f5b6e; }
+.ov-tile.miss small { color: #9b2019; }
+.ov-badge, .ov-ok { position: absolute; top: 8px; right: 8px; min-width: 28px; height: 28px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-weight: 700; color: #fff; padding: 0 7px; box-sizing: border-box; }
+.ov-badge { background: #b3261e; } .ov-ok { background: #1f7a45; }
+.ov-tile:focus-visible { outline: 3px solid #c9a400; outline-offset: 2px; }
+.ov-classic { margin: 6px 0 0; }
+.ov-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 4px 0 10px; }
+.ov-head h2 { flex: 1; margin: 0; display: flex; align-items: center; gap: 8px; color: #1f3f66; font-size: 1.3rem; }
+.ov-head h2 svg { width: 30px; height: 30px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.hbig { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; margin: 8px 0 18px; }
+.hbig-b { position: relative; overflow: hidden; display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 22px 16px; min-height: 160px; border-radius: 16px; border: 2px solid #1f3f66; background: #fff; color: #1f3f66; font: inherit; cursor: pointer; text-align: center; -webkit-appearance: none; appearance: none; }
+.hbig-b.primary { background: #1f3f66; color: #fff; }
+.hbig-b svg { width: 52px; height: 52px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.hbig-b b { font-size: 1.4rem; } .hbig-b small { font-size: .9rem; opacity: .85; }
+.hbig-b input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }

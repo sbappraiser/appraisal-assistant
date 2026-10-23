@@ -1,0 +1,97 @@
+/* =====================================================================
+   The button page (her layout, Oct 23 2026 – mockup "Octopus Mobile Sections Page").
+   Opening an inspection shows buttons by what she is looking for; tapping one slides in
+   its questions (the same groups and fields as the tabs – every answer keeps ONE home).
+   The walk-through keeps her own order. Classic tabs stay one tap away.
+   ===================================================================== */
+const OV_ICON = {
+  setup: '<path d="M4 7h10M18 7h2M4 12h4M12 12h8M4 17h12"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="17" r="2"/>',
+  project: '<rect x="5" y="3" width="14" height="18"/><path d="M8.5 7h2M13.5 7h2M8.5 11h2M13.5 11h2M8.5 15h2M13.5 15h2M10.5 21v-3h3v3"/>',
+  street: '<path d="M7 21 10 3M17 21 14 3M12 6v2M12 11v2M12 16v2"/>',
+  driveway: '<path d="M5 21 9 9h6l4 12"/><path d="M8.5 13h7"/><rect x="9" y="3" width="6" height="4" rx="1"/>',
+  site: '<path d="M3 18.5 8 16l8 3 5-2.5V5L16 7.5 8 4.5 3 7z"/><path d="M8 4.5v11.5M16 7.5V19"/>',
+  pool: '<path d="M3 15.5c1.5 0 1.5-1 3-1s1.5 1 3 1 1.5-1 3-1 1.5 1 3 1 1.5-1 3-1 1.5 1 3 1M3 19.5c1.5 0 1.5-1 3-1s1.5 1 3 1 1.5-1 3-1 1.5 1 3 1 1.5-1 3-1 1.5 1 3 1"/><path d="M8 13V5.5a1.8 1.8 0 0 1 3.6 0M16 13V5.5a1.8 1.8 0 0 0-3.6 0M8 8.5h8"/>',
+  front: '<path d="M3 11 12 4l9 7"/><rect x="5.5" y="10" width="13" height="10"/><rect x="10.3" y="14" width="3.4" height="6"/><rect x="7" y="12.5" width="2.2" height="2.2"/><rect x="14.8" y="12.5" width="2.2" height="2.2"/>',
+  interior: '<path d="M5 12V9.5A2.5 2.5 0 0 1 7.5 7h9A2.5 2.5 0 0 1 19 9.5V12"/><path d="M3.5 12.5a1.5 1.5 0 0 1 3 0V15h11v-2.5a1.5 1.5 0 0 1 3 0V18h-17z"/><path d="M5.5 18v2M18.5 18v2"/>',
+  systems: '<circle cx="12" cy="12" r="3"/><path d="M12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M5.6 18.4l1.8-1.8M16.6 7.4l1.8-1.8"/>',
+  energy: '<path d="M5 19c0-8 5-13 14-14-1 9-6 14-14 14Z"/><path d="M5 19 13 11"/><path d="m12 7-2 4h3l-2 4"/>',
+  disaster: '<ellipse cx="12" cy="4.6" rx="9" ry="2.1"/><path d="M3.8 7.6C5.5 9.6 18 9.9 20 7.7"/><path d="M5.4 10.6C7.2 12.4 16.8 12.5 18.4 10.5"/><path d="M7.4 13.4C8.9 14.9 15.6 14.9 16.8 13.3"/><path d="M9.2 16C10.3 17.2 14.4 17.2 15.3 15.9"/><path d="M10.8 18.3C11.5 19 13.3 19 13.9 18.2"/><path d="M12.6 19.4C12.8 20.6 12 21.5 10.4 22.2"/>',
+  garage: '<path d="M5 16.5V12l1.8-4.6A1.5 1.5 0 0 1 8.2 6.5h7.6a1.5 1.5 0 0 1 1.4.9L19 12v4.5z"/><path d="M5 12h14"/><path d="M6 16.5V19M18 16.5V19"/><circle cx="8.3" cy="14.3" r="0.9"/><circle cx="15.7" cy="14.3" r="0.9"/>',
+  defects: '<path d="M12 4 21 19.5H3z"/><path d="M12 10v4.5M12 17v.3"/>',
+  wrapup: '<circle cx="12" cy="10" r="6"/><path d="m9.3 10 1.9 1.9L15 8.2"/><path d="M8.5 15 7 21l5-2.5 5 2.5-1.5-6"/>',
+  adu: '<path d="M2.5 13 8 8.5l5.5 4.5V20h-11z"/><path d="M13.5 15 17.5 11.5 21.5 15v5h-8"/><path d="M6.5 20v-3h3v3"/>',
+  outb: '<path d="M3 12 10 6l7 6"/><path d="M5 11v8h10v-8"/><path d="M19.5 19v-5"/><circle cx="19.5" cy="11.5" r="2.6"/><path d="M8 19v-3.5h4V19"/>',
+  add: '<circle cx="12" cy="12" r="8.5"/><path d="M12 8v8M8 12h8"/>',
+  sketch: '<path d="M4 20V4h9"/><path d="M4 20h16v-9"/><path d="m11 13 7.5-7.5a1.8 1.8 0 0 1 2.5 2.5L13.5 15.5 10 16.5z"/>',
+  photos: '<path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>',
+  interview: '<path d="M4 5h11v8H9l-4 3v-3H4z"/><path d="M15 9h5v7h-1v3l-3.5-3H11v-3"/>',
+  permit: '<path d="M6 3h9l4 4v14H6z"/><path d="M14.5 3v4.5H19"/><circle cx="12" cy="14" r="3.2"/><path d="m10.6 14 1 1 1.8-1.9"/>',
+  attention: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5v5.5M12 16.2v.3"/>',
+  desktop: '<rect x="3" y="4" width="18" height="12" rx="1.5"/><path d="M9 20h6M12 16v4M12 7v5.5M9.5 10l2.5 2.5 2.5-2.5"/>',
+};
+/* each button: the groups it shows ([section, [group ids] | null = the whole section]) */
+const OV_BTNS = [
+  { id: 'setup', grp: 'Assignment', t: 'Report setup', icon: 'setup', sub: 'Type · buildings · Quick/Complex', parts: [['property', ['assign', 'ptype']]] },
+  { id: 'hoa', grp: 'Assignment', t: 'HOA / Project', icon: 'project', parts: [['project', null]], show: ins => tabShown(SECTIONS.find(s => s.id === 'project'), ins), off: 'Appears for condo, PUD or co-op' },
+  { id: 'street', grp: 'Inspection', t: 'Street', icon: 'street', parts: [['street', null]] },
+  { id: 'drive', grp: 'Inspection', t: 'Driveway', icon: 'driveway', parts: [['driveway', null]] },
+  { id: 'site', grp: 'Inspection', t: 'Site, topography & view', icon: 'site', sub: 'Hazards · utilities', parts: [['site', null]] },
+  { id: 'outdoor', grp: 'Inspection', t: 'Landscaping & outdoor living', icon: 'pool', sub: 'Pool · spa · courts', parts: [['amenities', null]] },
+  { id: 'ext', grp: 'Main dwelling', t: 'Exterior', icon: 'front', sub: 'Rear & side photos too', parts: [['front', null], ['exterior', null]] },
+  { id: 'int', grp: 'Main dwelling', t: 'Interior', icon: 'interior', sub: 'Smoke & CO · attic', parts: [['interior', null]] },
+  { id: 'sys', grp: 'Main dwelling', t: 'Systems & features', icon: 'systems', sub: 'Heating · cooling · water heater · smart home', parts: [['systems', ['hvac', 'wh', 'mech', 'smart']]] },
+  { id: 'energy', grp: 'Main dwelling', t: 'Green & energy efficiency', icon: 'energy', sub: 'Solar · battery · ratings', parts: [['systems', ['energy']]] },
+  { id: 'disaster', grp: 'Main dwelling', t: 'Disaster mitigation', icon: 'disaster', sub: 'Water heater strapping · retrofit', parts: [['interview', ['disaster']], ['systems', ['wh']]] },
+  { id: 'garage', grp: 'Main dwelling', t: 'Garage & parking', icon: 'garage', parts: [['garage', null]] },
+  { id: 'defects', grp: 'Main dwelling', t: 'Defects', icon: 'defects', parts: [['defects', null]] },
+  { id: 'qc', grp: 'Main dwelling', t: 'Quality & condition', icon: 'wrapup', sub: 'Functional obsolescence · notes', parts: [['condition', null]] },
+  { id: 'adu', grp: 'Other buildings', t: 'ADUs', icon: 'adu', parts: [['buildings', ['adu']]], count: ins => ins.lists.adus.length },
+  { id: 'outb', grp: 'Other buildings', t: 'Outbuildings', icon: 'outb', parts: [['buildings', ['outb']]], count: ins => ins.lists.outbuildings.length },
+  { id: 'sketch', grp: 'Other', t: 'OctoSketch', icon: 'sketch', act: 'sketch' },
+  { id: 'photos', grp: 'Other', t: 'Photos', icon: 'photos', tab: 'photos' },
+  { id: 'interview', grp: 'Other', t: 'Interview', icon: 'interview', sub: 'Remodels · EAs · sale & rent', parts: [['interview', ['updates', 'sysConf', 'utilConf', 'ea', 'confirm']]] },
+  { id: 'permits', grp: 'Other', t: 'Permits & public records', icon: 'permit', sub: 'From the order', parts: [['property', ['crs', 'pubrec']]] },
+  { id: 'attention', grp: 'Other', t: 'Needs attention', icon: 'attention', tab: 'attention' },
+  { id: 'desktop', grp: 'Other', t: 'Send to desktop', icon: 'desktop', sub: 'Summaries · export', tab: 'export' },
+];
+const OV_GROUPS = ['Assignment', 'Inspection', 'Main dwelling', 'Other buildings', 'Other'];
+const ovBtn = id => OV_BTNS.find(b => b.id === id);
+const ovIn = (b, x) => (b.parts || []).some(([s, g]) => x.tab === s && (!g || g.includes(x.group)));
+function ovMissing(b, issues) {
+  if (b.tab === 'attention') return issues.length;
+  if (b.tab === 'photos') return issues.filter(x => x.photo).length;
+  if (b.act === 'sketch') return issues.filter(x => /^sk/.test(x.key)).length;
+  return issues.filter(x => ovIn(b, x)).length;
+}
+function ovSketchSf(ins) { const T = ins.sketch && ins.sketch.totals; return T && T.agFin ? T.agFin.toLocaleString() + ' sq ft' : ''; }
+function renderOverview() {
+  const ins = app.ins; const issues = computeIssues(ins).filter(x => !ins.overrides[x.key] && (x.sev === 'Required' || x.sev === 'Photo'));
+  const P = ins.data.property || {};
+  const tile = b => { const shown = !b.show || b.show(ins); const miss = shown ? ovMissing(b, issues) : 0;
+    const n = b.count ? b.count(ins) : null; const title = b.t + (n !== null ? ` (${n})` : '');
+    const sub = !shown ? b.off : b.act === 'sketch' ? (ovSketchSf(ins) || 'Not drawn yet') : n === 0 ? 'None yet – tap Add a building' : (b.sub || '');
+    const st = !shown ? '' : miss ? `<span class="ov-badge" aria-label="${miss} missing">${miss}</span>` : (b.tab === 'photos' || b.tab === 'export' || b.act || n === 0) ? '' : '<span class="ov-ok" aria-label="Complete">✓</span>';
+    return `<button class="ov-tile${shown ? '' : ' off'}${miss ? ' miss' : ''}" data-ov="${b.id}"${shown ? '' : ' disabled'}>${st}<svg viewBox="0 0 24 24" aria-hidden="true">${OV_ICON[b.icon]}</svg><b>${esc(title)}</b><small>${esc(shown ? (miss ? miss + ' missing' + (sub ? ' · ' + sub : '') : sub) : sub)}</small></button>`; };
+  const add = `<button class="ov-tile add" data-ovadd="1"><svg viewBox="0 0 24 24" aria-hidden="true">${OV_ICON.add}</svg><b>Add a building</b><small>ADU · outbuilding</small></button>`;
+  const type = [P.legal && P.legal !== 'None' ? P.legal : (P.pud ? 'PUD' : 'Single family'), P.attach, P.mode].filter(Boolean).join(' · ');
+  return `<div class="ov"><p class="ov-lead">Tap a button and its questions slide in. ${esc(type)}. The 🚶 walk-through keeps your own order.</p>
+    ${OV_GROUPS.map(g => `<section class="ov-group"><h2>${esc(g)}${g === 'Assignment' ? ' <small>answer first – it sets up the rest</small>' : ''}</h2><div class="ov-grid">${OV_BTNS.filter(b => b.grp === g).map(tile).join('')}${g === 'Other buildings' ? add : ''}</div></section>`).join('')}
+    <p class="ov-classic"><button class="btn sm" data-ovclassic="1">Show the classic tabs</button></p></div>`;
+}
+function renderOvButton(id) {
+  const b = ovBtn(id); if (!b || !b.parts) return renderOverview();
+  const i = OV_BTNS.indexOf(b); const next = OV_BTNS.slice(i + 1).find(x => x.parts && (!x.show || x.show(app.ins)));
+  const body = b.parts.map(([s, g]) => { const sec = SECTIONS.find(x => x.id === s); return sec ? renderSection(sec, g) + (!g ? extraPhotos(sec) : '') : ''; }).join('');
+  return `<div class="ov-head"><button class="btn" data-ovback="1">‹ All buttons</button><h2><svg viewBox="0 0 24 24" aria-hidden="true">${OV_ICON[b.icon]}</svg>${esc(b.t)}</h2>${next ? `<button class="btn" data-ov="${next.id}">Next: ${esc(next.t)} ›</button>` : ''}</div>${legend()}${body}`;
+}
+function bindOverview(root) {
+  root.querySelectorAll('[data-ov]').forEach(el => el.onclick = () => { const b = ovBtn(el.dataset.ov); if (!b) return;
+    if (b.act === 'sketch') { const s = document.getElementById('sketchBtn'); if (s) s.click(); return; }
+    if (b.tab) { goTab(b.tab); return; }
+    goTab('b:' + b.id); window.scrollTo(0, 0); });
+  root.querySelectorAll('[data-ovback]').forEach(el => el.onclick = () => { goTab('overview'); window.scrollTo(0, 0); });
+  root.querySelectorAll('[data-ovclassic]').forEach(el => el.onclick = () => { app.classic = true; goTab('property'); });
+  root.querySelectorAll('[data-ovadd]').forEach(el => el.onclick = () => { goTab('b:adu'); window.scrollTo(0, 0); toast('Add an ADU here, or tap Next for outbuildings'); });
+}
+/* the section a group button belongs to (a button page shows groups from several sections) */
+function secOfEl(el) { const s = el.closest && el.closest('[data-secid]'); return SECTIONS.find(x => x.id === (s ? s.dataset.secid : app.tab)); }

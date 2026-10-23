@@ -2,7 +2,7 @@ import pathlib
 src=pathlib.Path('src'); out=pathlib.Path('dist'); out.mkdir(exist_ok=True)
 css=(src/'styles.css').read_text()+'\n'+(src/'walk.css').read_text()
 BUILD='6x-'+__import__('time').strftime('%m%d-%H%M')
-js='const BUILD='+repr(BUILD)+';\n'+'\n'.join((src/f).read_text() for f in ['enums.js','schema.js','core.js','crs.js','permits.js','summary.js','cmt36data.js','ui.js','dictate.js','walkcore.js','walk.js','xsdorder.js','export.js','helpwrite.js','main.js'])
+js='const BUILD='+repr(BUILD)+';\n'+'\n'.join((src/f).read_text() for f in ['enums.js','schema.js','core.js','crs.js','permits.js','summary.js','cmt36data.js','ui.js','overview.js','dictate.js','walkcore.js','walk.js','xsdorder.js','export.js','helpwrite.js','main.js'])
 t=(src/'template.html').read_text().replace('/*CSS*/',css).replace('/*JS*/',js)
 # artifact preview: page content only
 (out/'preview.html').write_text(t.replace('<!--PWA-->',''))
