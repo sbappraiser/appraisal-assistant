@@ -303,7 +303,7 @@ function buildComment(ins, target) {
   if (ins.finals[target.id] !== undefined && ins.finals[target.id] !== null) {
     const t = ins.finals[target.id]; return { text: t, dropped: [], edited: true, over: t.length > target.lim };
   }
-  const gen = (GEN[target.id] ? GEN[target.id](ins) : []).filter(Boolean).filter(x => x.t && x.t !== '.');
+  const gen = (GEN[target.id] ? GEN[target.id](ins) : []).concat(typeof cwGen === 'function' ? cwGen(ins, target.id) : []).filter(Boolean).filter(x => x.t && x.t !== '.');
   const user = (ins.comments[target.id] || '').trim();
   let keep = gen.map((g, i) => ({ ...g, i }));
   const join = arr => [arr.map(x => x.t).join(' '), user].filter(Boolean).join(' ');

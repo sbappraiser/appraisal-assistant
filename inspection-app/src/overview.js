@@ -74,7 +74,8 @@ function renderOverview() {
     return `<button class="ov-tile${shown ? '' : ' off'}${miss ? ' miss' : ''}" data-ov="${b.id}"${shown ? '' : ' disabled'}>${st}<svg viewBox="0 0 24 24" aria-hidden="true">${OV_ICON[b.icon]}</svg><b>${esc(title)}</b><small>${esc(shown ? (miss ? miss + ' missing' + (sub ? ' · ' + sub : '') : sub) : sub)}</small></button>`; };
   const add = `<button class="ov-tile add" data-ovadd="1"><svg viewBox="0 0 24 24" aria-hidden="true">${OV_ICON.add}</svg><b>Add a building</b><small>ADU · outbuilding</small></button>`;
   const type = [P.legal && P.legal !== 'None' ? P.legal : (P.pud ? 'PUD' : 'Single family'), P.attach, P.mode].filter(Boolean).join(' · ');
-  return `<div class="ov"><p class="ov-lead">Tap a button and its questions slide in. ${esc(type)}. The 🚶 walk-through keeps your own order.</p>
+  const cwb = `<button class="ov-cw" data-ovcw="1"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="13" cy="4" r="2"/><path d="m9 21 2-6 2 2v4M7 12l2-4 4 1 3 3M11 15l-2-3"/></svg><span><b>Complex walk</b><small>${P.mode === 'Complex' ? 'For this large property – tap what you see as you walk' : 'For large properties – street, driveway, then go anywhere'}</small></span></button>`;
+  return `<div class="ov">${cwb}<p class="ov-lead">Tap a button and its questions slide in. ${esc(type)}. The 🚶 walk-through keeps your own order.</p>
     ${OV_GROUPS.map(g => `<section class="ov-group"><h2>${esc(g)}${g === 'Assignment' ? ' <small>answer first – it sets up the rest</small>' : ''}</h2><div class="ov-grid">${OV_BTNS.filter(b => b.grp === g).map(tile).join('')}${g === 'Other buildings' ? add : ''}</div></section>`).join('')}
     <p class="ov-classic"><button class="btn sm" data-ovclassic="1">Show the classic tabs</button></p></div>`;
 }
@@ -90,6 +91,7 @@ function bindOverview(root) {
     if (b.tab) { goTab(b.tab); return; }
     goTab('b:' + b.id); window.scrollTo(0, 0); });
   root.querySelectorAll('[data-ovback]').forEach(el => el.onclick = () => { goTab('overview'); window.scrollTo(0, 0); });
+  root.querySelectorAll('[data-ovcw]').forEach(el => el.onclick = () => { goTab('cw'); window.scrollTo(0, 0); });
   root.querySelectorAll('[data-ovclassic]').forEach(el => el.onclick = () => { app.classic = true; goTab('property'); });
   root.querySelectorAll('[data-ovadd]').forEach(el => el.onclick = () => { goTab('b:adu'); window.scrollTo(0, 0); toast('Add an ADU here, or tap Next for outbuildings'); });
 }

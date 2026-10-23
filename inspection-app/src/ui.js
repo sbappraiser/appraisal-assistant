@@ -2,7 +2,7 @@
 const app = { ins: null, tab: 'property', open: new Set(), groups: {}, cur: null, confirm: null, saving: null, ovrOpen: null, appl: null, missIdx: 0, undo: null };
 const EXTRA_TABS = [{ id: 'photos', title: 'Photos' }, { id: 'summaries', title: 'Summaries' }, { id: 'attention', title: 'Needs Attention' }, { id: 'export', title: 'Save & Export' }];
 const tabShown = (sec, ins) => !sec.showTab || !!sec.showTab(ins || app.ins);
-const ALL_TABS_FULL = () => [{ id: 'overview', title: '▦ Buttons' }, { id: 'walk', title: '🚶 Walk-through' }, { id: 'dictate', title: '🎤 Dictate' }, ...SECTIONS.filter(s => tabShown(s)).map(s => ({ id: s.id, title: s.title })), ...EXTRA_TABS];
+const ALL_TABS_FULL = () => [{ id: 'overview', title: '▦ Buttons' }, { id: 'cw', title: 'Complex walk' }, { id: 'walk', title: '🚶 Walk-through' }, { id: 'dictate', title: '🎤 Dictate' }, ...SECTIONS.filter(s => tabShown(s)).map(s => ({ id: s.id, title: s.title })), ...EXTRA_TABS];
 const ALL_TABS = () => { const T = ALL_TABS_FULL(); if (typeof dkWalk !== 'function' || !dkWalk()) return T;   // walk-through mode (6r)
   const keep = new Set(['walk', 'dictate', 'photos', 'attention', app.tab]); return [...T.filter(t => keep.has(t.id)), { id: 'alltabs', title: '☰ All tabs' }]; };
 const CAM_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>';
@@ -160,7 +160,7 @@ async function openInspection(id, tab) {
 }
 async function openInspection2(id, tab) {
   const ins = normalize(await DB.get('inspections', id)); app.ins = ins;
-  app.tab = (tab && (SECTIONS.some(x => x.id === tab) || EXTRA_TABS.some(x => x.id === tab) || tab === 'walk' || tab === 'dictate' || tab === 'overview' || String(tab).startsWith('b:'))) ? tab : 'overview';
+  app.tab = (tab && (SECTIONS.some(x => x.id === tab) || EXTRA_TABS.some(x => x.id === tab) || tab === 'walk' || tab === 'dictate' || tab === 'overview' || tab === 'cw' || String(tab).startsWith('b:'))) ? tab : (((ins.data.property || {}).mode === 'Complex') ? 'cw' : 'overview');
   if (typeof wkResolvePending === 'function' && wkResolvePending(ins)) { ins.updated = Date.now(); try { await DB.put('inspections', JSON.parse(JSON.stringify(ins))); } catch (e) {} } app.open = new Set(); app.groups = {}; app.cur = null; app.confirm = null; app.appl = null;
   const root = $('#app');
   root.innerHTML = `<header class="bar"><div class="bar-row">
@@ -195,7 +195,7 @@ function refreshChrome() {
   const byTab = {}; issues.forEach(x => { if (x.sev === 'Required' || x.sev === 'Photo') byTab[x.tab] = (byTab[x.tab] || 0) + 1; });
   $('#tabs').innerHTML = ALL_TABS().map(t => `<button class="tab" role="tab" aria-selected="${t.id === app.tab}" data-tab="${t.id}">${esc(t.title)}${byTab[t.id] ? `<span class="dot">${byTab[t.id]}</span>` : (SECTIONS.some(s => s.id === t.id) ? '<span class="dot done">✓</span>' : '')}</button>`).join('');
   $('#tabs').querySelectorAll('[data-tab]').forEach(b => b.onclick = () => goTab(b.dataset.tab));
-  { const hide = !app.classic && (app.tab === 'overview' || String(app.tab).startsWith('b:')); $('#tabs').hidden = hide; $('#tabs').style.display = hide ? 'none' : ''; }
+  { const hide = !app.classic && (app.tab === 'overview' || app.tab === 'cw' || String(app.tab).startsWith('b:')); $('#tabs').hidden = hide; $('#tabs').style.display = hide ? 'none' : ''; }
   const sel = $('#tabs [aria-selected="true"]');
   if (sel) { const nav = $('#tabs'); nav.scrollLeft = sel.offsetLeft - nav.clientWidth / 2 + sel.offsetWidth / 2; }
 }
@@ -236,6 +236,7 @@ function renderTab2() {
   const sec = SECTIONS.find(s => s.id === app.tab);
   if (sec) main.innerHTML = legend() + renderSection(sec) + extraPhotos(sec);
   else if (app.tab === 'overview') main.innerHTML = renderOverview();
+  else if (app.tab === 'cw') main.innerHTML = renderCW();
   else if (String(app.tab).startsWith('b:')) main.innerHTML = renderOvButton(app.tab.slice(2));
   else if (app.tab === 'dictate') main.innerHTML = renderDictate();
   else if (app.tab === 'walk') main.innerHTML = renderWalk();
@@ -243,7 +244,7 @@ function renderTab2() {
   else if (app.tab === 'summaries') main.innerHTML = renderSummaries();
   else if (app.tab === 'attention') main.innerHTML = renderAttention();
   else if (app.tab === 'export') main.innerHTML = renderExport();
-  bind(main); if (app.tab === 'overview' || String(app.tab).startsWith('b:')) bindOverview(main); if (app.tab === 'dictate') bindDictate(main); if (app.tab === 'walk') { bindWalk(main); setTimeout(wkMicState, 0); } fillThumbs(main); window.scrollTo(0, y);
+  bind(main); if (app.tab === 'overview' || String(app.tab).startsWith('b:')) bindOverview(main); if (app.tab === 'cw') bindCW(main); if (app.tab === 'dictate') bindDictate(main); if (app.tab === 'walk') { bindWalk(main); setTimeout(wkMicState, 0); } fillThumbs(main); window.scrollTo(0, y);
   returnBar();
   syncBar();
 }
@@ -773,7 +774,7 @@ function bind(root) {
   root.querySelectorAll('input[type=file][data-slot]').forEach(inp => inp.onchange = async () => {
     const slot = JSON.parse(inp.dataset.slot); const files = [...inp.files]; if (!files.length) return;
     toast(files.length > 1 ? `Adding ${files.length} photos…` : 'Adding photo…');
-    try { for (const file of files) await addPhoto(app.ins, slot, file); await saveNow(); toast(files.length > 1 ? files.length + ' photos saved' : 'Photo saved: ' + app.ins.photos[app.ins.photos.length - 1].label); }
+    try { for (const file of files) { const m = await addPhoto(app.ins, slot, file); if (slot.cw && typeof cwAiLabel === 'function') cwAiLabel(m); } await saveNow(); toast(files.length > 1 ? files.length + ' photos saved' : 'Photo saved: ' + app.ins.photos[app.ins.photos.length - 1].label); }
     catch (e) { toast('Could not save that photo. Try again.'); }
     renderTab();
   });
