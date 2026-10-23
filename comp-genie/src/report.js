@@ -133,7 +133,7 @@ function reportHTML(J, part) {   // part: 'early' (Assignment, scope and site â€
       <label class="fld"><span>All rights included in the appraisal?</span>${yn('allRights', true)}</label>
       <label class="fld"><span>Rights not included <small class="muted">(only sent when the answer above is No; 540 characters)</small></span><textarea class="txt" rows="2" maxlength="540" data-rpt="rightsNot" placeholder="${esc(F.rightsNot || 'e.g. Oil, gas and mineral rights below 500 feet, reserved in a prior deed')}">${esc(R.rightsNot || '')}</textarea>${F.rightsNot && R.allRights !== 'false' ? '<small class="muted">The order has a reservation from the deed. If those rights are not part of what you appraised, answer No above.</small>' : ''}</label>
       ${R.allRights === 'false' ? `<label class="fld"><span>Kind of rights not included</span>${sel('rightsType', RIGHTS_TYPES, rightsGuess(rv(J, 'rightsNot')), 'from the description')}</label>${R.rightsType === 'Other' ? `<label class="fld"><span>Describe (33 characters)</span>${inp('rightsOther', 'e.g. Geothermal rights')}</label>` : ''}` : ''}
-      ${rv(J, 'allRights') !== 'false' ? fx('Mineral rights leased?', yn('minLeased', false), 'only asked when the mineral rights are part of what you appraise') : ''}
+      ${rv(J, 'allRights') !== 'false' && String(rv(J, 'sowGov')) === 'true' ? fx('Mineral rights leased?', yn('minLeased', false), 'only asked when the mineral rights are part of what you appraise') : ''}
       ${fx('Construction stage', selA('constr', 'PROPERTY_DETAIL/ConstructionStatusType', 'Complete'))}</section>
     <section><h3>Site</h3>
       <label class="fld"><span>Zoning code</span>${inp('zone', 'e.g. E-3', '8em')}</label>
@@ -461,7 +461,7 @@ function t2XML(J, R, SUBJ, VR, child, add, set, path, doc, NS) { const v = k => 
     if (v('encrDir')) set(e, 'EncroachmentDirectionType', v('encrDir')); if (v('encrImpact')) set(e, 'ValueMarketabilityImpactType', v('encrImpact')); if (v('encrDesc')) set(e, 'EncroachmentDescription', v('encrDesc').slice(0, 140)); });
   const PD = child(SUBJ, 'PROPERTY_DETAIL');
   if ((v('constr') && v('constr') !== 'Complete') || ((PD.getElementsByTagName('NewConstructionIndicator')[0] || {}).textContent === 'true')) set(PD, 'ConstructionStatusType', v('constr') || 'Complete');   // Fannie's D-1 samples leave it out for an existing home; SFREP showed 'Complete' red (Oct 22 2026)
-  if (rv(J, 'allRights') !== 'false') set(PD, 'MineralRightsLeasedIndicator', v('minLeased') || 'false');
+  if (rv(J, 'allRights') !== 'false' && String(rv(J, 'sowGov')) === 'true') set(PD, 'MineralRightsLeasedIndicator', v('minLeased') || 'false');   // 3.029 is for FHA / VA / USDA only (Fannie's samples leave it out; SFREP showed it red, Oct 22 2026)
   if (v('nonArmsNote')) set(path(SUBJ, 'SALES_CONTRACTS', 'SALES_CONTRACT', 'SALES_CONTRACT_DETAIL'), 'NonArmsLengthCommentText', v('nonArmsNote').slice(0, 1250));
   if ((v('listedYear') || X.listedYear) === 'true') { const LD = path(SUBJ, 'LISTING_INFORMATIONS', 'LISTING_INFORMATION', 'LISTING_INFORMATION_DETAIL'); const d = k => { const x = isoDate(v(k)); return x || null; }, amt = k => { const n = num(v(k).replace(/[$,\s]/g, '')); return blank(n) ? null : Math.round(n); };
     set(LD, 'ListingType', v('lstType') || 'MLS'); if (v('lstType') === 'Other') set(LD, 'ListingTypeOtherDescription', v('lstTypeOther').slice(0, 45)); set(LD, 'ListingStatusType', v('lstStatus') || null); set(LD, 'ListingIdentifier', v('lstId').slice(0, 45) || null);
