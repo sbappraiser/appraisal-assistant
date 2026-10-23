@@ -570,7 +570,7 @@ function dictParse(text, ins) {
   // a field she filled implies the yes/no above it (garage features → has a garage); then drop anything the tab would not show
   const has = re => [...changes.values()].some(c => c.room === undefined && re.test(c.key));
   if (has(/^garage\.(garAttach|garFinish|garFeat|garSpaces|garConverted)$/)) put('garage.hasGarage', true);
-  if (has(/^interior\.attic(Obs|Access|Finish|Ceil)$/)) put('interior.attic', true);
+  if (has(/^interior\.attic(Obs|Access|Finish|Ceil)$/)) { put('interior.atticAcc', true); put('interior.attic', true); }
   if (has(/^driveway\./)) put('driveway.hasDrive', true);
   if (has(/^interview\.addDesc$/) && !(ins && ins.data.interview && ins.data.interview.addPermit)) put('interview.addPermit', 'Unknown');   // she checks the permits; Unknown until then
   const fakeIns = ins || { data: {}, lists: {} };
@@ -624,7 +624,7 @@ function dkPhotoSlot(ins, tg, make) {
   if (!tg) return null;
   if (tg.kind === 'field') { const sec = SECTIONS.find(x => x.id === tg.sec); const fs = []; sec.groups.forEach(g => g.fields.forEach(f => { if (f.t === 'photo' && (f.k === tg.base || (f.k.startsWith(tg.base) && /^\d+$/.test(f.k.slice(tg.base.length))))) fs.push(f); }));
     if (!fs.length) return null; const d = ins.data[tg.sec] || {}; const f = fs.find(x => !photosInSlot(ins, { sec: tg.sec, field: x.k }).length) || fs[fs.length - 1];
-    if (make) { if (tg.sec === 'garage' && d.hasGarage === undefined) d.hasGarage = true; if (tg.sec === 'driveway' && d.hasDrive === undefined) d.hasDrive = true; if (f.k === 'photoAttic' && d.attic === undefined) d.attic = true; }
+    if (make) { if (tg.sec === 'garage' && d.hasGarage === undefined) d.hasGarage = true; if (tg.sec === 'driveway' && d.hasDrive === undefined) d.hasDrive = true; if (f.k === 'photoAttic' && d.atticAcc === undefined) { d.atticAcc = true; d.attic = true; d._atticAuto = true; } }
     let req = false; try { req = typeof f.req === 'function' ? !!f.req(d, ins) : !!f.req; } catch (e) {}
     return { sec: tg.sec, field: f.k, label: f.l, cat: f.cat, required: req }; }
   let key, it;

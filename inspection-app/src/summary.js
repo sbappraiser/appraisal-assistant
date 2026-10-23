@@ -156,7 +156,7 @@ const GEN = {
     if (sys.length) out.push(S(`Systems and components: ${sys.join('; ')}`, 2));
     const ac = lvl(ins, 'interior', 'access'); if (ac.length) out.push(S(`Accessibility features: ${listJoin(ac)}`, 2));
     if (d.co === true || d.smoke === true) out.push(S(`${[d.smoke ? 'Smoke' : '', d.co ? 'carbon monoxide' : ''].filter(Boolean).join(' and ')} detectors observed (not tested)`, 2));
-    if (d.attic === true) out.push(S(`Attic: ${lc(sv(ins, 'interior', 'atticAccess'))} access, ${lc(sv(ins, 'interior', 'atticFinish'))}`, 3));
+    if (d.atticAcc === true) out.push(S(`Attic: ${lc(sv(ins, 'interior', 'atticAccess'))} access, ${lc(sv(ins, 'interior', 'atticFinish'))}`, 3)); else if (d.attic === true) out.push(S('Attic: no access; not entered', 3));
     { const c = ins.data.property.crs, p = ins.data.property;
       if (c && p.pubCmt !== false) {
         const n = v => v ? Number(v).toLocaleString() : '';

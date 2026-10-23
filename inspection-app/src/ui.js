@@ -729,7 +729,8 @@ function bind(root) {
     else if (f.t === 'one') obj[f.k] = obj[f.k] === v ? undefined : v;
     else { const arr = new Set(obj[f.k] || []); if (arr.has(v)) arr.delete(v); else { if (v === 'None' || v === 'No Fire Hazard Zone') arr.clear(); else { arr.delete('None'); arr.delete('No Fire Hazard Zone'); } arr.add(v); } obj[f.k] = [...arr]; }
     if (f.k === 'view' && obj.viewPrimary && !(obj.view || []).includes(obj.viewPrimary)) delete obj.viewPrimary;
-    if (['attach', 'pud', 'project'].includes(f.k)) propDefaults(app.ins.data.property);   // her ask Oct 21 2026: a detached house, not PUD, not condo → the owner keeps up the outside
+    if (['attach', 'pud', 'project'].includes(f.k)) propDefaults(app.ins.data.property);
+    if (f.k === 'atticAcc') { if (obj.atticAcc === true) obj.attic = true; else if (obj._atticAuto) obj.attic = undefined; obj._atticAuto = obj.atticAcc === true; }   // an accessible attic is an attic (UAD 8.017); No asks whether there is a sealed one   // her ask Oct 21 2026: a detached house, not PUD, not condo → the owner keeps up the outside
     save(); renderTab();
   });
   root.querySelectorAll('[data-step]').forEach(b => b.onclick = () => { const { obj, f } = target(b); obj[f.k] = Math.max(0, (+obj[f.k] || 0) + (+b.dataset.step)); save(); renderTab(); });

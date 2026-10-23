@@ -125,6 +125,8 @@ function normalize(ins) {
   if (!ins.data.property.state) ins.data.property.state = 'CA';
   if (!ins.data.property.estate) ins.data.property.estate = 'FeeSimple';
   propDefaults(ins.data.property);
+  { const I = ins.data.interior; if (I) { if (I.atticAcc === undefined && I.attic !== undefined) I.atticAcc = I.attic === true ? I.atticAccess !== 'None / Sealed' : false;   // older inspections (before Oct 23 2026)
+    if (I.atticAcc === true) { I.attic = true; I._atticAuto = true; } } }
   if (!ins.data.site.apnDesc) ins.data.site.apnDesc = 'LandWithDwelling';
   // v3 interview: old per-item "year" boxes become the 15-year checklist; free-typed years become picker values
   { const iv = ins.data.interview; const now = new Date().getFullYear();
