@@ -422,9 +422,9 @@ input.txt:focus, select.txt:focus, textarea.txt:focus { background: #fff4b0 !imp
 .ov-tile.miss { border-color: #e7b3ae; }
 .ov-tile.off { background: #eef1f5; border: 2px dashed #b8c1ce; color: #5d6776; cursor: default; }
 .ov-tile.add { border-style: dashed; border-color: #1f3f66; }
-.ov-tile svg { width: 44px; height: 44px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
-.ov-tile b { font-size: 1.05rem; line-height: 1.2; }
-.ov-tile small { font-size: .82rem; color: #4f5b6e; }
+.ov-tile svg { width: 64px; height: 64px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.ov-tile b { font-size: 1.3rem; line-height: 1.2; }
+.ov-tile small { font-size: .95rem; color: #4f5b6e; }
 .ov-tile.miss small { color: #9b2019; }
 .ov-badge, .ov-ok { position: absolute; top: 8px; right: 8px; min-width: 28px; height: 28px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-weight: 700; color: #fff; padding: 0 7px; box-sizing: border-box; }
 .ov-badge { background: #b3261e; } .ov-ok { background: #1f7a45; }

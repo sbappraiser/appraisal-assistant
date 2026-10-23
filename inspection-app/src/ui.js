@@ -743,6 +743,7 @@ function bind(root) {
     if (f.k === 'view' && obj.viewPrimary && !(obj.view || []).includes(obj.viewPrimary)) delete obj.viewPrimary;
     if (['attach', 'pud', 'project'].includes(f.k)) propDefaults(app.ins.data.property);
     if (f.gate) gateSet(app.ins, Object.keys(app.ins.data).find(s => app.ins.data[s] === obj) || '', f.k);   // first yes/no question of a section (Oct 23 2026)
+    if (b.dataset.list === 'outbuildings' && f.k === 'real' && obj.real === false) { obPersonal(obj); return; }   // her rule Oct 23 2026: personal property is not an outbuilding
     if (f.k === 'atticAcc') { if (obj.atticAcc === true) obj.attic = true; else if (obj._atticAuto) obj.attic = undefined; obj._atticAuto = obj.atticAcc === true; }   // an accessible attic is an attic (UAD 8.017); No asks whether there is a sealed one   // her ask Oct 21 2026: a detached house, not PUD, not condo → the owner keeps up the outside
     save(); renderTab();
   });
@@ -1157,3 +1158,14 @@ const STARTER_FID = { accessDesc: ['4.024'], siteFeatures: ['4.066'], siteInflue
   outbuilding: ['12.025'], functional: ['11.001'], vehicle: ['13.010'], amenities: ['14.011'], assignment: ['2.061'], qc: ['15.010'] };
 function starterChips(id) { const F = STARTER_FID[id]; if (!F || typeof CMT36 === 'undefined') return ''; const L = CMT36.map((c, k) => [c, k]).filter(([c]) => F.includes(c[2])); if (!L.length) return '';
   return `<div class="starters"><span class="stlab">3.6 starter comments – tap to add:</span>${L.map(([c, k]) => `<button type="button" class="chip starter" data-starter="${id}|${k}" title="${esc(c[4])}">${esc(c[1])}</button>`).join('')}</div>`; }
+
+/* her rule (Oct 23 2026): a shed or other structure that is personal property is not an outbuilding.
+   It moves to Landscaping & outdoor living (with gazebo, trellis …); its photos go with it. */
+function obPersonal(it) {
+  const ins = app.ins; const a = ins.data.amenities = ins.data.amenities || {};
+  const what = it.label || it.type || 'Shed';
+  const arr = new Set(a.outdoor || []); arr.add('Shed (personal property)'); a.outdoor = [...arr]; a.recYes = true;
+  ins.photos.filter(p => p.list === 'outbuildings' && p.item === it.id).forEach(p => Object.assign(p, { sec: 'amenities', field: null, list: null, item: null, slot: null, extra: true, label: what + ' (personal property)', cat: 'SubjectPropertyAmenitiesExhibit' }));
+  ins.lists.outbuildings = ins.lists.outbuildings.filter(x => x.id !== it.id); app.open.delete(it.id);
+  save(); renderTab(); toast('Not permanently attached = personal property. Moved to Landscaping & outdoor living as "Shed (personal property)".');
+}

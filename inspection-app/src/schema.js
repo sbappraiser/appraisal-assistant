@@ -144,10 +144,10 @@ const LISTS = {
     title: 'Outbuildings', addLabel: 'Add outbuilding',
     name: it => it.label || it.type || 'Outbuilding',
     fields: [
+      { k: 'real', l: 'Permanently attached (real property)?', t: 'yn', req: true, uad: 'OutbuildingRealPropertyIndicator', help: 'No = personal property (a movable shed, kit or play structure). It is not an outbuilding – the app moves it to Landscaping & outdoor living.' },
       { k: 'type', l: 'Building type', t: 'one', req: true, o: opts('Guest House','Guest Quarters','Studio','Art Studio','Pool House','Cabana','Gym','Office','Recreation','Spa','Sauna','Pavilion','Barn','Stable','Shed','Storage','Workshop','Greenhouse','Boathouse','Bunkhouse','Kennel','Indoor Riding Arena','Wine Cellar','Other'), uad: 'OutbuildingType' },
       { k: 'label', l: 'Name used in report (optional)', t: 'text' },
       { k: 'measure', t: 'info', l: 'Measure it: SFREP requires the gross building area. You will enter it in SFREP from your sketch.' },
-      { k: 'real', l: 'Real property (permanently attached)?', t: 'yn', req: true, uad: 'OutbuildingRealPropertyIndicator' },
       { k: 'year', l: 'Year built', t: 'year' },
       { k: 'util', l: 'Utilities', t: 'multi', o: opts('None','Electricity','Gas','Water','Sanitary Sewer','Septic'), uad: 'UtilityType' },
       { k: 'feat', l: 'Features', t: 'multi', o: opts('Heated','Cooled','Finished Interior','Plumbing','Half Bath','Full Bath','Kitchenette','Loft','Fireplace','Wood Floors','Concrete Floor','Insulated','Rubber Flooring','Mirrors','Stalls','Tack Room','Wash Rack','Hay Storage') },
@@ -790,7 +790,7 @@ const SECTIONS = [
     ]},
     { id: 'rec', title: 'Recreation & outdoor living', showGroup: (d, ins) => !IS_PROJ(ins) || d.ownYard === true, fields: [
       { k: 'rec', l: 'Recreation', t: 'multi', o: opts('Tennis Court','Sport Court','Pickleball Court','Basketball Court','Bocce Court','Putting Green','Playground','Play Structure','Trampoline (in-ground)','Skate Ramp','Volleyball','Batting Cage') },
-      { k: 'outdoor', l: 'Outdoor living', t: 'multi', o: opts('Outdoor Dining','Outdoor Kitchen','Built-in BBQ Area','Pizza Oven','Outdoor Bar','Outdoor Fireplace','Fire Pit','Gazebo','Trellis','Pergola','Outdoor TV','Hammock Area','Dog Run','Chicken Coop','Other') },
+      { k: 'outdoor', l: 'Outdoor living', t: 'multi', o: opts('Outdoor Dining','Outdoor Kitchen','Built-in BBQ Area','Pizza Oven','Outdoor Bar','Outdoor Fireplace','Fire Pit','Gazebo','Trellis','Pergola','Shed (personal property)','Outdoor TV','Hammock Area','Dog Run','Chicken Coop','Other') },
       { k: 'gazeboMeasure', t: 'info', l: 'Measure it: SFREP requires the gazebo area. Enter it in SFREP from your sketch.', show: d => (d.outdoor || []).includes('Gazebo') },
       { k: 'equestrian', l: 'Equestrian', t: 'yn' },
       { k: 'equine', l: 'Horse amenities', t: 'multi', show: d => d.equestrian === true, o: opts('Barn','Stable','Stalls','Paddocks','Pasture','Corrals','Pens','Arena','Covered Arena','Round Pen','Riding Ring','Hot Walker','Wash Rack','Tack Room','Hay Barn','Manure Area','Trail Access','Fencing','Water Troughs','Horse Trailer Parking') },
