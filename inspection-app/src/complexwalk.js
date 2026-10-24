@@ -145,19 +145,19 @@ function cwSheetHTML(ins) {
   const box = w => `<span class="w"><i></i>${esc(w)}</span>`;
   const opts = f => { let o = f.o; if (typeof o === 'function') { try { o = o({}, ins); } catch (e) { o = null; } } if (f.t === 'yn') return ['Yes', 'No']; return (o || []).map(x => Array.isArray(x) ? x[1] : x).filter(x => x && !/^Other$/.test(x)).slice(0, 18); };
   const fieldRow = f => { if (!f || ['photo', 'info', 'calc', 'review', 'crs', 'permits', 'order', 'note'].includes(f.t) || (f.show && f.show.toString().includes('() => false'))) return '';
-    const w = opts(f); return `<div class="r"><b>${esc(f.l.replace(/<[^>]+>/g, ''))}</b>${w.length ? w.map(box).join('') : '<span class="line"></span>'}</div>`; };
+    const w = opts(f); return `<div class="r"><b>${esc(f.l.replace(/<[^>]+>/g, ''))}</b><span class="o">${w.length ? w.map(box).join('') : '<span class="line"></span>'}</span></div>`; };
   const part = p => {
-    if (p.cw) return `<div class="r"><b>${esc(p.t)}</b>${p.words.map(box).join('')}</div>`;
+    if (p.cw) return `<div class="r"><b>${esc(p.t)}</b><span class="o">${p.words.map(box).join('')}</span></div>`;
     if (p.f) return fieldRow(findField(p.f[0], p.f[1]).f);
     if (p.g) { const sec = SECTIONS.find(s => s.id === p.g[0]); const g = sec && sec.groups.find(x => x.id === p.g[1]); return g ? g.fields.filter(f => f && !p.g[2].includes(f.k) && !/Oth$|Other$|Desc$/.test(f.k)).map(fieldRow).join('') : ''; }
-    if (p.list) return `<div class="r"><b>${esc((LISTS[p.list] || {}).title || p.list)}</b><span class="line"></span><span class="line"></span></div>`;
+    if (p.list) return `<div class="r"><b>${esc((LISTS[p.list] || {}).title || p.list)}</b><span class="o"><span class="line"></span><span class="line"></span></span></div>`;
     return ''; };
   const addr = [insTitle(ins), insAddr(ins)].filter(Boolean).join(' · ');
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Clipboard sheet – ${esc(addr)}</title><style>
     @page { size: letter; margin: 0.45in; } body { font: 12.5pt/1.35 Arial, Helvetica, sans-serif; color: #000; margin: 0; }
     h1 { font-size: 17pt; margin: 0 0 6px; } h2 { font-size: 14pt; margin: 12px 0 4px; border-bottom: 2px solid #000; break-after: avoid; }
     .s { border: 1.5px solid #000; border-radius: 5px; padding: 6px 8px; margin: 0 0 8px; break-inside: avoid-page; }
-    .r { margin: 2px 0; } .r b { display: inline-block; min-width: 1.7in; margin-right: 10px; } .w { white-space: nowrap; margin-right: 12px; display: inline-block; }
+    .r { margin: 2px 0; display: flex; gap: 10px; align-items: baseline; } .r b { flex: 0 0 1.7in; } .r .o { flex: 1; display: flex; flex-wrap: wrap; gap: 2px 12px; min-width: 0; } .w { white-space: nowrap; display: inline-block; }   /* her Oct 24 2026: label on the left, choices wrap in their own column */
     .w i { display: inline-block; width: 12px; height: 12px; border: 1.5px solid #000; margin-right: 4px; vertical-align: -1px; }
     .line { display: inline-block; width: 2.2in; border-bottom: 1px solid #000; height: 14px; margin-right: 10px; } .meta { font-size: 11pt; margin-bottom: 6px; }
     .ph { font-size: 11pt; margin-top: 4px; } @media screen { body { max-width: 8in; margin: 16px auto; padding: 0 16px; } .noprint { margin: 10px 0; } } @media print { .noprint { display: none; } }
