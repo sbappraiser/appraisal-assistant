@@ -559,3 +559,30 @@ html.hc .ck .chip[aria-pressed="true"] { background: #000; color: #fff200; }
 .appl-more { margin: 8px 0; } .appl-more summary { font-weight: 700; cursor: pointer; padding: 6px 0; }
 .appl-other { display: flex; gap: 8px; align-items: center; margin: 8px 0; flex-wrap: wrap; } .appl-other label { display: flex; gap: 6px; align-items: center; flex: 1; } .appl-other .txt { flex: 1; min-width: 160px; }
 .ck .appl-edit .chip, .appl-edit .chip { border: 2px solid #1f3f66; background: #fff; padding: 9px 13px; font-size: 1.02rem; min-height: 44px; border-radius: 10px; margin: 3px; }
+
+/* ================= her Oct 24 2026: one palette with the rest of the Octopus =================
+   navy = the Octopus; light blue = chosen / where you are; soft green = done; red = missing. No bright yellow, lime, orange or pink.
+   Outdoor mode keeps the same colors, just stronger (heavier type and borders stay). */
+:root, html.hc {
+  --tangerine: #1f3f66; --focus: #1f3f66; --tabbar: #1f3f66;
+  --cyan: #d6e4f5; --cyan-dk: #1f3f66;
+  --yellow: #e9eef5; --pink: #eef2f7; --lime: #d9eedf;
+  --req: #e3ebf5; --req-ink: #1f3f66; --req-lt: #f4f7fb;
+  --opt: #f1f3f6; --opt-ink: #4f5b6e; --go: #1f7a45;
+}
+html.hc { --cyan: #b9cde6; --yellow: #dbe5f1; --lime: #bfe3c9; --pink: #dde5ef; }
+.bar { border-bottom-color: #1f3f66; }
+.hc-btn[aria-pressed="true"] { background: #1f3f66; color: #fff; }
+.group.current > .ghead, .group.current > .ghead-row { background: #e9eef5; color: #14213a; border-bottom-color: #1f3f66; }
+.chip[aria-pressed="true"] { background: #1f3f66; color: #fff; box-shadow: none; }
+.chip[aria-pressed="true"] .box { border-color: #fff; background: #fff; }
+.lg.warn:disabled, .gstat.ok, .btn.done, .attn-pill.ok { background: #e6f2ea; color: #14532d; border-color: #1f7a45; }
+.toast { color: #fff; }
+.tab[aria-selected="true"] { color: #fff; border-bottom-color: #fff; background: #2d5384; }
+.btn.primary { background: #1f3f66; color: #fff !important; }
+.cam { background: #eef2f7; }
+.item.open > .item-head { background: #e3ebf5; }
+.item-body { border-left-color: #c7d6ea; }
+.return-bar .ret-go { background: #1f3f66; color: #fff; }
+.sev.Check { background: #fff4d6; } .sev.Recommended { background: #e3ebf5; }
+.bar .sk-btn, .sk-btn { background: #e3ebf5; }

@@ -276,12 +276,12 @@ function hcInit() { let on = false; try { on = localStorage.getItem('hc') === '1
 function hcToggle() { const on = !document.documentElement.classList.contains('hc'); document.documentElement.classList.toggle('hc', on); try { localStorage.setItem('hc', on ? '1' : '0'); } catch (e) {} document.querySelectorAll('.hc-btn').forEach(b => b.setAttribute('aria-pressed', on)); }
 const hcBtn = () => `<button class="icon-btn hc-btn" aria-pressed="${document.documentElement.classList.contains('hc')}" onclick="hcToggle()" aria-label="Outdoor">☀<span class="bl"> Outdoor</span></button>`;
 function legend() {
-  const n = computeIssues(app.ins).filter(x => !app.ins.overrides[x.key] && x.tab === app.tab && (x.sev === 'Required' || x.sev === 'Photo')).length;
+  const n = computeIssues(app.ins).filter(x => !app.ins.overrides[x.key] && inThisTab(x) && (x.sev === 'Required' || x.sev === 'Photo')).length;
   return `<div class="legend"><span class="lg req">Required (UAD)</span><span class="lg opt">Optional</span>
     <button class="lg warn" id="nextMiss" ${n ? '' : 'disabled'}>${n ? `Missing: ${n} – tap to go to next ›` : 'Nothing missing on this tab ✓'}</button></div>`;
 }
 function nextMissing() {
-  const ins = app.ins; const list = computeIssues(ins).filter(x => !ins.overrides[x.key] && x.tab === app.tab && (x.sev === 'Required' || x.sev === 'Photo'));
+  const ins = app.ins; const list = computeIssues(ins).filter(x => !ins.overrides[x.key] && inThisTab(x) && (x.sev === 'Required' || x.sev === 'Photo'));
   if (!list.length) return; const x = list[app.missIdx % list.length]; app.missIdx++;
   if (x.group) openGroup(app.tab, x.group); if (x.item) app.open.add(x.item);
   renderTab(); scrollToEl(x.anchor || ('grp-' + x.group));
@@ -1220,3 +1220,6 @@ function strapSync(ins) { const s = ins.data.systems || {}, iv = ins.data.interv
   if (st.some(x => /^(Double|Single) Strapped$/.test(x))) { L.delete('None'); L.add('WaterHeaterStrapping'); }
   else if (L.has('WaterHeaterStrapping') && iv._strapAuto) L.delete('WaterHeaterStrapping');
   iv._strapAuto = L.has('WaterHeaterStrapping') && st.some(x => /Strapped$/.test(x) && !/^Not/.test(x)); iv.disaster = [...L]; }
+
+/* her Oct 24 2026: on a button page (b:…) or checklist tab (ck:…) "missing" counts that button's questions – it said "Nothing missing" while the group showed 4 */
+function inThisTab(x) { const m = String(app.tab).match(/^(b|ck):(.+)$/); if (m) { const b = ovBtn(m[2]); return !!(b && ovIn(b, x)); } return x.tab === app.tab; }
