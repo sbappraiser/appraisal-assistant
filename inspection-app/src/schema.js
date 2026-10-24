@@ -471,6 +471,7 @@ const SECTIONS = [
       { k: 'zip', l: 'ZIP code', t: 'one', req: true, o: opts(...ZIPS), uad: 'PostalCode' },
       { k: 'zipOther', l: 'ZIP code', t: 'text', show: d => d.zip === 'Other', req: d => d.zip === 'Other', lim: 5 },
       { k: 'zip4', l: 'ZIP+4 extension', t: 'text', lim: 4, help: 'Filled automatically from the CRS report' },
+      { k: 'nbhd', l: 'Neighborhood name (optional)', t: 'text', lim: 66, uad: 'NeighborhoodName', fid: '3.003', help: 'e.g. Montecito, Hope Ranch, San Roque. Not the mailing city – that stays Santa Barbara.' },
       { k: 'county', l: 'County', t: 'one', req: true, o: opts('Santa Barbara','Ventura','Other'), uad: 'CountyName' },
       { k: 'countyOther', l: 'County name', t: 'text', show: d => d.county === 'Other', req: d => d.county === 'Other' },
       { k: 'inspDate', l: 'Inspection date', t: 'date', req: true, uad: 'InspectionDate' },

@@ -95,6 +95,7 @@ function buildMISMO(ins, imgName) {
   const P = X(X(va, 'PROPERTIES'), 'PROPERTY', { ValuationUseType: 'SubjectProperty' });
 
   // ADDRESS
+  if (d.property.nbhd) V(X(X(P, 'NEIGHBORHOOD'), 'NEIGHBORHOOD_DETAIL'), 'NeighborhoodName', String(d.property.nbhd).slice(0, 66));   // UAD 3.003 (her Oct 24 2026)
   const ad = X(P, 'ADDRESS'); V(ad, 'AddressLineText', d.property.addr); V(ad, 'AddressUnitIdentifier', d.property.unit); V(ad, 'CityName', cityOf(d.property)); V(ad, 'CountyName', countyOf(d.property)); V(ad, 'PostalCode', zipOf(d.property) ? zipOf(d.property) + (d.property.zip4 ? '-' + d.property.zip4 : '') : undefined); V(ad, 'StateCode', (d.property.state || '').toUpperCase());
 
   // CAR_STORAGES

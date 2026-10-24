@@ -346,7 +346,8 @@ if (DEVICE === 'iPhone') { const fix = n => { if (n.nodeType === 3) { if (n.node
 function splitAddr(p) {
   const m = String(p.addr || '').match(/^\s*([^,]+?)\s*,\s*([^,]+?)\s*(?:,\s*)?(?:\b(CA|California)\b\.?\s*)?,?\s*(\d{5})?(?:-(\d{4}))?\s*$/i);
   if (!m || !/\d/.test(m[1]) || !(m[3] || m[4])) return;
-  const city = uspsCity(m[2].replace(/\s+(CA|California)$/i, '').trim()), zip = m[4] || '';
+  const said = m[2].replace(/\s+(CA|California)$/i, '').trim(), city = uspsCity(said), zip = m[4] || '';
+  if (city !== said && !p.nbhd) p.nbhd = said.replace(/\b\w/g, x => x.toUpperCase());   // her Oct 24 2026: Montecito is the neighborhood
   const cities = ['Santa Barbara', 'Goleta', 'Carpinteria', 'Summerland'];
   const c = cities.find(x => x.toLowerCase() === city.toLowerCase());
   if (c) { if (!p.city || p.city === c) p.city = c; }
@@ -360,4 +361,4 @@ function splitAddr(p) {
 /* her Oct 24 2026: Montecito is not a USPS city – mail goes to Santa Barbara (Hope Ranch too); Isla Vista mail is Goleta */
 const USPS_CITY = { montecito: 'Santa Barbara', 'hope ranch': 'Santa Barbara', 'mission canyon': 'Santa Barbara', 'isla vista': 'Goleta' };
 function uspsCity(c) { return USPS_CITY[String(c || '').trim().toLowerCase()] || c; }
-function cityFix(p) { if (p && p.city === 'Other' && p.cityOther && USPS_CITY[p.cityOther.trim().toLowerCase()]) { p.city = USPS_CITY[p.cityOther.trim().toLowerCase()]; delete p.cityOther; } }
+function cityFix(p) { if (p && p.city === 'Other' && p.cityOther && USPS_CITY[p.cityOther.trim().toLowerCase()]) { if (!p.nbhd) p.nbhd = p.cityOther.trim(); p.city = USPS_CITY[p.cityOther.trim().toLowerCase()]; delete p.cityOther; } }
