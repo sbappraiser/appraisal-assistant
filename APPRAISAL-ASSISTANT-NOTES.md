@@ -981,3 +981,4 @@ Decisions (her, Oct 19–20): "Exterior of dwelling" instead of left/right/side 
 - Oct 24 2026 (6x-1024-0000) – Button tiles now match mockup board 3: status line ("N missing" red / "Complete" green) and a blue tag with what the button covers. Landscaping & outdoor living icon = palm tree with pool water (OV_ICON.palm, her ask).
 - Oct 24 2026 (6x-1024-0002) – Driveway icon = gate (posts, arched leaves) with a cobblestone drive leading in (her ask).
 - Oct 24 2026 (6x-1024-0004) – Defects icon = light yellow (#ffe680) warning triangle with a dark ! (her ask).
+- Oct 24 2026 (6x-1024-0009) – "Defects" button and section now labeled "Deficiencies" (her ask). UAD data names unchanged.

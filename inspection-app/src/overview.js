@@ -45,7 +45,7 @@ const OV_BTNS = [
   { id: 'qc', grp: 'Main dwelling', t: 'Quality & condition', icon: 'wrapup', sub: 'Functional obsolescence · notes', parts: [['condition', null]] },
   { id: 'disaster', grp: 'Main dwelling', t: 'Disaster mitigation', icon: 'disaster', sub: 'Water heater strapping · retrofit', parts: [['interview', ['disaster']], ['systems', ['wh']]] },
   { id: 'energy', grp: 'Main dwelling', t: 'Green & energy efficiency', icon: 'energy', sub: 'Solar · battery · ratings', parts: [['systems', ['energy']]] },
-  { id: 'defects', grp: 'Main dwelling', t: 'Defects', icon: 'defects', parts: [['defects', null]] },
+  { id: 'defects', grp: 'Main dwelling', t: 'Deficiencies', icon: 'defects', parts: [['defects', null]] },
   { id: 'adu', grp: 'Other buildings', t: 'ADUs', icon: 'adu', parts: [['buildings', ['adu']]], count: ins => ins.lists.adus.length },
   { id: 'outb', grp: 'Other buildings', t: 'Outbuildings', icon: 'outb', parts: [['buildings', ['outb']]], count: ins => ins.lists.outbuildings.length },
   { id: 'sketch', grp: 'Other', t: 'OctoSketch', icon: 'sketch', act: 'sketch' },

@@ -922,7 +922,7 @@ const SECTIONS = [
     ]},
   ]},
 
-  { id: 'defects', title: 'Defects', groups: [
+  { id: 'defects', title: 'Deficiencies', groups: [
     { id: 'defInd', title: 'Defects present by area', fields: [
       { k: 'info', l: 'These mirror the defect questions on other tabs. Changing one changes both.', t: 'info' },
       { k: 'siteDefects', l: 'Site defects present?', t: 'yn', req: true, link: 'site' },
