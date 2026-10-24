@@ -985,3 +985,4 @@ Decisions (her, Oct 19–20): "Exterior of dwelling" instead of left/right/side 
 - Oct 24 2026 (6x-1024-0012) – Landscaping & outdoor living icon redrawn from her sketch: rounded pool with two waves, palm at the right corner with green fronds (#1e8f3a).
 - Oct 24 2026 (6x-1024-0013) – Pool & palm icon enlarged (drawing scaled 1.22 and that tile icon 84 px).
 - Oct 24 2026 (6x-1024-0014) – Systems & features sun icon: center filled yellow (#ffd84d).
+- Oct 24 2026 (6x-1024-0015) – Green & energy efficiency icon = green leaf (fill #8fd18f, outline/veins #1e7a34).
