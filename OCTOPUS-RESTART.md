@@ -1,6 +1,6 @@
 # THE OCTOPUS – restart file (paste this into a new Claude chat)
 
-Last updated: Oct 22, 2026 (evening). Owner: Jennifer Heath, SRA, AI-RRS – certified residential appraiser,
+Last updated: Oct 24, 2026. Owner: Jennifer Heath, SRA, AI-RRS – certified residential appraiser,
 Santa Barbara County (Montecito 93108, Hope Ranch, Summerland, Carpinteria, the Mesa, Goleta). Complex,
 high-end, non-conforming properties. Not a developer: explain in plain words, give click-by-click steps.
 
@@ -107,10 +107,17 @@ Appendix A-1 (xlsx), F-1 field list, D-1 sample XML, Appendix D v1.7 (2.6, text 
 `reference/UAD26_Appendix_D_v1.7.txt`), GSE XSD order (in code: `xsdorder.js`, `d1order.js`), her SFREP
 template. SFREP import: Home → Import Forms. XML must follow XSD element order.
 
-## 6. Recent versions (Oct 22, 2026)
+## 6. Recent versions (Oct 24, 2026)
 - iPad/iPhone app **6x-1024-1706** · OctoSleuth **g2-1024-1529** · hub **o1-1024-1604**.
 
 ## 7. Open items (pick up here)
+0. **Oct 24 2026 – where we stopped (newest first):**
+   - **Past-reports library (next build):** she is copying her ACI .aci, PDF and MISMO XML folders to OneDrive › "Octopus – My past reports" and will attach 3–4 XML + matching PDFs (one condo). Build: hub "Connect my past reports" (File System Access, read on her computer, never GitHub) → index (address, APN, file no, eff. date, value, subject + comps) → "You appraised this before" on a new order + open PDF; old subject facts shown for reference only (beds/baths/sq ft NEVER prefilled); old comps join her comp database. Check whether ACI XML embeds the PDF/photos.
+   - **Waiting for her OK:** Report setup redesign (design canvas board 15) and Buildings – as you find them (board 17: permits pre-fill, use always changeable, ADU only with ADU permit, cost to cure / how valued per building). Asked her: cost to cure on the main house too? are the uses / cure choices right?
+   - **Active checklist** is live (one more way in, ☑ Checklist); she is practicing in the field and will send changes. Her checklist words are all in (herWords in schema.js). TODO: put the non-UAD "your words" answers (styleMore, roofDetail, viewRating, wallMat, winUpg) into the comment drafts.
+   - **14 house-or-desk items** (year built, APN/zoning, hazards, Mello-Roos (now defaults No), Native American lands, rights, broadband, roof age, site influences, area source, 55+, HOA/project, outbuilding/ADU permits, utilities) – her H/D answers still pending.
+   - Design canvas (all mockups): https://claude.ai/artifact/8qCEtQFtndYfB66f7ANyUR
+   - She made a Claude **Project "The Octopus"**; new chats per topic start by reading this file and the NOTES.
 1. **Sketch on iPad/iPhone** – she is testing on her phone and iPad and sending screenshots; keep
    refining until she says it is settled.
 2. **Desktop sketch in tentacle 2** (proposed construction from architectural plans; reuse the iPad
