@@ -296,12 +296,12 @@ function compFlags0(c, job) {
     if (dupes.length) F.push({ sev: 'info', t: 'Also closed under MLS ' + dupes.map(d => d.mls).join(', ') + ' (same sale listed twice)' });
 
   }
-  // a recorded price that differs from the price being used (credits, personal property, recording errors)
-  const used = val(c, 'salePrice'); const Sv = srcVals(c);
-  ['crs', 'cort'].forEach(s => { const rp = Sv[s] && Sv[s].salePrice; if (used.v && rp && used.src !== s && Math.abs(rp - used.v) > Math.max(1000, used.v * 0.002) && (s !== 'cort' || !sale || !Sv.cort.saleDate || Math.abs(monthsBetween(Sv.cort.saleDate, sale.date)) <= 2))
-    F.push({ sev: 'warn', t: `Recorded price (${SRC[s].short}) ${money(rp)} differs from the price used, ${money(used.v)} (${SRC[used.src].short}) – explain in the report which is the effective sale price and why (credit, personal property, recording error)` }); });
-  if (used.v && ['crs', 'cort'].includes(used.src)) ['mls', 'pdf'].forEach(s => { const mp = Sv[s] && Sv[s].salePrice; if (mp && Math.abs(mp - used.v) > Math.max(1000, used.v * 0.002) && !F.some(x => /differs from the public record/.test(x.t)))
-    F.push({ sev: 'warn', t: `${SRC[s].short} sale price ${money(mp)} differs from the public record ${money(used.v)} (${SRC[used.src].short}) – the public record is used; explain the difference (e.g. negotiated ${money(mp)} with a credit for repairs, commission not taken, agent was the buyer)` }); });   // her rule: the public record is dominant
+  // her rule (Oct 24 2026): the public-record price is on the grid. The county price comes from the documentary transfer tax, which rounds up
+  // to the next $500 – a difference under $500 is rounding (describe it in the comments); anything more: verify with the agent which is correct.
+  { const P = prDiff(c); if (P) F.push(P.flag); }
+  { const used = val(c, 'salePrice'); const Sv = srcVals(c); const P = prDiff(c);
+    if (!P && used.v && !['crs', 'cort'].includes(used.src)) ['crs', 'cort'].forEach(s => { const rp = Sv[s] && Sv[s].salePrice; if (rp && Math.abs(rp - used.v) >= 500 && (s !== 'cort' || !sale || !Sv.cort.saleDate || Math.abs(monthsBetween(Sv.cort.saleDate, sale.date)) <= 2))
+      F.push({ sev: 'warn', t: `Recorded price (${SRC[s].short}) ${money(rp)} differs from the price used, ${money(used.v)} (${SRC[used.src].short}) – explain in the report which is the effective sale price and why (credit, personal property, recording error)` }); }); }
   { const lp = num(V(c, 'listPrice')) || num(V(c, 'origList')), pr = num(V(c, 'salePrice')), dm = num(V(c, 'cdom')) || num(V(c, 'dom')); if (pr && lp && pr > lp && /closed|sold|settled/i.test(String(V(c, 'status') || 'Closed'))) { const t = `Sold ${money(pr - lp)} over the list price (${(pr / lp * 100).toFixed(1)}%)`;
     if (dm !== null && dm >= 30) F.push({ sev: 'warn', t: t + ` after ${dm} days on market – call the agent to find out why` }); else F.push({ sev: 'info', t: t + (dm !== null ? ` in ${dm} days on market` : '') + (dm !== null && dm <= 14 ? ' – likely multiple offers' : '') }); } }
   { if (offMlsSale(c)) { const was = [...(c.mlsOther || []), ...[c.src.mls, c.src.pdf].filter(Boolean)].filter(o => !o.saleDate && o.mls).map(o => `MLS ${o.mls} (${o.status || 'off market'}${o.listPrice ? ', ' + money(o.listPrice) : ''})`);
@@ -351,3 +351,30 @@ function docNoOf(c) {
 /* her format (Oct 20 2026): the last 5 digits of the recording number, then the closing (recording) date – "Doc #06575 03/04/2026" */
 const docShort = d => { const m = String(d || '').match(/(\d+)\D*$/); if (!m) return String(d || ''); const n = m[1]; return n.length > 5 ? n.slice(-5) : n; };
 function docText(c, noDate) { const D = docNoOf(c); if (!D) return ''; if (noDate) return 'Doc #' + docShort(D.doc); const cs = currentSale(c); const dt = D.date || (cs && cs.date) || ''; return 'Doc #' + docShort(D.doc) + (dt ? ' ' + showDate(dt) : ''); }
+
+/* MLS price vs public-record price for this sale (her rule Oct 24 2026) */
+const PR_WHY = [['repairs', 'a credit for repairs'], ['commission', 'a commission reduction'], ['bpbc', 'buyer-paid broker compensation'], ['concessions', 'seller concessions'], ['persprop', 'personal property included in the sale'], ['other', '[explain]']];
+function prDiff(c) {
+  const sale = currentSale(c); const Sv = srcVals(c);
+  let pub = null, pubSrc = '';
+  if (Sv.crs && num(Sv.crs.salePrice)) { pub = num(Sv.crs.salePrice); pubSrc = 'crs'; }
+  else if (Sv.cort && num(Sv.cort.salePrice) && (!sale || !Sv.cort.saleDate || !sale.date || Math.abs(monthsBetween(Sv.cort.saleDate, sale.date)) <= 2)) { pub = num(Sv.cort.salePrice); pubSrc = 'cort'; }
+  const mls = num(Sv.mls && Sv.mls.salePrice) || num(Sv.pdf && Sv.pdf.salePrice);
+  if (!pub || !mls || pub === mls) return null;
+  const diff = pub - mls, round = Math.abs(diff) < 500, ans = c.prAns || null;
+  const head = `Sale price: MLS ${money(mls)}, public record ${money(pub)} (${SRC[pubSrc].short})`;
+  let flag;
+  if (round) flag = { sev: 'info', pr: 'round', t: `${head} – the county price comes from the transfer tax, rounded up to the next $500. The grid uses the public record; describe the difference in your comments.` };
+  else if (!ans) flag = { sev: 'warn', pr: 'verify', t: `${head} – ${money(Math.abs(diff))} apart, more than rounding. Verify with the agent which is correct (credit for repairs, commission reduction, buyer-paid broker compensation … or the public record is wrong).` };
+  else flag = { sev: 'info', pr: 'ans', t: `${head} – the agent said ${ans.who === 'mls' ? 'the MLS price is correct (public record wrong); the grid uses the MLS price' : 'the public record is correct' + (ans.why ? ' (' + (PR_WHY.find(x => x[0] === ans.why) || [, ans.why])[1] + ')' : '') + '; the grid uses the public record'}. Describe it in your comments.` };
+  return { pub, pubSrc, mls, diff, round, ans, flag };
+}
+/* the sentence for her comment – she clicks to add it */
+function prSentence(c) {
+  const P = prDiff(c); if (!P) return ''; const who = c.use ? `Comp ${c.use} (${compTitle(c)})` : compTitle(c);
+  if (P.round) return `${who}: the MLS reports a sale price of ${money(P.mls)}; the public record shows ${money(P.pub)}, which is derived from the documentary transfer tax and rounded up to the next $500. The public record price is used.`;
+  if (!P.ans) return `${who}: the MLS reports a sale price of ${money(P.mls)}; the public record shows ${money(P.pub)}. [Verified with the listing agent: …]`;
+  if (P.ans.who === 'mls') return `${who}: the public record shows a sale price of ${money(P.pub)}; the listing agent confirmed the MLS price of ${money(P.mls)} is correct and the public record is in error. The MLS price is used.`;
+  const why = (PR_WHY.find(x => x[0] === P.ans.why) || [, '[explain]'])[1];
+  return `${who}: the MLS reports a sale price of ${money(P.mls)}; the public record shows ${money(P.pub)}. The listing agent confirmed the difference reflects ${why}. The public record price is used.`;
+}
