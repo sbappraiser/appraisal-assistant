@@ -63,6 +63,7 @@ async function renderHome() {
     <p class="app-ver">Version ${typeof BUILD !== 'undefined' ? esc(BUILD) : '?'}</p>
   </main>`;
   { const nb = $('#newBtn'); if (nb) nb.onclick = () => { const f = $('#newForm'); f.hidden = !f.hidden; if (!f.hidden) $('#nAddr').focus(); }; }
+  bindStreetSugg($('#nAddr'), () => '', v => { $('#nAddr').value = v; });
   $('#newForm').onsubmit = async e => {
     e.preventDefault(); const a = capWords($('#nAddr').value.trim()), f = $('#nFile').value.trim(); if (!a || !f) return;
     const ins = newInspection(f, a); await DB.put('inspections', ins); openInspection(ins.id);
@@ -713,6 +714,7 @@ function target(el) {
 }
 function itemOf(el) { return app.ins.lists[el.dataset.list].find(x => x.id === el.dataset.item); }
 function bind(root) {
+  root.querySelectorAll('input.txt[data-k="addr"]').forEach(inp => bindStreetSugg(inp, () => (app.ins && app.ins.data.property || {}).zip));   // her Oct 24 2026
   const nm = $('#nextMiss'); if (nm) nm.onclick = nextMissing;
   root.querySelectorAll('[data-group]').forEach(b => b.onclick = () => {
     const sec = secOfEl(b); const set = ensureGroups(sec); const id = b.dataset.group;
@@ -1175,3 +1177,28 @@ function obPersonal(it) {
 /* her Oct 24 2026: names and streets – capital letter at the start of each word (the rest stays as typed, so McDonald stays) */
 const CAP_WORDS = new Set(['addr', 'cityOther', 'countyOther', 'projName', 'hoaName', 'hoaContactName', 'clubName', 'waterName', 'whoName', 'ident']);
 function capWords(v) { return String(v).replace(/(^|[\s\-\/(])([a-z])/g, (m, a, b) => a + b.toUpperCase()); }
+
+/* her Oct 24 2026: street name suggestions while she types an address – real street names in her ZIP codes (Census list, streets.js).
+   Streets in the ZIP she picked, and whose house numbers cover the number typed, come first. Tap one to use it. */
+function streetSugg(v, zip) {
+  const m = String(v || '').match(/^\s*(\d+[A-Za-z]?(?:-\d+)?)\s+(.*)$/); const n = m ? m[1] : '', rest = (m ? m[2] : String(v || '')).trim().toLowerCase().replace(/\s+/g, ' ');
+  if (rest.length < 2 || /,/.test(rest)) return [];
+  const num = parseInt(n, 10), zi = STREET_ZIPS.indexOf(String(zip || '')), out = [];
+  STREETS.forEach(([name, zs, lo, hi]) => { const l = name.toLowerCase(); if (l === rest) return;
+    const bare = l.replace(/^(n|s|e|w|north|south|east|west)\s+/, '');
+    let sc = l.startsWith(rest) ? 3 : bare.startsWith(rest) ? 2.5 : l.split(' ').some(w => w.startsWith(rest)) ? 1 : 0; if (!sc) return;
+    if (zi >= 0 && zs.includes(String(zi))) sc += 2;
+    if (num && hi && num >= lo && num <= hi) sc += 1.5; else if (num && hi) sc -= 1;
+    out.push([sc, name]); });
+  out.sort((a, b) => b[0] - a[0] || a[1].localeCompare(b[1]));
+  return [...new Set(out.map(x => x[1]))].slice(0, 6).map(name => (n ? n + ' ' : '') + name);
+}
+function bindStreetSugg(inp, getZip, onPick) {
+  if (!inp || inp.dataset.sugg) return; inp.dataset.sugg = '1'; inp.setAttribute('autocomplete', 'off');
+  const box = document.createElement('div'); box.className = 'st-sugg'; inp.insertAdjacentElement('afterend', box);
+  const show = () => { const L = streetSugg(inp.value, getZip && getZip()); box.innerHTML = L.map(s => `<button type="button" class="st-s" data-st="${esc(s)}">${esc(s)}</button>`).join(''); box.hidden = !L.length; };
+  inp.addEventListener('input', show); inp.addEventListener('focus', show);
+  inp.addEventListener('blur', () => setTimeout(() => { box.hidden = true; }, 250));
+  box.addEventListener('pointerdown', e => { const b = e.target.closest('[data-st]'); if (!b) return; e.preventDefault(); inp.value = b.dataset.st; box.hidden = true; if (onPick) onPick(inp.value); else { inp.dispatchEvent(new Event('input', { bubbles: true })); inp.dispatchEvent(new Event('change', { bubbles: true })); } });
+  box.hidden = true;
+}

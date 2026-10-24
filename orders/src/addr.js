@@ -25,6 +25,7 @@ function syncPick(p, key, list) {
 }
 function wireAddr(p, onChange) {
   const g = k => document.getElementById(p + k);
+  hubStreetSugg(g('street'), () => (g('zip') || {}).value, onChange);   // her Oct 24 2026: street name suggestions
   const pick = (key, list, after) => { const sel = g(key + 'Sel'), inp = g(key);
     sel.onchange = () => { if (sel.value === '__other') { inp.hidden = false; inp.value = ''; inp.focus(); } else { inp.value = sel.value; inp.hidden = true; if (after) after(sel.value); } onChange(); };
     inp.oninput = () => onChange(); syncPick(p, key, list); };
@@ -54,3 +55,20 @@ function loadOrderAddr(f) { const box = $('#addrBox'); if (!box) return;
 /* used by the CRS, MLS and letter readers */
 function setOrderAddr(v, force) { const old = readAddr('f_'); const n = { ...old };
   ADDR_KEYS.forEach(k => { if (v[k] && (force || !old[k] || (k === 'state' && old[k] === 'CA'))) n[k] = v[k]; }); writeAddr('f_', n); $('#f_address').value = joinAddr(n); return n; }
+
+/* her Oct 24 2026: street name suggestions as she types the address – Census street list for her ZIP codes (streets.js) */
+function hubStreetSugg(inp, getZip, onChange) {
+  if (!inp || inp.dataset.sugg) return; inp.dataset.sugg = '1';
+  const esc = x => String(x).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+  const sugg = v => { const m = String(v || '').match(/^\s*(\d+[A-Za-z]?(?:-\d+)?)\s+(.*)$/); const n = m ? m[1] : '', rest = (m ? m[2] : String(v || '')).trim().toLowerCase().replace(/\s+/g, ' ');
+    if (rest.length < 2 || /,/.test(rest)) return []; const num = parseInt(n, 10), zi = STREET_ZIPS.indexOf(String(getZip() || '')), out = [];
+    STREETS.forEach(([name, zs, lo, hi]) => { const l = name.toLowerCase(); if (l === rest) return; const bare = l.replace(/^(n|s|e|w)\s+/, '');
+      let sc = l.startsWith(rest) ? 3 : bare.startsWith(rest) ? 2.5 : l.split(' ').some(w => w.startsWith(rest)) ? 1 : 0; if (!sc) return;
+      if (zi >= 0 && zs.includes(String(zi))) sc += 2; if (num && hi && num >= lo && num <= hi) sc += 1.5; else if (num && hi) sc -= 1; out.push([sc, name]); });
+    out.sort((a, b) => b[0] - a[0] || a[1].localeCompare(b[1])); return [...new Set(out.map(x => x[1]))].slice(0, 6).map(x => (n ? n + ' ' : '') + x); };
+  const box = document.createElement('div'); box.className = 'st-sugg'; box.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;margin-top:4px'; inp.insertAdjacentElement('afterend', box);
+  const show = () => { const L = sugg(inp.value); box.innerHTML = L.map(s => `<button type="button" class="btn sm" data-st="${esc(s)}">${esc(s)}</button>`).join(''); box.style.display = L.length ? 'flex' : 'none'; };
+  inp.addEventListener('input', show); inp.addEventListener('focus', show); inp.addEventListener('blur', () => setTimeout(() => { box.style.display = 'none'; }, 250));
+  box.addEventListener('mousedown', e => { const b = e.target.closest('[data-st]'); if (!b) return; e.preventDefault(); inp.value = b.dataset.st; box.style.display = 'none'; inp.dispatchEvent(new Event('input', { bubbles: true })); inp.dispatchEvent(new Event('change', { bubbles: true })); if (onChange) onChange(); });
+  box.style.display = 'none';
+}
