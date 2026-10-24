@@ -22,7 +22,7 @@ const CW_SECS = [
   { id: 'door', n: '②', t: 'On the way to the door', fixed: true, ph: 'front', icon: 'front', parts: [
     CWW('door', 'What you see', ['Motor court', 'Guest parking', 'Fountain', 'Courtyard entry', 'Porte-cochère', 'Entry gate / arbor', 'Front lawn', 'Specimen trees']),
     CWG('site', 'view'), CWG('front', 'frontPh')] },
-  { id: 'site', t: 'Site & landscaping', ph: 'site', icon: 'site', parts: [
+  { id: 'site', t: 'Site & landscaping', ph: 'site', icon: 'palm', parts: [
     CWG('amenities', 'land'),
     CWF('site', 'topo'), CWF('site', 'topoOth'), CWF('site', 'topoMore'), CWF('site', 'usable'), CWF('site', 'siteFeat'), CWF('site', 'siteFeatOth'), CWF('site', 'siteFeatImpact'), CWF('site', 'siteFeatDesc'), CWF('site', 'drainage'), CWF('site', 'photoSite'), CWF('site', 'photoSite2'),
     CWW('grounds', 'Seen on the grounds', ['Well head', 'Propane tank', 'Septic lid', 'Water tanks', 'Generator', 'Solar panels', 'Transformer', 'Oil / gas well', 'Easement / path']),
