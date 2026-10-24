@@ -892,7 +892,7 @@ nav.tabs button[aria-selected="true"] { background: var(--look-navy) !important;
       <li><b>Home:</b> <b>New inspection</b> (from an order you sent from the Octopus, or blank) or <b>Open existing</b> (one on this iPad, or a Workfile / orders file from OneDrive). Your inspections are listed below.</li>
       <li>Opening an inspection shows its <b>buttons</b>, grouped Assignment · Inspection · Main dwelling · Other buildings · Other. A red number is how many required items are missing; a green ✓ means done. Tap a button and its questions slide in; <b>Next ›</b> goes to the next button, <b>‹ All buttons</b> goes back.</li>
       <li>Start with <b>Report setup</b>: property type (single family, condo, PUD, co-op – condo, PUD or co-op makes <b>HOA / Project</b> appear – next to <b>Interview</b>, because those are questions for the owner or agent; in the Complex walk they are under <b>Ask / later</b>), the buildings, and <b>Quick or Complex</b>. Add ADUs and outbuildings inside the <b>ADUs</b> and <b>Outbuildings</b> buttons (＋ Add). An outbuilding must be permanently attached (real property). Answer <b>No</b> for a movable shed and the app moves it to <b>Landscaping &amp; outdoor living</b> as "Shed (personal property)", next to gazebo and trellis, and takes its photos with it. Main dwelling order: Exterior, Interior, Systems &amp; features, Garage &amp; parking, Quality &amp; condition, Disaster mitigation, Green &amp; energy efficiency, Defects.</li>
-      <li>The water heater questions show in both <b>Systems & features</b> and <b>Disaster mitigation</b> – it is one answer, so changing it in either place changes both.</li>
+      <li>The water heater questions show in both <b>Systems & features</b> and <b>Disaster mitigation</b> – it is one answer, so changing it in either place changes both. Answering <b>Double</b> (or Single) <b>Strapped</b> also ticks the UAD disaster mitigation feature <b>Water Heater Strapping</b> for you.</li>
       <li>Top of the screen: Walk-through (your own order, unchanged), Dictate, Buttons, Search, OctoSketch, ☀ Outdoor and Storage check. <b>Show the classic tabs</b> at the bottom of the button page brings back the old tab strip.</li></ol></details>
     <details><summary>Comp sale price – MLS vs public record</summary><ol>
       <li>The grid uses the <b>public record</b> sale price (CRS Data, then the recorded deed in CORT).</li>
@@ -1228,7 +1228,7 @@ nav.tabs button[aria-selected="true"] { background: var(--look-navy) !important;
 </div>
 <div id="toast" role="status" hidden></div>
 <script>
-const BUILD='o1-1024-1531';
+const BUILD='o1-1024-1557';
 const G = (() => {
 /* ---------------- small helpers ---------------- */
 const $ = (s, r = document) => r.querySelector(s);

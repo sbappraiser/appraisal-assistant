@@ -748,6 +748,7 @@ function bind(root) {
     if (['attach', 'pud', 'project'].includes(f.k)) propDefaults(app.ins.data.property);
     if (f.gate) gateSet(app.ins, Object.keys(app.ins.data).find(s => app.ins.data[s] === obj) || '', f.k);   // first yes/no question of a section (Oct 23 2026)
     if (b.dataset.list === 'outbuildings' && f.k === 'real' && obj.real === false) { obPersonal(obj); return; }   // her rule Oct 23 2026: personal property is not an outbuilding
+    if (f.k === 'whStrap') strapSync(app.ins);   // her Oct 24 2026: a strapped water heater is a disaster mitigation feature
     if (f.k === 'atticAcc') { if (obj.atticAcc === true) obj.attic = true; else if (obj._atticAuto) obj.attic = undefined; obj._atticAuto = obj.atticAcc === true; }   // an accessible attic is an attic (UAD 8.017); No asks whether there is a sealed one   // her ask Oct 21 2026: a detached house, not PUD, not condo → the owner keeps up the outside
     save(); renderTab();
   });
@@ -1202,3 +1203,10 @@ function bindStreetSugg(inp, getZip, onPick) {
   box.addEventListener('pointerdown', e => { const b = e.target.closest('[data-st]'); if (!b) return; e.preventDefault(); inp.value = b.dataset.st; box.hidden = true; if (onPick) onPick(inp.value); else { inp.dispatchEvent(new Event('input', { bubbles: true })); inp.dispatchEvent(new Event('change', { bubbles: true })); } });
   box.hidden = true;
 }
+
+/* her Oct 24 2026: water heater strapped (double or single) → UAD disaster mitigation "Water Heater Strapping" (5.000), one answer in both places */
+function strapSync(ins) { const s = ins.data.systems || {}, iv = ins.data.interview = ins.data.interview || {}; const st = s.whStrap || [];
+  const L = new Set(iv.disaster || []);
+  if (st.some(x => /^(Double|Single) Strapped$/.test(x))) { L.delete('None'); L.add('WaterHeaterStrapping'); }
+  else if (L.has('WaterHeaterStrapping') && iv._strapAuto) L.delete('WaterHeaterStrapping');
+  iv._strapAuto = L.has('WaterHeaterStrapping') && st.some(x => /Strapped$/.test(x) && !/^Not/.test(x)); iv.disaster = [...L]; }
