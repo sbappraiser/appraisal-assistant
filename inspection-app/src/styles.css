@@ -496,3 +496,12 @@ input.txt:focus, select.txt:focus, textarea.txt:focus { background: #fff4b0 !imp
 .st-sugg { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
 .st-sugg[hidden] { display: none; }
 .st-s { font: inherit; font-size: 1rem; padding: 8px 12px; min-height: 44px; border: 2px solid #1f3f66; border-radius: 10px; background: #e3ebf5; color: #14213a; cursor: pointer; }
+
+/* her Oct 24 2026: every button the same size – title up to 2 lines, the blue tag on one line (full text when you hold on it) */
+.ov-tile { height: 206px; min-height: 0; overflow: hidden; justify-content: flex-start; padding: 14px 8px 10px; gap: 5px; }
+.ov-tile b { font-size: 1.2rem; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+.ov-tag { max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; box-sizing: border-box; }
+.ov-tile small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.ov-tile[data-ov="outdoor"] svg { width: 76px; height: 76px; margin: -6px 0 -6px; }
+.ov-tile[data-ov="ext"] svg { width: 140px; height: 64px; margin: 0; }
+@media (max-width: 520px) { .ov-tile b { font-size: 1.08rem; } .ov-tile svg { width: 56px; height: 56px; } .ov-tile[data-ov="ext"] svg { width: 120px; height: 56px; } }
