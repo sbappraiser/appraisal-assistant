@@ -330,7 +330,7 @@ const safeName = s => String(s || '').replace(/[\\/:*?"<>|#%]+/g, '-').replace(/
 
 /* her defaults (Oct 21 2026): Native American lands No (none in her area); homeowner responsible for all exterior maintenance Yes once the
    property is Detached, not a PUD and not a condominium / cooperative – only while those are unanswered, so her own answer always stays */
-function propDefaults(p) { if (!p) return; if (p.native === undefined) p.native = false; splitAddr(p);
+function propDefaults(p) { if (!p) return; if (p.native === undefined) p.native = false; splitAddr(p); cityFix(p);
   /* her rule (Oct 23 2026): not a condo, PUD or co-op → site owned in common = No and owner responsible for all exterior maintenance = Yes.
      Only fills blanks – her own answer always stays. */
   if (p.pud === false && p.project === false) { if (p.siteCommon === undefined) p.siteCommon = false; if (p.hoExt === undefined) p.hoExt = true; } }
@@ -346,7 +346,7 @@ if (DEVICE === 'iPhone') { const fix = n => { if (n.nodeType === 3) { if (n.node
 function splitAddr(p) {
   const m = String(p.addr || '').match(/^\s*([^,]+?)\s*,\s*([^,]+?)\s*(?:,\s*)?(?:\b(CA|California)\b\.?\s*)?,?\s*(\d{5})?(?:-(\d{4}))?\s*$/i);
   if (!m || !/\d/.test(m[1]) || !(m[3] || m[4])) return;
-  const city = m[2].replace(/\s+(CA|California)$/i, '').trim(), zip = m[4] || '';
+  const city = uspsCity(m[2].replace(/\s+(CA|California)$/i, '').trim()), zip = m[4] || '';
   const cities = ['Santa Barbara', 'Goleta', 'Carpinteria', 'Summerland'];
   const c = cities.find(x => x.toLowerCase() === city.toLowerCase());
   if (c) { if (!p.city || p.city === c) p.city = c; }
@@ -356,3 +356,8 @@ function splitAddr(p) {
     if (m[5] && !p.zip4) p.zip4 = m[5]; }
   p.addr = m[1].trim();
 }
+
+/* her Oct 24 2026: Montecito is not a USPS city – mail goes to Santa Barbara (Hope Ranch too); Isla Vista mail is Goleta */
+const USPS_CITY = { montecito: 'Santa Barbara', 'hope ranch': 'Santa Barbara', 'mission canyon': 'Santa Barbara', 'isla vista': 'Goleta' };
+function uspsCity(c) { return USPS_CITY[String(c || '').trim().toLowerCase()] || c; }
+function cityFix(p) { if (p && p.city === 'Other' && p.cityOther && USPS_CITY[p.cityOther.trim().toLowerCase()]) { p.city = USPS_CITY[p.cityOther.trim().toLowerCase()]; delete p.cityOther; } }

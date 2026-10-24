@@ -619,6 +619,7 @@ function applyCRS(ins, c) {
     const p = ins.data.property, fr = ins.data.front, si = ins.data.site;
     p.crs = c; if (p.pubCmt === undefined) p.pubCmt = true;
     if (c.addr) p.addr = titleCase(c.addr);
+    if (c.city) c.city = uspsCity(c.city);
     if (c.city) { const m = CITIES.find(x => x[0].toLowerCase() === c.city.toLowerCase()); if (m) { p.city = m[0]; delete p.cityOther; } else { p.city = 'Other'; p.cityOther = titleCase(c.city); } }
     if (c.state) p.state = c.state;
     if (c.zip) { if (ZIPS.includes(c.zip)) { p.zip = c.zip; delete p.zipOther; } else { p.zip = 'Other'; p.zipOther = c.zip; } }

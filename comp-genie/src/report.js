@@ -349,7 +349,7 @@ function writeReportXML(doc, NS, J, SUBJ, VA, SVC) {
   /* the appraiser (A-1 2400.0041 / .0047 / .0051, required) and who completed the inspection (D-1: INSPECTION_CompletedBy_ROLE) –
      her Oct 21 import showed Scope of Inspection by Appraiser red. Her details (APPRAISER_ME); with Overwrite off SFREP keeps her own profile. */
   { const M = APPRAISER_ME; const PS = child(SVC, 'PARTIES'); const P = add(PS, 'PARTY'); const nm = path(P, 'INDIVIDUAL', 'NAME'); set(nm, 'FirstName', M.first); set(nm, 'LastName', M.last); if (M.middle) set(nm, 'MiddleName', M.middle);
-    const ad = path(P, 'ADDRESSES', 'ADDRESS'); set(ad, 'AddressLineText', M.addr); set(ad, 'CityName', M.city); set(ad, 'PostalCode', M.zip); set(ad, 'StateCode', M.state);
+    const ad = path(P, 'ADDRESSES', 'ADDRESS'); set(ad, 'AddressLineText', M.addr); set(ad, 'CityName', uspsCity(M.city)); set(ad, 'PostalCode', M.zip); set(ad, 'StateCode', M.state);
     const RO = child(child(P, 'ROLES'), 'ROLE'); RO.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:label', 'ROLE_Appraiser'); set(path(RO, 'APPRAISER', 'APPRAISER_DETAIL'), 'AppraiserCompanyName', M.company);
     const L = path(RO, 'LICENSES', 'LICENSE'); set(child(L, 'APPRAISER_LICENSE'), 'AppraiserLicenseType', M.licType); const LD = child(L, 'LICENSE_DETAIL'); set(LD, 'LicenseExpirationDate', M.licExp); set(LD, 'LicenseIdentifier', M.lic); set(LD, 'LicenseIssuingAuthorityStateCode', M.licState);
     set(child(RO, 'ROLE_DETAIL'), 'PartyRoleType', 'Appraiser');

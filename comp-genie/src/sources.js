@@ -14,6 +14,9 @@ function archTier(note, L, rating) {
    ===================================================================== */
 
 /* ---------------- 1. Your comp archive (converted from ACI) ---------------- */
+/* her Oct 24 2026: Montecito is not a USPS city – the mailing city is Santa Barbara (Hope Ranch too); Isla Vista mail is Goleta */
+const USPS_CITY = { montecito: 'Santa Barbara', 'hope ranch': 'Santa Barbara', 'mission canyon': 'Santa Barbara', 'isla vista': 'Goleta' };
+function uspsCity(c) { return c && USPS_CITY[String(c).trim().toLowerCase()] || c; }
 const ZIP_CITY = { '93101': 'Santa Barbara', '93103': 'Santa Barbara', '93105': 'Santa Barbara', '93108': 'Santa Barbara', '93109': 'Santa Barbara', '93110': 'Santa Barbara', '93111': 'Santa Barbara', '93117': 'Goleta', '93013': 'Carpinteria', '93067': 'Summerland', '93014': 'Carpinteria', '93102': 'Santa Barbara', '93106': 'Santa Barbara', '93118': 'Goleta' };   // comp city when the MLS file has none and the archive is not loaded (Oct 22 2026: SFREP showed ', CA 93110')
 const ARCH = { loaded: false, cols: [], rows: [], sales: {}, byAddr: new Map(), byApn: new Map(), streets: [], zipCity: {} };
 function archiveIndex(data) {
@@ -265,7 +268,7 @@ function parseCortCsv(text) {
   if (!H.includes('grantor') || !H.includes('apn')) throw new Error('This is not a CORT table (no APN / Grantor columns).');
   return rows.slice(1).map(r => { const o = {}; H.forEach((h, i) => { o[h] = (r[i] || '').trim(); }); return o; }).map(cortCanon);
 }
-const CORT_CITY = { SBAR: 'Santa Barbara', GOLT: 'Goleta', MONT: 'Montecito', CARP: 'Carpinteria', SUMM: 'Summerland', 'I.V.': 'Isla Vista', UNIN: '', ONIN: '' };
+const CORT_CITY = { SBAR: 'Santa Barbara', GOLT: 'Goleta', MONT: 'Santa Barbara', CARP: 'Carpinteria', SUMM: 'Summerland', 'I.V.': 'Goleta', UNIN: '', ONIN: '' };   // USPS cities (her Oct 24 2026: Montecito mail is Santa Barbara, Isla Vista mail is Goleta)
 function cortCanon(o) {
   const noAddr = o.no_address === '1' || /NO (COUNTY|ADDRESS)/.test(o.address);
   return {

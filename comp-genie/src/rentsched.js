@@ -69,7 +69,7 @@ function rsXML(J, doc, NS, SUBJ, VA, SVC) { const RON = rentOn(J), ION = incOn(J
   const one = (p, tag) => kids(p, tag)[0] || el(p, tag);
   const PROPS = kids(VA, 'PROPERTIES')[0]; const RL = kids(SVC, 'RELATIONSHIPS')[0] || el(SVC, 'RELATIONSHIPS'); const rel = (arc, from, to) => el(RL, 'RELATIONSHIP', { 'xlink:arcrole': 'urn:fdc:mismo.org:2009:residential/' + arc, 'xlink:from': from, 'xlink:to': to });
   const subjLL = { lat: num(J.subject.lat), lon: num(J.subject.lon) }; const prox = (lat, lon) => { if (!num(lat) || !num(lon)) return null; const mi = milesBetween(subjLL, { lat: num(lat), lon: num(lon) }); return mi === null ? null : { mi, dir: directionOf(subjLL, { lat: num(lat), lon: num(lon) }) }; };
-  const addr = (P, a, city, zip) => { const A = el(P, 'ADDRESS'); leaf(A, 'AddressLineText', String(a || '').slice(0, 100)); leaf(A, 'CityName', city || J.subject.city || null); leaf(A, 'PostalCode', zip || null); leaf(A, 'StateCode', 'CA'); };
+  const addr = (P, a, city, zip) => { const A = el(P, 'ADDRESS'); leaf(A, 'AddressLineText', String(a || '').slice(0, 100)); leaf(A, 'CityName', uspsCity(city || J.subject.city || '') || null); leaf(A, 'PostalCode', zip || null); leaf(A, 'StateCode', 'CA'); };
   const IMS = kids(SUBJ, 'IMPROVEMENTS')[0]; const dw = IMS && kids(IMS, 'IMPROVEMENT').find(i => kids(i, 'IMPROVEMENT_DETAIL').some(d => kids(d, 'ImprovementType').some(x => x.textContent === 'Dwelling')));
   const units = dw && kids(dw, 'PROPERTY_UNITS')[0] ? kids(kids(dw, 'PROPERTY_UNITS')[0], 'PROPERTY_UNIT') : []; const isAdu = u => [...u.getElementsByTagNameNS(NS, 'AccessoryDwellingUnitIndicator')].some(x => x.textContent.trim() === 'true');
   const pu = units.find(u => !isAdu(u));
