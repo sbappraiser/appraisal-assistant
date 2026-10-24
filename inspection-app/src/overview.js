@@ -18,7 +18,7 @@ const OV_ICON = {
   energy: '<path d="M5 19c0-8 5-13 14-14-1 9-6 14-14 14Z"/><path d="M5 19 13 11"/><path d="m12 7-2 4h3l-2 4"/>',
   disaster: '<ellipse cx="12" cy="4.6" rx="9" ry="2.1"/><path d="M3.8 7.6C5.5 9.6 18 9.9 20 7.7"/><path d="M5.4 10.6C7.2 12.4 16.8 12.5 18.4 10.5"/><path d="M7.4 13.4C8.9 14.9 15.6 14.9 16.8 13.3"/><path d="M9.2 16C10.3 17.2 14.4 17.2 15.3 15.9"/><path d="M10.8 18.3C11.5 19 13.3 19 13.9 18.2"/><path d="M12.6 19.4C12.8 20.6 12 21.5 10.4 22.2"/>',
   garage: '<path d="M5 16.5V12l1.8-4.6A1.5 1.5 0 0 1 8.2 6.5h7.6a1.5 1.5 0 0 1 1.4.9L19 12v4.5z"/><path d="M5 12h14"/><path d="M6 16.5V19M18 16.5V19"/><circle cx="8.3" cy="14.3" r="0.9"/><circle cx="15.7" cy="14.3" r="0.9"/>',
-  defects: '<path d="M12 4 21 19.5H3z"/><path d="M12 10v4.5M12 17v.3"/>',
+  defects: '<path d="M12 3.5 21.5 20H2.5z" fill="#ffe680"/><path d="M12 9.5v5M12 17.2v.3" stroke-width="2.2"/>',   // her ask Oct 24 2026: light yellow warning sign with !
   wrapup: '<circle cx="12" cy="10" r="6"/><path d="m9.3 10 1.9 1.9L15 8.2"/><path d="M8.5 15 7 21l5-2.5 5 2.5-1.5-6"/>',
   adu: '<path d="M2.5 13 8 8.5l5.5 4.5V20h-11z"/><path d="M13.5 15 17.5 11.5 21.5 15v5h-8"/><path d="M6.5 20v-3h3v3"/>',
   outb: '<path d="M3 12 10 6l7 6"/><path d="M5 11v8h10v-8"/><path d="M19.5 19v-5"/><circle cx="19.5" cy="11.5" r="2.6"/><path d="M8 19v-3.5h4V19"/>',
