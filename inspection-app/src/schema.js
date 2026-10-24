@@ -573,7 +573,7 @@ const SECTIONS = [
       { k: 'photoStreet4', l: 'Street view 4', t: 'photo', cat: 'SiteExhibit' },
     ]},
     { id: 'access', title: 'Street & access', fields: [
-      { k: 'primaryAccess', l: 'Primary access', t: 'one', req: true, o: U('PropertyPrimaryEntryExitMethodType'), uad: 'PropertyPrimaryEntryExitMethodType', fid: '4.020' },
+      { k: 'primaryAccess', l: 'Primary access', t: 'one', req: true, o: order(U('PropertyPrimaryEntryExitMethodType').filter(x => !['PrivateAirstrip', 'Waterway'].includes(x[0])), ['PublicStreet', 'PrivateStreet', 'PedestrianOnlyAccess', 'Other']), uad: 'PropertyPrimaryEntryExitMethodType', fid: '4.020' },
       { k: 'streetType', l: 'Street type', t: 'one', req: true, o: U('StreetAccessType'), uad: 'StreetAccessType' },
       { k: 'streetSurface', l: 'Street surface', t: 'one', req: true, o: U('ImprovedSurfaceMaterialType'), uad: 'ImprovedSurfaceMaterialType' },
       { k: 'accessTypical', l: 'Access typical for market', t: 'yn', req: true, uad: 'PropertyAccessTypicalToMarketIndicator', fid: '4.023' },
