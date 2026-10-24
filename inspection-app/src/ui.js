@@ -763,7 +763,7 @@ function bind(root) {
       const lim = inp.parentElement.querySelector('[data-limit]'); if (lim) { lim.textContent = inp.value.length + ' / ' + lim.dataset.limit; lim.classList.toggle('over', inp.value.length > +lim.dataset.limit); }
       save();
     };
-    inp.addEventListener('input', upd); inp.addEventListener('change', () => { upd(); renderTab(); });
+    inp.addEventListener('input', upd); inp.addEventListener('change', () => { upd(); if (inp.dataset.k === 'addr') { const { obj } = target(inp); splitAddr(obj); save(); refreshTitleOnly(); } renderTab(); });
     if (inp.dataset.tenkey) { const pad = inp.parentElement.querySelector('.tenkey'); let dirty = false;
       inp.addEventListener('focus', () => { pad.hidden = false; });
       inp.addEventListener('blur', () => { pad.hidden = true; if (dirty) { dirty = false; inp.dispatchEvent(new Event('change')); } });

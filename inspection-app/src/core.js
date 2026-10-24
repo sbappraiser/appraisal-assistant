@@ -330,7 +330,7 @@ const safeName = s => String(s || '').replace(/[\\/:*?"<>|#%]+/g, '-').replace(/
 
 /* her defaults (Oct 21 2026): Native American lands No (none in her area); homeowner responsible for all exterior maintenance Yes once the
    property is Detached, not a PUD and not a condominium / cooperative – only while those are unanswered, so her own answer always stays */
-function propDefaults(p) { if (!p) return; if (p.native === undefined) p.native = false;
+function propDefaults(p) { if (!p) return; if (p.native === undefined) p.native = false; splitAddr(p);
   /* her rule (Oct 23 2026): not a condo, PUD or co-op → site owned in common = No and owner responsible for all exterior maintenance = Yes.
      Only fills blanks – her own answer always stays. */
   if (p.pud === false && p.project === false) { if (p.siteCommon === undefined) p.siteCommon = false; if (p.hoExt === undefined) p.hoExt = true; } }
@@ -340,3 +340,19 @@ const DEVICE = /iPhone/.test(navigator.userAgent) ? 'iPhone' : 'iPad';
 if (DEVICE === 'iPhone') { const fix = n => { if (n.nodeType === 3) { if (n.nodeValue.includes('iPad') && !(n.parentNode && n.parentNode.closest && n.parentNode.closest('[data-keep]'))) n.nodeValue = n.nodeValue.replace(/iPad/g, 'iPhone'); return; } if (n.nodeType === 1 && !/^(SCRIPT|STYLE|TEXTAREA|INPUT)$/.test(n.nodeName) && !(n.hasAttribute && n.hasAttribute('data-keep'))) { n.childNodes.forEach(fix); ['title', 'placeholder', 'aria-label'].forEach(a => { const v = n.getAttribute && n.getAttribute(a); if (v && v.includes('iPad')) n.setAttribute(a, v.replace(/iPad/g, 'iPhone')); }); } };
   const start = () => { fix(document.body); new MutationObserver(L => L.forEach(m => { m.addedNodes.forEach(fix); if (m.type === 'characterData') fix(m.target); })).observe(document.body, { childList: true, subtree: true, characterData: true }); };
   if (document.body) start(); else document.addEventListener('DOMContentLoaded', start); }
+
+/* her Oct 24 2026: a whole address typed or imported into Street ("112 State Street, Santa Barbara, CA 93101")
+   is split – the street stays, the city and ZIP go to their own answers (only when blank or the same). */
+function splitAddr(p) {
+  const m = String(p.addr || '').match(/^\s*([^,]+?)\s*,\s*([^,]+?)\s*(?:,\s*)?(?:\b(CA|California)\b\.?\s*)?,?\s*(\d{5})?(?:-(\d{4}))?\s*$/i);
+  if (!m || !/\d/.test(m[1]) || !(m[3] || m[4])) return;
+  const city = m[2].replace(/\s+(CA|California)$/i, '').trim(), zip = m[4] || '';
+  const cities = ['Santa Barbara', 'Goleta', 'Carpinteria', 'Summerland'];
+  const c = cities.find(x => x.toLowerCase() === city.toLowerCase());
+  if (c) { if (!p.city || p.city === c) p.city = c; }
+  else if (city && (!p.city || (p.city === 'Other' && !p.cityOther))) { p.city = 'Other'; p.cityOther = city.replace(/\b\w/g, x => x.toUpperCase()); }
+  if (zip) { const known = ['93101','93103','93105','93108','93109','93110','93111','93117','93013','93067'];
+    if (!p.zip || p.zip === zip || (p.zip === 'Other' && (!p.zipOther || p.zipOther === zip))) { if (known.includes(zip)) { p.zip = zip; delete p.zipOther; } else { p.zip = 'Other'; p.zipOther = zip; } }
+    if (m[5] && !p.zip4) p.zip4 = m[5]; }
+  p.addr = m[1].trim();
+}
