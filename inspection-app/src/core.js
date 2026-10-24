@@ -125,6 +125,8 @@ function normalize(ins) {
   if (!ins.data.property.state) ins.data.property.state = 'CA';
   if (!ins.data.property.estate) ins.data.property.estate = 'FeeSimple';
   propDefaults(ins.data.property); if (typeof gateFix === 'function') gateFix(ins); if (typeof strapSync === 'function') try { strapSync(ins); } catch (e) {}
+  (ins.lists.baths || []).forEach(b => { const F = b.feat || []; const mv = (lab, k) => { if (F.includes(lab)) { if (b[k] === undefined) b[k] = true; b.feat = (b.feat || []).filter(x => x !== lab); } };   // her Oct 24 2026: these are their own questions now
+    mv('Steam Shower', 'steamSh'); mv('Jetted Tub', 'spaTub'); mv('Bidet', 'bidet'); mv('Water Closet', 'wc'); if (F.includes('Wainscoting')) { if (!b.wainscot) b.wainscot = ['Other']; b.feat = (b.feat || []).filter(x => x !== 'Wainscoting'); } });
   { const I = ins.data.interior; if (I) { if (I.atticAcc === undefined && I.attic !== undefined) I.atticAcc = I.attic === true ? I.atticAccess !== 'None / Sealed' : false;   // older inspections (before Oct 23 2026)
     if (I.atticAcc === true) { I.attic = true; I._atticAuto = true; } } }
   if (!ins.data.site.apnDesc) ins.data.site.apnDesc = 'LandWithDwelling';

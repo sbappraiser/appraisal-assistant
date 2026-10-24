@@ -45,7 +45,11 @@ function bathText(b, name) {
   const ctr = mats(b.counter); if (ctr.length) p.push(`${listJoin(ctr)} counters`);
   if (b.tubFree) p.push(`${mats(b.tubFreeMat).length ? listJoin(mats(b.tubFreeMat)) + ' ' : ''}freestanding tub`);
   if (b.tubShower) p.push(`tub/shower with ${listJoin(mats(b.tubShowerMat)) || 'tile'} surround`);
-  if (b.shower) p.push(`${mats(b.showerMat).length ? listJoin(mats(b.showerMat)) + ' ' : ''}shower${(b.feat || []).includes('Frameless Glass') ? ' with frameless glass' : ''}`);
+  if (b.tubSep) p.push(`${b.spaTub ? 'spa tub' : 'tub'}${mats(b.tubSepSur).filter(x => x !== 'none').length ? ' with ' + listJoin(mats(b.tubSepSur).filter(x => x !== 'none')) + ' surround' : ''}`);
+  else if (b.spaTub && b.tubFree) p.push('spa tub');
+  if (b.shower) p.push(`${b.steamSh ? 'steam ' : ''}shower${mats(b.showerMat).filter(x => x !== 'none').length ? ' with ' + listJoin(mats(b.showerMat).filter(x => x !== 'none')) + ' walls' : ''}${(b.feat || []).includes('Frameless Glass') ? ' and frameless glass' : ''}`);
+  const wn = mats(b.wainscot).filter(x => x !== 'none'); if (wn.length) p.push(`${listJoin(wn)} wainscoting`);
+  if (b.wc) p.push('water closet'); if (b.bidet) p.push('bidet'); if (b.featOther) p.push(String(b.featOther).trim());
   const f = mats(b.feat).filter(x => x !== 'frameless glass' || !b.shower); if (f.length) p.push(listJoin(f));
   
   const fl = mats(b.flooring, FLOORING); if (fl.length) p.push(`${listJoin(fl)} flooring`);

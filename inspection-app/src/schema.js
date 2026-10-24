@@ -28,6 +28,8 @@ const COUNTERS = opts('Stone Slab','Tile','Corian / Solid Surface','Butcher Bloc
 const VANITY_MAT_X = ['White Oak', 'Rift-sawn Oak', 'Walnut', 'Panel-ready Appliance Fronts'];   // kitchen only (her list, Oct 20 2026)
 const CABINETS = opts('Custom Built','Semi-Custom','Stock','Solid Wood','Painted Wood','Stained Wood','Matched Grain Laminate','Lacquer / High Gloss','Thermofoil','Laminate','MDF','Metal','Glass Front','Inset','Frameless (Full Overlay)','Slab / Flat Panel','Shaker','Raised Panel','White Oak','Rift-sawn Oak','Walnut','Panel-ready Appliance Fronts','Other');
 const FIXTURE_FIN = opts('Polished Chrome','Brushed Nickel','Polished Nickel','Stainless','Unlacquered Brass',['Polished Gold Tone','Gold tone – polished'],['Brushed Brass / Gold','Gold tone – brushed / satin'],'Matte Black','Oil-rubbed Bronze','Mixed Metals');
+// her Oct 24 2026: shower walls ("shower wainscoting") and tub surrounds
+const SHOWER_WALL = opts('Tile','Stone Tile','Stone Slab','Corian','Fiberglass','Vinyl','Glass Block','Glass','Plaster','None','Other');
 const BATH_MAT = opts('Stone Tile','Stone Slab','Tile','Corian','Glass Tile','Acrylic / Fiberglass','Cast Iron','Enameled Steel','Copper','Concrete','Waterproof Plaster (Tadelakt / Microcement)','Other');
 const REMODEL = opts('Gutted and Remodeled','Remodeled','Updated','Partially Updated','Older Remodel','Dated','Original','New Construction');
 // her list and order (Oct 24 2026); the rest sit under "More brands"
@@ -297,10 +299,18 @@ const LISTS = {
       { k: 'tubFree', l: 'Freestanding tub', t: 'yn', show: it => it.kind === 'FullBathroom' },
       { k: 'tubFreeMat', l: 'Freestanding tub material', t: 'multi', o: BATH_MAT, show: it => it.tubFree === true },
       { k: 'tubShower', l: 'Tub / shower combination', t: 'yn', show: it => it.kind === 'FullBathroom' },
-      { k: 'tubShowerMat', l: 'Tub / shower surround material', t: 'multi', o: BATH_MAT, show: it => it.tubShower === true },
+      { k: 'tubShowerMat', l: 'Tub / shower surround', t: 'multi', o: SHOWER_WALL, show: it => it.tubShower === true },
+      { k: 'tubSep', l: 'Separate tub (built-in, not freestanding)', t: 'yn', show: it => it.kind === 'FullBathroom' },
+      { k: 'tubSepSur', l: 'Tub surround', t: 'multi', o: SHOWER_WALL, show: it => it.tubSep === true },
+      { k: 'spaTub', l: 'Spa / jetted tub', t: 'yn', show: it => it.kind === 'FullBathroom' && (it.tubSep === true || it.tubFree === true) },
       { k: 'shower', l: 'Separate shower', t: 'yn', show: it => it.kind === 'FullBathroom' },
-      { k: 'showerMat', l: 'Shower material', t: 'multi', o: BATH_MAT, show: it => it.shower === true },
-      { k: 'feat', l: 'Features', t: 'multi', o: opts('Frameless Glass','Steam Shower','Rain Shower Head','Multiple Shower Heads','Body Sprays','Jetted Tub','Heated Floors','Towel Warmer','Bidet','Smart Toilet','Water Closet','Wainscoting','Window','Walk-in Closet Access','Curbless / Walk-in Shower','Wet Room (open shower and tub)','Built-in Shower Bench','Shower Niche','Handheld Shower','Thermostatic Valve','Freestanding Soaking Tub','Floor-mounted Tub Filler','Wall-mount Faucets','Bidet Seat','Waterproof Plaster Walls','Wheelchair Accessible','Grab Bars','Linen Closet','Exhaust Fan') },
+      { k: 'showerMat', l: 'Shower walls', t: 'multi', o: SHOWER_WALL, show: it => it.shower === true },
+      { k: 'steamSh', l: 'Steam shower', t: 'yn', show: it => it.shower === true || it.tubShower === true },
+      { k: 'wainscot', l: 'Wall wainscoting', t: 'multi', o: opts('None','Tile','Wood','Other') },
+      { k: 'wc', l: 'Water closet (toilet room)', t: 'yn' },
+      { k: 'bidet', l: 'Bidet', t: 'yn' },
+      { k: 'feat', l: 'Features', t: 'multi', o: opts('Frameless Glass','Rain Shower Head','Multiple Shower Heads','Body Sprays','Heated Floors','Towel Warmer','Smart Toilet','Window','Walk-in Closet Access','Curbless / Walk-in Shower','Wet Room (open shower and tub)','Built-in Shower Bench','Shower Niche','Handheld Shower','Thermostatic Valve','Freestanding Soaking Tub','Floor-mounted Tub Filler','Wall-mount Faucets','Bidet Seat','Waterproof Plaster Walls','Wheelchair Accessible','Grab Bars','Linen Closet','Exhaust Fan') },
+      { k: 'featOther', l: 'Other', t: 'text', lim: 100 },
       { k: 'upd', l: 'Update status', t: 'one', req: true, o: UPDATE, uad: 'RoomUpdateStatusType' },
       { k: 'time', l: 'Update time frame', t: 'one', o: TIMEFRAME, show: it => it.upd && it.upd !== 'NotUpdated', req: it => it.upd && it.upd !== 'NotUpdated', uad: 'RoomUpdatedTimeframeType' },
       { k: 'condStat', l: 'Condition status', t: 'one', req: true, o: COND_STATUS, uad: 'RoomConditionStatusType' },
