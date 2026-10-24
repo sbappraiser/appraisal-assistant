@@ -479,3 +479,8 @@ input.txt:focus, select.txt:focus, textarea.txt:focus { background: #fff4b0 !imp
   .bar-tools .bl { display: inline; }
   .attn-pill { order: 4; }
 }
+
+/* tiles like the mockup (Oct 24 2026): status line, then a blue tag with what the button covers */
+.ov-tile small.st.ok { color: #1f6b3d; }
+.ov-tile small.st.miss { color: #9b2019; }
+.ov-tag { font-style: normal; font-weight: 700; font-size: .85rem; color: #1f3f66; background: #e3ebf5; border-radius: 10px; padding: 2px 8px; line-height: 1.3; }

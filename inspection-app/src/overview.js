@@ -10,6 +10,7 @@ const OV_ICON = {
   street: '<path d="M7 21 10 3M17 21 14 3M12 6v2M12 11v2M12 16v2"/>',
   driveway: '<path d="M5 21 9 9h6l4 12"/><path d="M8.5 13h7"/><rect x="9" y="3" width="6" height="4" rx="1"/>',
   site: '<path d="M3 18.5 8 16l8 3 5-2.5V5L16 7.5 8 4.5 3 7z"/><path d="M8 4.5v11.5M16 7.5V19"/>',
+  palm: '<path d="M8.6 21c.4-4 .3-7.8-.9-11.3"/><path d="M7.7 9.7C6.2 7.6 3.9 7.3 2.4 8.6M7.7 9.7c-.2-2.7-2-4.3-4.2-4.2M7.7 9.7c.8-2.6 3.2-3.6 5.3-2.9M7.7 9.7c2.3-.6 4.4.6 5 2.6"/><path d="M12.5 17.2c1.1 0 1.1-.8 2.3-.8s1.1.8 2.3.8 1.1-.8 2.3-.8 1.1.8 2.1.8M12.5 20.3c1.1 0 1.1-.8 2.3-.8s1.1.8 2.3.8 1.1-.8 2.3-.8 1.1.8 2.1.8"/><path d="M3 21h7"/>',
   pool: '<path d="M3 15.5c1.5 0 1.5-1 3-1s1.5 1 3 1 1.5-1 3-1 1.5 1 3 1 1.5-1 3-1 1.5 1 3 1M3 19.5c1.5 0 1.5-1 3-1s1.5 1 3 1 1.5-1 3-1 1.5 1 3 1 1.5-1 3-1 1.5 1 3 1"/><path d="M8 13V5.5a1.8 1.8 0 0 1 3.6 0M16 13V5.5a1.8 1.8 0 0 0-3.6 0M8 8.5h8"/>',
   front: '<path d="M3 11 12 4l9 7"/><rect x="5.5" y="10" width="13" height="10"/><rect x="10.3" y="14" width="3.4" height="6"/><rect x="7" y="12.5" width="2.2" height="2.2"/><rect x="14.8" y="12.5" width="2.2" height="2.2"/>',
   interior: '<path d="M5 12V9.5A2.5 2.5 0 0 1 7.5 7h9A2.5 2.5 0 0 1 19 9.5V12"/><path d="M3.5 12.5a1.5 1.5 0 0 1 3 0V15h11v-2.5a1.5 1.5 0 0 1 3 0V18h-17z"/><path d="M5.5 18v2M18.5 18v2"/>',
@@ -36,7 +37,7 @@ const OV_BTNS = [
   { id: 'street', grp: 'Inspection', t: 'Street', icon: 'street', parts: [['street', null]] },
   { id: 'drive', grp: 'Inspection', t: 'Driveway', icon: 'driveway', parts: [['driveway', null]] },
   { id: 'site', grp: 'Inspection', t: 'Site, topography & view', icon: 'site', sub: 'Hazards · utilities', parts: [['site', null]] },
-  { id: 'outdoor', grp: 'Inspection', t: 'Landscaping & outdoor living', icon: 'pool', sub: 'Pool · spa · courts', parts: [['amenities', null]] },
+  { id: 'outdoor', grp: 'Inspection', t: 'Landscaping & outdoor living', icon: 'palm', sub: 'Pool · spa · courts', parts: [['amenities', null]] },
   { id: 'ext', grp: 'Main dwelling', t: 'Exterior', icon: 'front', sub: 'Rear & side photos too', parts: [['front', null], ['exterior', null]] },
   { id: 'int', grp: 'Main dwelling', t: 'Interior', icon: 'interior', sub: 'Smoke & CO · attic', parts: [['interior', null]] },
   { id: 'sys', grp: 'Main dwelling', t: 'Systems & features', icon: 'systems', sub: 'Heating · cooling · water heater · smart home', parts: [['systems', ['hvac', 'wh', 'mech', 'smart']]] },
@@ -71,7 +72,7 @@ function renderOverview() {
     const n = b.count ? b.count(ins) : null; const title = b.t + (n !== null ? ` (${n})` : '');
     const sub = !shown ? b.off : b.act === 'sketch' ? (ovSketchSf(ins) || 'Not drawn yet') : n === 0 ? 'None yet – tap to add one' : (b.sub || '');
     const st = !shown ? '' : miss ? `<span class="ov-badge" aria-label="${miss} missing">${miss}</span>` : (b.tab === 'photos' || b.tab === 'export' || b.act || n === 0) ? '' : '<span class="ov-ok" aria-label="Complete">✓</span>';
-    return `<button class="ov-tile${shown ? '' : ' off'}${miss ? ' miss' : ''}" data-ov="${b.id}"${shown ? '' : ' disabled'}>${st}<svg viewBox="0 0 24 24" aria-hidden="true">${OV_ICON[b.icon]}</svg><b>${esc(title)}</b><small>${esc(shown ? (miss ? miss + ' missing' + (sub ? ' · ' + sub : '') : sub) : sub)}</small></button>`; };
+    return `<button class="ov-tile${shown ? '' : ' off'}${miss ? ' miss' : ''}" data-ov="${b.id}"${shown ? '' : ' disabled'}>${st}<svg viewBox="0 0 24 24" aria-hidden="true">${OV_ICON[b.icon]}</svg><b>${esc(title)}</b>${shown ? (miss ? `<small class="st miss">${miss} missing</small>` : (st ? '<small class="st ok">Complete</small>' : '')) : ''}${sub ? (shown ? `<i class="ov-tag">${esc(sub)}</i>` : `<small>${esc(sub)}</small>`) : ''}</button>`; };
   const type = [P.legal && P.legal !== 'None' ? P.legal : (P.pud ? 'PUD' : 'Single family'), P.attach, P.mode].filter(Boolean).join(' · ');
   const cwb = `<button class="ov-cw" data-ovcw="1"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="13" cy="4" r="2"/><path d="m9 21 2-6 2 2v4M7 12l2-4 4 1 3 3M11 15l-2-3"/></svg><span><b>Complex walk</b><small>${P.mode === 'Complex' ? 'For this large property – tap what you see as you walk' : 'For large properties – street, driveway, then go anywhere'}</small></span></button>`;
   return `<div class="ov">${cwb}<p class="ov-lead">Tap a button and its questions slide in. ${esc(type)}. The 🚶 walk-through keeps your own order.</p>
