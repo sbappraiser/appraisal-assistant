@@ -34,7 +34,6 @@ const OV_ICON = {
 const OV_VB = { front: '0 0 48 22' };   // icons not drawn on the 24 × 24 grid
 const OV_BTNS = [
   { id: 'setup', grp: 'Assignment', t: 'Report setup', icon: 'setup', sub: 'Type · buildings · Quick/Complex', parts: [['property', ['assign', 'ptype']]] },
-  { id: 'hoa', grp: 'Assignment', t: 'HOA / Project', icon: 'project', parts: [['project', null]], show: ins => tabShown(SECTIONS.find(s => s.id === 'project'), ins), off: 'Appears for condo, PUD or co-op' },
   { id: 'street', grp: 'Inspection', t: 'Street', icon: 'street', parts: [['street', null]] },
   { id: 'drive', grp: 'Inspection', t: 'Driveway', icon: 'driveway', parts: [['driveway', null]] },
   { id: 'site', grp: 'Inspection', t: 'Site, topography & view', icon: 'site', sub: 'Hazards · utilities', parts: [['site', null]] },
@@ -52,6 +51,7 @@ const OV_BTNS = [
   { id: 'sketch', grp: 'Other', t: 'OctoSketch', icon: 'sketch', act: 'sketch' },
   { id: 'photos', grp: 'Other', t: 'Photos', icon: 'photos', tab: 'photos' },
   { id: 'interview', grp: 'Other', t: 'Interview', icon: 'interview', sub: 'Remodels · EAs · sale & rent', parts: [['interview', ['updates', 'sysConf', 'utilConf', 'ea', 'confirm']]] },
+  { id: 'hoa', grp: 'Other', t: 'HOA / Project', icon: 'project', sub: 'Ask the owner or agent', parts: [['project', null]], show: ins => tabShown(SECTIONS.find(s => s.id === 'project'), ins), off: 'Appears for condo, PUD or co-op' },
   { id: 'permits', grp: 'Other', t: 'Permits & public records', icon: 'permit', sub: 'From the order', parts: [['property', ['crs', 'pubrec']]] },
   { id: 'attention', grp: 'Other', t: 'Needs attention', icon: 'attention', tab: 'attention' },
   { id: 'desktop', grp: 'Other', t: 'Send to desktop', icon: 'desktop', sub: 'Summaries · export', tab: 'export' },

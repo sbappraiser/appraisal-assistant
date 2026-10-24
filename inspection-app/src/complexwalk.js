@@ -37,6 +37,7 @@ const CW_SECS = [
   { id: 'mech', t: 'Mechanical & systems', ph: 'systems', icon: 'systems', parts: [CWG('systems', 'hvac'), CWG('systems', 'wh'), CWG('systems', 'mech'), CWG('systems', 'energy'), CWG('systems', 'smart', ['note']), CWG('interview', 'disaster')] },
   { id: 'ask', t: 'Ask / later', ph: 'interview', icon: 'interview', ask: true, parts: [
     CWG('site', 'hazard', ['note']), CWF('front', 'foundType'), CWF('front', 'foundTypeOth'), CWF('front', 'foundMat'), CWF('front', 'foundMatOth'), CWF('front', 'foundCond'),
+    CWG('project', 'projHOA'), CWG('project', 'projSee'),   // her Oct 24 2026: the HOA questions are asked of the owner / agent, with the interview
     CWG('interview', 'updates'), CWG('interview', 'sysConf'), CWG('interview', 'utilConf'), CWG('interview', 'confirm'), CWL('eas'), CWL('defects')] },
   { id: 'finish', t: 'Finish for the report', icon: 'wrapup', finish: true, parts: [] },
 ];
@@ -52,7 +53,7 @@ function cwField(sec, k) { const { f, g } = findField(sec, k); if (!f) return ''
 function cwPart(p) {
   const ins = app.ins; const D = cwData(ins);
   if (p.f) return cwField(p.f[0], p.f[1]);
-  if (p.g) { const sec = SECTIONS.find(s => s.id === p.g[0]); const g = sec && sec.groups.find(x => x.id === p.g[1]); if (!g || !groupShown(g, sec, ins)) return '';
+  if (p.g) { const sec = SECTIONS.find(s => s.id === p.g[0]); const g = sec && sec.groups.find(x => x.id === p.g[1]); if (!g || (sec.showTab && !sec.showTab(ins)) || !groupShown(g, sec, ins)) return '';
     const inner = g.fields.filter(f => f && !p.g[2].includes(f.k)).map(f => renderField(f, secData(ins, sec.id, f), { sec: sec.id, group: g.id })).join('');
     const lst = g.list && (!g.listShow || g.listShow(ins.data[sec.id], ins)) ? renderList(g.list) : '';
     return inner || lst ? `<div class="cw-sub"><h3>${esc(g.title)}</h3>${inner ? `<div class="fields two">${inner}</div>` : ''}${lst}</div>` : ''; }
