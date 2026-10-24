@@ -536,9 +536,24 @@ function dragEnd(from, ft) { // where a dragged wall ends: line-up dots, corners
 const curArea = () => SK.sk.areas.find(a => a.id === SK.drawId);
 function startArea(defId) { SK.mode = 'start'; SK.pendingDef = defId; SK.sel = null; SK.cursor = null; renderPanel(); draw(); }
 function placeStart(ft, exact) { pushUndo(); const p = exact ? [r3(ft[0]), r3(ft[1])] : snapPoint(ft); SK.lastDef = SK.pendingDef; SK.cursor = null; const a = { id: uid(), def: SK.pendingDef, level: SK.level, pg: SK.pg, pts: [p], closed: false }; SK.sk.areas.push(a); SK.drawId = a.id; SK.mode = 'draw'; markDirty(); draw(); renderPanel(); }
+/* her Oct 24 2026: after a wall is removed from the middle, the outline is in two pieces – reaching the other piece's end joins them */
+function joinPieces(a) {
+  const L = a.pts[a.pts.length - 1], near = (p, q) => Math.hypot(p[0] - q[0], p[1] - q[1]) < 0.06;
+  const o = SK.sk.areas.find(x => x !== a && !x.closed && x.def === a.def && sameSpot(x, a) && x.pts.length >= 2 && (near(x.pts[0], L) || near(x.pts[x.pts.length - 1], L)));
+  if (!o) return false;
+  let op = o.pts, oa = o.arcs || {}, oc = o.calc || {}, oi = o.inside || {};
+  if (!near(op[0], L)) { const m = op.length; op = [...op].reverse(); const rv = (x, f) => { const r = {}; Object.keys(x).forEach(k => { r[m - 2 - +k] = f ? f(x[k]) : x[k]; }); return r; };
+    oa = rv(oa, v => (v && v.side ? { ...v, side: v.side === 'L' ? 'R' : 'L' } : v)); oc = rv(oc); oi = rv(oi); }
+  const base = a.pts.length - 1;
+  [['arcs', oa], ['calc', oc], ['inside', oi]].forEach(([k, x]) => { if (Object.keys(x).length) { a[k] = a[k] || {}; Object.keys(x).forEach(j => { a[k][base + +j] = x[j]; }); } });
+  a.pts = [...a.pts, ...op.slice(1)]; SK.sk.areas = SK.sk.areas.filter(x => x !== o);
+  if (a.pts.length >= 4 && near(a.pts[a.pts.length - 1], a.pts[0])) { a.pts.pop(); finishArea(true); return true; }
+  toast('Joined up with the rest of the outline – keep drawing'); return false;
+}
 function addWallTo(pt) {
   const a = curArea(); if (!a) return; pushUndo(); a.pts.push([r3(pt[0]), r3(pt[1])]); SK.entry = '';
   if (a.pts.length >= 4 && Math.hypot(a.pts[a.pts.length - 1][0] - a.pts[0][0], a.pts[a.pts.length - 1][1] - a.pts[0][1]) < 0.06) { a.pts.pop(); finishArea(true); return; }
+  if (joinPieces(a)) return;
   markDirty(); draw(); renderPanel();
 }
 function addWall(dx, dy) {
@@ -552,6 +567,7 @@ function addWall(dx, dy) {
   a.pts.push([r3(last[0] + dx / len * (L + add)), r3(last[1] + dy / len * (L + add))]); SK.entry = ''; SK.angle = null;
   if (add) toast(`Measured inside ${L.toFixed(1)}' + 2 walls of ${Math.round(wallT() * 12)} in = ${(L + add).toFixed(1)}'`);
   if (a.pts.length >= 4 && Math.hypot(a.pts[a.pts.length - 1][0] - a.pts[0][0], a.pts[a.pts.length - 1][1] - a.pts[0][1]) < 0.06) { a.pts.pop(); finishArea(true); return; }
+  if (joinPieces(a)) return;
   markDirty(); draw(); renderPanel();
 }
 function angleWall() { const deg = SK.angle; if (deg === null || isNaN(deg)) return; const t = deg * Math.PI / 180; addWall(Math.cos(t), -Math.sin(t)); }
@@ -582,7 +598,14 @@ function removeWall(a, i) {
     SK.drawId = a.id; SK.mode = 'draw'; SK.sel = null; toast('Wall removed – the area is open. Draw from the orange end, or ⇄ Other end, then close it.'); markDirty(); draw(); renderPanel(); return; }
   if (i === n - 2) { pushUndo(); a.pts.pop(); ['arcs', 'calc', 'inside'].forEach(k => { if (a[k]) delete a[k][i]; }); }
   else if (i === 0) { pushUndo(); a.pts.shift(); const sh = k => k === 0 ? null : k - 1; a.arcs = map(a.arcs, sh); a.calc = map(a.calc, sh); a.inside = map(a.inside, sh); }
-  else return toast('Remove walls from either end of an open outline (tap the first or last wall)');
+  else {   // her Oct 24 2026: any wall can go – the outline splits in two; drawing goes on from the gap and joins the other piece when you reach its end
+    pushUndo(); const b = JSON.parse(JSON.stringify(a)); b.id = uid(); delete b.nameAt; delete b.name;
+    const keep = (o, lo, hi, d) => { if (!o) return o; const r = {}; Object.keys(o).forEach(k => { const j = +k; if (j >= lo && j < hi) r[j - d] = o[k]; }); return r; };
+    b.pts = a.pts.slice(i + 1); ['arcs', 'calc', 'inside'].forEach(k => { b[k] = keep(a[k], i + 1, n - 1, i + 1); a[k] = keep(a[k], 0, i, 0); });
+    a.pts = a.pts.slice(0, i + 1);
+    if (b.pts.length >= 2) SK.sk.areas.push(b);
+    if (a.pts.length < 2) { SK.sk.areas = SK.sk.areas.filter(x => x !== a); SK.drawId = b.pts.length >= 2 ? b.id : null; SK.mode = SK.drawId ? 'draw' : 'select'; SK.sel = null; toast('Wall removed – keep drawing'); markDirty(); draw(); renderPanel(); return; }
+    SK.drawId = a.id; SK.mode = 'draw'; SK.sel = null; toast('Wall removed. Tap more walls to remove them, or draw from the orange end – when you reach the other piece it joins up.'); markDirty(); draw(); renderPanel(); return; }
   if (a.pts.length < 2) { SK.sk.areas = SK.sk.areas.filter(x => x !== a); SK.drawId = null; SK.mode = 'select'; SK.sel = null; toast('Area removed'); }
   else { SK.drawId = a.id; SK.mode = 'draw'; SK.sel = null; toast('Wall removed – keep drawing'); }
   markDirty(); draw(); renderPanel(); }
@@ -745,7 +768,7 @@ function tapAt(ft) {
   if (SK.mode === 'uscale') { if (!SK.us.a) { SK.us.a = ft; draw(); renderPanel(); return; } const a = SK.us.a, b = ft, u = ulHere(); SK.us = { a: null };
     askNumber('How long is that, in feet?', 'The real length between the two points you tapped: the scale bar, or a dimension printed on the plan.', '', v => { if (u) ulScale(u, a, b, v); SK.mode = 'select'; renderPanel(); toast('Scale set – trace over the plan'); }); return; }
   if (SK.mode === 'umove') return;
-  if (SK.mode === 'draw') return; // while drawing, taps do nothing (walls come from the keypad)
+  if (SK.mode === 'draw') { const w = hitWall(ft); if (w) { SK.drawId = null; SK.mode = 'select'; SK.sel = { type: 'wall', id: w.id, i: w.i }; SK.entry = ''; SK.dial = null; draw(); renderPanel(); } return; }   // her Oct 24 2026: while drawing, tap a wall to fix or remove it
   SK.curve = null;
   const l = hitLabel(ft); if (l) { SK.sel = { type: 'label', id: l.id }; draw(); renderPanel(); return; }
   const sy = hitSymbol(ft); if (sy) { SK.sel = { type: 'symbol', id: sy.id }; SK.cursor = null; draw(); renderPanel(); return; }
@@ -914,7 +937,7 @@ function renderPanel() {
   else if (SK.mode === 'uscale') ctxHtml = `<div class="ctx"><b>Set the scale:</b> ${SK.us && SK.us.a ? 'now tap the other end.' : 'tap one end of the scale bar, or of a wall whose length is printed on the plan.'} <button class="btn sm" id="skCancelLabel">Cancel</button></div>`;
   else if (SK.mode === 'umove') ctxHtml = `<div class="ctx"><b>Move the floor plan:</b> drag it until it lines up with your walls. <button class="btn primary sm" id="skCancelLabel">Done</button></div>`;
   else if (SK.mode === 'label') ctxHtml = `<div class="ctx"><b>Tap where “${esc(SK.pendingLabel.text)}” goes.</b> <button class="btn sm" id="skCancelLabel">Cancel</button></div>`;
-  else if (a) ctxHtml = `<div class="ctx"><b>Drawing: ${esc(a.name || defOf(a.def).name)}</b> · ${a.pts.length - 1} wall${a.pts.length === 2 ? '' : 's'}<span class="hint"> · type a length + arrow, drag from the orange point, or tap a blue dot to line up with another corner. Tap the green start to close.</span>${a.pts.length >= 2 ? ' <button class="btn sm" id="skFlip" title="Blocked by a gate or wall? Keep going from your starting corner">⇄ Other end</button>' : ''}${a.pts.length >= 3 ? ' <button class="btn sm" id="skSquare" title="Fill the last one or two walls you could not measure (square corner)">⌐ Fill missing walls</button>' : ''}
+  else if (a) ctxHtml = `<div class="ctx"><b>Drawing: ${esc(a.name || defOf(a.def).name)}</b> · ${a.pts.length - 1} wall${a.pts.length === 2 ? '' : 's'}<span class="hint"> · type a length + arrow, drag from the orange point, or tap a blue dot to line up with another corner. Tap the green start to close. Tap any wall to fix or remove it.</span>${a.pts.length >= 2 ? ' <button class="btn sm" id="skFlip" title="Blocked by a gate or wall? Keep going from your starting corner">⇄ Other end</button>' : ''}${a.pts.length >= 3 ? ' <button class="btn sm" id="skSquare" title="Fill the last one or two walls you could not measure (square corner)">⌐ Fill missing walls</button>' : ''}
       <button class="btn sm ${SK.insideOn ? 'primary' : ''}" id="skInside" title="The next walls were measured inside: two wall thicknesses are added">${SK.insideOn ? `✓ Measured inside (+${Math.round(wallT() * 12)} in × 2)` : 'Measured inside?'}</button>${SK.insideOn ? '<button class="btn sm" id="skWallT">wall thickness</button>' : ''}</div>`;
   else if (sel && sel.type === 'wall') { const ar = SK.sk.areas.find(x => x.id === sel.id); const ws = walls(ar).find(w => w[0] === sel.i); const L = ws ? r1(wallLen(ws[1], ws[2])) : 0; const closing = ar.closed && sel.i === ar.pts.length - 1;
     ctxHtml = `<div class="ctx"><b>Wall: ${L.toFixed(1)} ft</b>${closing ? ' · closing wall (adjusts by itself)' : ''} of ${esc(ar.name || defOf(ar.def).name)}

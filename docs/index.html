@@ -894,6 +894,12 @@ nav.tabs button[aria-selected="true"] { background: var(--look-navy) !important;
       <li>Start with <b>Report setup</b>: property type (single family, condo, PUD, co-op – condo, PUD or co-op makes <b>HOA / Project</b> appear), the buildings, and <b>Quick or Complex</b>. Add ADUs and outbuildings inside the <b>ADUs</b> and <b>Outbuildings</b> buttons (＋ Add). An outbuilding must be permanently attached (real property). Answer <b>No</b> for a movable shed and the app moves it to <b>Landscaping &amp; outdoor living</b> as "Shed (personal property)", next to gazebo and trellis, and takes its photos with it. Main dwelling order: Exterior, Interior, Systems &amp; features, Garage &amp; parking, Quality &amp; condition, Disaster mitigation, Green &amp; energy efficiency, Defects.</li>
       <li>The water heater questions show in both <b>Systems & features</b> and <b>Disaster mitigation</b> – it is one answer, so changing it in either place changes both.</li>
       <li>Top of the screen: Walk-through (your own order, unchanged), Dictate, Buttons, Search, OctoSketch, ☀ Outdoor and Storage check. <b>Show the classic tabs</b> at the bottom of the button page brings back the old tab strip.</li></ol></details>
+    <details><summary>OctoSketch – fixing walls drawn wrong</summary><ol>
+      <li>While you are drawing, <b>tap any wall</b> to select it, then <b>✂ Remove this wall</b>. Tap the next wall you want gone and remove it too – as many as you need.</li>
+      <li>A closed area: tap the area, then a wall – removing it opens the area at that wall.</li>
+      <li>Removing a wall in the middle splits the outline in two. Keep drawing from the orange end; when your new wall reaches the end of the other piece, the two join up. Reach the green start and the area closes.</li>
+      <li>⌫ still takes off the last wall, and ↶ Undo undoes the last step.</li>
+    </ol></details>
     <details><summary>Quick or Complex inspection (Octopus Mobile)</summary><ol>
       <li>The first question of each inspection is <b>Inspection type</b>: <b>Quick</b> (tract house, condo) or <b>Complex</b> (Montecito, custom homes). You can switch at any time; nothing you answered is lost.</li>
       <li><b>Quick</b> hides the questions you marked "Complex only": driveway features, topography detail, well use, landscaped area and features, walks, number of water heaters, water storage tanks, solar cost, stair shape and railing, and the interview confirmations.</li>
@@ -1201,7 +1207,7 @@ nav.tabs button[aria-selected="true"] { background: var(--look-navy) !important;
 </div>
 <div id="toast" role="status" hidden></div>
 <script>
-const BUILD='o1-1023-2355';
+const BUILD='o1-1024-0044';
 const G = (() => {
 /* ---------------- small helpers ---------------- */
 const $ = (s, r = document) => r.querySelector(s);
