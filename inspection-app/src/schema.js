@@ -1134,3 +1134,38 @@ function gateFix(ins) { if (!ins || !ins.data) return;
 function gateSet(ins, sec, k) { const g = GATES.find(x => x[0] === sec && x[2] === k); if (!g) return; const d = ins.data[sec]; const none = g[5];
   if (d[k] === false) { Object.entries(none).forEach(([f, v]) => { if (d[f] === undefined || (Array.isArray(d[f]) && !d[f].length)) { d[f] = v.slice(); d['_gAuto_' + k] = true; } }); }
   else if (d['_gAuto_' + k]) { Object.keys(none).forEach(f => { if (JSON.stringify(d[f]) === JSON.stringify(none[f])) delete d[f]; }); delete d['_gAuto_' + k]; } }
+
+/* ================= her COMPLEX PROPERTY CHECKLIST words (Oct 24 2026) =================
+   Every word on her sample is offered: added to the matching question (a UAD choice is never removed),
+   and her own words for UAD-coded questions (style, roof surface …) get their own "your words" question for the comments. */
+(function herWords() {
+  const S = id => SECTIONS.find(x => x.id === id);
+  const find = (sec, k) => { for (const g of S(sec).groups) { const i = g.fields.findIndex(f => f && f.k === k); if (i >= 0) return { g, i, f: g.fields[i] }; } return null; };
+  const add = (f, words) => { if (!f || !Array.isArray(f.o)) return; const have = new Set(f.o.map(x => String(x[1]).toLowerCase())); const at = () => { const j = f.o.findIndex(x => x[0] === 'Other'); return j >= 0 ? j : f.o.length; };
+    words.forEach(w => { if (!have.has(w.toLowerCase())) { f.o.splice(at(), 0, [w, w]); have.add(w.toLowerCase()); } }); };
+  const F = (sec, k, words) => { const r = find(sec, k); if (r) add(r.f, words); };
+  const LF = (list, k, words) => add((LISTS[list].fields || []).find(f => f && f.k === k), words);
+  const after = (sec, k, nf) => { const r = find(sec, k); if (r && !r.g.fields.some(f => f && f.k === nf.k)) r.g.fields.splice(r.i + 1, 0, nf); };
+  F('driveway', 'driveMat', ['Chip Seal']);
+  F('driveway', 'driveFeat', ['Manual Gate', 'Guard / Gate House', 'U-Shape', 'Multiple Driveways', 'Shared – Maintenance Agreement']);
+  F('front', 'frontDoor', ['Arched', 'Glass Frame', 'Glass Slider']);
+  F('front', 'windows', ['Aluminum Clad', 'Metal']);
+  F('amenities', 'walks', ['Cobblestone', 'Rock', 'Tile', 'Slate']);
+  F('amenities', 'landFeat', ['Cactus', 'Palms', 'Oaks', 'Sculpted Garden', 'Tropical Plants', 'Agricultural']);
+  F('amenities', 'landSys', ['Water Evacuation', 'Well Head', 'Water Storage Tanks', 'Motion Sensors', 'Perimeter Security']);
+  F('amenities', 'hardscape', ['Rock Walls', 'Terrace Walls', 'Iron Gates']);
+  F('interior', 'intFeat', ['Tongue & Groove Ceilings', 'Chair Rail', 'Art Lighting / Niches', 'High-end Door Hardware', 'Solid Wood Doors', 'Tall Doors', 'Arched Doors', 'Touch Screens / iPad Control', 'App Control', 'Intercom', 'Sconces', 'Track Lighting', 'Pendant Lighting', 'Fire Suppression']);
+  F('systems', 'smart', ['Touch Screens / iPad Control', 'App Control', 'Motion Sensors']);
+  F('systems', 'security', ['Cameras', 'Perimeter Security']);
+  LF('outdoorLiving', 'feat', ['Fireplace', 'Heater']);
+  LF('waterFeatures', 'type', ['Swim Spa', 'Portable Spa (personal property)', 'Seasonal Creek', 'Dry Creek Bed']);
+  LF('rooms', 'feat', ['Closet Organizers', 'Door to Exterior', 'Door to Balcony']);
+  LF('kitchens', 'counter', ['Stone Tile', 'Formica', 'Wood']);
+  LF('outbuildings', 'type', ['Yoga Pavilion']);
+  after('front', 'design', { k: 'styleMore', l: 'Style – your words (not a UAD field)', t: 'multi', o: opts('Spanish Colonial', 'Spanish Revival', 'George Washington Smith', 'Italian', 'French Country', 'French Normandy', 'French Provincial', 'Modern Farmhouse', 'Historic', 'Palladian', 'Southwestern', 'Other') });
+  after('front', 'roofStyle', { k: 'roofDetail', l: 'Roof surface – your words (not a UAD field)', t: 'multi', o: opts('Concrete Tile', 'Clay Tile', 'Membrane', 'Rolled Composition', 'Built-up', 'Aluminum Tile', 'Wood Shingle', 'Wood Shake') });
+  after('front', 'windows', { k: 'winUpg', l: 'Windows upgraded or original', t: 'one', o: opts('Upgraded', 'Original', 'Mixed') });
+  after('site', 'viewImpact', { k: 'viewRating', l: 'View rating (your scale – not a UAD field)', t: 'one', o: opts('Panoramic', 'Very Good', 'Good', 'Average–Good', 'Average', 'Average–Fair') });
+  after('amenities', 'hardscape', { k: 'wallMat', l: 'Wall material', t: 'multi', show: d => (d.hardscape || []).some(x => /Wall/.test(x)), o: opts('Concrete', 'Plaster', 'Rock', 'Stone', 'Metal', 'Wood', 'Railroad Tie', 'Other') });
+  after('interview', 'addPermit', { k: 'pastDamage', l: 'Previous fire or flood damage', t: 'multi', o: opts('None', 'Previous Fire Damage', 'Previous Flood Damage', 'Other') });
+})();
