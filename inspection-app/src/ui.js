@@ -442,6 +442,7 @@ function applianceWidget(d, ctx, f) {
   const editor = ak => {
     const a = APPLIANCES.find(x => x.k === ak); const s = val[ak] || {}; const da = `data-ak="${ak}" data-list="${ctx.list}" data-item="${ctx.item}"`;
     return `<div class="appl-back" data-appldone="1"></div><div class="appl-edit" id="appl-edit" role="dialog" aria-label="${esc(a.l)}"><div class="appl-title">${esc(a.l)}</div>
+      ${a.opt ? `<div class="flabel"><span class="lab">Which? – tap one and you are back at the list</span></div><div class="chips">${a.opt.map(o => `<button class="chip radio" data-applopt="${esc(o)}" ${da} aria-pressed="${s.opt === o}"><span class="box"></span>${esc(o)}</button>`).join('')}</div>` : ''}
       ${a.qty ? `<div class="flabel"><span class="lab">How many?</span></div><div class="stepper"><button data-applqty="-1" ${da}>−</button><output>${s.qty || 1}</output><button data-applqty="1" ${da}>+</button></div>` : ''}
       ${a.brand ? (() => { const bb = b => `<button class="chip radio" data-applbrand="${esc(b)}" ${da} aria-pressed="${s.brand === b}"><span class="box"></span>${esc(b)}</button>`; const other = s.brand && !BRANDS.includes(s.brand) ? s.brand : '';
         return `<div class="flabel"><span class="lab">Brand – tap one and you are back at the list</span></div><div class="chips">${BRANDS_MAIN.map(bb).join('')}</div>
@@ -449,9 +450,9 @@ function applianceWidget(d, ctx, f) {
         <div class="appl-other"><label>Other: <input class="txt" data-applother="1" ${da} value="${esc(other)}" placeholder="type the brand" autocapitalize="words"></label><button class="btn sm" data-applotherok="1" ${da}>Use it</button></div>`; })() : ''}
       <div class="row"><button class="btn sm primary" data-appldone="1">Done</button><button class="btn sm danger" data-applrm="${ak}" data-list="${ctx.list}" data-item="${ctx.item}">Remove ${esc(a.l)}</button></div></div>`;
   };
-  return `<div class="chips">${APPLIANCES.map(a => {
+  return `<div class="chips">${APPLIANCES.filter(a => !a.old || val[a.k]).map(a => {
     const s = val[a.k]; const on = !!s;
-    const lab = on ? `${a.l}${s.brand ? ' – ' + s.brand : ''}${a.qty && s.qty > 1 ? ' ×' + s.qty : ''}` : a.l;
+    const lab = on ? `${a.l}${s.opt ? ' – ' + s.opt : ''}${s.brand ? ' – ' + s.brand.replace(/ \(label worn off\)/, '') : ''}${a.qty && s.qty > 1 ? ' ×' + s.qty : ''}` : a.l;
     return `<button class="chip ${on ? 'appl-on' : ''}" data-appl="${a.k}" data-list="${ctx.list}" data-item="${ctx.item}" aria-pressed="${on}"><span class="box"></span>${esc(lab)}</button>${editing === a.k ? editor(a.k) : ''}`;
   }).join('')}</div>`;
 }
@@ -797,8 +798,9 @@ function bind(root) {
   root.querySelectorAll('[data-appl]').forEach(b => b.onclick = () => {
     const it = itemOf(b); it.appl = it.appl || {}; const ak = b.dataset.appl; const a = APPLIANCES.find(x => x.k === ak);
     if (!it.appl[ak]) it.appl[ak] = a.qty ? { qty: 1 } : {};
-    app.appl = (a.brand || a.qty) ? it.id + ':' + ak : null; save(); renderTab(); if (app.appl) { const e = document.getElementById('appl-edit'); if (e) e.scrollIntoView({ block: 'nearest' }); }
+    app.appl = (a.brand || a.qty || a.opt) ? it.id + ':' + ak : null; save(); renderTab(); if (app.appl) { const e = document.getElementById('appl-edit'); if (e) e.scrollIntoView({ block: 'nearest' }); }
   });
+  root.querySelectorAll('[data-applopt]').forEach(b => b.onclick = () => { const it = itemOf(b); it.appl[b.dataset.ak].opt = b.dataset.applopt; app.appl = null; save(); renderTab(); });
   root.querySelectorAll('[data-applbrand]').forEach(b => b.onclick = () => { const it = itemOf(b); it.appl[b.dataset.ak].brand = b.dataset.applbrand; app.appl = null; save(); renderTab(); });
   root.querySelectorAll('[data-applotherok]').forEach(b => b.onclick = () => { const it = itemOf(b); const inp = root.querySelector(`[data-applother][data-ak="${b.dataset.ak}"]`); const v = inp && capWords(inp.value.trim()); if (!v) return toast('Type the brand first'); it.appl[b.dataset.ak].brand = v; app.appl = null; save(); renderTab(); });   // her Oct 24 2026: Other – type the brand
   root.querySelectorAll('[data-applqty]').forEach(b => b.onclick = () => { const it = itemOf(b); const s = it.appl[b.dataset.ak]; s.qty = Math.max(1, (s.qty || 1) + (+b.dataset.applqty)); save(); renderTab(); });

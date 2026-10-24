@@ -31,7 +31,7 @@ const FIXTURE_FIN = opts('Polished Chrome','Brushed Nickel','Polished Nickel','S
 const BATH_MAT = opts('Stone Tile','Stone Slab','Tile','Corian','Glass Tile','Acrylic / Fiberglass','Cast Iron','Enameled Steel','Copper','Concrete','Waterproof Plaster (Tadelakt / Microcement)','Other');
 const REMODEL = opts('Gutted and Remodeled','Remodeled','Updated','Partially Updated','Older Remodel','Dated','Original','New Construction');
 // her list and order (Oct 24 2026); the rest sit under "More brands"
-const BRANDS_MAIN = ['Sub-Zero','Wolf','Viking','KitchenAid','Bosch','Miele','GE Profile','Fisher & Paykel','Kenmore','Maytag','Bertazzoni','La Cornue','Samsung','LG',"O'Keefe & Merritt"];
+const BRANDS_MAIN = ['Sub-Zero','Wolf','Viking','KitchenAid','Bosch','Miele','GE Profile','Fisher & Paykel','Kenmore','Maytag','Bertazzoni','La Cornue','Samsung','LG',"O'Keefe & Merritt", 'Unknown (label worn off)'];
 const BRANDS_MORE = ['Thermador','Gaggenau','Dacor','JennAir','GE Monogram','GE Café','BlueStar','Frigidaire','Whirlpool','Asko','Sharp'];
 const BRANDS = [...BRANDS_MAIN, ...BRANDS_MORE, 'Other'];
 /* Kitchen appliances: tap one, pick brand (and quantity where it applies), it folds closed */
@@ -51,7 +51,7 @@ const APPLIANCES = [
   { k: 'micro', l: 'Microwave', brand: true },
   { k: 'microDrw', l: 'Microwave Drawer', brand: true },
   { k: 'warming', l: 'Warming Drawer', brand: true },
-  { k: 'hood', l: 'Hood / Vent', brand: true },
+  { k: 'hood', l: 'Fan / Hood' },   // her Oct 24 2026: no brand needed
   { k: 'wine', l: 'Wine Refrigerator', qty: true, brand: true },
   { k: 'bev', l: 'Beverage Center', brand: true },
   { k: 'ucRef', l: 'Under-counter Refrigerator', brand: true },
@@ -60,8 +60,9 @@ const APPLIANCES = [
   { k: 'compactor', l: 'Trash Compactor', brand: true },
   { k: 'disposal', l: 'Disposal' },
   { k: 'potFiller', l: 'Pot Filler' },
-  { k: 'waterHot', l: 'Filtered Water (Hot)' },
-  { k: 'waterCold', l: 'Filtered Water (Cold)' },
+  { k: 'waterTap', l: 'Drinking Water Tap', opt: ['Hot & cold', 'Cold only'] },   // her Oct 24 2026: one tap, pop-out hot & cold or cold only
+  { k: 'waterHot', l: 'Filtered Water (Hot)', old: true },
+  { k: 'waterCold', l: 'Filtered Water (Cold)', old: true },
 ];
 const CITIES = opts('Santa Barbara','Goleta','Carpinteria','Summerland','Other');
 const ZIPS = ['93101','93103','93105','93108','93109','93110','93111','93117','93013','93067','Other'];

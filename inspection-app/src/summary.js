@@ -12,7 +12,7 @@ function L(listKey, k) { return LISTS[listKey].fields.find(f => f.k === k); }
 function sv(ins, secId, k) { const f = F(secId, k); const d = ins.data[(f && f.link) || secId]; const v = d[k]; return f ? valText(f, v, d) : v; }
 function lv(listKey, it, k) { const f = L(listKey, k); return f ? valText(f, it[k]) : it[k]; }
 function lvl(ins, secId, k) { const f = F(secId, k); const d = ins.data[secId]; const v = d[k]; if (!f || isEmpty(v)) return []; return (Array.isArray(v) ? v : [v]).filter(x => x !== 'None' && x !== 'No Fire Hazard Zone').map(x => lc(labelFor(f, x, d))); }
-const brandList = it => Object.entries(it.appl || {}).map(([k, s]) => s.brand).filter(b => b && b !== 'Other').filter((b, i, a) => a.indexOf(b) === i);
+const brandList = it => Object.entries(it.appl || {}).map(([k, s]) => s.brand).filter(b => b && b !== 'Other' && !/^Unknown/.test(b)).filter((b, i, a) => a.indexOf(b) === i);
 function S(t, p = 2) { return t ? { t: t.replace(/\s+/g, ' ').trim().replace(/([^.!?])$/, '$1.'), p } : null; }
 const cap = s => s ? s[0].toUpperCase() + s.slice(1) : s;
 
@@ -24,7 +24,7 @@ const per = ins => listJoin((ins.data.interview.who || []).map(lc)) || 'the inte
 const yr4 = y => /^\d{4}$/.test(String(y || ''));
 function applDetail(it) {
   return Object.entries(it.appl || {}).map(([k, s]) => { const a = APPLIANCES.find(x => x.k === k); if (!a) return null; const nm = lc(a.l).replace(' / ', '/');
-    return `${s.brand && s.brand !== 'Other' ? s.brand + ' ' : ''}${nm}${s.qty > 1 ? ' (' + s.qty + ')' : ''}`; }).filter(Boolean);
+    return `${s.brand && s.brand !== 'Other' && !/^Unknown/.test(s.brand) ? s.brand + ' ' : ''}${nm}${s.opt ? ' (' + s.opt.toLowerCase() + ')' : ''}${s.qty > 1 ? ' (' + s.qty + ')' : ''}`; }).filter(Boolean);
 }
 const mats = (arr, opt) => (arr || []).filter(x => x && x !== 'None').map(x => lc(opt ? labelOf(opt, x) : x));
 function kitchenText(k, name) {
