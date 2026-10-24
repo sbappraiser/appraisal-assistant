@@ -983,3 +983,4 @@ Decisions (her, Oct 19–20): "Exterior of dwelling" instead of left/right/side 
 - Oct 24 2026 (6x-1024-0004) – Defects icon = light yellow (#ffe680) warning triangle with a dark ! (her ask).
 - Oct 24 2026 (6x-1024-0009) – "Defects" button and section now labeled "Deficiencies" (her ask). UAD data names unchanged.
 - Oct 24 2026 (6x-1024-0012) – Landscaping & outdoor living icon redrawn from her sketch: rounded pool with two waves, palm at the right corner with green fronds (#1e8f3a).
+- Oct 24 2026 (6x-1024-0013) – Pool & palm icon enlarged (drawing scaled 1.22 and that tile icon 84 px).
