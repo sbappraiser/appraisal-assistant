@@ -161,7 +161,7 @@ async function openInspection(id, tab) {
 }
 async function openInspection2(id, tab) {
   const ins = normalize(await DB.get('inspections', id)); app.ins = ins;
-  app.tab = (tab && (SECTIONS.some(x => x.id === tab) || EXTRA_TABS.some(x => x.id === tab) || tab === 'walk' || tab === 'dictate' || tab === 'overview' || tab === 'cw' || String(tab).startsWith('b:'))) ? tab : 'overview';
+  app.tab = (tab && (SECTIONS.some(x => x.id === tab) || EXTRA_TABS.some(x => x.id === tab) || tab === 'walk' || tab === 'dictate' || tab === 'overview' || tab === 'cw' || String(tab).startsWith('b:') || String(tab).startsWith('ck:'))) ? tab : 'overview';
   if (typeof wkResolvePending === 'function' && wkResolvePending(ins)) { ins.updated = Date.now(); try { await DB.put('inspections', JSON.parse(JSON.stringify(ins))); } catch (e) {} } app.open = new Set(); app.groups = {}; app.cur = null; app.confirm = null; app.appl = null;
   const root = $('#app');
   root.innerHTML = `<header class="bar"><div class="bar-row">
@@ -170,6 +170,7 @@ async function openInspection2(id, tab) {
       <span class="saved" id="saved">Saved ✓</span>
       <button class="icon-btn" id="saveBtn">Save</button>
       <div class="bar-tools">
+      <button class="icon-btn" id="ckBtn" aria-label="Checklist">☑<span class="bl"> Checklist</span></button>
       <button class="icon-btn" id="ovWalk" aria-label="Walk-through">🚶<span class="bl"> Walk-through</span></button>
       <button class="icon-btn" id="ovDict" aria-label="Dictate">🎤<span class="bl"> Dictate</span></button>
       <button class="icon-btn" id="ovBtns" aria-label="All buttons">▦<span class="bl"> Buttons</span></button>
@@ -182,6 +183,7 @@ async function openInspection2(id, tab) {
   $('#homeBtn').onclick = async () => { await saveNow(); renderHome(); window.scrollTo(0, 0); };
   $('#saveBtn').onclick = () => saveNow(true);
   $('#jumpBtn').onclick = openJump;
+  $('#ckBtn').onclick = () => { goTab('ck:' + (app.ckLast || 'street')); window.scrollTo(0, 0); };   // her Oct 24 2026: the active checklist
   $('#sketchBtn').onclick = async () => { const b = $('#sketchBtn'); b.textContent = 'Saving…'; const url = 'sketch.html?ins=' + encodeURIComponent(app.ins.id) + '&tab=' + encodeURIComponent(app.tab || 'interior'); try { await saveNow(); } catch (e) {} app.leaving = true; clearTimeout(app.saving); DB.close(); b.textContent = 'Opening…'; location.href = url; };
   $('#attnPill').onclick = () => goTab('attention');
   $('#insStore').onclick = storageCheck;
@@ -197,7 +199,7 @@ function refreshChrome() {
   const byTab = {}; issues.forEach(x => { if (x.sev === 'Required' || x.sev === 'Photo') byTab[x.tab] = (byTab[x.tab] || 0) + 1; });
   $('#tabs').innerHTML = ALL_TABS().map(t => `<button class="tab" role="tab" aria-selected="${t.id === app.tab}" data-tab="${t.id}">${esc(t.title)}${byTab[t.id] ? `<span class="dot">${byTab[t.id]}</span>` : (SECTIONS.some(s => s.id === t.id) ? '<span class="dot done">✓</span>' : '')}</button>`).join('');
   $('#tabs').querySelectorAll('[data-tab]').forEach(b => b.onclick = () => goTab(b.dataset.tab));
-  { const hide = !app.classic && (app.tab === 'overview' || app.tab === 'cw' || String(app.tab).startsWith('b:')); $('#tabs').hidden = hide; $('#tabs').style.display = hide ? 'none' : ''; }
+  { const hide = !app.classic && (app.tab === 'overview' || app.tab === 'cw' || String(app.tab).startsWith('b:') || String(app.tab).startsWith('ck:')); $('#tabs').hidden = hide; $('#tabs').style.display = hide ? 'none' : ''; }
   const sel = $('#tabs [aria-selected="true"]');
   if (sel) { const nav = $('#tabs'); nav.scrollLeft = sel.offsetLeft - nav.clientWidth / 2 + sel.offsetWidth / 2; }
 }
@@ -240,13 +242,14 @@ function renderTab2() {
   else if (app.tab === 'overview') main.innerHTML = renderOverview();
   else if (app.tab === 'cw') main.innerHTML = renderCW();
   else if (String(app.tab).startsWith('b:')) main.innerHTML = renderOvButton(app.tab.slice(2));
+  else if (String(app.tab).startsWith('ck:')) main.innerHTML = renderCK(app.tab.slice(3));
   else if (app.tab === 'dictate') main.innerHTML = renderDictate();
   else if (app.tab === 'walk') main.innerHTML = renderWalk();
   else if (app.tab === 'photos') main.innerHTML = renderGallery();
   else if (app.tab === 'summaries') main.innerHTML = renderSummaries();
   else if (app.tab === 'attention') main.innerHTML = renderAttention();
   else if (app.tab === 'export') main.innerHTML = renderExport();
-  if (app.tab === 'overview' || String(app.tab).startsWith('b:')) { try { bindOverview(main); } catch (e) { console.error(e); toast('Buttons: ' + e.message); } }   // her Oct 24 2026: taps did nothing – the buttons are wired first, and a problem elsewhere is shown, not silent
+  if (app.tab === 'overview' || String(app.tab).startsWith('b:') || String(app.tab).startsWith('ck:')) { try { bindOverview(main); } catch (e) { console.error(e); toast('Buttons: ' + e.message); } }   // her Oct 24 2026: taps did nothing – the buttons are wired first, and a problem elsewhere is shown, not silent
   try { bind(main); } catch (e) { console.error(e); toast('Something went wrong on this page: ' + e.message + ' – please send Claude a screenshot'); } if (app.tab === 'cw') bindCW(main); if (app.tab === 'dictate') bindDictate(main); if (app.tab === 'walk') { bindWalk(main); setTimeout(wkMicState, 0); } fillThumbs(main); window.scrollTo(0, y);
   returnBar();
   syncBar();

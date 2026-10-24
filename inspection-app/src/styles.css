@@ -505,3 +505,49 @@ input.txt:focus, select.txt:focus, textarea.txt:focus { background: #fff4b0 !imp
 .ov-tile[data-ov="outdoor"] svg { width: 76px; height: 76px; margin: -6px 0 -6px; }
 .ov-tile[data-ov="ext"] svg { width: 140px; height: 64px; margin: 0; }
 @media (max-width: 520px) { .ov-tile b { font-size: 1.08rem; } .ov-tile svg { width: 56px; height: 56px; } .ov-tile[data-ov="ext"] svg { width: 120px; height: 56px; } }
+
+/* ================= active checklist (her Oct 24 2026): her paper sheet, live ================= */
+.ck-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 8px; }
+.ck-tab { font: inherit; font-weight: 700; font-size: .95rem; padding: 7px 10px; border: 2px solid #1f3f66; border-radius: 9px; background: #fff; color: #1f3f66; cursor: pointer; }
+.ck-tab.on { background: #1f3f66; color: #fff; }
+.ck-n { display: inline-block; min-width: 1.3em; padding: 0 5px; border-radius: 9px; background: #b3261e; color: #fff; font-size: .8rem; text-align: center; }
+.ck-tip { font-size: .9rem; color: #4f5b6e; margin: 0 0 10px; } .ck-dot { color: #b3261e; }
+.ck-body { column-gap: 14px; }
+@media (min-width: 700px) { .ck-body { column-count: 2; } }
+.ck .group { break-inside: avoid; border: 1.5px solid #111; border-radius: 4px; margin: 0 0 10px; box-shadow: none; background: #fff; }
+.ck .ghead-row { background: #f2f2f2; border-bottom: 1.5px solid #111; padding: 2px 6px; }
+.ck .ghead { font-size: 1rem; padding: 4px 4px; min-height: 0; }
+.ck .ghead .chev, .ck .gcheck { display: none; }
+.ck .fields.two { display: block; padding: 0; }
+.ck .field { display: flex; gap: 8px; align-items: baseline; border-bottom: 1px solid #d6d6d6; padding: 4px 8px; margin: 0; border-left: 0; background: none; box-shadow: none; }
+.ck .field.missing { background: #fff6f5; }
+.ck .flabel { flex: 0 0 120px; margin: 0; display: block; }
+.ck .flabel .tag, .ck .flabel .fid, .ck .field .help { display: none; }
+.ck .flabel .lab { font-size: .85rem; font-weight: 700; line-height: 1.25; }
+.ck .field.req .flabel .lab::before { content: '● '; color: #b3261e; }
+.ck .field > :not(.flabel) { flex: 1; min-width: 0; }
+.ck .chips { display: flex; flex-wrap: wrap; gap: 2px 2px; margin: 0; }
+.ck .chip { border: 0; background: transparent; box-shadow: none; padding: 4px 7px; min-height: 0; font-size: .95rem; font-weight: 400; border-radius: 6px; color: #14213a; }
+.ck .chip .box, .ck .chip .chipicon { display: none; }
+.ck .chip[aria-pressed="true"] { background: #1f3f66; color: #fff; font-weight: 700; }
+html.hc .ck .chip[aria-pressed="true"] { background: #000; color: #fff200; }
+.ck .gfoot { padding: 4px 8px; } .ck .gfoot .btn { min-height: 0; padding: 4px 10px; font-size: .85rem; }
+.ck .txt { min-height: 36px; padding: 4px 8px; font-size: .95rem; }
+.ck .list-items .item { margin: 6px 8px; border: 1.5px solid #1f7a45; border-radius: 4px; }
+.ck .add-row .btn { border-style: dashed; }
+.ck-nav { display: flex; justify-content: space-between; gap: 8px; margin: 12px 0 30px; }
+@media (max-width: 520px) { .ck .flabel { flex-basis: 96px; } }
+/* checklist polish */
+.ck .btn, .ck .field .btn { min-height: 0; padding: 4px 10px; font-size: .85rem; border-width: 1.5px; }
+.ck .field[id] .btn svg { width: 16px; height: 16px; }
+.ck .field { border-left-width: 4px; }
+.ck .chips.yn .chip { flex: none; width: auto; min-width: 0; }
+.ck .gtitle { text-transform: none; letter-spacing: 0; font-size: 1rem; }
+.ck .group.current .ghead-row, .ck .group .ghead-row { background: #f2f2f2; color: #111; }
+.ck .gstat.miss { font-size: .75rem; padding: 1px 7px; }
+.ck .list-items .item > :first-child { padding: 4px 8px; font-size: .95rem; }
+.ck .list-items .item h3, .ck .list-items .item .ihead { font-size: 1rem; }
+.ck .stepper, .ck .tenkey { transform: scale(.85); transform-origin: left center; }
+.ck label.cam, .ck label.lib, .ck .photo-btns label, .ck .pslot label { min-height: 0; padding: 4px 10px; font-size: .85rem; border-width: 1.5px; }
+.ck label.cam svg, .ck label.lib svg, .ck .pslot svg { width: 16px; height: 16px; }
+.ck .pslot, .ck .photo-slot { display: flex; flex-wrap: wrap; gap: 6px; }

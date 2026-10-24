@@ -87,6 +87,7 @@ function renderOvButton(id) {
   return `<div class="ov-head"><button class="btn" data-ovback="1">‹ All buttons</button><h2><svg viewBox="${OV_VB[b.icon] || '0 0 24 24'}" aria-hidden="true">${OV_ICON[b.icon]}</svg>${esc(b.t)}</h2>${next ? `<button class="btn" data-ov="${next.id}">Next: ${esc(next.t)} ›</button>` : ''}</div>${legend()}${body}`;
 }
 function bindOverview(root) {
+  root.querySelectorAll('[data-ckgo]').forEach(el => el.onclick = () => { app.ckLast = el.dataset.ckgo; goTab('ck:' + el.dataset.ckgo); window.scrollTo(0, 0); });
   root.querySelectorAll('[data-ov]').forEach(el => el.onclick = () => { const b = ovBtn(el.dataset.ov); if (!b) return;
     if (b.act === 'sketch') { const s = document.getElementById('sketchBtn'); if (s) s.click(); return; }
     if (b.tab) { goTab(b.tab); return; }
@@ -98,3 +99,20 @@ function bindOverview(root) {
 }
 /* the section a group button belongs to (a button page shows groups from several sections) */
 function secOfEl(el) { const s = el.closest && el.closest('[data-secid]'); return SECTIONS.find(x => x.id === (s ? s.dataset.secid : app.tab)); }
+
+/* ================= the active checklist (her Oct 24 2026) =================
+   Her clipboard sheet as a live screen: one tab per button, every group open, compact rows (question on the left, words on the right),
+   tap a word to choose it. Same answers as the buttons; lists (bedrooms, baths, roofs, outbuildings…) grow with their ＋ Add buttons. */
+function renderCK(id) {
+  const ins = app.ins; const issues = computeIssues(ins).filter(x => !ins.overrides[x.key] && (x.sev === 'Required' || x.sev === 'Photo'));
+  const tabs = OV_BTNS.filter(b => b.parts && (!b.show || b.show(ins)));
+  const b = tabs.find(x => x.id === id) || tabs[0]; app.ckLast = b.id;
+  b.parts.forEach(([s, g]) => { const sec = SECTIONS.find(x => x.id === s); if (!sec) return; const set = ensureGroups(sec, g); sec.groups.forEach(x => { if (!g || g.includes(x.id)) set.add(x.id); }); });
+  const body = b.parts.map(([s, g]) => { const sec = SECTIONS.find(x => x.id === s); return sec ? renderSection(sec, g) + (!g ? extraPhotos(sec) : '') : ''; }).join('');
+  const i = tabs.indexOf(b), next = tabs[i + 1], prev = tabs[i - 1];
+  const tab = x => { const m = ovMissing(x, issues); return `<button class="ck-tab${x === b ? ' on' : ''}" data-ckgo="${x.id}">${esc(x.t)}${m ? ` <span class="ck-n">${m}</span>` : ''}</button>`; };
+  return `<div class="ck"><div class="ck-tabs">${tabs.map(tab).join('')}</div>
+    <p class="ck-tip">Tap a word to choose it (dark = chosen), tap again to clear. <span class="ck-dot">●</span> = UAD required. ＋ Add makes a new box (bedroom, bath, roof, outbuilding…). Same answers as the buttons.</p>
+    <div class="ck-body">${body}</div>
+    <div class="ck-nav">${prev ? `<button class="btn" data-ckgo="${prev.id}">‹ ${esc(prev.t)}</button>` : '<span></span>'}${next ? `<button class="btn primary" data-ckgo="${next.id}">${esc(next.t)} ›</button>` : ''}</div></div>`;
+}
