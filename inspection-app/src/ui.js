@@ -246,7 +246,8 @@ function renderTab2() {
   else if (app.tab === 'summaries') main.innerHTML = renderSummaries();
   else if (app.tab === 'attention') main.innerHTML = renderAttention();
   else if (app.tab === 'export') main.innerHTML = renderExport();
-  bind(main); if (app.tab === 'overview' || String(app.tab).startsWith('b:')) bindOverview(main); if (app.tab === 'cw') bindCW(main); if (app.tab === 'dictate') bindDictate(main); if (app.tab === 'walk') { bindWalk(main); setTimeout(wkMicState, 0); } fillThumbs(main); window.scrollTo(0, y);
+  if (app.tab === 'overview' || String(app.tab).startsWith('b:')) { try { bindOverview(main); } catch (e) { console.error(e); toast('Buttons: ' + e.message); } }   // her Oct 24 2026: taps did nothing – the buttons are wired first, and a problem elsewhere is shown, not silent
+  try { bind(main); } catch (e) { console.error(e); toast('Something went wrong on this page: ' + e.message + ' – please send Claude a screenshot'); } if (app.tab === 'cw') bindCW(main); if (app.tab === 'dictate') bindDictate(main); if (app.tab === 'walk') { bindWalk(main); setTimeout(wkMicState, 0); } fillThumbs(main); window.scrollTo(0, y);
   returnBar();
   syncBar();
 }
