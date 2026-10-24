@@ -268,7 +268,7 @@ const GEN = {
     const cond = { 'Well Kept': 'Common elements appear adequately maintained', 'Typical Wear and Tear': 'Common elements show typical wear and tear', 'Deferred Maintenance': 'Common elements show deferred maintenance', 'Under Renovation': 'Common elements are under renovation' }[J.projCond];
     if (cond) out.push(S(cond, 2));
     if (J.dues !== undefined) { const ut = (J.duesUtil || []).filter(x => x !== 'None').flatMap(x => x === 'Other' ? ([...(J.duesUtilOtherPick || []), J.duesUtilOther].filter(Boolean).map(lc).length ? [...(J.duesUtilOtherPick || []), J.duesUtilOther].filter(Boolean).map(lc) : ['other']) : [x === 'SanitarySewer' ? 'sewer' : lc(x)]); const inc = [...ut, ...(J.duesIncl || []).map(lc)];
-      out.push(S(`Association dues are reported by the owner at $${Number(J.dues).toLocaleString()}${' ' + (J.duesFreq || 'Monthly').toLowerCase()}${inc.length ? ' and include ' + listJoin(inc) : ''}`, 1)); }
+      out.push(S(`Association dues are reported by the owner at $${Number(J.dues).toLocaleString('en-US', Number(J.dues) % 1 ? { minimumFractionDigits: 2, maximumFractionDigits: 2 } : {})}${' ' + (J.duesFreq || 'Monthly').toLowerCase()}${inc.length ? ' and include ' + listJoin(inc) : ''}`, 1)); }
     if (P0.hoExt === false) out.push(S('Exterior maintenance is the responsibility of the association', 2));
     const park = [['pgSpaces', 'pgAssign', 'parking garage'], ['ccSpaces', 'ccAssign', 'common carport'], ['olSpaces', 'olAssign', 'open lot']].filter(([n]) => (g[n] || 0) > 0).map(([n, a, t]) => `${g[n]} ${g[a] ? lc(g[a]) + ' ' : ''}${t} space${g[n] > 1 ? 's' : ''}`);
     if (park.length) out.push(S(`Parking: ${listJoin(park)}`, 2));

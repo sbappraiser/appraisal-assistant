@@ -404,6 +404,7 @@ function compFacts0(c, J) {
 }
 function showFact(k, v) {
   if (blank(v) || v === '') return '';
+  if (k === 'hoa' && num(v) !== null && num(v) % 1) return '$' + num(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });   // her Oct 24 2026: HOA fee keeps its cents on screen and in comments; the UAD file gets whole dollars
   if (['price', 'conc', 'listPrice', 'origList', 'hoa'].includes(k)) return money(v);
   if (['contract', 'sale', 'listDate', 'lastRed'].includes(k)) return showDate(v);
   if (k === 'site') return fmt(FIELD.siteSf, v);
@@ -429,7 +430,7 @@ function rateAmount(row, S, C, J) {
   const r = num(R[key]); if (!key || !r) return null;
   const d = (a, b) => (blank(a) || blank(b)) ? null : (+a) - (+b);
   let x = null;
-  if (key === 'gla') { const dd = d(S.gla, C.gla); x = dd === null ? null : Math.abs(dd) < 100 ? 0 : dd * r; }   // her rule: no adjustment under 100 sq ft
+  if (key === 'gla') { const dd = d(S.gla, C.gla); x = dd === null ? null : Math.abs(dd) < 100 ? 0 : Math.round(dd * r / 500) * 500 || 0; }   // her rules: no adjustment under 100 sq ft; round to the nearest $500 ($7,451 → $7,500)
   if (key === 'usableAc') { const dd = d(S.usable, C.usable); x = dd === null ? null : dd * r; }
   if (key === 'bed') { const dd = d(capBeds(S.beds), capBeds(C.beds)); x = dd === null ? null : dd * r; }
   if (key === 'bath') { const df = d(S.full, C.full), dh = d(S.half || 0, C.half || 0); const rh = num(R.halfBath); x = df === null ? null : df * r + (dh || 0) * (rh || r / 2); }
