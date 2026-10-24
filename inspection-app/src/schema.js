@@ -574,7 +574,7 @@ const SECTIONS = [
     ]},
     { id: 'access', title: 'Street & access', fields: [
       { k: 'primaryAccess', l: 'Primary access', t: 'one', req: true, o: order(U('PropertyPrimaryEntryExitMethodType').filter(x => !['PrivateAirstrip', 'Waterway'].includes(x[0])), ['PublicStreet', 'PrivateStreet', 'PedestrianOnlyAccess', 'Other']), uad: 'PropertyPrimaryEntryExitMethodType', fid: '4.020' },
-      { k: 'streetType', l: 'Street type', t: 'one', req: true, o: U('StreetAccessType'), uad: 'StreetAccessType' },
+      { k: 'streetType', l: 'Street type', t: 'one', req: true, o: order(U('StreetAccessType'), ['Local', 'Collector', 'CulDeSac', 'DeadEnd', 'Arterial', 'Rural', 'Alley', 'Other']), uad: 'StreetAccessType' },   // her order Oct 24 2026: most used first
       { k: 'streetSurface', l: 'Street surface', t: 'one', req: true, o: U('ImprovedSurfaceMaterialType'), uad: 'ImprovedSurfaceMaterialType' },
       { k: 'accessTypical', l: 'Access typical for market', t: 'yn', req: true, uad: 'PropertyAccessTypicalToMarketIndicator', fid: '4.023' },
       { k: 'accessDesc', l: 'Description of property access', t: 'note', lim: 300, show: d => d.accessTypical === false, req: d => d.accessTypical === false, uad: 'PropertyAccessDescription', fid: '4.024' },
