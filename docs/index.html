@@ -894,6 +894,11 @@ nav.tabs button[aria-selected="true"] { background: var(--look-navy) !important;
       <li>Start with <b>Report setup</b>: property type (single family, condo, PUD, co-op – condo, PUD or co-op makes <b>HOA / Project</b> appear), the buildings, and <b>Quick or Complex</b>. Add ADUs and outbuildings inside the <b>ADUs</b> and <b>Outbuildings</b> buttons (＋ Add). An outbuilding must be permanently attached (real property). Answer <b>No</b> for a movable shed and the app moves it to <b>Landscaping &amp; outdoor living</b> as "Shed (personal property)", next to gazebo and trellis, and takes its photos with it. Main dwelling order: Exterior, Interior, Systems &amp; features, Garage &amp; parking, Quality &amp; condition, Disaster mitigation, Green &amp; energy efficiency, Defects.</li>
       <li>The water heater questions show in both <b>Systems & features</b> and <b>Disaster mitigation</b> – it is one answer, so changing it in either place changes both.</li>
       <li>Top of the screen: Walk-through (your own order, unchanged), Dictate, Buttons, Search, OctoSketch, ☀ Outdoor and Storage check. <b>Show the classic tabs</b> at the bottom of the button page brings back the old tab strip.</li></ol></details>
+    <details><summary>Dictation – appraisal words and numbers</summary><ol>
+      <li>The iPhone and iPad hear you with Apple's speech recognition, which cannot be given a word list. Octopus Mobile fixes appraisal words right after it hears them: Sub-Zero, Thermador, Gaggenau, La Cornue, Fisher &amp; Paykel, JennAir, BlueStar, Liebherr, Dacor, Miele, Caesarstone, Silestone, Calacatta, Carrara, Saltillo, Tadelakt, Lutron, Control4, Crestron, TOTO, Waterworks, Trex, porte-cochère, loggia, hardwood, wainscoting, vaulted and more.</li>
+      <li>Say <b>"number two"</b> and it types <b>#2</b> (number one to twenty, or any number said as digits). "Bedroom #2" is still read as the second bedroom.</li>
+      <li>A word it keeps getting wrong: use <b>Teach</b> in Dictate – type what it heard and what you meant. Your fixes run first.</li>
+    </ol></details>
     <details><summary>OctoSketch – fixing walls drawn wrong</summary><ol>
       <li>While you are drawing, <b>tap any wall</b> to select it, then <b>✂ Remove this wall</b>. Tap the next wall you want gone and remove it too – as many as you need.</li>
       <li>A closed area: tap the area, then a wall – removing it opens the area at that wall.</li>
@@ -1207,7 +1212,7 @@ nav.tabs button[aria-selected="true"] { background: var(--look-navy) !important;
 </div>
 <div id="toast" role="status" hidden></div>
 <script>
-const BUILD='o1-1024-1506';
+const BUILD='o1-1024-1509';
 const G = (() => {
 /* ---------------- small helpers ---------------- */
 const $ = (s, r = document) => r.querySelector(s);

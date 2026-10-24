@@ -26,6 +26,7 @@ const DICT_HEAR = [ // 6k: what the iPad heard → what she said (from her Oct 2
 // a count only when it really is the house count – not "bedroom 2", "addition of 2 bedrooms", "bathroom 1 full bathroom"
 const dkCount = tok => (m, n, off, s) => /\b(?:of|added|addition|bedroom|bathroom|bath|number|no|both|the|these|those|new|extra|additional)\s*$/.test(s.slice(Math.max(0, off - 16), off)) ? m : tok + n;
 const DICT_PRE = [ // numbers, ratings, levels, counts – turned into one word each so they cannot be misread
+  [/#\s*(\d{1,2})\b/g, 'number $1'],   // her Oct 24 2026: "#2" from the vocabulary fix reads like "number 2" (bedroom #2)
   [/\b(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\b/g, (m, w) => String(NUMW[w])], [/\b(first|second|third|fourth|fifth)\b/g, (m, w) => ORDW[w]],
   // 6x: cars that can park in the driveway ("2 cars can park in the driveway", "driveway holds 3 cars", "2 car driveway", "parking for 2 cars")
   [/\b(\d{1,2})\s+(?:cars?|vehicles?)\s+(?:can\s+|could\s+|will\s+)?(?:be\s+)?(?:park(?:ed)?|fit)\s+(?:in|on)\s+(?:the\s+)?driveway\b/g, 'drivecars$1 driveway'],
@@ -251,7 +252,7 @@ function dkTeachApply(text) { let t = String(text || '');
   return t; }
 function dkLines(text) { return String(text || '').replace(/:[ \t]*\n+\s*/g, ': ').replace(/([.!?;])?[ \t]*\n+\s*/g, (m, p) => p ? p + ' ' : '. '); }
 function dkSpoken(text) {   // her taught words first; then spoken commands: "accept" ends a sentence, "scratch that" drops the sentence it is in
-  return dkTeachApply(text).replace(/[^.!?\n]*\bscratch that\b[.!,]?/gi, '').replace(/\s*\baccept\b[.,!]?/gi, '.').replace(/\.(\s*\.)+/g, '.');
+  return (typeof wkVocab === 'function' ? wkVocab(dkTeachApply(text)) : dkTeachApply(text)).replace(/[^.!?\n]*\bscratch that\b[.!,]?/gi, '').replace(/\s*\baccept\b[.,!]?/gi, '.').replace(/\.(\s*\.)+/g, '.');
 }
 
 /* ---- "<field name> <answer>" and component conditions (6x) ---- */

@@ -12,6 +12,7 @@ function wkClean(t) {
   s = s.replace(/\b(?:hi|high|upper)\s+([QqCc])\s*-?\s*([1-6])\b/g, (m, l, d) => l.toUpperCase() + d + '+').replace(/\b(?:low|lower)\s+([QqCc])\s*-?\s*([1-6])\b/g, (m, l, d) => l.toUpperCase() + d + '-')
     .replace(/\b([QqCc])\s*([1-6])\s+plus\b/g, (m, l, d) => l.toUpperCase() + d + '+').replace(/\b([QqCc])\s*([1-6])\s+minus\b/g, (m, l, d) => l.toUpperCase() + d + '-').replace(/\b(?:mille|millie|mealie|milley|mielle|mila|milla|meela|meila|myla)\b/gi, 'Miele').replace(/\b(?:(?:wind|wine|wayne|wane|wain|whine) ?scot(?:t)?ing|wind coating|wine coating|wayne coating|wane coating|wainscotting)\b/gi, 'wainscoting').replace(/(^|[^0-9 ] *| )voltage\b(?! (?:panel|outlet|outlets|wiring|service|line|lines|meter))/gi, '$1vaulted');
   s = s.replace(/\bhard\s+would\b/gi, 'hardwood').replace(/\b(engineered|vaulted|natural|stained|painted|exposed|reclaimed|solid|real)\s+would\b/gi, '$1 wood').replace(/\bwould(?=[ ,]+(?:floor|floors|flooring|beams?|deck|decking|fence|fencing|siding|cabinets?|cabinetry|windows?|stove|burning|paneling|panelling|shingles?|shakes?|trim|ceilings?|frame|framed|doors?|stairs|railings?|pergola|trellis|planks?|look|grain|tones?|tile|laminate|burning)\b)/gi, m => m[0] === 'W' ? 'Wood' : 'wood');
+  s = wkVocab(s);
   try { if (typeof dkCommaFix === 'function') s = dkCommaFix(s); } catch (e) {}
   return s.replace(WK_COLON, ': ').replace(/\s+:/g, ':').replace(/:\s*/g, ': ').replace(/\s{2,}/g, ' ').trim();
 }
@@ -111,3 +112,22 @@ function wsrStop() { WSR.on = false; clearTimeout(WSR.timer); const t = WSR.inte
 /* spoken commands inside what she said: "take a photo", "next place", "scratch that", "stop listening" */
 const WK_CMD = [[/\b(?:take (?:a |the |another )?(?:photo|picture|pic)|snap(?: it)?|shoot)\b[.!]?/i, 'photo'], [/\bnext place\b[.!]?/i, 'next'], [/\bscratch that\b[.!]?/i, 'scratch'], [/\bstop listening\b[.!]?/i, 'stop']];
 function wkCommands(text) { const cmds = []; let t = ' ' + text + ' '; WK_CMD.forEach(([rx, c]) => { const g = new RegExp(rx.source, 'gi'); if (g.test(t)) { cmds.push(c); t = t.replace(g, ' '); } }); return { text: t.replace(/\s{2,}/g, ' ').trim(), cmds }; }
+
+/* her Oct 24 2026: appraisal words the iPhone / iPad speech often mishears, and "number two" → "#2".
+   Apple's speech recognition cannot be given a vocabulary, so the app fixes the words after it hears them.
+   Her own fixes (Teach) still run first and win. */
+const WK_NUMW = { one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, eleven: 11, twelve: 12, thirteen: 13, fourteen: 14, fifteen: 15, sixteen: 16, seventeen: 17, eighteen: 18, nineteen: 19, twenty: 20 };
+const WK_VOCAB = [
+  [/\bnumber\s+(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty)\b/gi, (m, w) => '#' + WK_NUMW[w.toLowerCase()]],
+  [/\bnumber\s+(\d{1,4})\b/gi, '#$1'], [/\bpound sign\s+(\d{1,4})\b/gi, '#$1'],
+  [/\bsub[ -]?zero\b/gi, 'Sub-Zero'], [/\b(?:thermo[ -]?door|thermador|therma door)\b/gi, 'Thermador'], [/\b(?:gag(?:g)?(?:a|e|i)n(?:a|e)?u|gaggenau|gag in now|gag and now|gag a now)\b/gi, 'Gaggenau'],
+  [/\bla (?:corn(?:ue|ew|e|u)|cornu)\b/gi, 'La Cornue'], [/\b(?:fisher (?:and|&) (?:paykel|pay kel|pickle|paicle))\b/gi, 'Fisher & Paykel'], [/\b(?:jenn?[ -]?air)\b/gi, 'JennAir'],
+  [/\bblue ?star\b/gi, 'BlueStar'], [/\blieb(?:herr|her|hair)\b/gi, 'Liebherr'], [/\b(?:da ?core|dacor)\b/gi, 'Dacor'],
+  [/\b(?:seizure|caesar|caesars|ceasar) ?stone\b/gi, 'Caesarstone'], [/\bsilo ?stone\b/gi, 'Silestone'], [/\b(?:calcutta|kalakata|calicata|calacata)\b/gi, 'Calacatta'], [/\b(?:car(?:r)?ara|kerrara)\b/gi, 'Carrara'],
+  [/\b(?:salty ?o|sal ?tio|saltio|salt e o)\b/gi, 'Saltillo'], [/\b(?:tad[ae]? ?lak(?:t)?|tadalac|tada lock|taddle act)\b/gi, 'Tadelakt'], [/\btravertine\b/gi, 'travertine'],
+  [/\b(?:lou ?tron|lutron)\b/gi, 'Lutron'], [/\bcontrol (?:four|for|4)\b/gi, 'Control4'], [/\b(?:cress ?tron|crestron)\b/gi, 'Crestron'], [/\bsonos\b/gi, 'Sonos'],
+  [/\b(?:toto|tow tow)\s+(toilet|toilets|washlet)\b/gi, 'TOTO $1'], [/\bwater ?works\b/gi, 'Waterworks'], [/\btrex\s+(deck|decking)\b/gi, 'Trex $1'],
+  [/\b(?:quarts|quartz?)\s+(counter|counters|countertops?)\b/gi, 'quartz $1'], [/\b(?:porte?[ -]?co(?:ch|sh)(?:ere|air|er))\b/gi, 'porte-cochère'], [/\bloggia\b/gi, 'loggia'], [/\b(?:log ?ia|lodge ?ia|lojia)\b/gi, 'loggia'],
+  [/\b(?:palapa|pa lapa)\b/gi, 'palapa'], [/\b(?:pergola|per ?gola)\b/gi, 'pergola'], [/\b(?:corbel|cor bell)s?\b/gi, m => /s$/i.test(m) ? 'corbels' : 'corbel'],
+];
+function wkVocab(s) { WK_VOCAB.forEach(([rx, r]) => { s = s.replace(rx, r); }); return s; }
