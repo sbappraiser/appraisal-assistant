@@ -485,3 +485,5 @@ input.txt:focus, select.txt:focus, textarea.txt:focus { background: #fff4b0 !imp
 .ov-tile small.st.miss { color: #9b2019; }
 .ov-tag { font-style: normal; font-weight: 700; font-size: .85rem; color: #1f3f66; background: #e3ebf5; border-radius: 10px; padding: 2px 8px; line-height: 1.3; }
 .ov-tile[data-ov="outdoor"] svg { width: 84px; height: 84px; margin: -8px 0 -6px; }   /* her ask Oct 24 2026: bigger pool & palm */
+.ov-tile[data-ov="ext"] svg { width: 150px; height: 69px; margin: -4px 0 -2px; }   /* her Spanish estate icon is wide */
+.ov-head h2 svg[viewBox="0 0 48 22"] { width: 2.6em; height: 1.2em; }

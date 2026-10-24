@@ -986,3 +986,4 @@ Decisions (her, Oct 19–20): "Exterior of dwelling" instead of left/right/side 
 - Oct 24 2026 (6x-1024-0013) – Pool & palm icon enlarged (drawing scaled 1.22 and that tile icon 84 px).
 - Oct 24 2026 (6x-1024-0014) – Systems & features sun icon: center filled yellow (#ffd84d).
 - Oct 24 2026 (6x-1024-0015) – Green & energy efficiency icon = green leaf (fill #8fd18f, outline/veins #1e7a34).
+- Oct 24 2026 (6x-1024-0028) – Exterior icon redrawn from her picture: Spanish-style estate (tile roofs, chimney, 3-arch loggia, center tower with arched entry, lantern and steps, two wings). Drawn on a 48 × 22 grid (OV_VB in overview.js); the Exterior tile shows it 150 px wide.
