@@ -160,7 +160,7 @@ async function openInspection(id, tab) {
 }
 async function openInspection2(id, tab) {
   const ins = normalize(await DB.get('inspections', id)); app.ins = ins;
-  app.tab = (tab && (SECTIONS.some(x => x.id === tab) || EXTRA_TABS.some(x => x.id === tab) || tab === 'walk' || tab === 'dictate' || tab === 'overview' || tab === 'cw' || String(tab).startsWith('b:'))) ? tab : (((ins.data.property || {}).mode === 'Complex') ? 'cw' : 'overview');
+  app.tab = (tab && (SECTIONS.some(x => x.id === tab) || EXTRA_TABS.some(x => x.id === tab) || tab === 'walk' || tab === 'dictate' || tab === 'overview' || tab === 'cw' || String(tab).startsWith('b:'))) ? tab : 'overview';
   if (typeof wkResolvePending === 'function' && wkResolvePending(ins)) { ins.updated = Date.now(); try { await DB.put('inspections', JSON.parse(JSON.stringify(ins))); } catch (e) {} } app.open = new Set(); app.groups = {}; app.cur = null; app.confirm = null; app.appl = null;
   const root = $('#app');
   root.innerHTML = `<header class="bar"><div class="bar-row">

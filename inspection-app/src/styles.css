@@ -487,3 +487,7 @@ input.txt:focus, select.txt:focus, textarea.txt:focus { background: #fff4b0 !imp
 .ov-tile[data-ov="outdoor"] svg { width: 84px; height: 84px; margin: -8px 0 -6px; }   /* her ask Oct 24 2026: bigger pool & palm */
 .ov-tile[data-ov="ext"] svg { width: 150px; height: 69px; margin: -4px 0 -2px; }   /* her Spanish estate icon is wide */
 .ov-head h2 svg[viewBox="0 0 48 22"] { width: 2.6em; height: 1.2em; }
+
+/* her Oct 24 2026: Complex walk buttons carry the same icons as the button page */
+.cw-b .cw-ic { display: block; margin: 0 auto 4px; width: 44px; height: 44px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.cw-b .cw-ic[viewBox="0 0 48 22"] { width: 96px; height: 44px; }

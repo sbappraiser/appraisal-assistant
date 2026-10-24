@@ -33,7 +33,7 @@ const CW_SECS = [
     CWL('levels'), CWL('rooms'), CWL('bedrooms'), CWL('baths'), CWL('kitchens'), CWL('wetbars'), CWL('stairs'),
     CWG('interior', 'finish'), CWG('interior', 'feat'), CWG('interior', 'safety'), CWG('interior', 'attic'), CWG('interior', 'noncont'), CWG('interior', 'unit'), CWG('interior', 'intQC', ['note'])] },
   { id: 'bldg', t: 'Buildings', add: 'building', ph: 'buildings', icon: 'adu', parts: [CWL('adus'), CWL('outbuildings'), CWG('garage', 'vs', ['note'])] },
-  { id: 'pool', t: 'Pool & outdoor', add: 'pool', ph: 'amenities', icon: 'pool', parts: [CWL('waterFeatures'), CWL('outdoorLiving'), CWG('amenities', 'rec', ['note'])] },
+  { id: 'pool', t: 'Pool & outdoor', add: 'pool', ph: 'amenities', icon: 'palm', parts: [CWL('waterFeatures'), CWL('outdoorLiving'), CWG('amenities', 'rec', ['note'])] },
   { id: 'mech', t: 'Mechanical & systems', ph: 'systems', icon: 'systems', parts: [CWG('systems', 'hvac'), CWG('systems', 'wh'), CWG('systems', 'mech'), CWG('systems', 'energy'), CWG('systems', 'smart', ['note']), CWG('interview', 'disaster')] },
   { id: 'ask', t: 'Ask / later', ph: 'interview', icon: 'interview', ask: true, parts: [
     CWG('site', 'hazard', ['note']), CWF('front', 'foundType'), CWF('front', 'foundTypeOth'), CWF('front', 'foundMat'), CWF('front', 'foundMatOth'), CWF('front', 'foundCond'),
@@ -73,7 +73,7 @@ function renderCW() {
   const ins = app.ins; const D = cwData(ins); const cur = cwSec(app.cwSec || D.at || 'street'); D.at = cur.id;
   const issues = cwIssues(ins); const n = S => S.finish ? issues.length : issues.filter(x => cwOwns(S, x)).length;
   const btn = S => { const m = n(S); const on = S.id === cur.id;
-    return `<button type="button" class="cw-b${on ? ' on' : ''}${S.fixed ? ' fixed' : ''}${S.ask ? ' ask' : ''}${S.add ? ' add' : ''}" data-cwgo="${S.id}"${on ? ' aria-current="true"' : ''}>${S.n ? S.n + ' ' : ''}${esc(S.t)}${m ? ` <span class="cw-n">${m}</span>` : (S.finish ? '' : ' <span class="cw-ok">✓</span>')}</button>`; };
+    return `<button type="button" class="cw-b${on ? ' on' : ''}${S.fixed ? ' fixed' : ''}${S.ask ? ' ask' : ''}${S.add ? ' add' : ''}" data-cwgo="${S.id}"${on ? ' aria-current="true"' : ''}>${OV_ICON[S.icon] ? `<svg class="cw-ic" viewBox="${OV_VB[S.icon] || '0 0 24 24'}" aria-hidden="true">${OV_ICON[S.icon]}</svg>` : ''}${S.n ? S.n + ' ' : ''}${esc(S.t)}${m ? ` <span class="cw-n">${m}</span>` : (S.finish ? '' : ' <span class="cw-ok">✓</span>')}</button>`; };
   const added = cwAdded(ins);
   let body;
   if (cur.finish) body = cwFinishHTML(ins, issues);
