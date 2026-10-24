@@ -108,7 +108,7 @@ Appendix A-1 (xlsx), F-1 field list, D-1 sample XML, Appendix D v1.7 (2.6, text 
 template. SFREP import: Home → Import Forms. XML must follow XSD element order.
 
 ## 6. Recent versions (Oct 22, 2026)
-- iPad/iPhone app **6x-1024-0331** · OctoSleuth **g2-1023-0502** · hub **o1-1024-0044**.
+- iPad/iPhone app **6x-1024-1507** · OctoSleuth **g2-1023-0502** · hub **o1-1024-1506**.
 
 ## 7. Open items (pick up here)
 1. **Sketch on iPad/iPhone** – she is testing on her phone and iPad and sending screenshots; keep

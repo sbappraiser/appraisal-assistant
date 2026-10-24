@@ -601,3 +601,11 @@ function oRender(f) { oSetup(); if (!f) return; const P = $('#panel-letter'); co
     $('#oaNone').onclick = () => { cur.noLetterAsk = true; A.dataset.on = ''; update(); }; }
   if (!ask) A.dataset.on = ''; }
 document.addEventListener('change', e => { if (e.target && e.target.id === 'f_aiPublic' && typeof cur !== 'undefined' && cur) { cur = readForm(); saveLetter(true, true); if (typeof PB !== 'undefined') PB.plan = null; if (typeof renderPermBatch === 'function') renderPermBatch(); } });
+
+/* her Oct 24 2026: name and street boxes – capital letter at the start of each word (the rest stays as typed, so McDonald stays) */
+(function capNames() {
+  const want = el => el && el.tagName === 'INPUT' && (!el.type || el.type === 'text' || el.type === 'search') && el.id && /(addr|street|name|city|firm|company|county)/i.test(el.id) && !/email|file|search|find|hf/i.test(el.id);
+  const cap = v => String(v).replace(/(^|[\s\-\/(])([a-z])/g, (m, a, b) => a + b.toUpperCase());
+  document.addEventListener('focusin', e => { if (want(e.target)) { e.target.setAttribute('autocapitalize', 'words'); } });
+  document.addEventListener('change', e => { const el = e.target; if (!want(el) || !el.value) return; const v = cap(el.value); if (v !== el.value) { el.value = v; el.dispatchEvent(new Event('input', { bubbles: true })); } }, true);
+})();

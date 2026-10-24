@@ -64,7 +64,7 @@ async function renderHome() {
   </main>`;
   { const nb = $('#newBtn'); if (nb) nb.onclick = () => { const f = $('#newForm'); f.hidden = !f.hidden; if (!f.hidden) $('#nAddr').focus(); }; }
   $('#newForm').onsubmit = async e => {
-    e.preventDefault(); const a = $('#nAddr').value.trim(), f = $('#nFile').value.trim(); if (!a || !f) return;
+    e.preventDefault(); const a = capWords($('#nAddr').value.trim()), f = $('#nFile').value.trim(); if (!a || !f) return;
     const ins = newInspection(f, a); await DB.put('inspections', ins); openInspection(ins.id);
   };
   root.querySelectorAll('[data-open]').forEach(b => b.onclick = () => openInspection(b.dataset.open));
@@ -395,7 +395,7 @@ function renderField(f, d, ctx) {
     case 'phone': html += tenkey(attr, fmtPhone(v || ''), '(805) 555-1234', false); break;
     case 'date': html += tenkey(attr, fmtDateUS(v || ''), 'MM/DD/YYYY', false); break;
     case 'month': html += `<input class="txt num" type="month" ${attr} value="${esc(v || '')}" placeholder="YYYY-MM">`; break;
-    case 'text': html += `<input class="txt" spellcheck="true" autocorrect="on" autocapitalize="sentences" ${attr} value="${esc(v || '')}" ${f.lim ? `maxlength="${f.lim}"` : ''}>`; break;
+    case 'text': html += `<input class="txt" spellcheck="true" autocorrect="${CAP_WORDS.has(f.k) ? 'off' : 'on'}" autocapitalize="${CAP_WORDS.has(f.k) ? 'words' : 'sentences'}" ${attr} value="${esc(v || '')}" ${f.lim ? `maxlength="${f.lim}"` : ''}>`; break;
     case 'note':
       html += `<textarea class="txt" spellcheck="true" autocorrect="on" autocapitalize="sentences" ${attr} placeholder="${f.lim ? 'Max ' + f.lim + ' characters' : 'Notes for your workfile'}">${esc(v || '')}</textarea>`;
       if (f.lim) html += `<div class="limit ${over ? 'over' : ''}" data-limit="${f.lim}">${(v || '').length} / ${f.lim}</div>`;
@@ -491,7 +491,7 @@ async function homeList(all) {
   return `<section class="orders-home"><div class="row" style="align-items:center;justify-content:space-between;flex-wrap:wrap"><h2>Active orders${rec ? ` <small>orders file from ${esc(new Date(rec.made).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }))}</small>` : ''}</h2>
     <span class="row"><button class="btn primary" id="newBtn">＋ New inspection</button><label class="btn" style="position:relative;overflow:hidden">${rec ? 'Get newer orders' : 'Get orders'}<input id="ordersFile" type="file" style="position:absolute;inset:0;opacity:0"></label>${rec ? '<button class="btn" data-oclear>Clear orders</button>' : ''}</span></div>
     <form class="new-form" id="newForm" autocomplete="off" hidden>
-      <div><label class="flabel" for="nAddr"><span class="tag">Required</span><span class="lab">Property address</span></label><input class="txt" id="nAddr" required placeholder="123 Oak Street"></div>
+      <div><label class="flabel" for="nAddr"><span class="tag">Required</span><span class="lab">Property address</span></label><input class="txt" id="nAddr" required autocapitalize="words" autocorrect="off" placeholder="123 Oak Street"></div>
       <div><label class="flabel" for="nFile"><span class="tag">Required</span><span class="lab">File name</span></label><input class="txt" id="nFile" required placeholder="2026-1015"></div>
       <button class="btn primary" type="submit">Start inspection</button></form>
     <div class="hlist">${act.map(row).join('') || `<p class="help">No active orders. On the computer, press <b data-keep>Send active orders to the iPad</b> (the same file works on the iPhone), save it to iCloud Drive or OneDrive, then tap <b>Get orders</b> here – or tap <b>＋ New inspection</b>.</p>`}</div></section>
@@ -763,7 +763,7 @@ function bind(root) {
       const lim = inp.parentElement.querySelector('[data-limit]'); if (lim) { lim.textContent = inp.value.length + ' / ' + lim.dataset.limit; lim.classList.toggle('over', inp.value.length > +lim.dataset.limit); }
       save();
     };
-    inp.addEventListener('input', upd); inp.addEventListener('change', () => { upd(); if (inp.dataset.k === 'addr') { const { obj } = target(inp); splitAddr(obj); save(); refreshTitleOnly(); } renderTab(); });
+    inp.addEventListener('input', upd); inp.addEventListener('change', () => { upd(); if (CAP_WORDS.has(inp.dataset.k)) { const { obj, f } = target(inp); if (obj[f.k]) { obj[f.k] = capWords(obj[f.k]); inp.value = obj[f.k]; } if (f.k === 'addr') splitAddr(obj); save(); refreshTitleOnly(); } renderTab(); });
     if (inp.dataset.tenkey) { const pad = inp.parentElement.querySelector('.tenkey'); let dirty = false;
       inp.addEventListener('focus', () => { pad.hidden = false; });
       inp.addEventListener('blur', () => { pad.hidden = true; if (dirty) { dirty = false; inp.dispatchEvent(new Event('change')); } });
@@ -1170,3 +1170,7 @@ function obPersonal(it) {
   ins.lists.outbuildings = ins.lists.outbuildings.filter(x => x.id !== it.id); app.open.delete(it.id);
   save(); renderTab(); toast('Not permanently attached = personal property. Moved to Landscaping & outdoor living as "Shed (personal property)".');
 }
+
+/* her Oct 24 2026: names and streets – capital letter at the start of each word (the rest stays as typed, so McDonald stays) */
+const CAP_WORDS = new Set(['addr', 'cityOther', 'countyOther', 'projName', 'hoaName', 'hoaContactName', 'clubName', 'waterName', 'whoName', 'ident']);
+function capWords(v) { return String(v).replace(/(^|[\s\-\/(])([a-z])/g, (m, a, b) => a + b.toUpperCase()); }
