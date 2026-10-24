@@ -586,3 +586,5 @@ html.hc { --cyan: #b9cde6; --yellow: #dbe5f1; --lime: #bfe3c9; --pink: #dde5ef; 
 .return-bar .ret-go { background: #1f3f66; color: #fff; }
 .sev.Check { background: #fff4d6; } .sev.Recommended { background: #e3ebf5; }
 .bar .sk-btn, .sk-btn { background: #e3ebf5; }
+
+.bar .icon-btn.on, .bar-tools .icon-btn.on { background: #1f3f66; color: #fff; border-color: #1f3f66; }   /* the screen she is on */

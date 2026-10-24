@@ -251,7 +251,7 @@ function renderTab2() {
   else if (app.tab === 'export') main.innerHTML = renderExport();
   if (app.tab === 'overview' || String(app.tab).startsWith('b:') || String(app.tab).startsWith('ck:')) { try { bindOverview(main); } catch (e) { console.error(e); toast('Buttons: ' + e.message); } }   // her Oct 24 2026: taps did nothing – the buttons are wired first, and a problem elsewhere is shown, not silent
   try { bind(main); } catch (e) { console.error(e); toast('Something went wrong on this page: ' + e.message + ' – please send Claude a screenshot'); } if (app.tab === 'cw') bindCW(main); if (app.tab === 'dictate') bindDictate(main); if (app.tab === 'walk') { bindWalk(main); setTimeout(wkMicState, 0); } fillThumbs(main); window.scrollTo(0, y);
-  returnBar();
+  returnBar(); markTools();
   syncBar();
 }
 /* the top bar is fixed: keep the page padded by its real height (it wraps on narrow screens) */
@@ -743,7 +743,10 @@ function bind(root) {
   function doneGroup(b) {
     const sec = secOfEl(b); const set = ensureGroups(sec);
     set.delete(b.dataset.donegroup); app.ins.reviewed = app.ins.reviewed || {}; app.ins.reviewed[sec.id + ':' + b.dataset.donegroup] = true; saveNow();
-    if (String(app.tab).startsWith('b:') && !b.dataset.next) { toast('Done with ' + ((ovBtn(app.tab.slice(2)) || {}).t || 'this button')); goTab('overview'); window.scrollTo(0, 0); return; }
+    const pm = String(app.tab).match(/^(b|ck):(.+)$/);   // her Oct 24 2026: on a button or checklist page, Done goes to the next box on the page; after the last one, back to the buttons
+    if (pm && !b.dataset.next) { const groups = [...document.querySelectorAll('#main section.group')]; const nxt = groups[groups.indexOf(b.closest('section.group')) + 1];
+      if (nxt) { const gid = nxt.id.replace(/^grp-/, ''); const s2 = SECTIONS.find(s => s.id === nxt.dataset.secid); if (s2) ensureGroups(s2).add(gid); app.cur = gid; renderTab(); scrollToEl('grp-' + gid); return; }
+      toast('Done with ' + ((ovBtn(pm[2]) || {}).t || 'this section') + ' ✓'); goTab('overview'); window.scrollTo(0, 0); return; }
     if (b.dataset.next) { set.add(b.dataset.next); app.cur = b.dataset.next; renderTab(); scrollToEl('grp-' + b.dataset.next); }
     else { const i = SECTIONS.findIndex(s => s.id === app.tab); goTab(SECTIONS[i + 1] ? SECTIONS[i + 1].id : 'attention'); }
   }
@@ -1223,3 +1226,8 @@ function strapSync(ins) { const s = ins.data.systems || {}, iv = ins.data.interv
 
 /* her Oct 24 2026: on a button page (b:…) or checklist tab (ck:…) "missing" counts that button's questions – it said "Nothing missing" while the group showed 4 */
 function inThisTab(x) { const m = String(app.tab).match(/^(b|ck):(.+)$/); if (m) { const b = ovBtn(m[2]); return !!(b && ovIn(b, x)); } return x.tab === app.tab; }
+
+/* her Oct 24 2026: the top button for the screen she is on stays highlighted; the last Done on a button page says the button's name */
+function markTools() { const t = String(app.tab || ''); const on = { ckBtn: t.startsWith('ck:'), ovBtns: t === 'overview' || t.startsWith('b:'), ovWalk: t === 'walk', ovDict: t === 'dictate' };
+  Object.entries(on).forEach(([id, v]) => { const e = document.getElementById(id); if (e) { e.setAttribute('aria-pressed', String(v)); e.classList.toggle('on', v); } });
+  const pm = t.match(/^(b|ck):(.+)$/); if (pm) { const d = [...document.querySelectorAll('#main .donecheck')].pop(); const btn = ovBtn(pm[2]); if (d && btn) { const sp = d.querySelectorAll('span'); if (sp.length) sp[sp.length - 1].textContent = 'Done with ' + btn.t; } } }
