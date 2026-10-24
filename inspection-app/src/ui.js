@@ -441,9 +441,12 @@ function applianceWidget(d, ctx, f) {
   const editing = app.appl && app.appl.startsWith(key) ? app.appl.slice(key.length) : null;
   const editor = ak => {
     const a = APPLIANCES.find(x => x.k === ak); const s = val[ak] || {}; const da = `data-ak="${ak}" data-list="${ctx.list}" data-item="${ctx.item}"`;
-    return `<div class="appl-edit" id="appl-edit"><div class="appl-title">${esc(a.l)}</div>
+    return `<div class="appl-back" data-appldone="1"></div><div class="appl-edit" id="appl-edit" role="dialog" aria-label="${esc(a.l)}"><div class="appl-title">${esc(a.l)}</div>
       ${a.qty ? `<div class="flabel"><span class="lab">How many?</span></div><div class="stepper"><button data-applqty="-1" ${da}>−</button><output>${s.qty || 1}</output><button data-applqty="1" ${da}>+</button></div>` : ''}
-      ${a.brand ? `<div class="flabel"><span class="lab">Brand (tap one to finish)</span></div><div class="chips">${BRANDS.map(b => `<button class="chip radio" data-applbrand="${esc(b)}" ${da} aria-pressed="${s.brand === b}"><span class="box"></span>${esc(b)}</button>`).join('')}</div>` : ''}
+      ${a.brand ? (() => { const bb = b => `<button class="chip radio" data-applbrand="${esc(b)}" ${da} aria-pressed="${s.brand === b}"><span class="box"></span>${esc(b)}</button>`; const other = s.brand && !BRANDS.includes(s.brand) ? s.brand : '';
+        return `<div class="flabel"><span class="lab">Brand – tap one and you are back at the list</span></div><div class="chips">${BRANDS_MAIN.map(bb).join('')}</div>
+        <details class="appl-more"${BRANDS_MORE.includes(s.brand) ? ' open' : ''}><summary>More brands</summary><div class="chips">${BRANDS_MORE.map(bb).join('')}</div></details>
+        <div class="appl-other"><label>Other: <input class="txt" data-applother="1" ${da} value="${esc(other)}" placeholder="type the brand" autocapitalize="words"></label><button class="btn sm" data-applotherok="1" ${da}>Use it</button></div>`; })() : ''}
       <div class="row"><button class="btn sm primary" data-appldone="1">Done</button><button class="btn sm danger" data-applrm="${ak}" data-list="${ctx.list}" data-item="${ctx.item}">Remove ${esc(a.l)}</button></div></div>`;
   };
   return `<div class="chips">${APPLIANCES.map(a => {
@@ -797,6 +800,7 @@ function bind(root) {
     app.appl = (a.brand || a.qty) ? it.id + ':' + ak : null; save(); renderTab(); if (app.appl) { const e = document.getElementById('appl-edit'); if (e) e.scrollIntoView({ block: 'nearest' }); }
   });
   root.querySelectorAll('[data-applbrand]').forEach(b => b.onclick = () => { const it = itemOf(b); it.appl[b.dataset.ak].brand = b.dataset.applbrand; app.appl = null; save(); renderTab(); });
+  root.querySelectorAll('[data-applotherok]').forEach(b => b.onclick = () => { const it = itemOf(b); const inp = root.querySelector(`[data-applother][data-ak="${b.dataset.ak}"]`); const v = inp && capWords(inp.value.trim()); if (!v) return toast('Type the brand first'); it.appl[b.dataset.ak].brand = v; app.appl = null; save(); renderTab(); });   // her Oct 24 2026: Other – type the brand
   root.querySelectorAll('[data-applqty]').forEach(b => b.onclick = () => { const it = itemOf(b); const s = it.appl[b.dataset.ak]; s.qty = Math.max(1, (s.qty || 1) + (+b.dataset.applqty)); save(); renderTab(); });
   root.querySelectorAll('[data-applrm]').forEach(b => b.onclick = () => { const it = itemOf(b); delete it.appl[b.dataset.applrm]; app.appl = null; save(); renderTab(); });
   root.querySelectorAll('[data-appldone]').forEach(b => b.onclick = () => { app.appl = null; renderTab(); });

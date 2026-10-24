@@ -30,7 +30,10 @@ const CABINETS = opts('Custom Built','Semi-Custom','Stock','Solid Wood','Painted
 const FIXTURE_FIN = opts('Polished Chrome','Brushed Nickel','Polished Nickel','Stainless','Unlacquered Brass',['Polished Gold Tone','Gold tone – polished'],['Brushed Brass / Gold','Gold tone – brushed / satin'],'Matte Black','Oil-rubbed Bronze','Mixed Metals');
 const BATH_MAT = opts('Stone Tile','Stone Slab','Tile','Corian','Glass Tile','Acrylic / Fiberglass','Cast Iron','Enameled Steel','Copper','Concrete','Waterproof Plaster (Tadelakt / Microcement)','Other');
 const REMODEL = opts('Gutted and Remodeled','Remodeled','Updated','Partially Updated','Older Remodel','Dated','Original','New Construction');
-const BRANDS = ['Wolf','Viking','Miele','Sub-Zero','Thermador','Dacor','Bosch','GE Profile','GE Monogram','GE Café','KitchenAid','La Cornue','Bertazzoni','Gaggenau','JennAir','Fisher & Paykel','Sharp','LG','Samsung','Maytag','Kenmore','Frigidaire','Whirlpool','Asko','BlueStar','O\'Keefe & Merritt','Other'];
+// her list and order (Oct 24 2026); the rest sit under "More brands"
+const BRANDS_MAIN = ['Sub-Zero','Wolf','Viking','KitchenAid','Bosch','Miele','GE Profile','Fisher & Paykel','Kenmore','Maytag','Bertazzoni','La Cornue','Samsung','LG',"O'Keefe & Merritt"];
+const BRANDS_MORE = ['Thermador','Gaggenau','Dacor','JennAir','GE Monogram','GE Café','BlueStar','Frigidaire','Whirlpool','Asko','Sharp'];
+const BRANDS = [...BRANDS_MAIN, ...BRANDS_MORE, 'Other'];
 /* Kitchen appliances: tap one, pick brand (and quantity where it applies), it folds closed */
 const APPLIANCES = [
   { k: 'refFrz', l: 'Refrigerator / Freezer', qty: true, brand: true },

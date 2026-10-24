@@ -551,3 +551,11 @@ html.hc .ck .chip[aria-pressed="true"] { background: #000; color: #fff200; }
 .ck label.cam, .ck label.lib, .ck .photo-btns label, .ck .pslot label { min-height: 0; padding: 4px 10px; font-size: .85rem; border-width: 1.5px; }
 .ck label.cam svg, .ck label.lib svg, .ck .pslot svg { width: 16px; height: 16px; }
 .ck .pslot, .ck .photo-slot { display: flex; flex-wrap: wrap; gap: 6px; }
+
+/* her Oct 24 2026: the brand list opens in its own window over the page; picking a brand closes it and leaves her at the appliance list */
+.appl-back { position: fixed; inset: 0; background: rgba(13, 23, 38, .45); z-index: 900; }
+.appl-edit { position: fixed; z-index: 901; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(600px, 94vw); max-height: 86vh; overflow: auto; background: #fff; border: 3px solid #1f3f66; border-radius: 14px; box-shadow: 0 12px 40px rgba(0,0,0,.35); padding: 14px 16px; }
+.appl-edit .appl-title { font-size: 1.3rem; font-weight: 700; margin-bottom: 6px; }
+.appl-more { margin: 8px 0; } .appl-more summary { font-weight: 700; cursor: pointer; padding: 6px 0; }
+.appl-other { display: flex; gap: 8px; align-items: center; margin: 8px 0; flex-wrap: wrap; } .appl-other label { display: flex; gap: 6px; align-items: center; flex: 1; } .appl-other .txt { flex: 1; min-width: 160px; }
+.ck .appl-edit .chip, .appl-edit .chip { border: 2px solid #1f3f66; background: #fff; padding: 9px 13px; font-size: 1.02rem; min-height: 44px; border-radius: 10px; margin: 3px; }
